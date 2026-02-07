@@ -1,0 +1,106 @@
+# 참조 코드 (원본 저장소에서 가져온 코드)
+reference/
+
+# Bun/Node
+node_modules/
+dist/
+build/
+.bun/
+*.bun
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 로그
+*.log
+
+# 환경 변수
+.env
+.env.local
+
+# 생성된 릴리즈 노트 (gh release create에서 사용)
+release-notes-*.md
+
+# mise
+.mise/
+
+# 문서 빌드 산출물
+doc_build/
+
+# Playwright 테스트 결과
+test-results/
+playwright-report/
+.playwright/
+
+# React Native
+# iOS
+**/ios/Pods/
+**/ios/build/
+**/ios/DerivedData/
+**/ios/*.xcworkspace/xcuserdata/
+**/ios/*.xcodeproj/xcuserdata/
+**/ios/*.xcworkspace/xcshareddata/
+**/ios/.xcode.env.local
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Android
+**/android/app/build/
+**/android/app/.cxx/
+**/android/build/
+**/android/.gradle/
+**/android/local.properties
+**/android/.cxx/
+**/android/.idea/
+**/android/.kotlin/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# CMake 빌드 디렉토리
+.cmake-build/
+**/.cmake-build/
+**/build/
+**/.cxx/
+
+# React Native / Expo
+**/.expo/
+**/.expo-shared/
+**/.metro/
+**/web-build/
+
+# React Native 인증서 및 키
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+*.keystore
+
+# React Native 로그
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+metro-*.log
+
+# 브랜치/커밋 요약 (PR 바디에만 사용, 커밋하지 않음)
+branch-summary.md
+commit-summary.md

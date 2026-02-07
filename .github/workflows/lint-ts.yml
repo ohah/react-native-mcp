@@ -1,0 +1,61 @@
+name: TypeScript 린트
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check:
+    name: 실행 여부 확인
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.changes.outputs.ts }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            ts:
+              - 'packages/**/*.ts'
+              - 'packages/**/*.tsx'
+              - 'packages/**/*.js'
+              - 'packages/**/*.jsx'
+              - '*.ts'
+              - '*.js'
+              - 'oxlint.json'
+              - '.oxfmtrc.json'
+              - '.github/workflows/lint-ts.yml'
+
+  lint:
+    name: TypeScript/JavaScript 린트
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 변경사항 없으면 건너뛰기
+        if: needs.check.outputs.should-run != 'true'
+        run: echo "TypeScript/JavaScript 변경사항 없음, 린트 건너뛰기"
+        continue-on-error: false
+
+      - name: Bun 설정
+        if: needs.check.outputs.should-run == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 의존성 설치
+        if: needs.check.outputs.should-run == 'true'
+        run: bun install
+
+      - name: oxlint 실행
+        if: needs.check.outputs.should-run == 'true'
+        run: bun run lint
+
+      - name: 포맷팅 검사
+        if: needs.check.outputs.should-run == 'true'
+        run: bun run format:check

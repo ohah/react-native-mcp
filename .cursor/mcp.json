@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "react-native-mcp-local": {
+      "command": "/Users/yoon/.local/bin/mise",
+      "args": ["-y", "@ohah/react-native-mcp-server"]
+    }
+  }
+}

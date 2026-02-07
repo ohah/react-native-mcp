@@ -1,0 +1,16 @@
+# 의존성
+node_modules/
+**/node_modules/**
+
+# 빌드 산출물
+dist/
+build/
+**/dist/**
+**/build/**
+
+# 락 파일
+*.lock
+**/*.lock
+
+# 참조 코드
+reference/

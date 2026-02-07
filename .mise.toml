@@ -1,0 +1,4 @@
+[tools]
+bun = "latest"
+node = "24.11.1"
+gh = "latest"

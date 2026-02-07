@@ -1,0 +1,45 @@
+name: 테스트
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check:
+    name: 실행 여부 확인
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.changes.outputs.ts }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            ts:
+              - 'packages/**/*.ts'
+              - 'packages/**/*.tsx'
+              - '*.ts'
+              - '.github/workflows/test.yml'
+
+  test:
+    name: 유닛 테스트
+    needs: check
+    if: needs.check.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Bun 설정
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 의존성 설치
+        run: bun install
+
+      - name: 테스트 실행
+        run: bun run test:unit

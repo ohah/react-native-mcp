@@ -1,0 +1,35 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# 최상위 EditorConfig 파일
+root = true
+
+# 모든 파일
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# TypeScript/JavaScript 파일
+[*.{ts,tsx,js,jsx}]
+indent_style = space
+indent_size = 2
+
+# JSON 파일
+[*.json]
+indent_style = space
+indent_size = 2
+
+# Markdown 파일
+[*.md]
+trim_trailing_whitespace = false
+
+# YAML 파일
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Shell 스크립트
+[*.{sh,bat}]
+indent_style = space
+indent_size = 2

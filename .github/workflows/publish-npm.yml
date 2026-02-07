@@ -1,0 +1,150 @@
+name: npm에 배포
+
+on:
+  push:
+    tags:
+      - 'react-native-mcp-server-v*'
+      - 'react-native-mcp-react-native-v*'
+  workflow_dispatch:
+    inputs:
+      package:
+        description: '배포할 패키지 (server 또는 react-native)'
+        required: true
+        type: choice
+        options:
+          - server
+          - react-native
+      version:
+        description: '배포할 버전 (예: 1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  detect-package:
+    name: 패키지 감지
+    runs-on: ubuntu-latest
+    outputs:
+      package-name: ${{ steps.detect.outputs.package-name }}
+      version: ${{ steps.detect.outputs.version }}
+      should-publish: ${{ steps.detect.outputs.should-publish }}
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 패키지 및 버전 감지
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PACKAGE_INPUT="${{ github.event.inputs.package }}"
+            VERSION_INPUT="${{ github.event.inputs.version }}"
+
+            if [ "$PACKAGE_INPUT" = "server" ]; then
+              PACKAGE_NAME="react-native-mcp-server"
+            elif [ "$PACKAGE_INPUT" = "react-native" ]; then
+              PACKAGE_NAME="react-native-mcp-react-native"
+            else
+              echo "알 수 없는 패키지: $PACKAGE_INPUT"
+              exit 1
+            fi
+
+            echo "package-name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+            echo "version=$VERSION_INPUT" >> $GITHUB_OUTPUT
+            echo "should-publish=true" >> $GITHUB_OUTPUT
+          else
+            # 태그 푸시 이벤트
+            TAG_NAME="${{ github.ref_name }}"
+
+            if [[ "$TAG_NAME" == react-native-mcp-server-v* ]]; then
+              PACKAGE_NAME="react-native-mcp-server"
+              VERSION="${TAG_NAME#react-native-mcp-server-v}"
+            elif [[ "$TAG_NAME" == react-native-mcp-react-native-v* ]]; then
+              PACKAGE_NAME="react-native-mcp-react-native"
+              VERSION="${TAG_NAME#react-native-mcp-react-native-v}"
+            else
+              echo "알 수 없는 태그 형식: $TAG_NAME"
+              exit 1
+            fi
+
+            echo "package-name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "should-publish=true" >> $GITHUB_OUTPUT
+          fi
+
+  publish-server:
+    name: 서버 배포
+    needs: detect-package
+    if: |
+      needs.detect-package.outputs.should-publish == 'true' &&
+      needs.detect-package.outputs.package-name == 'react-native-mcp-server'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Bun 설정
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 의존성 설치
+        run: bun install
+
+      - name: 서버 패키지 빌드
+        run: cd packages/server && bun run build
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: npm에 배포
+        working-directory: packages/server
+        run: |
+          npm publish --provenance --access public --tag latest
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-react-native:
+    name: React Native 패키지 배포
+    needs: detect-package
+    if: |
+      needs.detect-package.outputs.should-publish == 'true' &&
+      needs.detect-package.outputs.package-name == 'react-native-mcp-react-native'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Bun 설정
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 의존성 설치
+        run: bun install
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: npm에 배포
+        working-directory: packages/react-native
+        run: |
+          npm publish --provenance --access public --tag latest
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

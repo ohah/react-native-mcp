@@ -1,0 +1,36 @@
+{
+  "name": "react-native-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter @ohah/react-native-mcp-server build",
+    "build:server": "bun run --filter @ohah/react-native-mcp-server build",
+    "dev": "bun scripts/dev.ts",
+    "dev:all": "bun run --filter='*' dev",
+    "dev:server": "bun run --filter='@ohah/react-native-mcp-server' dev",
+    "mcp": "bun run --filter @ohah/react-native-mcp-server mcp",
+    "test": "bun run --filter @ohah/react-native-mcp-server test",
+    "typecheck": "bunx tsc --noEmit -p packages/server",
+    "lint": "oxlint .",
+    "format": "oxfmt .",
+    "format:check": "oxfmt . --check",
+    "test:unit": "bun test packages/",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test packages/ --coverage",
+    "setup-mcp": "bun run .cursor/scripts/set-mcp-mise-path.ts"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^20.0.11",
+    "@types/bun": "latest",
+    "@types/node": "^20.0.0",
+    "oxfmt": "latest",
+    "oxlint": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "name": "@ohah/react-native-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for React Native app automation and monitoring",
+  "keywords": [
+    "automation",
+    "mcp",
+    "model-context-protocol",
+    "monitoring",
+    "react-native"
+  ],
+  "homepage": "https://github.com/ohah/react-native-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/ohah/react-native-mcp/issues"
+  },
+  "license": "MIT",
+  "author": "ohah",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ohah/react-native-mcp.git",
+    "directory": "packages/server"
+  },
+  "bin": {
+    "react-native-mcp-server": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bunup && bun scripts/chmod-dist.mjs",
+    "prepublishOnly": "bun run build",
+    "dev": "bun run --watch src/index.ts",
+    "mcp:run": "bun dist/index.js",
+    "mcp": "bun run build && bun dist/index.js",
+    "test": "bun test src/"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.0",
+    "@types/bun": "latest",
+    "@types/node": "^20.10.0",
+    "@types/ws": "^8.5.0",
+    "bunup": "^0.16.22",
+    "typescript": "^5.9.3",
+    "ws": "^8.18.0",
+    "zod": "^3.25.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=24"
+  }
+}
