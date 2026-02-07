@@ -36,10 +36,15 @@ npm install -g @ohah/react-native-mcp-server
 ```
 
 3. Cursor 재시작 (또는 MCP 새로고침)
-4. React Native 앱에 클라이언트 라이브러리 설치:
+4. React Native 앱에 Metro 플러그인 추가:
 
-```bash
-npm install @ohah/react-native-mcp
+```js
+// metro.config.js
+const { withReactNativeMCP } = require('@ohah/react-native-mcp-server/metro-plugin');
+
+module.exports = withReactNativeMCP({
+  // 기존 Metro 설정
+});
 ```
 
 ### Claude Desktop
@@ -107,17 +112,26 @@ Copilot CLI 재시작.
 ```
 React Native 앱 (iOS/Android)
   ↓ (WebSocket)
-  └─ @ohah/react-native-mcp (클라이언트 라이브러리)
+  └─ Runtime (Metro로 자동 주입)
        ↓
      MCP 서버 (개발자 PC)
        ↓ (stdio/MCP protocol)
      Cursor / Claude Desktop / Copilot CLI
 ```
 
-## 패키지
+## 패키지 구조
 
-- `packages/server` - MCP 서버 (Node.js/Bun)
-- `packages/react-native` - React Native 앱용 클라이언트 라이브러리
+```
+packages/
+└── react-native-mcp-server/    # 모든 기능을 포함한 단일 패키지
+    ├── src/
+    │   ├── index.ts            # CLI 진입점
+    │   ├── server/             # MCP + WebSocket 서버
+    │   ├── tools/              # MCP Tools
+    │   ├── metro-plugin/       # Metro 플러그인
+    │   └── runtime/            # 자동 주입되는 런타임 코드
+    └── package.json
+```
 
 ## 라이선스
 
