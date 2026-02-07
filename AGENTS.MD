@@ -185,13 +185,14 @@ bun run test:coverage       # 커버리지 포함 테스트
 
 ### Subject (필수)
 
+- **한국어**로 작성
 - 50자 이내로 간결하게 작성
 - 명령형으로 작성 (과거형 X)
-- 첫 글자는 대문자로 시작하지 않음
 - 마지막에 마침표(.) 사용하지 않음
 
 ### Body (선택)
 
+- **한국어**로 작성
 - 72자마다 줄바꿈
 - 무엇을, 왜 변경했는지 설명
 - 어떻게 변경했는지는 코드로 보이므로 생략 가능
@@ -203,7 +204,7 @@ bun run test:coverage       # 커버리지 포함 테스트
 ### 커밋 예시
 
 ```
-feat(server): add MCP server with tool support
+feat(server): MCP 서버 및 도구 지원 추가
 
 - MCP 프로토콜 기반 서버 구현
 - 여러 도구(Tool) 등록 및 실행 지원
@@ -211,7 +212,7 @@ feat(server): add MCP server with tool support
 ```
 
 ```
-fix(react-native): handle WebSocket reconnection properly
+fix(react-native): WebSocket 재연결 처리 수정
 
 - 연결 끊김 시 재연결 로직 수정
 - 지수 백오프 적용
@@ -262,3 +263,14 @@ fix(react-native): handle WebSocket reconnection properly
 - [ ] 포맷팅으로 변경된 파일이 있으면 함께 스테이징
 - [ ] `mise exec -- bun run lint` 실행하여 린트 검사
 - [ ] 모든 검사를 통과한 후 커밋 진행
+
+## PR 규칙
+
+**언어**: PR 제목, 본문, `branch-summary.md` 모두 **한국어**로 작성한다.
+
+- **제목**: 사용자 지정 시 그대로 사용. 이슈 참조 시 `[#번호]` 접두사 + 주제. 미지정 시 한국어로 짧고 명령형 주제.
+- **본문**: `branch-summary.md`를 PR 본문으로 사용. 제목(목적), 작업 내용(산문체) 포함.
+- **담당자**: PR 생성 시 `--assignee @me` 추가.
+- **라벨**: PR 타입에 맞게 추가 (feat → enhancement, fix → bug, docs → documentation 등).
+
+작업 절차는 `.cursor/commands/pr.md` 참고.
