@@ -1,5 +1,7 @@
 # React Native MCP Server
 
+> [한국어 문서](./README_KO.md)
+
 MCP(Model Context Protocol) server for React Native app automation and monitoring. Works with Cursor, Claude Desktop, and GitHub Copilot CLI.
 
 ## Features
@@ -36,10 +38,15 @@ Or use with `npx` without installation.
 ```
 
 3. Restart Cursor (or refresh MCP)
-4. Install the client library in your React Native app:
+4. Add Metro plugin to your React Native app:
 
-```bash
-npm install @ohah/react-native-mcp
+```js
+// metro.config.js
+const { withReactNativeMCP } = require('@ohah/react-native-mcp-server/metro-plugin');
+
+module.exports = withReactNativeMCP({
+  // your existing Metro config
+});
 ```
 
 ### Claude Desktop
@@ -107,17 +114,26 @@ Restart the Copilot CLI.
 ```
 React Native App (iOS/Android)
   ↓ (WebSocket)
-  └─ @ohah/react-native-mcp (client library)
+  └─ Runtime (auto-injected via Metro)
        ↓
      MCP Server (developer's machine)
        ↓ (stdio/MCP protocol)
      Cursor / Claude Desktop / Copilot CLI
 ```
 
-## Packages
+## Package Structure
 
-- `packages/server` - MCP server (Node.js/Bun)
-- `packages/react-native` - Client library for React Native apps
+```
+packages/
+└── react-native-mcp-server/    # Single package with everything
+    ├── src/
+    │   ├── index.ts            # CLI entry point
+    │   ├── server/             # MCP + WebSocket server
+    │   ├── tools/              # MCP Tools
+    │   ├── metro-plugin/       # Metro plugin
+    │   └── runtime/            # Auto-injected runtime code
+    └── package.json
+```
 
 ## License
 
