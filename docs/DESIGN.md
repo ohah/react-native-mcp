@@ -123,6 +123,18 @@ React Native 앱을 AI가 제어하고 모니터링할 수 있도록 MCP 서버 
 
 **점진적 구현 가능**: Phase 1부터 단계적으로 동작
 
+### 2.4 Metro AST 변환 검증 (CLI)
+
+실제 앱·Metro 서버를 띄우지 않고 **CLI 단위 테스트**로 AST 기반 코드 감싸기를 검증할 수 있다.
+
+- **위치**: `packages/react-native-mcp-server/src/metro/transform-source.ts`, `src/__tests__/metro-transformer.test.ts`
+- **동작**: Metro 의존성 없이, **Metro에 붙일 변환 함수**(`transformSource`)만 Babel로 구현해 두고, 테스트에서 이 함수를 직접 호출해 입력 문자열 → 변환 결과를 assert한다. `AppRegistry.registerComponent(...)` 를 `__REACT_NATIVE_MCP__.registerComponent(...)` 로 치환하는지 검증.
+- **실행** (레포 루트 또는 패키지 디렉터리):
+  ```bash
+  cd packages/react-native-mcp-server && bun test src/
+  ```
+- **확장**: `metro`는 이미 devDependency에 포함되어 있음. 나중에 `Metro.runBuild()` 로 진짜 번들 출력을 검증하는 통합 테스트 추가 시 사용할 예정.
+
 ---
 
 ## 3. 아키텍처
