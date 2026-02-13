@@ -3,8 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "packages/*",
-    "examples/*"
+    "packages/*"
   ],
   "scripts": {
     "build": "bun run --filter @ohah/react-native-mcp-server build",
@@ -14,7 +13,7 @@
     "dev": "bun scripts/dev.ts",
     "dev:all": "bun run --filter='*' dev",
     "dev:server": "bun run --filter='@ohah/react-native-mcp-server' dev",
-    "dev:demo": "bun run --filter react-native-mcp-demo-app start",
+    "dev:demo": "cd examples/demo-app && bun run start",
     "mcp": "bun run --filter @ohah/react-native-mcp-server mcp",
     "test": "bun run --filter @ohah/react-native-mcp-server test",
     "test:mcp": "bun run build && bun run scripts/test-mcp-server.ts",

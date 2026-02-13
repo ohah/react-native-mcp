@@ -1,6 +1,7 @@
 /**
- * MCP 도구: eval_code
- * DESIGN.md Phase 1 — 앱 컨텍스트에서 코드 실행 (WebSocket으로 앱에 전달)
+ * MCP 도구: evaluate_script
+ * Chrome DevTools MCP 스펙. function + args를 앱에서 실행 (WebSocket eval)
+ * @see docs/chrome-devtools-mcp-spec-alignment.md
  */
 
 import { z } from 'zod';
@@ -8,7 +9,10 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
 
 const schema = z.object({
-  code: z.string().describe('JavaScript code to run in the React Native app context'),
+  function: z
+    .string()
+    .describe('JavaScript function to run in the app (e.g. () => document.title or (x) => x + 1)'),
+  args: z.array(z.unknown()).optional().describe('Arguments to pass to the function'),
 });
 
 function formatResult(value: unknown): string {
@@ -22,9 +26,9 @@ function formatResult(value: unknown): string {
 }
 
 /**
- * eval_code 도구 등록: 연결된 앱에 코드 전송 후 결과 반환
+ * evaluate_script: Chrome DevTools MCP와 동일 (function, args). 앱에 코드 전송 후 결과 반환.
  */
-export function registerEvalCode(server: McpServer, appSession: AppSession): void {
+export function registerEvaluateScript(server: McpServer, appSession: AppSession): void {
   (
     server as {
       registerTool(
@@ -34,41 +38,38 @@ export function registerEvalCode(server: McpServer, appSession: AppSession): voi
       ): void;
     }
   ).registerTool(
-    'eval_code',
+    'evaluate_script',
     {
       description:
-        'Run JavaScript code in the React Native app context. Requires the app to be running with Metro and connected to this MCP server (Phase 1).',
+        'Evaluate a JavaScript function in the React Native app context. Same spec as Chrome DevTools MCP: function (string), args (array). Returns JSON-serializable result.',
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const { code } = schema.parse(args);
+      const { function: fnStr, args: fnArgs } = schema.parse(args);
 
       if (!appSession.isConnected()) {
         return {
           content: [
             {
               type: 'text' as const,
-              text: 'No React Native app connected. Start the app with Metro (e.g. npx react-native start) and ensure the MCP runtime is loaded (entry file uses AppRegistry.registerComponent).',
+              text: 'No React Native app connected. Start the app with Metro and ensure the MCP runtime is loaded.',
             },
           ],
         };
       }
 
+      const argsJson = JSON.stringify(fnArgs ?? []);
+      const code = `(function(){try{var __f=(${fnStr});return __f.apply(null,${argsJson});}catch(e){return e.message||String(e);}})()`;
+
       try {
         const res = await appSession.sendRequest({ method: 'eval', params: { code } });
         if (res.error != null) {
-          return {
-            content: [{ type: 'text' as const, text: `Error: ${res.error}` }],
-          };
+          return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }
-        return {
-          content: [{ type: 'text' as const, text: formatResult(res.result) }],
-        };
+        return { content: [{ type: 'text' as const, text: formatResult(res.result) }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: 'text' as const, text: `Request failed: ${message}` }],
-        };
+        return { content: [{ type: 'text' as const, text: `evaluate_script failed: ${message}` }] };
       }
     }
   );

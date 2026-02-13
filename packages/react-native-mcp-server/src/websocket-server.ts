@@ -1,9 +1,11 @@
 /**
  * MCP 서버 ↔ React Native 앱 간 WebSocket 서버 (Phase 1)
- * 포트 12300에서 앱 연결 수락, eval 요청 전송 및 응답 수신
+ * 포트 12300에서 앱 연결 수락, eval 요청 전송 및 응답 수신.
+ * 앱이 연결 시 type:'init', metroBaseUrl 전송하면 CDP 요청에 해당 Metro 포트 사용.
  */
 
 import { WebSocketServer, WebSocket } from 'ws';
+import { setMetroBaseUrlFromApp } from './tools/metro-cdp.js';
 
 const DEFAULT_PORT = 12300;
 
@@ -50,20 +52,27 @@ export class AppSession {
       this.ws = ws;
       ws.on('message', (data: Buffer | string) => {
         try {
-          const msg = JSON.parse(data.toString()) as AppResponse;
-          if (msg.id && this.pending.has(msg.id)) {
-            const { resolve } = this.pending.get(msg.id)!;
-            this.pending.delete(msg.id);
-            resolve(msg);
+          const msg = JSON.parse(data.toString()) as Record<string, unknown>;
+          if (msg?.type === 'init' && typeof msg.metroBaseUrl === 'string') {
+            setMetroBaseUrlFromApp(msg.metroBaseUrl);
+            return;
+          }
+          const res = msg as unknown as AppResponse;
+          if (res.id && this.pending.has(res.id)) {
+            const { resolve } = this.pending.get(res.id)!;
+            this.pending.delete(res.id);
+            resolve(res);
           }
         } catch {
           // ignore malformed
         }
       });
       ws.on('close', () => {
+        setMetroBaseUrlFromApp(null);
         this.ws = null;
       });
       ws.on('error', () => {
+        setMetroBaseUrlFromApp(null);
         this.ws = null;
       });
     });
