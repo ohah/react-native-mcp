@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "react-native-mcp": {
+    "react-native-mcp-local": {
       "command": "npx",
       "args": ["-y", "@ohah/react-native-mcp-server"]
     }

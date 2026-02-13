@@ -75,3 +75,23 @@ grep -oE 'testID:\s*"[^"]+"' /tmp/out.js | head -5     # 주입된 testID 예시
 
 - **testID**: 앱을 실행한 뒤 E2E/Detox에서 `testID="demo-app-title"` 또는 자동 주입된 `App-0-View` 등으로 요소를 조회해 보면 됩니다.
 - **AppRegistry 래퍼**: MCP 서버로 앱에 연결했을 때, 등록된 앱 컴포넌트가 MCP 쪽에서 보이면 래퍼가 적용된 것입니다.
+
+## Phase 1: eval_code 사용법
+
+MCP 서버와 앱이 WebSocket(12300)으로 연결되면, Cursor/Claude에서 `eval_code` 도구로 앱 컨텍스트에서 JavaScript를 실행할 수 있습니다.
+
+1. **MCP 서버 실행** (stdio, Cursor에서 사용 시 Cursor가 자동 실행)
+   ```bash
+   npx -y @ohah/react-native-mcp-server
+   # 또는 모노레포: bun run --filter @ohah/react-native-mcp-server mcp
+   ```
+2. **Metro 실행** (터미널 1)
+   ```bash
+   cd examples/demo-app && bun run start
+   ```
+3. **앱 실행** (시뮬레이터/기기, 터미널 2)
+   ```bash
+   bun run ios
+   # 또는 bun run android
+   ```
+4. 앱이 로드되면 런타임이 `ws://localhost:12300`에 자동 연결됩니다. Cursor에서 MCP 도구 `eval_code`를 호출해 예: `1 + 2` 또는 `require('react-native').Platform.OS` 같은 코드를 실행하면 결과가 반환됩니다.
