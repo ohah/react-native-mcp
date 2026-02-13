@@ -13,19 +13,19 @@ React Native 앱을 AI가 제어하고 모니터링할 수 있도록 MCP 서버 
 - **컴포넌트 조회**: DOM 대신 React Fiber tree 활용
 - **자동화**: testID 기반 컴포넌트 선택 및 조작
 - **모니터링**: 네트워크, 로그, 상태 추적
-- **시각적 피드백**: 네이티브 스크린샷
+- **시각적 피드백**: CLI 기반 스크린샷 (ADB / simctl, 앱 내 네이티브 모듈 없음)
 
 ### 1.2 Chrome MCP와의 차이점
 
-| 항목      | Chrome MCP            | React Native MCP       |
-| --------- | --------------------- | ---------------------- |
-| 구조 파악 | DOM tree              | React Fiber tree       |
-| 선택자    | CSS selector          | testID, component path |
-| 조작      | querySelector + click | Fiber + event trigger  |
-| 스냅샷    | HTML snapshot         | Component tree JSON    |
-| 스크린샷  | CDP screenshot        | Native module          |
-| 통신      | CDP (WebSocket)       | WebSocket + eval       |
-| 코드 주입 | 불필요                | Babel/Metro 필수       |
+| 항목      | Chrome MCP            | React Native MCP                                 |
+| --------- | --------------------- | ------------------------------------------------ |
+| 구조 파악 | DOM tree              | React Fiber tree                                 |
+| 선택자    | CSS selector          | testID, component path                           |
+| 조작      | querySelector + click | Fiber + event trigger                            |
+| 스냅샷    | HTML snapshot         | Component tree JSON                              |
+| 스크린샷  | CDP screenshot        | ADB / xcrun simctl (호스트 CLI, 앱 내 모듈 없음) |
+| 통신      | CDP (WebSocket)       | WebSocket + eval                                 |
+| 코드 주입 | 불필요                | Babel/Metro 필수                                 |
 
 ### 1.3 핵심 전략
 
@@ -33,7 +33,7 @@ React Native 앱을 AI가 제어하고 모니터링할 수 있도록 MCP 서버 
 2. **Babel Plugin**: AST 변환으로 개발 모드 추적 코드 삽입
 3. **React Fiber Hook**: 런타임 컴포넌트 트리 추적 (React DevTools 방식)
 4. **WebSocket**: MCP 서버 ↔ 앱 양방향 통신
-5. **Native Module**: 스크린샷 전용 (최소화)
+5. **스크린샷**: 네이티브 모듈 없이 호스트에서 ADB(Android)·simctl(iOS 시뮬레이터)로 캡처
 
 ---
 
@@ -67,11 +67,11 @@ React Native 앱을 AI가 제어하고 모니터링할 수 있도록 MCP 서버 
 - Metro HMR이 유사 방식 사용
 - Chrome DevTools Protocol도 remote execution 가능
 
-#### Native Screenshot
+#### 스크린샷 (CLI 기반, 네이티브 모듈 없음)
 
-- iOS: `UIGraphicsImageRenderer`
-- Android: `View.drawToBitmap()`
-- **참고**: `react-native-view-shot` 라이브러리
+- **Android**: `adb shell screencap -p` — OS가 화면 덤프, 앱 코드 불필요
+- **iOS 시뮬레이터**: `xcrun simctl io booted screenshot <path>` — 시뮬레이터만 지원, 실기기는 미지원
+- 앱에 네이티브 모듈을 설치하지 않아도 되며, MCP 서버가 호스트에서 위 명령을 실행해 캡처
 
 ### 2.2 ⚠️ 어려운 부분 (해결 가능)
 
@@ -167,7 +167,7 @@ react-native-mcp/
                     │ stdio (MCP protocol)
 ┌───────────────────▼─────────────────────────────┐
 │  MCP Server (packages/server)                   │
-│  - Tools: get_component_tree, eval_code, etc.   │
+│  - Tools: get_component_tree, evaluate_script, etc.   │
 │  - WebSocket Server (ws://localhost:12300)      │
 └───────────────────┬─────────────────────────────┘
                     │ WebSocket
@@ -188,7 +188,7 @@ react-native-mcp/
 │  └────────────────────────────────────────┘     │
 │                                                  │
 │  ┌────────────────────────────────────────┐     │
-│  │  Native Screenshot Module              │     │
+│  │  (스크린샷: 호스트 CLI adb/simctl)      │     │
 │  └────────────────────────────────────────┘     │
 └──────────────────────────────────────────────────┘
 ```
@@ -238,7 +238,7 @@ packages/react-native-mcp-server/
 │   ├── websocket-server.ts      # WS 서버 (앱 연결, 12300)
 │   ├── tools/
 │   │   ├── index.ts             # 도구 등록
-│   │   └── eval-code.ts         # eval_code ✅
+│   │   └── eval-code.ts         # evaluate_script ✅
 │   ├── babel/
 │   │   └── inject-testid.ts     # testID 자동 주입 + registerPressHandler 주입 ✅
 │   ├── metro/
@@ -252,12 +252,12 @@ packages/react-native-mcp-server/
 
 **제공 Tools**:
 
-- `eval_code` - 앱에서 코드 실행 ✅ (triggerPress 등 호출 가능)
+- `evaluate_script` - 앱에서 함수 실행 (Chrome DevTools MCP 스펙) ✅ (triggerPress 등 호출 가능)
 - `get_component_tree` - (예정)
 - `find_component` - (예정)
-- `click_component` - eval_code로 `triggerPress(testID)` 호출로 대체 ✅
+- `click_component` - evaluate_script로 `triggerPress(testID)` 호출로 대체 ✅
 - `set_props` - (예정)
-- `take_screenshot` - (예정)
+- `take_screenshot` - ADB(Android) / simctl(iOS 시뮬레이터)로 캡처 ✅
 - `list_network_requests` / `get_console_logs` - (예정)
 
 ### 4.2 packages/metro-plugin
@@ -376,51 +376,23 @@ if (__DEV__) {
 - Dead code elimination으로 완전 제거
 - 번들 크기 영향 없음
 
-### 4.5 packages/native-snapshot
+### 4.5 스크린샷 (CLI 기반, 네이티브 모듈 없음)
 
-**역할**: 스크린샷 캡처 네이티브 모듈
+**역할**: 호스트(MCP 서버 실행 환경)에서 ADB / simctl로 화면 캡처. 앱 내 네이티브 모듈은 사용하지 않음.
 
-**플랫폼 구현**:
+**Android**:
 
-#### iOS (Swift/Objective-C)
+- `adb shell screencap -p` — stdout으로 PNG 출력 → Base64 인코딩 후 MCP 응답으로 반환
+- 기기 1대 연결 가정 (또는 `-s <serial>` 지정)
 
-```swift
-@objc(RNMCPSnapshot)
-class RNMCPSnapshot: NSObject {
-  @objc func captureScreen(
-    _ resolve: @escaping RCTPromiseResolveBlock,
-    rejecter reject: @escaping RCTPromiseRejectBlock
-  ) {
-    // UIGraphicsImageRenderer
-    // Base64 인코딩 반환
-  }
-}
-```
+**iOS (시뮬레이터만)**:
 
-#### Android (Kotlin/Java)
+- `xcrun simctl io booted screenshot <path>` — 파일로 저장 후 읽어 Base64 반환
+- `simctl`은 시뮬레이터 전용. 실기기 연결 시에는 사용 불가
 
-```kotlin
-class RNMCPSnapshotModule(reactContext: ReactApplicationContext)
-  : ReactContextBaseJavaModule(reactContext) {
+**플랫폼 선택**:
 
-  @ReactMethod
-  fun captureScreen(promise: Promise) {
-    // View.drawToBitmap()
-    // Base64 인코딩 반환
-  }
-}
-```
-
-**JS 인터페이스**:
-
-```ts
-import { NativeModules } from 'react-native';
-
-const { RNMCPSnapshot } = NativeModules;
-
-// 사용
-const base64Image = await RNMCPSnapshot.captureScreen();
-```
+- `take_screenshot` 도구에서 `platform` 인자로 `android` | `ios` 지정, 또는 자동 감지(adb devices / simctl list Booted)
 
 ---
 
@@ -437,7 +409,7 @@ const base64Image = await RNMCPSnapshot.captureScreen();
 - [x] MCP 서버 기본 구조
   - [x] stdio transport 구현
   - [x] WebSocket 서버 추가 (ws://localhost:12300)
-  - [x] 기본 도구 1개: `eval_code`
+  - [x] 기본 도구 1개: `evaluate_script`
 - [x] Runtime (runtime.js, 서버 패키지 내)
   - [x] WebSocket 클라이언트
   - [x] eval bridge 구현
@@ -485,29 +457,24 @@ const base64Image = await RNMCPSnapshot.captureScreen();
 - [ ] 프로덕션 제거 로직
   - [ ] `__DEV__` 조건부 컴파일 (Babel 주입은 항상 적용, runtime만 **DEV** 시 연결)
   - [ ] Dead code elimination 검증
-- [x] MCP 조작 (eval_code로 구현)
+- [x] MCP 조작 (evaluate_script로 구현)
   - [x] testID로 onPress 트리거 (runtime `triggerPress(testID)` + Babel에서 `registerPressHandler` 주입)
   - [ ] `set_props` - props 변경 (미구현)
 
 **산출물**: AI가 컴포넌트 선택 및 조작 (버튼 클릭 등) ✅
 
-### Phase 4: Native Screenshot
+### Phase 4: CLI 스크린샷 (ADB / simctl)
 
-**목표**: 시각적 피드백
+**목표**: 시각적 피드백. 네이티브 모듈 없이 호스트 CLI로 캡처.
 
 **구현**:
 
-- [ ] Native Module 개발
-  - [ ] iOS: Swift 구현
-  - [ ] Android: Kotlin 구현
-  - [ ] Base64 인코딩
-- [ ] MCP Tool 추가
-  - [ ] `take_screenshot` - 전체 화면
-- [ ] 최적화
-  - [ ] 압축 옵션
-  - [ ] 크기 조절
+- [x] MCP Tool 추가
+  - [x] `take_screenshot` — Android: `adb shell screencap -p`, iOS 시뮬레이터: `xcrun simctl io booted screenshot`
+  - [x] Base64 PNG 반환 (data URL 또는 content)
+- [ ] 선택: 압축/크기 조절 (미구현)
 
-**산출물**: AI가 화면 보고 판단
+**산출물**: AI가 화면 보고 판단 (Android 기기 또는 iOS 시뮬레이터)
 
 ### Phase 5: 고급 기능
 
@@ -571,7 +538,7 @@ const base64Image = await RNMCPSnapshot.captureScreen();
 
 ### 7.2 기능적 제약
 
-1. **완벽한 스크린샷 불가** - 네이티브 뷰 일부 누락 가능
+1. **iOS 실기기 스크린샷** - simctl은 시뮬레이터 전용이라 실기기에서는 미지원
 2. **가상화 목록 한계** - FlatList 미렌더링 아이템 접근 어려움
 3. **서드파티 네이티브 컴포넌트** - 제어 어려움
 
@@ -588,7 +555,7 @@ const base64Image = await RNMCPSnapshot.captureScreen();
 ### Phase 1 (MVP)
 
 - [x] MCP 서버가 Cursor/Claude에서 인식
-- [x] 앱에서 코드 실행 가능 (eval_code)
+- [x] 앱에서 코드 실행 가능 (evaluate_script)
 - [x] WebSocket 연결 안정 (12300)
 
 ### Phase 2
@@ -598,7 +565,7 @@ const base64Image = await RNMCPSnapshot.captureScreen();
 
 ### Phase 3
 
-- [x] AI가 버튼 클릭 등 조작 (triggerPress via eval_code)
+- [x] AI가 버튼 클릭 등 조작 (triggerPress via evaluate_script)
 - [ ] 프로덕션 빌드에서 코드 완전 제거
 
 ### Phase 4
@@ -617,7 +584,7 @@ const base64Image = await RNMCPSnapshot.captureScreen();
 
 1. **Phase 2**: Fiber Hook + get_component_tree / find_component
 2. **Phase 3 보완**: set_props, 추적 코드, 프로덕션 제거 검증
-3. **Phase 4**: Native Screenshot
+3. **Phase 4**: CLI 스크린샷 (ADB / simctl) ✅
 4. **피드백 반영**
 
 이 설계는 실험적이며, 구현 중 발견되는 제약사항에 따라 수정 가능합니다.
