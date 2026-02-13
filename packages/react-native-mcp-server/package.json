@@ -33,7 +33,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bunup && bun scripts/chmod-dist.mjs",
+    "build": "bunup && bun build src/transformer-entry.ts --outdir=dist --target=node && bun scripts/chmod-dist.mjs",
     "prepublishOnly": "bun run build",
     "dev": "bun run --watch src/index.ts",
     "mcp:run": "bun dist/index.js",
