@@ -33,20 +33,22 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bunup && bun build src/transformer-entry.ts --outdir=dist --target=node && bun scripts/chmod-dist.mjs",
+    "build": "bunup && bun build src/index.ts --outdir=dist --target=node && bun build src/transformer-entry.ts --outdir=dist --target=node && bun scripts/chmod-dist.mjs",
     "prepublishOnly": "bun run build",
     "dev": "bun run --watch src/index.ts",
     "mcp:run": "bun dist/index.js",
     "mcp": "bun run build && bun dist/index.js",
     "test": "bun test src/"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.0",
+    "zod": "^3.25.0"
+  },
   "devDependencies": {
     "@babel/generator": "^7.26.0",
     "@babel/parser": "^7.26.0",
     "@babel/traverse": "^7.26.0",
     "@babel/types": "^7.26.0",
-    "@modelcontextprotocol/sdk": "^1.25.0",
     "@types/babel__generator": "^7.6.8",
     "@types/babel__traverse": "^7.28.0",
     "@types/bun": "latest",
@@ -55,8 +57,7 @@
     "bunup": "^0.16.22",
     "metro": "^0.82.0",
     "typescript": "^5.9.3",
-    "ws": "^8.18.0",
-    "zod": "^3.25.0"
+    "ws": "^8.18.0"
   },
   "engines": {
     "bun": ">=1.0.0",

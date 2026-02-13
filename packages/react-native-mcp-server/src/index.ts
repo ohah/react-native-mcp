@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
  * React Native MCP 서버 진입점
+ * electron-mcp-server 패턴: Stdio transport + registerAllTools
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { registerAllTools } from './tools';
 
 export const VERSION = '0.1.0';
 
@@ -17,7 +19,7 @@ async function main() {
     version: VERSION,
   });
 
-  // TODO: registerAllTools(server);
+  registerAllTools(server);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
