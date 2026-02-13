@@ -7,11 +7,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const target = path.join(__dirname, '..', 'dist', 'index.js');
+const pkgRoot = path.join(__dirname, '..');
+const distIndex = path.join(pkgRoot, 'dist', 'index.js');
+const runScript = path.join(pkgRoot, 'run-mcp-server.sh');
 
-if (!fs.existsSync(target)) {
-  console.error(`[chmod-dist] Expected build output not found: ${target}`);
+if (!fs.existsSync(distIndex)) {
+  console.error(`[chmod-dist] Expected build output not found: ${distIndex}`);
   process.exitCode = 1;
 } else if (process.platform !== 'win32') {
-  fs.chmodSync(target, 0o755);
+  fs.chmodSync(distIndex, 0o755);
+  if (fs.existsSync(runScript)) fs.chmodSync(runScript, 0o755);
 }

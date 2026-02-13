@@ -15,16 +15,19 @@ import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 
 const MCP_RUNTIME_ID = '__REACT_NATIVE_MCP__';
+const RUNTIME_MODULE_ID = '@ohah/react-native-mcp-server/runtime';
 
 /** traverse visitor에서 받는 path (타입만 명시) */
 interface TraversePath {
   node: t.Node;
   replaceWith(node: t.Node): void;
+  findParent(test: (p: unknown) => boolean): unknown;
 }
 
 /**
- * 소스 코드를 AST로 파싱한 뒤 AppRegistry.registerComponent 호출을
- * __REACT_NATIVE_MCP__.registerComponent(...) 로 감싼 코드로 변환
+ * 소스 코드를 AST로 파싱한 뒤:
+ * 1) 진입점 상단에 MCP 런타임 require 주입
+ * 2) AppRegistry.registerComponent → __REACT_NATIVE_MCP__.registerComponent 치환
  *
  * @param src - 변환할 소스 문자열
  * @param filename - 파일 경로 (소스맵용, 선택)
@@ -37,6 +40,8 @@ export async function transformSource(src: string, filename?: string): Promise<{
     sourceFilename: filename ?? 'entry.js',
   });
 
+  let runtimeInjected = false;
+
   traverse(ast, {
     CallExpression(path: TraversePath) {
       const node = path.node;
@@ -45,6 +50,20 @@ export async function transformSource(src: string, filename?: string): Promise<{
       const { object, property } = node.callee;
       if (!t.isIdentifier(object) || !t.isIdentifier(property)) return;
       if (object.name !== 'AppRegistry' || property.name !== 'registerComponent') return;
+
+      if (!runtimeInjected) {
+        const programPath = path.findParent(
+          (p) => (p as { isProgram?: () => boolean }).isProgram?.() === true
+        ) as { node: t.Program } | null | undefined;
+        if (programPath?.node?.body) {
+          programPath.node.body.unshift(
+            t.expressionStatement(
+              t.callExpression(t.identifier('require'), [t.stringLiteral(RUNTIME_MODULE_ID)])
+            )
+          );
+          runtimeInjected = true;
+        }
+      }
 
       // AppRegistry.registerComponent(...) → __REACT_NATIVE_MCP__.registerComponent(...)
       path.replaceWith(

@@ -24,6 +24,13 @@ describe('Metro AST transformer', () => {
     expect(code).not.toContain('AppRegistry.registerComponent');
   });
 
+  it('변환 시 진입점 상단에 MCP 런타임 require가 주입된다', async () => {
+    const src = `import { AppRegistry } from 'react-native';\nAppRegistry.registerComponent('App', () => App);`;
+    const { code } = await transformSource(src);
+    expect(code).toContain('@ohah/react-native-mcp-server/runtime');
+    expect(code).toMatch(/require\s*\(\s*['"]@ohah\/react-native-mcp-server\/runtime['"]\s*\)/);
+  });
+
   it('변환 후에도 import 문은 유지된다', async () => {
     const src = `import { AppRegistry } from 'react-native';\nAppRegistry.registerComponent('App', () => App);`;
     const { code } = await transformSource(src);

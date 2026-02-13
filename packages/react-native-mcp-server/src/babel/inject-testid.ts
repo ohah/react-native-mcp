@@ -71,14 +71,61 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
       const scope = state.stack[state.stack.length - 1];
       if (scope === undefined) return;
       const el = path.node;
-      const hasTestId = el.attributes.some(
+      const testIdAttr = el.attributes.find(
         (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'testID'
+      ) as t.JSXAttribute | undefined;
+      const hasTestId = !!testIdAttr;
+      if (!hasTestId) {
+        const tagName = getTagName(el.name);
+        const value = `${scope.componentName}-${scope.jsxIndex}-${tagName}`;
+        el.attributes.push(t.jsxAttribute(t.jsxIdentifier('testID'), t.stringLiteral(value)));
+        scope.jsxIndex += 1;
+      }
+      // testID + onPress 있으면 onPress를 등록 래퍼로 감싸서 MCP triggerPress 가능하게 함
+      const onPressAttr = el.attributes.find(
+        (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'onPress'
+      ) as t.JSXAttribute | undefined;
+      const tidAttr =
+        testIdAttr ??
+        (el.attributes.find(
+          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'testID'
+        ) as t.JSXAttribute | undefined);
+      if (!tidAttr?.value || !onPressAttr?.value) return;
+      const testIdValue = getTestIdStringLiteral(tidAttr);
+      if (testIdValue == null) return;
+      const rawExpr = t.isJSXExpressionContainer(onPressAttr.value)
+        ? onPressAttr.value.expression
+        : null;
+      if (!rawExpr || t.isJSXEmptyExpression(rawExpr)) return;
+      const onPressExpr = rawExpr as t.Expression;
+      const wrapper = t.callExpression(
+        t.functionExpression(
+          null,
+          [],
+          t.blockStatement([
+            t.variableDeclaration('var', [t.variableDeclarator(t.identifier('f'), onPressExpr)]),
+            t.expressionStatement(
+              t.logicalExpression(
+                '&&',
+                t.memberExpression(
+                  t.identifier('__REACT_NATIVE_MCP__'),
+                  t.identifier('registerPressHandler')
+                ),
+                t.callExpression(
+                  t.memberExpression(
+                    t.identifier('__REACT_NATIVE_MCP__'),
+                    t.identifier('registerPressHandler')
+                  ),
+                  [t.stringLiteral(testIdValue), t.identifier('f')]
+                )
+              )
+            ),
+            t.returnStatement(t.identifier('f')),
+          ])
+        ),
+        []
       );
-      if (hasTestId) return;
-      const tagName = getTagName(el.name);
-      const value = `${scope.componentName}-${scope.jsxIndex}-${tagName}`;
-      el.attributes.push(t.jsxAttribute(t.jsxIdentifier('testID'), t.stringLiteral(value)));
-      scope.jsxIndex += 1;
+      onPressAttr.value = t.jsxExpressionContainer(wrapper);
     },
   });
 
@@ -88,6 +135,17 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
   });
 
   return { code: output.code };
+}
+
+/**
+ * testID 속성에서 문자열 리터럴 값 추출 (없으면 null)
+ */
+function getTestIdStringLiteral(attr: t.JSXAttribute): string | null {
+  if (!attr.value) return null;
+  if (t.isStringLiteral(attr.value)) return attr.value.value;
+  if (t.isJSXExpressionContainer(attr.value) && t.isStringLiteral(attr.value.expression))
+    return attr.value.expression.value;
+  return null;
 }
 
 /**
