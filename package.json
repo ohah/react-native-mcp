@@ -12,6 +12,7 @@
     "dev": "bun scripts/dev.ts",
     "dev:all": "bun run --filter='*' dev",
     "dev:server": "bun run --filter='@ohah/react-native-mcp-server' dev",
+    "dev:demo": "bun run --filter react-native-mcp-demo-app start",
     "mcp": "bun run --filter @ohah/react-native-mcp-server mcp",
     "test": "bun run --filter @ohah/react-native-mcp-server test",
     "typecheck": "bunx tsc --noEmit -p packages/server",
