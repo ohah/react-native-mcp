@@ -1,0 +1,9 @@
+{
+  "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    "lib": ["ES2020", "DOM"],
+    "skipLibCheck": true
+  },
+  "include": ["**/*.ts", "**/*.tsx", "**/*.d.ts"],
+  "exclude": ["**/node_modules", "**/Pods"]
+}
