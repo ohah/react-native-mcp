@@ -4,8 +4,9 @@
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { registerEvalCode } from './eval-code';
+import type { AppSession } from '../websocket-server.js';
+import { registerEvalCode } from './eval-code.js';
 
-export function registerAllTools(server: McpServer): void {
-  registerEvalCode(server);
+export function registerAllTools(server: McpServer, appSession: AppSession): void {
+  registerEvalCode(server, appSession);
 }
