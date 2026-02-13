@@ -42,11 +42,18 @@
   },
   "dependencies": {},
   "devDependencies": {
+    "@babel/generator": "^7.26.0",
+    "@babel/parser": "^7.26.0",
+    "@babel/traverse": "^7.26.0",
+    "@babel/types": "^7.26.0",
     "@modelcontextprotocol/sdk": "^1.25.0",
+    "@types/babel__generator": "^7.6.8",
+    "@types/babel__traverse": "^7.28.0",
     "@types/bun": "latest",
     "@types/node": "^20.10.0",
     "@types/ws": "^8.5.0",
     "bunup": "^0.16.22",
+    "metro": "^0.82.0",
     "typescript": "^5.9.3",
     "ws": "^8.18.0",
     "zod": "^3.25.0"
