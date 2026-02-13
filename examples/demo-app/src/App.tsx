@@ -27,6 +27,36 @@ function App(): React.JSX.Element {
       >
         <Text style={styles.buttonText}>Count: {count}</Text>
       </Pressable>
+      <Pressable
+        style={({ pressed }) => [
+          styles.button,
+          styles.buttonSecondary,
+          pressed && styles.buttonPressed,
+        ]}
+        onPress={() => {
+          console.log('[Demo] Console button pressed at', new Date().toISOString());
+          console.warn('[Demo] Sample warning for MCP console monitoring');
+        }}
+        testID="demo-app-console-button"
+      >
+        <Text style={styles.buttonTextSecondary}>Console</Text>
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [
+          styles.button,
+          styles.buttonSecondary,
+          pressed && styles.buttonPressed,
+        ]}
+        onPress={() => {
+          fetch('https://httpbin.org/get?demo=1')
+            .then((res) => res.json())
+            .then((data) => console.log('[Demo] Network response:', data))
+            .catch((err) => console.warn('[Demo] Network error:', err));
+        }}
+        testID="demo-app-network-button"
+      >
+        <Text style={styles.buttonTextSecondary}>Network</Text>
+      </Pressable>
     </View>
   );
 }
@@ -61,11 +91,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#0066cc',
     borderRadius: 8,
+    marginTop: 12,
+  },
+  buttonSecondary: {
+    backgroundColor: '#444',
   },
   buttonPressed: {
     opacity: 0.8,
   },
   buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonTextSecondary: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

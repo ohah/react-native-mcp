@@ -6,24 +6,21 @@ MCP 서버 연동·테스트용 최소 React Native 예제 앱입니다.
 
 - Node.js >= 20
 - React Native 개발 환경 (Xcode, Android Studio, CocoaPods 등)
-- 모노레포 루트에서 `bun install` 완료
+- 데모 앱은 워크스페이스 밖에서 일반 설치(크롬 리모트 데브툴 등과 동일). **이 디렉터리에서 `npm install`** 필요.
 
 ## 실행
 
 ```bash
-# 루트에서 의존성 설치
-cd ../..
-bun install
-
-# 데모 앱 디렉터리로 이동
+# 데모 앱 디렉터리에서 의존성 설치 (일반 설치, 심링크 없음)
 cd examples/demo-app
+npm install
 
 # iOS: Pod 설치 후 실행
 cd ios && pod install && cd ..
-bun run ios
+bun run ios   # 또는 npm run ios
 
 # Android
-bun run android
+bun run android   # 또는 npm run android
 
 # Metro 번들러만 실행
 bun run start
@@ -76,9 +73,9 @@ grep -oE 'testID:\s*"[^"]+"' /tmp/out.js | head -5     # 주입된 testID 예시
 - **testID**: 앱을 실행한 뒤 E2E/Detox에서 `testID="demo-app-title"` 또는 자동 주입된 `App-0-View` 등으로 요소를 조회해 보면 됩니다.
 - **AppRegistry 래퍼**: MCP 서버로 앱에 연결했을 때, 등록된 앱 컴포넌트가 MCP 쪽에서 보이면 래퍼가 적용된 것입니다.
 
-## Phase 1: eval_code 사용법
+## Phase 1: evaluate_script 사용법
 
-MCP 서버와 앱이 WebSocket(12300)으로 연결되면, Cursor/Claude에서 `eval_code` 도구로 앱 컨텍스트에서 JavaScript를 실행할 수 있습니다.
+MCP 서버와 앱이 WebSocket(12300)으로 연결되면, Cursor/Claude에서 `evaluate_script` 도구로 앱 컨텍스트에서 JavaScript 함수를 실행할 수 있습니다.
 
 1. **MCP 서버 실행** (stdio, Cursor에서 사용 시 Cursor가 자동 실행)
    ```bash
@@ -94,4 +91,4 @@ MCP 서버와 앱이 WebSocket(12300)으로 연결되면, Cursor/Claude에서 `e
    bun run ios
    # 또는 bun run android
    ```
-4. 앱이 로드되면 런타임이 `ws://localhost:12300`에 자동 연결됩니다. Cursor에서 MCP 도구 `eval_code`를 호출해 예: `1 + 2` 또는 `require('react-native').Platform.OS` 같은 코드를 실행하면 결과가 반환됩니다.
+4. 앱이 로드되면 런타임이 `ws://localhost:12300`에 자동 연결됩니다. Cursor에서 MCP 도구 `evaluate_script`를 호출해 예: function `() => 1 + 2` 또는 `() => require('react-native').Platform.OS` 같은 함수를 실행하면 결과가 반환됩니다.
