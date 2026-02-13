@@ -41,10 +41,10 @@ Or use with `npx` without installation.
 4. Add Metro plugin to your React Native app:
 
 ```js
-// metro.config.js
-const { withReactNativeMCP } = require('@ohah/react-native-mcp-server/metro-plugin');
+// metro.config.mjs
+import { withReactNativeMCP } from '@ohah/react-native-mcp-server/metro-plugin';
 
-module.exports = withReactNativeMCP({
+export default withReactNativeMCP({
   // your existing Metro config
 });
 ```
@@ -127,11 +127,8 @@ React Native App (iOS/Android)
 packages/
 └── react-native-mcp-server/    # Single package with everything
     ├── src/
-    │   ├── index.ts            # CLI entry point
-    │   ├── server/             # MCP + WebSocket server
-    │   ├── tools/              # MCP Tools
-    │   ├── metro-plugin/       # Metro plugin
-    │   └── runtime/            # Auto-injected runtime code
+    │   └── index.ts            # CLI entry point (MCP server + CLI)
+    ├── tests/                  # Test files
     └── package.json
 ```
 

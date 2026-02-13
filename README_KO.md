@@ -39,10 +39,10 @@ npm install -g @ohah/react-native-mcp-server
 4. React Native 앱에 Metro 플러그인 추가:
 
 ```js
-// metro.config.js
-const { withReactNativeMCP } = require('@ohah/react-native-mcp-server/metro-plugin');
+// metro.config.mjs (ESM 구성 파일)
+import { withReactNativeMCP } from '@ohah/react-native-mcp-server/metro-plugin';
 
-module.exports = withReactNativeMCP({
+export default withReactNativeMCP({
   // 기존 Metro 설정
 });
 ```
@@ -125,11 +125,8 @@ React Native 앱 (iOS/Android)
 packages/
 └── react-native-mcp-server/    # 모든 기능을 포함한 단일 패키지
     ├── src/
-    │   ├── index.ts            # CLI 진입점
-    │   ├── server/             # MCP + WebSocket 서버
-    │   ├── tools/              # MCP Tools
-    │   ├── metro-plugin/       # Metro 플러그인
-    │   └── runtime/            # 자동 주입되는 런타임 코드
+    │   └── index.ts            # MCP 서버 및 CLI 진입점
+    ├── tests/                  # 테스트 코드
     └── package.json
 ```
 
