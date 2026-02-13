@@ -141,19 +141,22 @@ React Native 앱을 AI가 제어하고 모니터링할 수 있도록 MCP 서버 
 
 ### 3.1 패키지 구조
 
+**현재**: 서버·transformer·런타임이 `react-native-mcp-server` 한 패키지에 통합됨.
+
 ```
 react-native-mcp/
 ├── packages/
-│   ├── server/              # MCP 서버 (PC에서 실행)
-│   ├── metro-plugin/        # Metro 번들러 플러그인
-│   ├── babel-plugin/        # Babel AST 변환 플러그인
-│   ├── runtime/             # 앱에 자동 주입되는 런타임 코드
-│   └── native-snapshot/     # 스크린샷 네이티브 모듈
+│   └── react-native-mcp-server/   # MCP 서버 + Metro transformer + Babel(inject-testid) + runtime
+│       ├── src/ (index, websocket-server, tools/eval-code, babel/inject-testid, metro/transform-source)
+│       ├── runtime.js              # 앱 주입 런타임
+│       └── metro-transformer.cjs   # 앱 Metro에서 사용
 ├── examples/
-│   └── demo-app/            # 테스트용 RN 앱
+│   └── demo-app/                   # 테스트용 RN 앱
 └── docs/
-    └── DESIGN.md            # 이 문서
+    └── DESIGN.md
 ```
+
+(향후 분리 가능: metro-plugin, babel-plugin, runtime, native-snapshot)
 
 ### 3.2 데이터 흐름
 
@@ -165,7 +168,7 @@ react-native-mcp/
 ┌───────────────────▼─────────────────────────────┐
 │  MCP Server (packages/server)                   │
 │  - Tools: get_component_tree, eval_code, etc.   │
-│  - WebSocket Server (ws://localhost:9223)       │
+│  - WebSocket Server (ws://localhost:12300)      │
 └───────────────────┬─────────────────────────────┘
                     │ WebSocket
 ┌───────────────────▼─────────────────────────────┐
@@ -216,9 +219,9 @@ App 실행 → MCP 코드 완전 제거됨
 
 ## 4. 패키지 상세 스펙
 
-### 4.1 packages/server
+### 4.1 packages/react-native-mcp-server (서버 역할)
 
-**역할**: MCP 프로토콜 서버 + WebSocket 서버
+**역할**: MCP 프로토콜 서버 + WebSocket 서버 + Metro transformer + Babel 변환 + 런타임
 
 **의존성**:
 
@@ -229,31 +232,33 @@ App 실행 → MCP 코드 완전 제거됨
 **주요 파일**:
 
 ```
-packages/server/
+packages/react-native-mcp-server/
 ├── src/
-│   ├── index.ts              # 진입점 (stdio transport)
-│   ├── websocket-server.ts   # WS 서버 (앱 연결)
+│   ├── index.ts                 # 진입점 (stdio transport)
+│   ├── websocket-server.ts      # WS 서버 (앱 연결, 12300)
 │   ├── tools/
-│   │   ├── index.ts          # 도구 등록
-│   │   ├── component-tree.ts # get_component_tree
-│   │   ├── eval-code.ts      # eval_code
-│   │   ├── screenshot.ts     # take_screenshot
-│   │   └── ...
-│   └── utils/
+│   │   ├── index.ts             # 도구 등록
+│   │   └── eval-code.ts         # eval_code ✅
+│   ├── babel/
+│   │   └── inject-testid.ts     # testID 자동 주입 + registerPressHandler 주입 ✅
+│   ├── metro/
+│   │   └── transform-source.ts  # 진입점 runtime 주입 + registerComponent 래핑 ✅
+│   └── transformer-entry.ts    # Metro에서 로드하는 진입점
+├── runtime.js                   # 앱에 주입되는 런타임 (WebSocket 클라이언트, eval, triggerPress) ✅
+├── metro-transformer.cjs        # Metro babelTransformerPath
 └── scripts/
-    └── chmod-dist.mjs        # 빌드 후 실행 권한
+    └── chmod-dist.mjs           # 빌드 후 실행 권한
 ```
 
-**제공 Tools** (예정):
+**제공 Tools**:
 
-- `get_component_tree` - Fiber tree 조회
-- `find_component` - testID/경로로 검색
-- `eval_code` - 앱에서 코드 실행
-- `click_component` - 컴포넌트 클릭
-- `set_props` - props 변경
-- `take_screenshot` - 스크린샷
-- `list_network_requests` - 네트워크 로그
-- `get_console_logs` - 콘솔 로그
+- `eval_code` - 앱에서 코드 실행 ✅ (triggerPress 등 호출 가능)
+- `get_component_tree` - (예정)
+- `find_component` - (예정)
+- `click_component` - eval_code로 `triggerPress(testID)` 호출로 대체 ✅
+- `set_props` - (예정)
+- `take_screenshot` - (예정)
+- `list_network_requests` / `get_console_logs` - (예정)
 
 ### 4.2 packages/metro-plugin
 
@@ -360,7 +365,7 @@ module.exports = {
 // 앱 진입점에 Metro가 자동 삽입
 if (__DEV__) {
   require('@ohah/react-native-mcp-runtime').initialize({
-    serverUrl: 'ws://localhost:9223',
+    serverUrl: 'ws://localhost:12300',
   });
 }
 ```
@@ -421,29 +426,31 @@ const base64Image = await RNMCPSnapshot.captureScreen();
 
 ## 5. 구현 단계 (Phase별)
 
+**현재 구현 상태**: 서버·Metro transformer·Babel 변환·런타임이 `packages/react-native-mcp-server` 한 패키지에 통합되어 있음. 별도 metro-plugin / babel-plugin / runtime 패키지는 없음.
+
 ### Phase 1: 기본 인프라 ✨ (MVP)
 
 **목표**: WebSocket + eval로 기본 제어 가능
 
 **구현**:
 
-- [ ] MCP 서버 기본 구조
-  - [ ] stdio transport 구현
-  - [ ] WebSocket 서버 추가 (ws://localhost:9223)
-  - [ ] 기본 도구 1개: `eval_code`
-- [ ] Runtime 패키지
-  - [ ] WebSocket 클라이언트
-  - [ ] eval bridge 구현
-  - [ ] `__DEV__` 플래그 처리
-- [ ] Metro Plugin 기본
-  - [ ] runtime 자동 주입
-  - [ ] HMR 통합
+- [x] MCP 서버 기본 구조
+  - [x] stdio transport 구현
+  - [x] WebSocket 서버 추가 (ws://localhost:12300)
+  - [x] 기본 도구 1개: `eval_code`
+- [x] Runtime (runtime.js, 서버 패키지 내)
+  - [x] WebSocket 클라이언트
+  - [x] eval bridge 구현
+  - [x] `__DEV__` 플래그 처리
+- [x] Metro Transformer (서버 패키지 내 metro-transformer.cjs)
+  - [x] runtime 자동 주입 (진입점에 require + registerComponent 래핑)
+  - [ ] HMR 통합 (미구현, MCP 전용 WebSocket 12300 사용)
 
-- [ ] 테스트
-  - [ ] 데모 앱 생성
-  - [ ] MCP로 코드 실행 확인
+- [x] 테스트
+  - [x] 데모 앱 생성 (examples/demo-app)
+  - [x] MCP로 코드 실행 확인
 
-**산출물**: AI가 앱에서 임의 코드 실행 가능
+**산출물**: AI가 앱에서 임의 코드 실행 가능 ✅
 
 ### Phase 2: Component Tree 읽기
 
@@ -470,19 +477,19 @@ const base64Image = await RNMCPSnapshot.captureScreen();
 
 **구현**:
 
-- [ ] Babel Plugin 개발
-  - [ ] AST visitor 구현
-  - [ ] 컴포넌트 감지 (JSX)
-  - [ ] testID 자동 생성 및 주입
-  - [ ] 추적 코드 삽입
+- [x] Babel 변환 (서버 패키지 내 inject-testid.ts, Metro transformer에서 호출)
+  - [x] AST visitor 구현
+  - [x] 컴포넌트 감지 (JSX)
+  - [x] testID 자동 생성 및 주입
+  - [ ] 추적 코드 삽입 (미구현)
 - [ ] 프로덕션 제거 로직
-  - [ ] `__DEV__` 조건부 컴파일
+  - [ ] `__DEV__` 조건부 컴파일 (Babel 주입은 항상 적용, runtime만 **DEV** 시 연결)
   - [ ] Dead code elimination 검증
-- [ ] MCP Tools 추가
-  - [ ] `click_component` - testID로 onPress 트리거
-  - [ ] `set_props` - props 변경
+- [x] MCP 조작 (eval_code로 구현)
+  - [x] testID로 onPress 트리거 (runtime `triggerPress(testID)` + Babel에서 `registerPressHandler` 주입)
+  - [ ] `set_props` - props 변경 (미구현)
 
-**산출물**: AI가 컴포넌트 선택 및 조작
+**산출물**: AI가 컴포넌트 선택 및 조작 (버튼 클릭 등) ✅
 
 ### Phase 4: Native Screenshot
 
@@ -580,9 +587,9 @@ const base64Image = await RNMCPSnapshot.captureScreen();
 
 ### Phase 1 (MVP)
 
-- [ ] MCP 서버가 Cursor/Claude에서 인식
-- [ ] 앱에서 코드 실행 가능
-- [ ] WebSocket 연결 안정
+- [x] MCP 서버가 Cursor/Claude에서 인식
+- [x] 앱에서 코드 실행 가능 (eval_code)
+- [x] WebSocket 연결 안정 (12300)
 
 ### Phase 2
 
@@ -591,7 +598,7 @@ const base64Image = await RNMCPSnapshot.captureScreen();
 
 ### Phase 3
 
-- [ ] AI가 버튼 클릭 등 조작
+- [x] AI가 버튼 클릭 등 조작 (triggerPress via eval_code)
 - [ ] 프로덕션 빌드에서 코드 완전 제거
 
 ### Phase 4
@@ -608,9 +615,9 @@ const base64Image = await RNMCPSnapshot.captureScreen();
 
 ## 9. 다음 단계
 
-1. **Phase 1 구현 시작**
-2. **데모 앱 생성**
-3. **반복 테스트**
+1. **Phase 2**: Fiber Hook + get_component_tree / find_component
+2. **Phase 3 보완**: set_props, 추적 코드, 프로덕션 제거 검증
+3. **Phase 4**: Native Screenshot
 4. **피드백 반영**
 
 이 설계는 실험적이며, 구현 중 발견되는 제약사항에 따라 수정 가능합니다.
