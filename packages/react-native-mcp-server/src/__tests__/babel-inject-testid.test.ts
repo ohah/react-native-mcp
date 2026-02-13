@@ -124,4 +124,21 @@ export default () => (
     expect(code).toContain('testID="Anonymous-0-View"');
     expect(code).toContain('testID="Anonymous-1-Text"');
   });
+
+  it('testID와 onPress가 있으면 onPress를 registerPressHandler 래퍼로 감싼다', async () => {
+    const src = `
+function App() {
+  const [n, setN] = useState(0);
+  return (
+    <Pressable testID="demo-app-counter-button" onPress={() => setN((c) => c + 1)}>
+      <Text>Count: {n}</Text>
+    </Pressable>
+  );
+}
+`;
+    const { code } = await injectTestIds(src);
+    expect(code).toContain('__REACT_NATIVE_MCP__.registerPressHandler');
+    expect(code).toContain('demo-app-counter-button');
+    expect(code).toContain('onPress=');
+  });
 });
