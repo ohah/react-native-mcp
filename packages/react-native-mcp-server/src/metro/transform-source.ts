@@ -5,8 +5,12 @@
  * MCP 런타임 래퍼로 감싸서, CLI 테스트로 동작 여부를 검증할 수 있게 한다.
  */
 
-import traverse from '@babel/traverse';
-import generate from '@babel/generator';
+// 번들 후 CJS/ESM interop으로 default가 달라질 수 있음
+import traverseModule from '@babel/traverse';
+import generateModule from '@babel/generator';
+
+const traverse = (traverseModule as { default?: typeof traverseModule }).default ?? traverseModule;
+const generate = (generateModule as { default?: typeof generateModule }).default ?? generateModule;
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 

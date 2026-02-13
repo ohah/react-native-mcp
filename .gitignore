@@ -101,6 +101,9 @@ yarn-debug.*
 yarn-error.*
 metro-*.log
 
+# transformer 검증 스크립트 임시 번들
+.tmp-verify-bundle.js
+
 # 브랜치/커밋 요약 (PR 바디에만 사용, 커밋하지 않음)
 branch-summary.md
 commit-summary.md
