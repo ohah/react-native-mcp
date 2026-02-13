@@ -16,7 +16,7 @@ PR 제목, 본문, `branch-summary.md` 모두 **한국어**로 작성한다.
 5. **이슈 연결**: `gh issue list --state open --limit 50` 실행. 관련 이슈 있으면 본문에 `Relates to #<번호>` 또는 `Fixes #<번호>` 추가.
 6. **PR 생성·업데이트**:
    - 열린 PR 없음 → `gh pr create --head <현재브랜치> --base <base> --title "<제목>" --body-file branch-summary.md --assignee @me`
-   - 열린 PR 있음 → 본문(필요 시 base) 업데이트.
+   - 열린 PR 있음 → **REST API로** 제목·본문만 수정 (아래 "구형 API 사용 금지" 참고).
 7. **Push**: 푸시 안 된 커밋 있으면 `git push origin <현재브랜치>`.
 8. **담당자**: PR 생성 시 항상 `--assignee @me`.
 9. **라벨**: `gh label list` 확인 후 PR 타입에 맞는 라벨 추가 (feat → enhancement, fix → bug, docs → documentation 등).
@@ -38,6 +38,21 @@ PR 제목, 본문, `branch-summary.md` 모두 **한국어**로 작성한다.
 
 - **제목(목적)**: 이 PR의 목적
 - **작업 내용**: 무엇을·왜 변경했는지 산문체로 작성
+
+## 구형 API 사용 금지
+
+- **`gh pr edit`로 PR 제목/본문을 수정하지 말 것.**  
+  `gh pr edit`는 내부적으로 deprecated된 GraphQL 필드(Projects classic, `repository.pullRequest.projectCards`)를 사용해, 제목/본문만 바꾸는 경우에도 deprecation 경고가 나오고 **exit code 1**로 실패할 수 있음.
+- **PR 제목·본문 수정 시**: REST API를 사용한다. 본문은 파일 내용을 JSON으로 넣어야 하므로 `jq`로 payload 생성 후 `--input -`로 전달한다.
+  ```bash
+  REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+  jq -n --rawfile b branch-summary.md --arg t "제목" '{title: $t, body: $b}' | \
+    gh api -X PATCH "repos/${REPO}/pulls/PR번호" --input -
+  ```
+- **라벨 추가**: `gh pr edit --add-label` 대신 REST API. JSON 배열은 `--input -`로 전달한다.
+  ```bash
+  echo '{"labels":["enhancement"]}' | gh api -X POST "repos/${REPO}/issues/PR번호/labels" --input -
+  ```
 
 ## 참고
 
