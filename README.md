@@ -108,6 +108,17 @@ Restart the Copilot CLI.
   - `bun run mcp` - Run MCP server
   - `bun run dev` - Watch mode
   - `bun run test` - Run tests
+  - `bun run test:mcp` - Spawn server, call `eval_code` via stdio (no app: "No app connected"; with app: result)
+
+### Testing the MCP server
+
+From the repo root (after `bun install`):
+
+```bash
+bun run test:mcp
+```
+
+This builds the server, starts it, sends MCP `initialize` → `notifications/initialized` → `tools/call` (`eval_code`, `1 + 2`), and prints the result. Without a connected React Native app you see "No React Native app connected". With the demo app running and connected to `ws://localhost:12300`, you see the evaluation result (e.g. `3`).
 
 ## Architecture
 
