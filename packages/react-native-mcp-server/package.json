@@ -25,11 +25,22 @@
   },
   "files": [
     "dist",
-    "runtime.js"
+    "runtime.js",
+    "cdp-interceptor.cjs"
   ],
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./cdp-interceptor": "./cdp-interceptor.cjs",
+    "./runtime": "./runtime.js",
+    "./runtime.js": "./runtime.js"
+  },
   "publishConfig": {
     "access": "public"
   },

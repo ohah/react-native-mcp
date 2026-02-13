@@ -10,6 +10,7 @@
 'use strict';
 
 var _pressHandlers = {};
+var _webViews = {};
 var MCP = {
   registerComponent: function (name, component) {
     return require('react-native').AppRegistry.registerComponent(name, component);
@@ -26,6 +27,33 @@ var MCP = {
   getRegisteredPressTestIDs: function () {
     return Object.keys(_pressHandlers);
   },
+  /**
+   * 앱 내 WebView를 MCP에서 제어할 수 있도록 등록.
+   * ref: react-native-webview의 ref (injectJavaScript 메서드 필요)
+   * id: 웹뷰 식별자 (예: 'main'). click_webview 호출 시 사용.
+   */
+  registerWebView: function (ref, id) {
+    if (ref && typeof id === 'string') _webViews[id] = ref;
+  },
+  /**
+   * 등록된 WebView 내부에서 CSS selector에 해당하는 요소를 클릭.
+   * WebView ref.injectJavaScript로 document.querySelector(selector).click() 실행.
+   */
+  clickInWebView: function (id, selector) {
+    var ref = _webViews[id];
+    if (!ref || typeof ref.injectJavaScript !== 'function')
+      return { ok: false, error: 'WebView not found or injectJavaScript not available' };
+    var script =
+      '(function(){ var el = document.querySelector(' +
+      JSON.stringify(selector) +
+      '); if (el) el.click(); })();';
+    ref.injectJavaScript(script);
+    return { ok: true };
+  },
+  /** 디버그: 등록된 웹뷰 id 목록 */
+  getRegisteredWebViewIds: function () {
+    return Object.keys(_webViews);
+  },
 };
 if (typeof global !== 'undefined') global.__REACT_NATIVE_MCP__ = MCP;
 if (typeof globalThis !== 'undefined') globalThis.__REACT_NATIVE_MCP__ = MCP;
@@ -40,11 +68,31 @@ if (typeof __DEV__ !== 'undefined' && __DEV__) {
   var maxReconnectDelay = 30000;
 
   function connect() {
-    ws = new WebSocket(wsUrl);
+    var WS =
+      typeof WebSocket !== 'undefined'
+        ? WebSocket
+        : typeof global !== 'undefined' && global.WebSocket
+          ? global.WebSocket
+          : null;
+    if (!WS) {
+      _reconnectTimer = setTimeout(connect, 100);
+      return;
+    }
+    ws = new WS(wsUrl);
     ws.onopen = function () {
       reconnectDelay = 1000;
       if (_reconnectTimer != null) clearTimeout(_reconnectTimer);
       _reconnectTimer = null;
+      // 앱이 로드된 Metro origin 전송 → MCP가 list_console_messages 등에서 동일 포트 사용
+      try {
+        var rn = require('react-native');
+        var scriptURL =
+          rn.NativeModules && rn.NativeModules.SourceCode && rn.NativeModules.SourceCode.scriptURL;
+        if (scriptURL && typeof scriptURL === 'string') {
+          var origin = new URL(scriptURL).origin;
+          ws.send(JSON.stringify({ type: 'init', metroBaseUrl: origin }));
+        }
+      } catch (_e) {}
     };
     ws.onmessage = function (ev) {
       try {
@@ -54,7 +102,7 @@ if (typeof __DEV__ !== 'undefined' && __DEV__) {
           var errMsg = null;
           try {
             // Phase 1: 원격 코드 실행 (개발 모드 전용, MCP 서버가 localhost에서만 동작)
-            // oxlint-disable-next-line no-eval -- MCP eval_code 도구용 의도적 사용
+            // oxlint-disable-next-line no-eval -- MCP evaluate_script 도구용 의도적 사용
             result = eval(msg.params && msg.params.code != null ? msg.params.code : 'undefined');
           } catch (e) {
             errMsg = e && e.message != null ? e.message : String(e);
@@ -80,5 +128,6 @@ if (typeof __DEV__ !== 'undefined' && __DEV__) {
     ws.onerror = function () {};
   }
 
-  connect();
+  // 런타임 로드 직후엔 WebSocket이 없을 수 있음 → 한 틱 미뤄서 연결
+  setTimeout(connect, 0);
 }
