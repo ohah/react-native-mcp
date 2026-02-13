@@ -21,6 +21,9 @@ const mcpTransformerPath = path.resolve(
 const config = getDefaultConfig(__dirname);
 
 module.exports = mergeConfig(config, {
+  server: {
+    port: 8230,
+  },
   watchFolders: [workspaceRoot],
   transformer: {
     ...config.transformer,

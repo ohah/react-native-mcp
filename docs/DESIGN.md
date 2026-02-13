@@ -57,7 +57,7 @@ React Native 앱을 AI가 제어하고 모니터링할 수 있도록 MCP 서버 
 
 #### WebSocket + HMR
 
-- Metro는 이미 `ws://localhost:8081`로 HMR 제공
+- Metro는 이미 `ws://localhost:8230`으로 HMR 제공 (demo-app 기본 포트)
 - 별도 WebSocket 서버 추가 가능
 - 양방향 통신으로 명령 전송 및 결과 수신
 
