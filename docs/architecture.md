@@ -5,8 +5,7 @@
 ```
 react-native-mcp/
 ├── packages/
-│   ├── server/           # MCP 서버
-│   └── react-native/     # React Native 클라이언트 라이브러리
-├── examples/             # 예제 앱
-└── scripts/              # 빌드/개발 스크립트
+│   └── react-native-mcp-server/   # MCP 서버 (Metro 플러그인·도구 포함)
+├── docs/                  # 프로젝트 문서
+└── scripts/               # 빌드/개발 스크립트
 ```
