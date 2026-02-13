@@ -99,6 +99,7 @@ fix(react-native): WebSocket 재연결 처리 수정
    - 포맷팅 검사를 통과한 후에만 커밋을 진행합니다
 
 2. **린트 검사** (필수):
+
    ```bash
    mise exec -- bun run lint
    ```
