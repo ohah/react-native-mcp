@@ -1,7 +1,6 @@
 /**
  * MCP 도구: click
- * Chrome DevTools MCP 스펙. testID(uid)로 요소 클릭. 내부적으로 triggerPress 호출.
- * @see docs/chrome-devtools-mcp-spec-alignment.md
+ * testID(uid)로 요소 클릭. triggerPress 호출.
  */
 
 import { z } from 'zod';
@@ -47,10 +46,10 @@ export function registerClick(server: McpServer, appSession: AppSession): void {
         };
       }
 
-      const triggerCode = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.triggerPress && __REACT_NATIVE_MCP__.triggerPress(${JSON.stringify(uid)}); })();`;
+      const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.triggerPress && __REACT_NATIVE_MCP__.triggerPress(${JSON.stringify(uid)}); })();`;
       try {
         const res = await appSession.sendRequest(
-          { method: 'eval', params: { code: triggerCode } },
+          { method: 'eval', params: { code } },
           10000,
           deviceId,
           platform
@@ -58,19 +57,29 @@ export function registerClick(server: McpServer, appSession: AppSession): void {
         if (res.error != null) {
           return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }
+
+        const fired = res.result === true;
+        if (!fired) {
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: 'No handler for this testID (element may not have onPress + testID).',
+              },
+            ],
+          };
+        }
+
         if (dblClick) {
           await appSession.sendRequest(
-            { method: 'eval', params: { code: triggerCode } },
+            { method: 'eval', params: { code } },
             10000,
             deviceId,
             platform
           );
-          return { content: [{ type: 'text' as const, text: 'pressed twice (dblClick)' }] };
         }
-        const fired = res.result === true;
-        const text = fired
-          ? 'pressed'
-          : 'No handler for this testID (element may not have onPress + testID, or Babel transform not applied).';
+
+        const text = dblClick ? 'pressed twice (dblClick)' : 'pressed';
         return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

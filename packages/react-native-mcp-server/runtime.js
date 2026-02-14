@@ -492,6 +492,25 @@ var MCP = {
     }
     return false;
   },
+  triggerLongPress: function (testID) {
+    var root = getFiberRoot();
+    if (!root) return false;
+    var found = (function find(fiber) {
+      if (!fiber) return null;
+      if (
+        fiber.memoizedProps &&
+        fiber.memoizedProps.testID === testID &&
+        typeof fiber.memoizedProps.onLongPress === 'function'
+      )
+        return fiber;
+      return find(fiber.child) || find(fiber.sibling);
+    })(root);
+    if (found) {
+      found.memoizedProps.onLongPress();
+      return true;
+    }
+    return false;
+  },
   getRegisteredPressTestIDs: function () {
     return Object.keys(_pressHandlers);
   },
@@ -659,6 +678,70 @@ var MCP = {
       return false;
     } catch (e) {
       return false;
+    }
+  },
+  /**
+   * Fiber 트리에서 라벨(텍스트)에 해당하는 onLongPress 노드들을 순서대로 수집한 뒤, index번째(0-based) 호출.
+   */
+  longPressByLabel: function (labelSubstring, index) {
+    if (typeof labelSubstring !== 'string' || !labelSubstring.trim()) return false;
+    try {
+      var root = getFiberRoot();
+      if (!root) return false;
+      var c = getRNComponents();
+      var search = labelSubstring.trim();
+      var matches = [];
+      function visitLP(fiber) {
+        if (!fiber) return;
+        var props = fiber.memoizedProps;
+        var onLP = props && props.onLongPress;
+        if (typeof onLP === 'function') {
+          var label = getLabel(fiber, c.Text, c.Image);
+          if (label.indexOf(search) !== -1) matches.push(onLP);
+          visitLP(fiber.sibling);
+          return;
+        }
+        visitLP(fiber.child);
+        visitLP(fiber.sibling);
+      }
+      visitLP(root);
+      var idx = typeof index === 'number' && index >= 0 ? index : 0;
+      if (matches[idx]) {
+        try {
+          matches[idx]();
+        } catch (e) {}
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  },
+  /**
+   * TextInput에 텍스트 입력. Fiber에서 testID 매칭 → onChangeText(text) 호출 + setNativeProps 동기화.
+   */
+  typeText: function (testID, text) {
+    try {
+      var root = getFiberRoot();
+      if (!root) return { ok: false, error: 'No Fiber root' };
+      var found = (function find(fiber) {
+        if (!fiber) return null;
+        if (
+          fiber.memoizedProps &&
+          fiber.memoizedProps.testID === testID &&
+          typeof fiber.memoizedProps.onChangeText === 'function'
+        )
+          return fiber;
+        return find(fiber.child) || find(fiber.sibling);
+      })(root);
+      if (!found) return { ok: false, error: 'TextInput not found: ' + testID };
+      found.memoizedProps.onChangeText(text);
+      if (found.stateNode && typeof found.stateNode.setNativeProps === 'function') {
+        found.stateNode.setNativeProps({ text: text });
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String(e) };
     }
   },
   registerWebView: function (ref, id) {
