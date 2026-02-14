@@ -464,3 +464,159 @@ describe('registerPressHandler + triggerPress', () => {
     expect(ids).toContain('my-id');
   });
 });
+
+// ─── triggerLongPress ─────────────────────────────────────────
+
+describe('triggerLongPress', () => {
+  beforeEach(() => clearMockFiberRoot());
+
+  it('Fiber에서 onLongPress 트리거 성공', () => {
+    let called = false;
+    const root = makeFiber('View', {}, [
+      makeFiber('Pressable', {
+        testID: 'lp-btn',
+        onLongPress: () => {
+          called = true;
+        },
+      }),
+    ]);
+    setMockFiberRoot(root);
+    const result = MCP.triggerLongPress('lp-btn');
+    expect(result).toBe(true);
+    expect(called).toBe(true);
+  });
+
+  it('testID 없으면 false 반환', () => {
+    const root = makeFiber('View', {}, [
+      makeFiber('Pressable', {
+        onLongPress: () => {},
+      }),
+    ]);
+    setMockFiberRoot(root);
+    expect(MCP.triggerLongPress('nonexistent')).toBe(false);
+  });
+
+  it('onLongPress 없으면 false 반환', () => {
+    const root = makeFiber('View', {}, [
+      makeFiber('Pressable', { testID: 'no-lp', onPress: () => {} }),
+    ]);
+    setMockFiberRoot(root);
+    expect(MCP.triggerLongPress('no-lp')).toBe(false);
+  });
+
+  it('Fiber root 없으면 false', () => {
+    expect(MCP.triggerLongPress('any')).toBe(false);
+  });
+});
+
+// ─── longPressByLabel ─────────────────────────────────────────
+
+describe('longPressByLabel', () => {
+  beforeEach(() => clearMockFiberRoot());
+
+  it('label substring 매칭으로 long press 트리거', () => {
+    let called = false;
+    const root = makeFiber('View', {}, [
+      makeFiber(
+        'Pressable',
+        {
+          onLongPress: () => {
+            called = true;
+          },
+        },
+        [makeFiber(MockText, { children: '길게 누르기' })]
+      ),
+    ]);
+    setMockFiberRoot(root);
+    const result = MCP.longPressByLabel('길게');
+    expect(result).toBe(true);
+    expect(called).toBe(true);
+  });
+
+  it('index로 n번째 매칭 선택', () => {
+    const calls: number[] = [];
+    const root = makeFiber('View', {}, [
+      makeFiber(
+        'Pressable',
+        {
+          onLongPress: () => {
+            calls.push(0);
+          },
+        },
+        [makeFiber(MockText, { children: '버튼' })]
+      ),
+      makeFiber(
+        'Pressable',
+        {
+          onLongPress: () => {
+            calls.push(1);
+          },
+        },
+        [makeFiber(MockText, { children: '버튼' })]
+      ),
+    ]);
+    setMockFiberRoot(root);
+    MCP.longPressByLabel('버튼', 1);
+    expect(calls).toEqual([1]);
+  });
+
+  it('매칭 없으면 false', () => {
+    const root = makeFiber('View', {}, [
+      makeFiber('Pressable', { onPress: () => {} }, [makeFiber(MockText, { children: '클릭만' })]),
+    ]);
+    setMockFiberRoot(root);
+    expect(MCP.longPressByLabel('클릭만')).toBe(false);
+  });
+});
+
+// ─── typeText ─────────────────────────────────────────────────
+
+describe('typeText', () => {
+  beforeEach(() => clearMockFiberRoot());
+
+  it('onChangeText 호출 성공', () => {
+    let received = '';
+    const root = makeFiber('View', {}, [
+      makeFiber('TextInput', {
+        testID: 'input-1',
+        onChangeText: (t: string) => {
+          received = t;
+        },
+      }),
+    ]);
+    setMockFiberRoot(root);
+    const result = MCP.typeText('input-1', 'hello') as { ok: boolean };
+    expect(result.ok).toBe(true);
+    expect(received).toBe('hello');
+  });
+
+  it('setNativeProps 호출 (stateNode 있을 때)', () => {
+    let nativeText = '';
+    const input = makeFiber('TextInput', {
+      testID: 'input-2',
+      onChangeText: () => {},
+    });
+    input.stateNode = {
+      setNativeProps: (props: { text: string }) => {
+        nativeText = props.text;
+      },
+    };
+    const root = makeFiber('View', {}, [input]);
+    setMockFiberRoot(root);
+    MCP.typeText('input-2', 'world');
+    expect(nativeText).toBe('world');
+  });
+
+  it('TextInput 없으면 에러 반환', () => {
+    const root = makeFiber('View', {}, []);
+    setMockFiberRoot(root);
+    const result = MCP.typeText('missing', 'text') as { ok: boolean; error: string };
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('not found');
+  });
+
+  it('Fiber root 없으면 에러', () => {
+    const result = MCP.typeText('any', 'text') as { ok: boolean; error: string };
+    expect(result.ok).toBe(false);
+  });
+});
