@@ -1,90 +1,118 @@
-# CDP 가로채기 라이브러리 제공 설계
+# CDP 이벤트 수집 설계
 
-Metro 쪽 패치(createDevMiddleware + customMessageHandler)를 **설치 가능한 라이브러리**로 제공할 때의 구조.
-
----
-
-## 1. 제공 형태
-
-- **패키지**: 기존 `@ohah/react-native-mcp-server` 안에 **진입점 하나** 추가.
-- **진입점**: `metro.config.js`에서 **한 번만** require하면 되는 CJS 파일.
-  - 예: `require('@ohah/react-native-mcp-server/cdp-interceptor')`
-  - side-effect만 있으면 되고, export는 없어도 됨.
+Metro에서 CDP(Chrome DevTools Protocol) 이벤트를 수집하는 구조.
 
 ---
 
-## 2. 진입점이 하는 일
+## 1. 현재 구현: 직접 CDP WebSocket 연결
 
-1. **createDevMiddleware 패치**
-   - `@react-native/dev-middleware`를 require한 뒤, `createDevMiddleware`를 래핑.
-   - 래핑된 함수는 호출 시 **옵션에 unstable_customInspectorMessageHandler**를 넣어서 원본에 넘김.
-   - customMessageHandler는 **디바이스→디버거, 디버거→디바이스 모든 CDP 메시지**를 수집해 **모듈 내부 저장소**에 push (Network, Console, Runtime, Debugger 등 전부).
+### 1.1 개요
 
-2. **미들웨어에 이벤트 노출 라우트 추가**
-   - `createDevMiddleware()` 반환값은 보통 `{ middleware, websocketEndpoints }`.
-   - `middleware`를 한 번 감싸서: `req.url === '/__mcp_cdp_events__'` 이면 수집된 CDP 이벤트 배열을 JSON으로 응답 (`{ events: [...] }`).
-   - 그 외는 기존 middleware 그대로 호출.
+MCP 서버가 Metro의 `/json` 엔드포인트에서 디버거 타겟을 발견하고, `webSocketDebuggerUrl`로 직접 WebSocket 연결. `node -r`이나 `metro.config.js` 수정 불필요.
 
-이렇게 하면 **Metro 서버에 GET /**mcp_cdp_events\*\*\*\* 가 생기고, MCP 서버(다른 프로세스)는 이 URL로 HTTP 요청해 전체 CDP 이벤트를 읽을 수 있음.
+### 1.2 흐름
 
----
+```
+RN 앱 시작
+  → runtime.js가 ws://localhost:12300 (MCP 서버)에 연결
+  → { type: 'init', metroBaseUrl: 'http://localhost:8230' } 전송
+  → MCP 서버가 GET http://localhost:8230/json 으로 타겟 목록 조회
+  → webSocketDebuggerUrl로 CDP WebSocket 연결
+  → Runtime.enable, Network.enable, Log.enable 전송
+  → CDP 이벤트를 in-memory 배열에 push (최대 2000건)
+```
 
-## 3. 파일 배치 (제안)
+### 1.3 핵심 코드
 
 ```
 packages/react-native-mcp-server/
-├── cdp-interceptor.cjs          # Metro용 진입점 (CJS, require 시 패치 적용)
 ├── src/
-│   └── cdp/
-│       ├── store.js             # 인메모리 저장소 (Network 이벤트 리스트)
-│       └── custom-handler.js    # handleDeviceMessage 로직 (선택: CJS로 분리)
-├── ...
+│   ├── tools/
+│   │   └── metro-cdp.ts          # CdpClient 싱글톤: /json → WebSocket → 이벤트 수집
+│   ├── websocket-server.ts       # 앱 init 수신 → setMetroBaseUrlFromApp() 호출
+│   └── __tests__/
+│       └── metro-cdp.test.ts     # CdpClient 테스트 (mock Metro/CDP 서버)
+└── runtime.js                    # 앱 측: metroBaseUrl 전송
 ```
 
-- **cdp-interceptor.cjs**: Metro config 로드 시점에 실행되므로 **반드시 CJS**. `require('@react-native/dev-middleware')` 후 패치 + middleware 래핑.
-- **store**: 같은 프로세스 안에서 customMessageHandler와 `/__mcp_network_log__` 핸들러가 공유하는 단일 저장소 (배열 또는 맵).
-- `@react-native/dev-middleware`는 **앱(React Native) 쪽 dependency**이므로, 이 패키지의 dependency에 넣지 않고 **peerDependencies** 또는 문서로만 명시.
+### 1.4 CdpClient 클래스
 
----
-
-## 4. 사용자(앱) 측 사용법
-
-**metro.config.js** 맨 위에 한 줄:
-
-```js
-require('@ohah/react-native-mcp-server/cdp-interceptor');
-
-const path = require('path');
-// ... 기존 config
-module.exports = { ... };
+```typescript
+class CdpClient {
+  async connect(metroBaseUrl: string); // /json fetch → WebSocket 연결 → 도메인 활성화
+  disconnect(); // WebSocket 종료 + reconnect 타이머 취소
+  getEvents(): CdpEventEntry[]; // in-memory 이벤트 반환
+  getLastEventTimestamp(): number | null;
+  isConnected(): boolean; // WebSocket.OPEN 상태 확인
+}
 ```
 
-- Metro를 띄우는 프로세스에서 위 config가 로드될 때 패치가 적용됨.
-- **엔드포인트** `/__mcp_cdp_events__` 는 config require만으로 등록됨 (runServer 패치).
-- **CDP 이벤트 수집**(콘솔/네트워크 등)을 쓰려면, CLI가 `@react-native/dev-middleware`를 require하기 **전에** Module.\_load 후크가 걸려 있어야 함. 따라서 Metro 시작 시 **node -r** 로 cdp-interceptor를 선로드해야 함:
-  ```bash
-  node -r @ohah/react-native-mcp-server/cdp-interceptor node_modules/.bin/react-native start --port 8230 --config ./metro.config.js
-  ```
-  package.json의 `scripts.start` 에 위 형태로 넣어 두면 `bun start` / `npm start` 시 이벤트가 수집됨.
+- **자동 재연결**: WebSocket 끊어지면 2초 후 `connect()` 재시도
+- **이벤트 필터링**: `method`가 있는 메시지만 수집 (CDP 응답(id-only)은 무시)
+
+### 1.5 장점
+
+- **설정 제로**: 사용자가 `node -r`이나 config 수정할 필요 없음
+- **프로세스 독립**: Metro와 같은 프로세스가 아니어도 동작
+- **Metro 포트 자동 감지**: 앱이 `NativeModules.SourceCode.scriptURL`에서 origin 추출
+
+### 1.6 제약
+
+- **타겟당 디버거 1개**: Metro는 같은 타겟에 WebSocket 1개만 허용. MCP가 연결 중이면 Chrome DevTools는 같은 타겟에 연결 불가.
+- **Android + iOS 동시 가능**: 별도 타겟이므로 충돌 없음.
 
 ---
 
-## 5. MCP 서버와의 연동
+## 2. 레거시: cdp-interceptor.cjs (Module.\_load 후크)
 
-- **list_cdp_events** / **list_network_requests** 등 도구: Metro가 떠 있는 **base URL** (예: `http://localhost:8230`)을 알고 있어야 함.
-  - 환경 변수(예: `METRO_BASE_URL`) 또는 기본값(예: `http://localhost:8230`)으로 해결.
-- 도구 내부에서 `fetch(METRO_BASE_URL + '/__mcp_cdp_events__')` 로 GET 후 JSON 파싱. 응답은 `{ events: Array<{ direction, method, params?, id?, timestamp }> }`. 클라이언트에서 `method.startsWith('Network.')` 등으로 필터링 가능.
+> **더 이상 필요하지 않음.** 직접 CDP 연결 도입 전의 구현으로, 참고용으로 남겨둠.
+
+### 2.1 방식
+
+1. `Module._load` 후크 → `@react-native/dev-middleware` 최초 로드 시 `createDevMiddleware` 래핑
+2. `unstable_customInspectorMessageHandler`로 모든 CDP 메시지를 eventStore에 push
+3. `unstable_extraMiddleware`로 `GET /__mcp_cdp_events__` 엔드포인트 등록
+4. MCP 서버가 HTTP로 이벤트 조회
+
+### 2.2 문제점
+
+- **`node -r` 필수**: CLI가 dev-middleware를 require하기 전에 Module.\_load 후크가 걸려야 함
+- **같은 프로세스 제약**: Metro와 같은 프로세스에서만 이벤트 접근 가능
+- **사용자 설정 필요**: `metro.config.js`에 require 1줄 + `package.json`에 `node -r` 추가
+
+### 2.3 파일
+
+```
+packages/react-native-mcp-server/
+└── cdp-interceptor.cjs    # Module._load 후크 + runServer 패치 + dev-middleware 래핑
+```
 
 ---
 
-## 6. 정리
+## 3. MCP 서버와의 연동
 
-| 항목                   | 내용                                                              |
-| ---------------------- | ----------------------------------------------------------------- |
-| 라이브러리 진입점      | `@ohah/react-native-mcp-server/cdp-interceptor` (CJS)             |
-| 사용자 작업            | metro.config.js 상단에 require 1줄                                |
-| 수집 대상              | 모든 CDP 이벤트 (device→debugger, debugger→device)                |
-| 저장소                 | 패키지 내부 인메모리(최대 2000건), 같은 Metro 프로세스에서만 접근 |
-| MCP가 이벤트 읽는 방법 | HTTP GET /**mcp_cdp_events** (Metro base URL 필요)                |
+### 3.1 이벤트 조회 (현재)
 
-이렇게 하면 “Metro에 플러그인 추가하듯이” 한 줄만 넣어도 CDP 가로채기가 켜지고, MCP는 별도 프로세스에서도 HTTP로 전체 CDP 이벤트(콘솔·네트워크 등)를 가져갈 수 있음.
+```typescript
+// metro-cdp.ts — in-memory 직접 반환
+fetchCdpEvents()     → CdpEventEntry[]
+fetchCdpEventsRaw()  → { events, lastEventTimestamp }
+getDebuggerStatus()  → { connected, lastEventTimestamp, eventCount }
+```
+
+### 3.2 도구에서 사용
+
+- `list_console_messages`: `fetchCdpEvents()`에서 `Runtime.consoleAPICalled` 필터링
+- `list_network_requests`: `fetchCdpEvents()`에서 `Network.*` 필터링
+- `get_debugger_status`: `getDebuggerStatus()`로 연결 상태 확인
+
+---
+
+## 4. 테스트
+
+```bash
+bun test packages/react-native-mcp-server/src/__tests__/metro-cdp.test.ts
+```
+
+- Mock HTTP + WebSocket 서버로 Metro 시뮬레이션
+- 자동 연결, 도메인 활성화, 이벤트 수집, disconnect, CDP 응답 필터링 검증
