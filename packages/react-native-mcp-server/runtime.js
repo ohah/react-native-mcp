@@ -936,7 +936,13 @@ var _origNativeLoggingHook = typeof global !== 'undefined' ? global.nativeLoggin
 if (typeof global !== 'undefined') {
   global.nativeLoggingHook = function (msg, level) {
     _consoleLogId++;
-    _consoleLogs.push({ id: _consoleLogId, message: msg, level: level, timestamp: Date.now() });
+    var messageStr = typeof msg === 'string' ? msg : JSON.stringify(msg);
+    _consoleLogs.push({
+      id: _consoleLogId,
+      message: messageStr,
+      level: level,
+      timestamp: Date.now(),
+    });
     if (_consoleLogs.length > _CONSOLE_BUFFER_SIZE) _consoleLogs.shift();
     if (typeof _origNativeLoggingHook === 'function') _origNativeLoggingHook(msg, level);
   };
