@@ -262,7 +262,6 @@ packages/react-native-mcp-server/
 - `scroll` - 등록된 ScrollView의 scrollTo 호출 ✅
 - `get_by_label` / `get_by_labels` - Fiber 트리에서 라벨 검색 + 디버그 정보 ✅
 - `get_debugger_status` - 앱 연결 상태 + 디바이스 목록 ✅
-- `get_metro_url` - Metro 번들러 Base URL 조회 ✅
 - `take_screenshot` - ADB(Android) / simctl(iOS 시뮬레이터)로 캡처 ✅
 - `list_pages` - 연결된 앱 페이지 목록 ✅
 - `list_console_messages` - CDP Runtime.consoleAPICalled 수집 (보류 — CDP 연결 기능 일시 비활성화)

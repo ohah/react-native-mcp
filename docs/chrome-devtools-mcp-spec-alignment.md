@@ -67,7 +67,7 @@ React Native MCP 서버는 [Chrome DevTools MCP](https://github.com/ChromeDevToo
 
 ## 4. 데이터 소스
 
-- **콘솔/네트워크**: Metro에 붙은 **CDP 가로채기**(cdp-interceptor.cjs)가 수집한 이벤트. MCP 서버는 `GET METRO_BASE_URL/__mcp_cdp_events__`로 조회.
+- **콘솔/네트워크**: `list_console_messages`, `list_network_requests` 도구는 현재 미등록(stub).
 - **Metro base URL**: 환경 변수 `METRO_BASE_URL` (기본값 `http://localhost:8230`).
 
 ---
