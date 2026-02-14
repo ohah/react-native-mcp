@@ -27,6 +27,14 @@ function getTestIdStringLiteral(t: BabelApi['types'], attr: t.JSXAttribute): str
   return null;
 }
 
+function getTestIdExpression(t: BabelApi['types'], attr: t.JSXAttribute): t.Expression | null {
+  if (!attr.value) return null;
+  if (t.isStringLiteral(attr.value)) return attr.value;
+  if (t.isJSXExpressionContainer(attr.value) && !t.isJSXEmptyExpression(attr.value.expression))
+    return attr.value.expression as t.Expression;
+  return null;
+}
+
 function getTagName(
   t: BabelApi['types'],
   name: t.JSXIdentifier | t.JSXMemberExpression | t.JSXNamespacedName
@@ -286,8 +294,8 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
             (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'testID'
           ) as t.JSXAttribute | undefined);
         if (!tidAttr?.value || !onPressAttr?.value) return;
-        const testIdValue = getTestIdStringLiteral(t, tidAttr);
-        if (testIdValue == null) return;
+        const testIdExpr = getTestIdExpression(t, tidAttr);
+        if (testIdExpr == null) return;
         const rawExpr = t.isJSXExpressionContainer(onPressAttr.value)
           ? onPressAttr.value.expression
           : null;
@@ -311,7 +319,7 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
                       t.identifier('__REACT_NATIVE_MCP__'),
                       t.identifier('registerPressHandler')
                     ),
-                    [t.stringLiteral(testIdValue), t.identifier('f')]
+                    [t.cloneNode(testIdExpr), t.identifier('f')]
                   )
                 )
               ),

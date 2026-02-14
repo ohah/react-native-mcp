@@ -244,8 +244,8 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
           (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'testID'
         ) as t.JSXAttribute | undefined);
       if (!tidAttr?.value || !onPressAttr?.value) return;
-      const testIdValue = getTestIdStringLiteral(tidAttr);
-      if (testIdValue == null) return;
+      const testIdExpr = getTestIdExpression(tidAttr);
+      if (testIdExpr == null) return;
       const rawExpr = t.isJSXExpressionContainer(onPressAttr.value)
         ? onPressAttr.value.expression
         : null;
@@ -269,7 +269,7 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
                     t.identifier('__REACT_NATIVE_MCP__'),
                     t.identifier('registerPressHandler')
                   ),
-                  [t.stringLiteral(testIdValue), t.identifier('f')]
+                  [t.cloneNode(testIdExpr), t.identifier('f')]
                 )
               )
             ),
@@ -298,6 +298,17 @@ function getTestIdStringLiteral(attr: t.JSXAttribute): string | null {
   if (t.isStringLiteral(attr.value)) return attr.value.value;
   if (t.isJSXExpressionContainer(attr.value) && t.isStringLiteral(attr.value.expression))
     return attr.value.expression.value;
+  return null;
+}
+
+/**
+ * testID 속성에서 AST Expression 추출 (StringLiteral, TemplateLiteral 등 모든 표현식)
+ */
+function getTestIdExpression(attr: t.JSXAttribute): t.Expression | null {
+  if (!attr.value) return null;
+  if (t.isStringLiteral(attr.value)) return attr.value;
+  if (t.isJSXExpressionContainer(attr.value) && !t.isJSXEmptyExpression(attr.value.expression))
+    return attr.value.expression as t.Expression;
   return null;
 }
 
