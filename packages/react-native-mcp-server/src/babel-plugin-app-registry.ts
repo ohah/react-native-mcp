@@ -5,6 +5,7 @@
  * Metro transformer 대신 babel.config.js plugins에 넣어 사용.
  */
 
+import type { NodePath } from '@babel/traverse';
 import type * as t from '@babel/types';
 
 const MCP_RUNTIME_ID = '__REACT_NATIVE_MCP__';
@@ -28,17 +29,10 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
           state.runtimeInjected = false;
         },
       },
-      CallExpression(
-        path: {
-          node: t.CallExpression;
-          replaceWith: (n: t.Node) => void;
-          findParent: (fn: (p: unknown) => boolean) => unknown;
-        },
-        state: PluginState
-      ) {
+      CallExpression(path: NodePath<t.CallExpression>, state: PluginState) {
         const node = path.node;
         const filename =
-          (path as unknown as { hub?: { file?: { opts?: { filename?: string } } } }).hub?.file?.opts
+          (path.hub as { file?: { opts?: { filename?: string } } } | undefined)?.file?.opts
             ?.filename ?? '';
         if (filename.includes('node_modules')) return;
         if (!t.isCallExpression(node)) return;
@@ -48,9 +42,9 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
         if (object.name !== 'AppRegistry' || property.name !== 'registerComponent') return;
 
         if (!state.runtimeInjected) {
-          const programPath = path.findParent(
-            (p) => (p as { isProgram?: () => boolean }).isProgram?.() === true
-          ) as { node: t.Program } | null | undefined;
+          const programPath = path.findParent((p) => p.isProgram?.()) as
+            | NodePath<t.Program>
+            | undefined;
           if (programPath?.node?.body) {
             programPath.node.body.unshift(
               t.expressionStatement(
