@@ -88,9 +88,6 @@ describe('runtime.js MCP 객체', () => {
       'getRegisteredPressTestIDs',
       // Fiber 기반
       'getClickables',
-      'getByLabel',
-      'getByLabels',
-      'getClickableTextContent',
       'getTextNodes',
       'getComponentTree',
       'pressByLabel',
@@ -134,155 +131,6 @@ describe('__REACT_DEVTOOLS_GLOBAL_HOOK__ 설정 (복구된 DevTools hook 주입)
     expect(typeof hook.inject).toBe('function');
     expect(typeof hook.onCommitFiberRoot).toBe('function');
     expect(typeof hook.getFiberRoots).toBe('function');
-  });
-});
-
-describe('getByLabel — fiber 트리 탐색', () => {
-  beforeEach(() => clearMockFiberRoot());
-
-  it('hook 없으면 hookPresent: false', () => {
-    clearMockFiberRoot();
-    const result = MCP.getByLabel('') as Record<string, unknown>;
-    expect(result.hookPresent).toBe(false);
-    expect(result.labelsWithOnPress).toEqual([]);
-  });
-
-  it('root 없으면 rootPresent: false', () => {
-    (globalThis as Record<string, unknown>).__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
-      renderers: new Map([[1, {}]]),
-      getFiberRoots: () => new Set(), // 빈 set
-    };
-    const result = MCP.getByLabel('') as Record<string, unknown>;
-    expect(result.hookPresent).toBe(true);
-    expect(result.rendererPresent).toBe(true);
-    expect(result.rootPresent).toBe(false);
-  });
-
-  it('onPress 가진 노드의 텍스트 라벨 수집', () => {
-    // View > [Pressable(onPress) > Text("Hello"), Pressable(onPress) > Text("World")]
-    const root = makeFiber('View', {}, [
-      makeFiber('Pressable', { onPress: () => {} }, [makeFiber(MockText, { children: 'Hello' })]),
-      makeFiber('Pressable', { onPress: () => {} }, [makeFiber(MockText, { children: 'World' })]),
-    ]);
-    setMockFiberRoot(root);
-
-    const result = MCP.getByLabel('') as Record<string, unknown>;
-    expect(result.rootPresent).toBe(true);
-    const labels = result.labelsWithOnPress as Array<{ text: string }>;
-    expect(labels.length).toBe(2);
-    expect(labels[0].text).toBe('Hello');
-    expect(labels[1].text).toBe('World');
-  });
-
-  it('labelSubstring 매칭 시 match 반환', () => {
-    const root = makeFiber('View', {}, [
-      makeFiber('Pressable', { onPress: () => {} }, [makeFiber(MockText, { children: '로그인' })]),
-      makeFiber('Pressable', { onPress: () => {} }, [
-        makeFiber(MockText, { children: '회원가입' }),
-      ]),
-    ]);
-    setMockFiberRoot(root);
-
-    const result = MCP.getByLabel('회원') as Record<string, unknown>;
-    const match = result.match as { text: string };
-    expect(match).toBeDefined();
-    expect(match.text).toBe('회원가입');
-  });
-
-  it('중첩된 Text children 을 concat', () => {
-    // Pressable > [Text("Good"), Text("Morning")] → "GoodMorning" (trim후 concat)
-    // getLabel에서 replace(/\s+/g, ' ').trim() 적용되므로 trim된 결과 concat
-    const root = makeFiber('Pressable', { onPress: () => {} }, [
-      makeFiber(MockText, { children: 'Good' }),
-      makeFiber(MockText, { children: 'Morning' }),
-    ]);
-    setMockFiberRoot(root);
-
-    const result = MCP.getByLabel('') as Record<string, unknown>;
-    const labels = result.labelsWithOnPress as Array<{ text: string }>;
-    expect(labels[0].text).toBe('GoodMorning');
-  });
-
-  it('배열 children Text 처리', () => {
-    // Text with children: ["Hello ", "World"]
-    const root = makeFiber('Pressable', { onPress: () => {} }, [
-      makeFiber(MockText, { children: ['Hello ', 'World'] }),
-    ]);
-    setMockFiberRoot(root);
-
-    const result = MCP.getByLabel('') as Record<string, unknown>;
-    const labels = result.labelsWithOnPress as Array<{ text: string }>;
-    expect(labels[0].text).toBe('Hello World');
-  });
-
-  it('Text children에 number가 있으면 문자열로 합쳐짐 (textContent)', () => {
-    const root = makeFiber('Pressable', { onPress: () => {} }, [
-      makeFiber(MockText, { children: ['탭: ', 1] }),
-    ]);
-    setMockFiberRoot(root);
-
-    const result = MCP.getByLabel('') as Record<string, unknown>;
-    const labels = result.labelsWithOnPress as Array<{ text: string }>;
-    expect(labels[0].text).toBe('탭: 1');
-  });
-
-  it('onPress 노드의 children은 중복 수집하지 않음 (dedup)', () => {
-    // TouchableOpacity(onPress) > Pressable(onPress, 내부 자동 생성) > Text
-    const root = makeFiber('View', {}, [
-      makeFiber('TouchableOpacity', { onPress: () => {} }, [
-        makeFiber('Pressable', { onPress: () => {} }, [
-          makeFiber(MockText, { children: 'Button' }),
-        ]),
-      ]),
-    ]);
-    setMockFiberRoot(root);
-
-    const result = MCP.getByLabel('') as Record<string, unknown>;
-    const labels = result.labelsWithOnPress as Array<{ text: string }>;
-    // TouchableOpacity만 수집 (자식 Pressable은 skip)
-    expect(labels.length).toBe(1);
-    expect(labels[0].text).toBe('Button');
-  });
-
-  it('accessibilityLabel fallback', () => {
-    const root = makeFiber(
-      'Pressable',
-      {
-        onPress: () => {},
-        accessibilityLabel: 'Close dialog',
-      },
-      []
-    );
-    setMockFiberRoot(root);
-
-    const result = MCP.getByLabel('Close') as Record<string, unknown>;
-    const labels = result.labelsWithOnPress as Array<{ text: string }>;
-    expect(labels[0].text).toBe('Close dialog');
-    expect((result.match as { text: string }).text).toBe('Close dialog');
-  });
-
-  it('Image의 accessibilityLabel 수집', () => {
-    const root = makeFiber('Pressable', { onPress: () => {} }, [
-      makeFiber(MockImage, { accessibilityLabel: 'Profile picture' }),
-    ]);
-    setMockFiberRoot(root);
-
-    const result = MCP.getByLabel('Profile') as Record<string, unknown>;
-    const labels = result.labelsWithOnPress as Array<{ text: string }>;
-    expect(labels[0].text).toBe('Profile picture');
-  });
-
-  it('testID 포함된 노드', () => {
-    const root = makeFiber('View', {}, [
-      makeFiber('Pressable', { onPress: () => {}, testID: 'btn-login' }, [
-        makeFiber(MockText, { children: 'Login' }),
-      ]),
-    ]);
-    setMockFiberRoot(root);
-
-    const result = MCP.getByLabel('') as Record<string, unknown>;
-    const labels = result.labelsWithOnPress as Array<{ text: string; testID?: string }>;
-    expect(labels[0].testID).toBe('btn-login');
   });
 });
 
@@ -478,35 +326,6 @@ describe('pressByLabel — onPress 호출', () => {
     setMockFiberRoot(root);
     expect(MCP.pressByLabel('탭:', 1)).toBe(false);
     expect(MCP.pressByLabel('탭:', 99)).toBe(false);
-  });
-});
-
-describe('getClickableTextContent — onPress 노드별 textContent', () => {
-  beforeEach(() => clearMockFiberRoot());
-
-  it('hook 없으면 빈 배열', () => {
-    clearMockFiberRoot();
-    const result = MCP.getClickableTextContent() as Array<{ text: string; testID?: string }>;
-    expect(result).toEqual([]);
-  });
-
-  it('getByLabel labelsWithOnPress와 동일 배열 반환', () => {
-    const root = makeFiber('View', {}, [
-      makeFiber('Pressable', { onPress: () => {}, testID: 'btn-a' }, [
-        makeFiber(MockText, { children: '버튼 A' }),
-      ]),
-      makeFiber('Pressable', { onPress: () => {} }, [makeFiber(MockText, { children: '버튼 B' })]),
-    ]);
-    setMockFiberRoot(root);
-
-    const content = MCP.getClickableTextContent() as Array<{ text: string; testID?: string }>;
-    const byLabel = MCP.getByLabel('') as Record<string, unknown>;
-    const labels = byLabel.labelsWithOnPress as Array<{ text: string; testID?: string }>;
-    expect(content).toEqual(labels);
-    expect(content).toHaveLength(2);
-    expect(content[0].text).toBe('버튼 A');
-    expect(content[0].testID).toBe('btn-a');
-    expect(content[1].text).toBe('버튼 B');
   });
 });
 
