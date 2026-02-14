@@ -12,7 +12,7 @@ import { registerEvaluateScript } from './eval-code.js';
 import { registerGetByLabel } from './get-by-label.js';
 import { registerGetDebuggerStatus } from './get-debugger-status.js';
 import { registerGetMetroUrl } from './get-metro-url.js';
-// 콘솔/네트워크는 CDP 연결 등 조건에서 동작 안 할 수 있어 기본 비활성화
+// 비활성화: list_console_messages, get_console_message, list_network_requests, get_network_request (CDP 의존)
 // import { registerListConsoleMessages } from './list-console-messages.js';
 // import { registerListNetworkRequests } from './list-network-requests.js';
 import { registerListClickables } from './list-clickables.js';
@@ -37,7 +37,7 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerListPages(server);
   registerGetMetroUrl(server);
   registerGetByLabel(server, appSession);
-  registerGetDebuggerStatus(server);
-  // registerListConsoleMessages(server);
-  // registerListNetworkRequests(server);
+  registerGetDebuggerStatus(server, appSession);
+  // registerListConsoleMessages(server);  // list_console_messages, get_console_message
+  // registerListNetworkRequests(server); // list_network_requests, get_network_request
 }
