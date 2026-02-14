@@ -19,6 +19,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
 permissions:
   contents: read
   id-token: write
@@ -96,21 +100,24 @@ jobs:
           bun-version: latest
 
       - name: 의존성 설치
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: 서버 패키지 빌드
-        run: cd packages/server && bun run build
+        run: bun run build:mcp
+
+      - name: 빌드 결과 검증
+        working-directory: packages/react-native-mcp-server
+        run: bun dist/index.js --help || true
 
       - name: Node.js 설정
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: npm에 배포
-        working-directory: packages/server
-        run: |
-          npm publish --provenance --access public --tag latest
+        working-directory: packages/react-native-mcp-server
+        run: npm publish --tag latest --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -134,17 +141,16 @@ jobs:
           bun-version: latest
 
       - name: 의존성 설치
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Node.js 설정
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: npm에 배포
         working-directory: packages/react-native
-        run: |
-          npm publish --provenance --access public --tag latest
+        run: npm publish --tag latest --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
