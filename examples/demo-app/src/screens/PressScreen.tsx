@@ -49,7 +49,10 @@ export function PressScreen({ isDarkMode }: PressScreenProps) {
         </Text>
         <Pressable
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-          onPress={() => setCount((c) => c + 1)}
+          onPress={() => {
+            setCount((c) => c + 1);
+            console.log('[PressScreen] Counter pressed, count:', count + 1);
+          }}
           testID="press-counter-button"
         >
           <Text style={styles.buttonText}>Count: {count}</Text>
