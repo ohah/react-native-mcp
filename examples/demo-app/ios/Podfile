@@ -30,11 +30,5 @@ target 'ReactNativeMcpDemo' do
       config[:reactNativePath],
       :mac_catalyst_enabled => false
     )
-    # non-modular header in framework module 오류 방지
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-      end
-    end
   end
 end
