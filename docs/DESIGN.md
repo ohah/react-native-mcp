@@ -250,7 +250,7 @@ packages/react-native-mcp-server/
 - `take_snapshot` - React Fiber 트리 스냅샷 (컴포넌트 구조 JSON) ✅
 - `take_screenshot` - ADB(Android) / simctl(iOS 시뮬레이터)로 캡처 ✅
 - `scroll` - ScrollView/FlatList scrollTo 호출 (Fiber stateNode 직접 접근) ✅
-- `click` - testID(uid) 기반 클릭 (onPress 트리거) ✅
+- `click` - testID(uid) 기반 단일 클릭 (onPress 트리거). RN에서는 더블클릭 미지원. ✅
 - `click_by_label` - 텍스트 라벨로 onPress 호출 (testID 불필요) ✅
 - `long_press` - testID(uid) 기반 롱프레스 (onLongPress 트리거) ✅
 - `long_press_by_label` - 텍스트 라벨로 onLongPress 호출 (testID 불필요) ✅
@@ -623,6 +623,8 @@ const INJECT_SCROLL_REF = true; // false → true
 ---
 
 ## 10. 프로그래매틱 테스트 러너 (YAML / 스크립트 기반)
+
+> 구체적인 구현 계획은 **[E2E 테스트 계획 문서](./e2e-test-plan.md)** 참조.
 
 ### 10.1 개요
 
