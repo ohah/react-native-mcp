@@ -77,12 +77,63 @@ function clearMockFiberRoot() {
 describe('runtime.js MCP 객체', () => {
   it('globalThis.__REACT_NATIVE_MCP__ 가 존재', () => {
     expect(MCP).toBeDefined();
-    expect(typeof MCP.getByLabel).toBe('function');
-    expect(typeof MCP.pressByLabel).toBe('function');
-    expect(typeof MCP.getClickables).toBe('function');
-    expect(typeof MCP.getClickableTextContent).toBe('function');
-    expect(typeof MCP.getTextNodes).toBe('function');
-    expect(typeof MCP.getComponentTree).toBe('function');
+  });
+
+  it('모든 필수 함수가 존재', () => {
+    const requiredFunctions = [
+      // 기본
+      'registerComponent',
+      'registerPressHandler',
+      'triggerPress',
+      'getRegisteredPressTestIDs',
+      // Fiber 기반
+      'getClickables',
+      'getByLabel',
+      'getByLabels',
+      'getClickableTextContent',
+      'getTextNodes',
+      'getComponentTree',
+      'pressByLabel',
+      // WebView
+      'registerWebView',
+      'unregisterWebView',
+      'clickInWebView',
+      'evaluateInWebView',
+      'getRegisteredWebViewIds',
+      // Scroll
+      'registerScrollRef',
+      'unregisterScrollRef',
+      'scrollTo',
+      'getRegisteredScrollTestIDs',
+      // 기타
+      'enable',
+    ];
+    for (const fn of requiredFunctions) {
+      expect(typeof MCP[fn]).toBe('function');
+    }
+  });
+});
+
+describe('__REACT_DEVTOOLS_GLOBAL_HOOK__ 설정 (복구된 DevTools hook 주입)', () => {
+  it('runtime 로드 후 DevTools hook이 존재', () => {
+    const hook = (globalThis as Record<string, unknown>).__REACT_DEVTOOLS_GLOBAL_HOOK__ as Record<
+      string,
+      unknown
+    >;
+    // hook이 존재하는지 (runtime이 설정했거나 이미 있었거나)
+    expect(hook).toBeDefined();
+  });
+
+  it('hook에 Fiber 지원 API가 있음 (supportsFiber, inject, onCommitFiberRoot, getFiberRoots)', () => {
+    const hook = (globalThis as Record<string, unknown>).__REACT_DEVTOOLS_GLOBAL_HOOK__ as Record<
+      string,
+      unknown
+    >;
+    expect(hook).toBeDefined();
+    expect(hook.supportsFiber).toBe(true);
+    expect(typeof hook.inject).toBe('function');
+    expect(typeof hook.onCommitFiberRoot).toBe('function');
+    expect(typeof hook.getFiberRoots).toBe('function');
   });
 });
 
@@ -456,6 +507,120 @@ describe('getClickableTextContent — onPress 노드별 textContent', () => {
     expect(content[0].text).toBe('버튼 A');
     expect(content[0].testID).toBe('btn-a');
     expect(content[1].text).toBe('버튼 B');
+  });
+});
+
+describe('WebView 함수', () => {
+  it('registerWebView + getRegisteredWebViewIds', () => {
+    const mockRef = { injectJavaScript: mock(() => {}) };
+    MCP.registerWebView(mockRef, 'test-wv');
+    const ids = MCP.getRegisteredWebViewIds() as string[];
+    expect(ids).toContain('test-wv');
+  });
+
+  it('unregisterWebView 후 목록에서 제거', () => {
+    const mockRef = { injectJavaScript: mock(() => {}) };
+    MCP.registerWebView(mockRef, 'wv-to-remove');
+    MCP.unregisterWebView('wv-to-remove');
+    const ids = MCP.getRegisteredWebViewIds() as string[];
+    expect(ids).not.toContain('wv-to-remove');
+  });
+
+  it('clickInWebView — 등록된 WebView에 script 주입', () => {
+    const injectFn = mock(() => {});
+    MCP.registerWebView({ injectJavaScript: injectFn }, 'click-wv');
+    const result = MCP.clickInWebView('click-wv', 'button.submit') as { ok: boolean };
+    expect(result.ok).toBe(true);
+    expect(injectFn).toHaveBeenCalled();
+  });
+
+  it('clickInWebView — 미등록 WebView는 에러', () => {
+    const result = MCP.clickInWebView('nonexistent', 'a') as { ok: boolean; error: string };
+    expect(result.ok).toBe(false);
+    expect(result.error).toBeDefined();
+  });
+
+  it('evaluateInWebView — 임의 JS 실행', () => {
+    const injectFn = mock(() => {});
+    MCP.registerWebView({ injectJavaScript: injectFn }, 'eval-wv');
+    const result = MCP.evaluateInWebView('eval-wv', 'document.title') as { ok: boolean };
+    expect(result.ok).toBe(true);
+    expect(injectFn).toHaveBeenCalledWith('document.title');
+  });
+
+  it('evaluateInWebView — 미등록 WebView는 에러', () => {
+    const result = MCP.evaluateInWebView('nonexistent', 'alert(1)') as {
+      ok: boolean;
+      error: string;
+    };
+    expect(result.ok).toBe(false);
+    expect(result.error).toBeDefined();
+  });
+});
+
+describe('Scroll 함수', () => {
+  it('registerScrollRef + getRegisteredScrollTestIDs', () => {
+    const mockRef = { scrollTo: mock(() => {}) };
+    MCP.registerScrollRef('test-scroll', mockRef);
+    const ids = MCP.getRegisteredScrollTestIDs() as string[];
+    expect(ids).toContain('test-scroll');
+  });
+
+  it('unregisterScrollRef 후 목록에서 제거', () => {
+    const mockRef = { scrollTo: mock(() => {}) };
+    MCP.registerScrollRef('scroll-to-remove', mockRef);
+    MCP.unregisterScrollRef('scroll-to-remove');
+    const ids = MCP.getRegisteredScrollTestIDs() as string[];
+    expect(ids).not.toContain('scroll-to-remove');
+  });
+
+  it('scrollTo — ScrollView ref.scrollTo 호출', () => {
+    const scrollToFn = mock(() => {});
+    MCP.registerScrollRef('sv', { scrollTo: scrollToFn });
+    const result = MCP.scrollTo('sv', { x: 0, y: 100, animated: true }) as { ok: boolean };
+    expect(result.ok).toBe(true);
+    expect(scrollToFn).toHaveBeenCalledWith({ x: 0, y: 100, animated: true });
+  });
+
+  it('scrollTo — FlatList ref.scrollToOffset fallback', () => {
+    const scrollToOffsetFn = mock(() => {});
+    MCP.registerScrollRef('fl', { scrollToOffset: scrollToOffsetFn });
+    const result = MCP.scrollTo('fl', { y: 200 }) as { ok: boolean };
+    expect(result.ok).toBe(true);
+    expect(scrollToOffsetFn).toHaveBeenCalledWith({ offset: 200, animated: true });
+  });
+
+  it('scrollTo — 미등록 ref는 에러', () => {
+    const result = MCP.scrollTo('nonexistent', {}) as { ok: boolean; error: string };
+    expect(result.ok).toBe(false);
+    expect(result.error).toBeDefined();
+  });
+});
+
+describe('getClickables — clickable 목록', () => {
+  beforeEach(() => clearMockFiberRoot());
+
+  it('pressHandler 등록된 testID 목록 반환', () => {
+    MCP.registerPressHandler('btn-1', () => {});
+    MCP.registerPressHandler('btn-2', () => {});
+    const clickables = MCP.getClickables() as Array<{ uid: string; label: string }>;
+    const uids = clickables.map((c) => c.uid);
+    expect(uids).toContain('btn-1');
+    expect(uids).toContain('btn-2');
+  });
+
+  it('Fiber root 있으면 label 포함', () => {
+    MCP.registerPressHandler('fiber-btn', () => {});
+    const root = makeFiber('View', {}, [
+      makeFiber('Pressable', { testID: 'fiber-btn', onPress: () => {} }, [
+        makeFiber(MockText, { children: 'Fiber Label' }),
+      ]),
+    ]);
+    setMockFiberRoot(root);
+    const clickables = MCP.getClickables() as Array<{ uid: string; label: string }>;
+    const item = clickables.find((c) => c.uid === 'fiber-btn');
+    expect(item).toBeDefined();
+    expect(item!.label).toBe('Fiber Label');
   });
 });
 

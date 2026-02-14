@@ -1,6 +1,6 @@
 /**
- * MCP 도구: click_webview
- * 앱에 등록된 WebView 내부에서 CSS selector에 해당하는 요소 클릭 (injectJavaScript)
+ * MCP 도구: webview_evaluate_script
+ * 앱에 등록된 WebView 내부에서 임의의 JavaScript를 실행 (injectJavaScript)
  * 앱에서 __REACT_NATIVE_MCP__.registerWebView(ref, id)로 웹뷰를 등록해 두어야 함.
  */
 
@@ -11,9 +11,11 @@ import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
   webViewId: z.string().describe('WebView id registered in the app via registerWebView(ref, id).'),
-  selector: z
+  script: z
     .string()
-    .describe('CSS selector for the element inside the WebView (e.g. "button.submit", "#ok").'),
+    .describe(
+      'JavaScript code to execute inside the WebView (e.g. "document.querySelector(\'button\').click()" or "document.title").'
+    ),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -28,14 +30,14 @@ export function registerClickWebView(server: McpServer, appSession: AppSession):
       ): void;
     }
   ).registerTool(
-    'click_webview',
+    'webview_evaluate_script',
     {
       description:
-        'Click the element matching the CSS selector inside the in-app WebView. App must register the WebView via __REACT_NATIVE_MCP__.registerWebView(ref, id) (react-native-webview).',
+        'Run a JavaScript function in the in-app WebView context. App must register the WebView via __REACT_NATIVE_MCP__.registerWebView(ref, id) (react-native-webview).',
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const { webViewId, selector, deviceId, platform } = schema.parse(args);
+      const { webViewId, script, deviceId, platform } = schema.parse(args);
 
       if (!appSession.isConnected(deviceId, platform)) {
         return {
@@ -48,7 +50,7 @@ export function registerClickWebView(server: McpServer, appSession: AppSession):
         };
       }
 
-      const code = `(function(){ return __REACT_NATIVE_MCP__.clickInWebView(${JSON.stringify(webViewId)}, ${JSON.stringify(selector)}); })();`;
+      const code = `(function(){ return __REACT_NATIVE_MCP__.evaluateInWebView(${JSON.stringify(webViewId)}, ${JSON.stringify(script)}); })();`;
       try {
         const res = await appSession.sendRequest(
           { method: 'eval', params: { code } },
@@ -65,7 +67,10 @@ export function registerClickWebView(server: McpServer, appSession: AppSession):
         if (result && result.ok === true) {
           return {
             content: [
-              { type: 'text' as const, text: 'OK: click() executed on element inside WebView.' },
+              {
+                type: 'text' as const,
+                text: `OK: script executed in WebView "${webViewId}".`,
+              },
             ],
           };
         }
