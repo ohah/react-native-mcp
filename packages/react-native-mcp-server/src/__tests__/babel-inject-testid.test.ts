@@ -164,6 +164,37 @@ function Screen() {
     expect(hasUserRefBranch).toBe(false);
   });
 
+  it('동적 testID(TemplateLiteral)와 onPress가 있으면 registerPressHandler 래퍼로 감싼다', async () => {
+    const src = `
+function ListItem({ item, onPress }) {
+  return (
+    <Pressable testID={\`btn-\${item.id}\`} onPress={onPress}>
+      <Text>{item.title}</Text>
+    </Pressable>
+  );
+}
+`;
+    const { code } = await injectTestIds(src);
+    expect(code).toContain('__REACT_NATIVE_MCP__.registerPressHandler');
+    expect(code).toContain('item.id');
+    expect(code).toContain('onPress=');
+  });
+
+  it('동적 testID(변수 참조)와 onPress가 있으면 registerPressHandler 래퍼로 감싼다', async () => {
+    const src = `
+function MyBtn({ tid, onTap }) {
+  return (
+    <Pressable testID={tid} onPress={onTap}>
+      <Text>tap</Text>
+    </Pressable>
+  );
+}
+`;
+    const { code } = await injectTestIds(src);
+    expect(code).toContain('__REACT_NATIVE_MCP__.registerPressHandler');
+    expect(code).toContain('onPress=');
+  });
+
   it('ScrollView에 testID와 ref가 있으면 ref가 합성된다', async () => {
     const src = `
 function Screen() {
