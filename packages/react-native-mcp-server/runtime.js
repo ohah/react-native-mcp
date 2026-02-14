@@ -936,10 +936,9 @@ var _origNativeLoggingHook = typeof global !== 'undefined' ? global.nativeLoggin
 if (typeof global !== 'undefined') {
   global.nativeLoggingHook = function (msg, level) {
     _consoleLogId++;
-    var messageStr = typeof msg === 'string' ? msg : JSON.stringify(msg);
     _consoleLogs.push({
       id: _consoleLogId,
-      message: messageStr,
+      message: msg,
       level: level,
       timestamp: Date.now(),
     });
