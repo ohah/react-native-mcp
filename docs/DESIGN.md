@@ -20,7 +20,7 @@ React Native 앱을 AI가 제어하고 모니터링할 수 있도록 MCP 서버 
 | 항목      | Chrome MCP            | React Native MCP                                 |
 | --------- | --------------------- | ------------------------------------------------ |
 | 구조 파악 | DOM tree              | React Fiber tree                                 |
-| 선택자    | CSS selector          | testID, component path                           |
+| 선택자    | CSS selector          | testID, querySelector (Fiber 셀렉터)             |
 | 조작      | querySelector + click | Fiber + event trigger                            |
 | 스냅샷    | HTML snapshot         | Component tree JSON                              |
 | 스크린샷  | CDP screenshot        | ADB / xcrun simctl (호스트 CLI, 앱 내 모듈 없음) |
@@ -145,7 +145,7 @@ react-native-mcp/
 │       ├── runtime.js              # 앱 주입 런타임
 │       └── metro-transformer.cjs   # 앱 Metro에서 사용
 ├── examples/
-│   └── demo-app/                   # 테스트용 RN 앱
+│   └── demo-app/                   # 테스트용 RN 앱 (5탭: Scroll/Press/Input/List/WebView)
 └── docs/
     └── DESIGN.md
 ```
@@ -249,14 +249,19 @@ packages/react-native-mcp-server/
 - `webview_evaluate_script` - 앱 내 WebView에서 임의 JS 실행 (injectJavaScript) ✅
 - `take_snapshot` - React Fiber 트리 스냅샷 (컴포넌트 구조 JSON) ✅
 - `take_screenshot` - ADB(Android) / simctl(iOS 시뮬레이터)로 캡처 ✅
-- `scroll` - 등록된 ScrollView/FlatList의 scrollTo 호출 ✅
-- `click` - testID(uid) 기반 클릭 ✅
+- `scroll` - ScrollView/FlatList scrollTo 호출 (Fiber stateNode 직접 접근) ✅
+- `click` - testID(uid) 기반 클릭 (onPress 트리거) ✅
 - `click_by_label` - 텍스트 라벨로 onPress 호출 (testID 불필요) ✅
+- `long_press` - testID(uid) 기반 롱프레스 (onLongPress 트리거) ✅
+- `long_press_by_label` - 텍스트 라벨로 onLongPress 호출 (testID 불필요) ✅
+- `type_text` - TextInput에 텍스트 입력 (onChangeText + setNativeProps) ✅
+- `query_selector` - Fiber 셀렉터로 첫 번째 매칭 요소 검색 (CSS querySelector 유사) ✅
+- `query_selector_all` - Fiber 셀렉터로 모든 매칭 요소 검색 ✅
+- `assert_text` - 텍스트 존재 여부 확인 ({ pass, message } 반환) ✅
+- `assert_visible` - 셀렉터 매칭 요소 존재 여부 확인 ({ pass, message } 반환) ✅
 - `list_clickables` - Fiber 트리에서 클릭 가능 요소 목록 (uid + label) ✅
-- `list_clickable_text_content` - 클릭 가능 요소의 전체 텍스트 ✅
 - `list_text_nodes` - Fiber 트리의 모든 텍스트 노드 ✅
 - `list_pages` - 연결된 앱 페이지 목록 ✅
-- `get_by_label` / `get_by_labels` - Fiber 트리에서 라벨 검색 + 디버그 정보 ✅
 - `get_debugger_status` - 앱 연결 상태 + 디바이스 목록 ✅
 - `list_console_messages` - CDP Runtime.consoleAPICalled 수집 (보류 — CDP 연결 기능 일시 비활성화)
 - `list_network_requests` - CDP Network.\* 이벤트 수집 (보류 — CDP 연결 기능 일시 비활성화)
@@ -266,6 +271,8 @@ packages/react-native-mcp-server/
 
 - `click_webview` - `webview_evaluate_script`로 대체 (CSS selector 클릭만 가능 → 임의 JS 실행)
 - `navigate_webview` - `webview_evaluate_script`로 대체 (`window.location.href = url`로 동일 동작)
+- `get_by_label` / `get_by_labels` - `query_selector`로 대체
+- `list_clickable_text_content` - `query_selector_all`로 대체
 
 ### 4.2 Babel Plugin (inject-testid.ts)
 
@@ -323,15 +330,18 @@ function MyButton({ title, onPress }) {
 
 1. **DevTools hook 설치**: `__REACT_DEVTOOLS_GLOBAL_HOOK__` 없으면 자동 생성 (Release 빌드 Fiber 접근)
 2. **Fiber 트리 헬퍼**: `getFiberRoot`, `collectText`, `getLabel`, `getFiberTypeName`, `getComponentTree` 등
-3. **Press**: `pressByLabel` (Fiber 직접 접근), `registerPressHandler`/`triggerPress`/`getClickables` (레거시, 코드 유지)
-4. **Scroll**: Fiber `stateNode.scrollTo()` 직접 접근 가능. `registerScrollRef`/`scrollTo` (레거시, 코드 유지)
-5. **WebView**: `registerWebView`, `unregisterWebView`, `evaluateInWebView` (Babel 주입 필수 — Fiber 대체 불가)
-6. **WebSocket 연결**: `__DEV__` 자동 연결, `MCP.enable()` 수동 활성화, 지수 백오프 재연결 (최대 30초)
+3. **Press**: `triggerPress` (Fiber memoizedProps.onPress 직접 호출), `pressByLabel` (텍스트 매칭)
+4. **Long Press**: `triggerLongPress` (Fiber memoizedProps.onLongPress 직접 호출), `longPressByLabel` (텍스트 매칭)
+5. **Text Input**: `typeText` (onChangeText 호출 + setNativeProps 네이티브 값 동기화)
+6. **Scroll**: Fiber `stateNode.scrollTo()` 직접 접근. `registerScrollRef` 레지스트리 fallback 유지
+7. **querySelector**: `querySelector`/`querySelectorAll` — CSS querySelector 유사 Fiber 셀렉터 (타입, #testID, :text(), [attr], :has-press, :has-scroll, 계층 셀렉터, 콤마 OR). 동일 testID 중복 제거(dedup) 포함
+8. **WebView**: `registerWebView`, `unregisterWebView`, `evaluateInWebView` (Babel 주입 필수 — Fiber 대체 불가)
+9. **WebSocket 연결**: `__DEV__` 자동 연결, `MCP.enable()` 수동 활성화, 지수 백오프 재연결 (최대 30초)
 
 > runtime.js의 레거시 함수(registerPressHandler, registerScrollRef 등)는 코드가 유지되어 있으나,
 > Babel 플래그 비활성화로 호출되지 않음. Babel 플래그 재활성화 시 즉시 동작.
 >
-> **getByLabel / getByLabels / getClickableTextContent**: 런타임에 그대로 유지. MCP 도구 `get_by_label`·`get_by_labels`·`list_clickable_text_content`에서 사용. `query_selector`로 대체 가능하나 하위 호환·디버깅(훅/라벨 확인)용으로 유지.
+> **삭제된 함수**: `getByLabel`, `getByLabels`, `getClickableTextContent` — `querySelector`로 대체되어 런타임에서 제거됨.
 
 **WebSocket 연결 조건**:
 
@@ -459,8 +469,11 @@ function MyButton({ title, onPress }) {
 - [ ] 네트워크 모니터링 — CDP 직접 연결로 `Network.*` 이벤트 수집 (`list_network_requests`) (보류 — CDP 연결 기능 일시 비활성화)
 - [ ] 콘솔 모니터링 — `Runtime.consoleAPICalled` 수집 (`list_console_messages`) (보류 — CDP 연결 기능 일시 비활성화)
 - [x] 연결 상태 + 디바이스 목록 확인 (`get_debugger_status`) ✅
-- [x] Fiber 트리 기반 라벨 검색 (`get_by_label`, `click_by_label`, `list_clickables`) ✅
+- [x] Fiber 트리 기반 라벨 검색 (`click_by_label`, `list_clickables`) ✅
 - [x] 다중 디바이스 지원 — N대 동시 연결, deviceId/platform 기반 라우팅 ✅
+- [x] querySelector / querySelectorAll — CSS 유사 Fiber 셀렉터 (YAML 테스트 러너용) ✅
+- [x] long_press / long_press_by_label — onLongPress 트리거 ✅
+- [x] type_text — TextInput 텍스트 입력 (onChangeText + setNativeProps) ✅
 - [ ] 성능 모니터링
 
 **산출물**: 프로덕션급 완성
@@ -630,13 +643,17 @@ Maestro 등 기존 E2E 도구는 플랫폼별 네이티브 API(XCUITest, UiAutom
 ```yaml
 name: 로그인 플로우
 steps:
-  - click_by_label: '이메일'
-  - type: { text: 'user@example.com' }
-  - click_by_label: '비밀번호'
-  - type: { text: 'secret123' }
-  - click_by_label: '로그인'
+  - query: 'TextInput#email-input'
+    action: type_text
+    text: 'user@example.com'
+  - query: 'TextInput#password-input'
+    action: type_text
+    text: 'secret123'
+  - query: 'Pressable:text("로그인")'
+    action: click
   - wait: 2000
-  - assert_text: '환영합니다'
+  - query: 'Text:text("환영합니다")'
+    assert: exists
   - screenshot: { path: './results/login-success.png' }
 ```
 
@@ -663,19 +680,22 @@ await client.callTool({ name: 'scroll', arguments: { uid: 'main-scroll', y: 300 
 
 ### 10.4 Babel 필요 여부
 
-| 테스트 방식                    | Babel 필요?         | 설명                      |
-| ------------------------------ | ------------------- | ------------------------- |
-| 텍스트 기반 (`click_by_label`) | 불필요              | Fiber 순회로 텍스트 매칭  |
-| testID 기반 (`click(uid)`)     | 자동 testID 시 필요 | 수동 testID면 불필요      |
-| 스크롤 (`scroll(uid)`)         | 불필요              | Fiber stateNode 직접 접근 |
-| WebView 제어                   | **필요**            | ref 주입은 Babel만 가능   |
-| 스크린샷                       | 불필요              | adb/simctl 호스트 CLI     |
+| 테스트 방식                    | Babel 필요?         | 설명                                 |
+| ------------------------------ | ------------------- | ------------------------------------ |
+| 셀렉터 기반 (`query_selector`) | 불필요              | Fiber 트리 셀렉터 (타입/텍스트/속성) |
+| 텍스트 기반 (`click_by_label`) | 불필요              | Fiber 순회로 텍스트 매칭             |
+| testID 기반 (`click(uid)`)     | 자동 testID 시 필요 | 수동 testID면 불필요                 |
+| 롱프레스 (`long_press`)        | 불필요              | Fiber memoizedProps.onLongPress      |
+| 텍스트 입력 (`type_text`)      | 불필요              | Fiber onChangeText + setNativeProps  |
+| 스크롤 (`scroll(uid)`)         | 불필요              | Fiber stateNode 직접 접근            |
+| WebView 제어                   | **필요**            | ref 주입은 Babel만 가능              |
+| 스크린샷                       | 불필요              | adb/simctl 호스트 CLI                |
 
 ### 10.5 구현 계획
 
-1. **YAML 스키마 정의**: 지원 액션 목록 (click, scroll, type, assert, wait, screenshot)
-2. **YAML 파서 → MCP 도구 매핑**: 각 액션을 `client.callTool()` 호출로 1:1 변환
-3. **assert 도구 추가**: `list_text_nodes` 기반 텍스트 존재 확인, 스크린샷 비교
+1. **YAML 스키마 정의**: 지원 액션 목록 (click, long_press, scroll, type_text, assert, wait, screenshot)
+2. **YAML 파서 → MCP 도구 매핑**: `query_selector`로 uid 획득 → `click`/`long_press`/`type_text`/`scroll` 호출
+3. **assert 도구 추가**: `query_selector`로 요소 존재 확인, `list_text_nodes` 기반 텍스트 검증
 4. **CLI 엔트리포인트**: `npx react-native-mcp-test run tests/login.yaml`
 5. **리포트 출력**: 성공/실패 요약, 실패 시 스크린샷 첨부
 
@@ -686,7 +706,113 @@ await client.callTool({ name: 'scroll', arguments: { uid: 'main-scroll', y: 300 
 1. **Phase 3 보완**: set_props, Dead code elimination 검증
 2. **Phase 5**: CDP 기반 네트워크/콘솔 모니터링 재활성화
 3. **FlatList 가상화 자동 탐색**: 전체 목록 자동 스크롤 + 수집 기능
-4. **프로그래매틱 테스트 러너**: 섹션 10 구현
-5. **안정화**: npm 배포, 문서 정비
+4. **프로그래매틱 테스트 러너**: 섹션 10 구현 (YAML 파서 + MCP Client + assertion)
+5. **네이티브 제스처 (drag/swipe/pinch)**: 섹션 12 참조 — 구현 방식 미결정, 케이스별 분석 필요
+6. **안정화**: npm 배포, 문서 정비
 
 이 설계는 실험적이며, 구현 중 발견되는 제약사항에 따라 수정 가능합니다.
+
+---
+
+## 12. 네이티브 제스처 지원 분석
+
+### 12.1 현재 상황
+
+현재 MCP는 **React props 레벨**(JS 함수 호출)로 동작한다:
+
+- `onPress()` → click
+- `onLongPress()` → long_press
+- `onChangeText()` → type_text
+- `scrollTo()` → scroll
+
+이 방식으로 커버 안 되는 제스처가 존재한다.
+
+### 12.2 제스처 유형별 분석
+
+| 제스처                    | 현재 지원 | Fiber props로 가능? | 비고                                                      |
+| ------------------------- | --------- | ------------------- | --------------------------------------------------------- |
+| tap (onPress)             | ✅        | ✅                  | 구현됨                                                    |
+| long press (onLongPress)  | ✅        | ✅                  | 구현됨                                                    |
+| scroll (scrollTo)         | ✅        | ✅                  | 구현됨                                                    |
+| text input (onChangeText) | ✅        | ✅                  | 구현됨                                                    |
+| swipe to delete           | ❌        | ❓                  | 라이브러리 의존 (Swipeable, react-native-gesture-handler) |
+| pull to refresh           | ❌        | ✅ 가능성           | `onRefresh` props 호출로 가능할 수 있음                   |
+| drag & drop               | ❌        | ❓                  | PanResponder 콜백 시뮬레이션 복잡                         |
+| pinch to zoom             | ❌        | ❓                  | react-native-gesture-handler 네이티브 레벨                |
+| drawer swipe              | ❌        | ✅ 가능성           | react-navigation drawer의 `openDrawer()` 메서드           |
+| tab swipe (ViewPager)     | ❌        | ✅ 가능성           | `setPage(index)` 또는 `scrollTo`                          |
+| bottom sheet drag         | ❌        | ❓                  | @gorhom/bottom-sheet 등 라이브러리 의존                   |
+
+### 12.3 접근 방식 후보
+
+#### 방식 A: Fiber props 확장 (네이티브 모듈 불필요)
+
+현재 방식의 연장. React props에 노출된 콜백/메서드를 찾아 호출:
+
+- `onRefresh()` → pull to refresh
+- `openDrawer()` / `closeDrawer()` → drawer
+- `setPage(index)` → ViewPager/TabView
+- PanResponder의 `onPanResponderMove` 등에 합성 이벤트 전달
+
+**장점**: 네이티브 모듈 불필요, 기존 아키텍처 유지
+**단점**: 라이브러리마다 API가 다름, 합성 이벤트 생성이 복잡, 모든 제스처를 커버 못 함
+
+#### 방식 B: 좌표 기반 터치 시뮬레이션 (호스트 CLI)
+
+`adb shell input` / iOS 시뮬레이터 API로 화면 좌표에 터치 이벤트 전송:
+
+```bash
+# Android
+adb shell input tap 200 400
+adb shell input swipe 300 800 300 200 500
+
+# iOS (simctl은 제한적, XCTest 필요)
+```
+
+요소 좌표는 `UIManager.measure()` 또는 Fiber에서 `ref.measure()`로 획득.
+
+**장점**: 모든 제스처 가능, 라이브러리 무관
+**단점**: 기기별 화면 크기/밀도 차이, 상태바/노치 오프셋, 앱 상태와 비동기, iOS 실기기 미지원. `adb shell input`으로 프로덕션 E2E를 하는 주요 도구는 없음 (Maestro/Appium/Detox 모두 네이티브 API 사용)
+
+#### 방식 C: 네이티브 모듈 추가 (옵션)
+
+Maestro/Detox처럼 경량 네이티브 모듈을 앱에 설치:
+
+- Android: Espresso / UiAutomator2 연동
+- iOS: XCUITest 연동
+- 앱 내에서 정확한 좌표 기반 터치 이벤트 생성
+
+**장점**: 가장 안정적, 모든 제스처 지원
+**단점**: "네이티브 모듈 없이 동작" 원칙에 어긋남, 설치 복잡도 증가
+
+#### 방식 D: 하이브리드 (A + 필요시 B)
+
+기본은 Fiber props 호출(방식 A), 커버 안 되는 경우만 좌표 기반(방식 B) fallback:
+
+1. `query_selector`로 요소 찾기
+2. Fiber props에 적절한 콜백이 있으면 JS 호출
+3. 없으면 `UIManager.measure()`로 좌표 획득 → `adb shell input` / simctl
+
+### 12.4 주요 라이브러리별 제어 가능성
+
+| 라이브러리                   | 제스처            | Fiber props로 제어                | 비고                  |
+| ---------------------------- | ----------------- | --------------------------------- | --------------------- |
+| RN ScrollView                | 스크롤            | ✅ `scrollTo()`                   | 구현됨                |
+| RN FlatList                  | 스크롤            | ✅ `scrollToOffset()`             | 구현됨                |
+| RN RefreshControl            | 당겨서 새로고침   | ✅ `onRefresh()`                  | props 호출 가능       |
+| RN Switch                    | 토글              | ✅ `onValueChange(true/false)`    | props 호출 가능       |
+| RN Slider                    | 값 변경           | ✅ `onValueChange(value)`         | props 호출 가능       |
+| react-navigation Drawer      | 열기/닫기         | ✅ `navigation.openDrawer()`      | ref/imperative handle |
+| react-navigation TabView     | 탭 전환           | ✅ `navigation.navigate(tabName)` | JS API                |
+| react-native-gesture-handler | 스와이프/팬       | ❌ 네이티브 레벨                  | JS 콜백 없음          |
+| @gorhom/bottom-sheet         | 시트 이동         | ✅ `ref.snapToIndex(i)`           | imperative handle     |
+| react-native-reanimated      | 애니메이션 제스처 | ❌ 워클릿 네이티브                | JS 스레드 밖에서 실행 |
+
+### 12.5 결론 및 방향
+
+1. **단기**: 방식 A — Fiber props 호출 범위를 확장 (onRefresh, onValueChange 등 추가)
+2. **중기**: 방식 D (하이브리드) — 좌표 기반 fallback 실험, 신뢰도 검증
+3. **장기**: 필요에 따라 방식 C (네이티브 모듈) 검토 — 옵셔널 플러그인 형태
+
+> react-native-gesture-handler / reanimated 기반 제스처는 네이티브 스레드에서 실행되므로
+> Fiber props로는 제어 불가. 이 영역은 네이티브 모듈 없이는 근본적 한계가 있다.
