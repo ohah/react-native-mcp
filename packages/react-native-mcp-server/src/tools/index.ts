@@ -9,12 +9,11 @@ import { registerClick } from './click.js';
 import { registerClickByLabel } from './click-by-label.js';
 import { registerClickWebView } from './click-webview.js';
 import { registerEvaluateScript } from './eval-code.js';
-import { registerGetByLabel } from './get-by-label.js';
 import { registerGetDebuggerStatus } from './get-debugger-status.js';
 import { registerListClickables } from './list-clickables.js';
-import { registerListClickableTextContent } from './list-clickable-text-content.js';
 import { registerListPages } from './list-pages.js';
 import { registerListTextNodes } from './list-text-nodes.js';
+import { registerQuerySelector } from './query-selector.js';
 import { registerScroll } from './scroll.js';
 import { registerTakeScreenshot } from './take-screenshot.js';
 import { registerTakeSnapshot } from './take-snapshot.js';
@@ -28,9 +27,8 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerClickByLabel(server, appSession);
   registerClickWebView(server, appSession);
   registerListClickables(server, appSession);
-  registerListClickableTextContent(server, appSession);
   registerListTextNodes(server, appSession);
   registerListPages(server);
-  registerGetByLabel(server, appSession);
+  registerQuerySelector(server, appSession);
   registerGetDebuggerStatus(server, appSession);
 }
