@@ -102,6 +102,9 @@ describe('runtime.js MCP 객체', () => {
       'unregisterScrollRef',
       'scrollTo',
       'getRegisteredScrollTestIDs',
+      // Console
+      'getConsoleLogs',
+      'clearConsoleLogs',
       // 기타
       'enable',
     ];
@@ -618,5 +621,130 @@ describe('typeText', () => {
   it('Fiber root 없으면 에러', () => {
     const result = MCP.typeText('any', 'text') as { ok: boolean; error: string };
     expect(result.ok).toBe(false);
+  });
+});
+
+// ─── Console Logs ─────────────────────────────────────────────
+
+describe('getConsoleLogs / clearConsoleLogs', () => {
+  beforeEach(() => {
+    MCP.clearConsoleLogs();
+  });
+
+  it('초기 상태에서 빈 배열 반환', () => {
+    const logs = MCP.getConsoleLogs() as unknown[];
+    expect(logs).toEqual([]);
+  });
+
+  it('nativeLoggingHook 호출 시 버퍼에 로그 추가', () => {
+    const hook = (globalThis as Record<string, unknown>).nativeLoggingHook as (
+      msg: string,
+      level: number
+    ) => void;
+    expect(typeof hook).toBe('function');
+
+    hook('hello world', 0);
+    hook('warn message', 2);
+
+    const logs = MCP.getConsoleLogs() as Array<{
+      id: number;
+      message: string;
+      level: number;
+      timestamp: number;
+    }>;
+    expect(logs).toHaveLength(2);
+    expect(logs[0].message).toBe('hello world');
+    expect(logs[0].level).toBe(0);
+    expect(typeof logs[0].id).toBe('number');
+    expect(typeof logs[0].timestamp).toBe('number');
+    expect(logs[1].message).toBe('warn message');
+    expect(logs[1].level).toBe(2);
+  });
+
+  it('level 문자열 필터링', () => {
+    const hook = (globalThis as Record<string, unknown>).nativeLoggingHook as (
+      msg: string,
+      level: number
+    ) => void;
+
+    hook('log msg', 0);
+    hook('info msg', 1);
+    hook('warn msg', 2);
+    hook('error msg', 3);
+
+    const warnOnly = MCP.getConsoleLogs({ level: 'warn' }) as Array<{
+      message: string;
+      level: number;
+    }>;
+    expect(warnOnly).toHaveLength(1);
+    expect(warnOnly[0].message).toBe('warn msg');
+    expect(warnOnly[0].level).toBe(2);
+
+    const errorOnly = MCP.getConsoleLogs({ level: 'error' }) as Array<{
+      message: string;
+      level: number;
+    }>;
+    expect(errorOnly).toHaveLength(1);
+    expect(errorOnly[0].message).toBe('error msg');
+  });
+
+  it('since 타임스탬프 필터', async () => {
+    const hook = (globalThis as Record<string, unknown>).nativeLoggingHook as (
+      msg: string,
+      level: number
+    ) => void;
+
+    hook('old msg', 0);
+    const midpoint = Date.now();
+    // 약간의 시간 차이를 위해 1ms 대기
+    await new Promise((r) => setTimeout(r, 5));
+    hook('new msg', 0);
+
+    const filtered = MCP.getConsoleLogs({ since: midpoint }) as Array<{ message: string }>;
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].message).toBe('new msg');
+  });
+
+  it('limit 옵션으로 최대 반환 수 제한', () => {
+    const hook = (globalThis as Record<string, unknown>).nativeLoggingHook as (
+      msg: string,
+      level: number
+    ) => void;
+
+    for (let i = 0; i < 10; i++) hook(`msg-${i}`, 0);
+
+    const limited = MCP.getConsoleLogs({ limit: 3 }) as Array<{ message: string }>;
+    expect(limited).toHaveLength(3);
+    // 최근 3개 반환 (slice from end)
+    expect(limited[0].message).toBe('msg-7');
+    expect(limited[2].message).toBe('msg-9');
+  });
+
+  it('clearConsoleLogs 후 빈 배열', () => {
+    const hook = (globalThis as Record<string, unknown>).nativeLoggingHook as (
+      msg: string,
+      level: number
+    ) => void;
+
+    hook('will be cleared', 0);
+    expect((MCP.getConsoleLogs() as unknown[]).length).toBeGreaterThan(0);
+
+    MCP.clearConsoleLogs();
+    expect(MCP.getConsoleLogs()).toEqual([]);
+  });
+
+  it('버퍼 크기 제한 (500개 초과 시 oldest 제거)', () => {
+    const hook = (globalThis as Record<string, unknown>).nativeLoggingHook as (
+      msg: string,
+      level: number
+    ) => void;
+
+    for (let i = 0; i < 510; i++) hook(`msg-${i}`, 0);
+
+    const all = MCP.getConsoleLogs({ limit: 600 }) as Array<{ message: string }>;
+    expect(all).toHaveLength(500);
+    // 첫 10개가 제거되었으므로 msg-10이 첫 번째
+    expect(all[0].message).toBe('msg-10');
+    expect(all[499].message).toBe('msg-509');
   });
 });

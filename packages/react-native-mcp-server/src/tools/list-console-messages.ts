@@ -1,182 +1,99 @@
 /**
- * MCP 도구: list_console_messages, get_console_message
- * Chrome DevTools MCP 스펙. CDP에서 Runtime.consoleAPICalled 등 수집 (현재 stub)
- * @see docs/chrome-devtools-mcp-spec-alignment.md
- * @see https://github.com/ChromeDevTools/chrome-devtools-mcp/blob/main/docs/tool-reference.md
+ * MCP 도구: list_console_messages, clear_console_messages
+ * nativeLoggingHook을 통해 캡처된 콘솔 로그를 조회/초기화.
+ * runtime.js의 getConsoleLogs / clearConsoleLogs를 eval로 호출.
  */
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-// CDP 기능 보류 — 이 파일은 현재 index.ts에서 등록되지 않음.
-// CDP 기능 보류 — 이 파일은 현재 index.ts에서 등록되지 않음.
+import type { AppSession } from '../websocket-server.js';
+import { deviceParam, platformParam } from './device-param.js';
 
-interface CdpEventEntry {
-  direction: string;
-  method: string;
-  params?: unknown;
-  id?: number;
-  timestamp: number;
-}
-
-async function fetchCdpEvents(): Promise<CdpEventEntry[]> {
-  return [];
-}
-
-const CONSOLE_METHODS = new Set([
-  'Runtime.consoleAPICalled',
-  'Log.entryAdded',
-  'Runtime.exceptionThrown',
-]);
-
-function parseConsoleEvent(
-  ev: CdpEventEntry
-): { level: string; text: string; url?: string; line?: number; column?: number } | null {
-  const method = ev.method;
-  const params = ev.params as Record<string, unknown> | undefined;
-  if (!params) return null;
-
-  if (method === 'Runtime.consoleAPICalled') {
-    const args = (params.args as Array<{ type?: string; value?: unknown }>) ?? [];
-    const text = args.map((a) => (a?.value != null ? String(a.value) : '')).join(' ');
-    const type = (params.type as string) ?? 'log';
-    return { level: type, text, url: undefined, line: undefined, column: undefined };
-  }
-  if (method === 'Log.entryAdded') {
-    const entry = params.entry as
-      | { level?: string; text?: string; url?: string; lineNumber?: number }
-      | undefined;
-    if (!entry) return null;
-    return {
-      level: entry.level ?? 'verbose',
-      text: entry.text ?? '',
-      url: entry.url,
-      line: entry.lineNumber,
-      column: undefined,
-    };
-  }
-  if (method === 'Runtime.exceptionThrown') {
-    const ex = params.exceptionDetails as
-      | {
-          text?: string;
-          exception?: { description?: string };
-          url?: string;
-          lineNumber?: number;
-          columnNumber?: number;
-        }
-      | undefined;
-    if (!ex) return null;
-    const text = ex.exception?.description ?? ex.text ?? JSON.stringify(ex);
-    return {
-      level: 'error',
-      text,
-      url: ex.url,
-      line: ex.lineNumber,
-      column: ex.columnNumber,
-    };
-  }
-  return null;
-}
-
-function buildConsoleList(events: CdpEventEntry[]): Array<{
-  msgid: number;
-  level: string;
-  text: string;
-  url?: string;
-  line?: number;
-  column?: number;
-  timestamp: number;
-}> {
-  const out: Array<{
-    msgid: number;
-    level: string;
-    text: string;
-    url?: string;
-    line?: number;
-    column?: number;
-    timestamp: number;
-  }> = [];
-  let msgid = 1;
-  for (const ev of events) {
-    if (ev.direction !== 'device' || !CONSOLE_METHODS.has(ev.method)) continue;
-    const parsed = parseConsoleEvent(ev);
-    if (!parsed) continue;
-    out.push({
-      msgid: msgid++,
-      level: parsed.level,
-      text: parsed.text,
-      url: parsed.url,
-      line: parsed.line,
-      column: parsed.column,
-      timestamp: ev.timestamp,
-    });
-  }
-  return out;
-}
+const LEVEL_NAMES: Record<number, string> = { 0: 'log', 1: 'info', 2: 'warn', 3: 'error' };
 
 const listSchema = z.object({
-  pageIdx: z.number().optional().describe('Page number (0-based). Omit for first page.'),
-  pageSize: z.number().optional().describe('Max messages to return. Omit for all.'),
-  types: z
-    .array(z.string())
+  level: z
+    .enum(['log', 'info', 'warn', 'error'])
     .optional()
-    .describe('Filter by level: log, warning, error, etc. Omit for all.'),
-  includePreservedMessages: z
-    .boolean()
-    .optional()
-    .describe('If true, return preserved messages over last navigations. RN: same list.'),
+    .describe('Filter by log level. Omit for all levels.'),
+  since: z.number().optional().describe('Return only logs after this timestamp (ms).'),
+  limit: z.number().optional().describe('Max number of logs to return (default 100).'),
+  deviceId: deviceParam,
+  platform: platformParam,
 });
 
-const getSchema = z.object({
-  msgid: z.number().describe('Message ID from list_console_messages'),
+const clearSchema = z.object({
+  deviceId: deviceParam,
+  platform: platformParam,
 });
 
-const serverRegister = (server: McpServer) =>
-  server as {
-    registerTool(
-      name: string,
-      def: { description: string; inputSchema: z.ZodTypeAny },
-      handler: (args: unknown) => Promise<unknown>
-    ): void;
-  };
+type ServerWithRegisterTool = {
+  registerTool(
+    name: string,
+    def: { description: string; inputSchema: z.ZodTypeAny },
+    handler: (args: unknown) => Promise<unknown>
+  ): void;
+};
 
-export function registerListConsoleMessages(server: McpServer): void {
-  const s = serverRegister(server);
+export function registerListConsoleMessages(server: McpServer, appSession: AppSession): void {
+  const s = server as unknown as ServerWithRegisterTool;
+
   s.registerTool(
     'list_console_messages',
     {
       description:
-        'List console messages for the current page since last navigation. Uses Metro CDP events. Set METRO_BASE_URL if Metro runs on non-default port.',
+        'List console messages captured via nativeLoggingHook. Filter by level, timestamp, or limit. Level mapping: 0=log, 1=info, 2=warn, 3=error.',
       inputSchema: listSchema,
     },
     async (args: unknown) => {
-      const params = listSchema.parse(args);
-      try {
-        const events = await fetchCdpEvents();
-        let list = buildConsoleList(events);
-        if (params.types && params.types.length > 0) {
-          const set = new Set(params.types.map((t) => t.toLowerCase()));
-          list = list.filter((m) => set.has(m.level.toLowerCase()));
-        }
-        const pageIdx = params.pageIdx ?? 0;
-        const pageSize = params.pageSize;
-        const slice =
-          pageSize != null && pageSize > 0
-            ? list.slice(pageIdx * pageSize, (pageIdx + 1) * pageSize)
-            : list;
-        const lines: string[] = [];
-        if (pageSize != null && pageSize > 0 && list.length > 0) {
-          const totalPages = Math.ceil(list.length / pageSize);
-          lines.push(
-            `Showing page ${pageIdx + 1} of ${totalPages}, ${slice.length} of ${list.length} messages.`
-          );
-        }
-        for (const m of slice) {
-          lines.push(
-            `[${m.msgid}] ${m.level}: ${m.text}${m.url != null ? ` (${m.url}${m.line != null ? `:${m.line}` : ''})` : ''}`
-          );
-        }
+      const parsed = listSchema.safeParse(args ?? {});
+      const deviceId = parsed.success ? parsed.data.deviceId : undefined;
+      const platform = parsed.success ? parsed.data.platform : undefined;
+
+      if (!appSession.isConnected(deviceId, platform)) {
         return {
-          content: [{ type: 'text' as const, text: lines.join('\n') || 'No console messages.' }],
+          content: [
+            {
+              type: 'text' as const,
+              text: 'No React Native app connected. Start the app with Metro and ensure the MCP runtime is loaded.',
+            },
+          ],
+        };
+      }
+
+      const options: Record<string, unknown> = {};
+      if (parsed.success) {
+        if (parsed.data.level != null) options.level = parsed.data.level;
+        if (parsed.data.since != null) options.since = parsed.data.since;
+        if (parsed.data.limit != null) options.limit = parsed.data.limit;
+      }
+
+      const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.getConsoleLogs ? __REACT_NATIVE_MCP__.getConsoleLogs(${JSON.stringify(options)}) : []; })();`;
+
+      try {
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
+        if (res.error != null) {
+          return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
+        }
+        const list = Array.isArray(res.result) ? res.result : [];
+        if (list.length === 0) {
+          return { content: [{ type: 'text' as const, text: 'No console messages.' }] };
+        }
+        const lines = list.map(
+          (entry: { id?: number; level?: number; message?: string; timestamp?: number }) => {
+            const levelName = LEVEL_NAMES[entry.level ?? 0] ?? String(entry.level);
+            return `[${entry.id}] ${levelName}: ${entry.message ?? ''}  (${entry.timestamp ?? ''})`;
+          }
+        );
+        return {
+          content: [
+            { type: 'text' as const, text: `${list.length} message(s):\n${lines.join('\n')}` },
+          ],
         };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -186,41 +103,46 @@ export function registerListConsoleMessages(server: McpServer): void {
       }
     }
   );
+
   s.registerTool(
-    'get_console_message',
+    'clear_console_messages',
     {
-      description: 'Get a console message by its ID (msgid from list_console_messages).',
-      inputSchema: getSchema,
+      description: 'Clear all captured console messages from the buffer.',
+      inputSchema: clearSchema,
     },
     async (args: unknown) => {
-      const { msgid } = getSchema.parse(args);
+      const parsed = clearSchema.safeParse(args ?? {});
+      const deviceId = parsed.success ? parsed.data.deviceId : undefined;
+      const platform = parsed.success ? parsed.data.platform : undefined;
+
+      if (!appSession.isConnected(deviceId, platform)) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: 'No React Native app connected. Start the app with Metro and ensure the MCP runtime is loaded.',
+            },
+          ],
+        };
+      }
+
+      const code = `(function(){ if (typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.clearConsoleLogs) { __REACT_NATIVE_MCP__.clearConsoleLogs(); return true; } return false; })();`;
+
       try {
-        const events = await fetchCdpEvents();
-        const list = buildConsoleList(events);
-        const entry = list.find((m) => m.msgid === msgid);
-        if (!entry) {
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: `Console message not found for msgid ${msgid}. Use list_console_messages to get valid msgids.`,
-              },
-            ],
-          };
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
+        if (res.error != null) {
+          return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }
-        const text = [
-          `msgid: ${entry.msgid}`,
-          `level: ${entry.level}`,
-          `text: ${entry.text}`,
-          ...(entry.url != null ? [`url: ${entry.url}`] : []),
-          ...(entry.line != null ? [`line: ${entry.line}`] : []),
-          ...(entry.column != null ? [`column: ${entry.column}`] : []),
-        ].join('\n');
-        return { content: [{ type: 'text' as const, text }] };
+        return { content: [{ type: 'text' as const, text: 'Console messages cleared.' }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
-          content: [{ type: 'text' as const, text: `get_console_message failed: ${message}` }],
+          content: [{ type: 'text' as const, text: `clear_console_messages failed: ${message}` }],
         };
       }
     }
