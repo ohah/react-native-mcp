@@ -1,9 +1,12 @@
 /**
- * Babel AST 변환: JSX 요소에 자동 testID 주입
+ * Babel AST 변환: JSX 요소에 자동 testID 주입 + displayName 보존
  *
  * DESIGN.md Phase 3 계획에 따른 자동 testID 생성.
  * 커스텀 컴포넌트 내부의 JSX 요소 중 testID가 없으면
  * ComponentName-index-TagName 형식으로 주입한다.
+ *
+ * PascalCase 함수 컴포넌트에 displayName을 자동 주입해
+ * release 빌드에서도 Fiber 트리에서 컴포넌트 이름을 보존한다.
  */
 
 // 번들 후 CJS/ESM interop으로 default가 달라질 수 있음
@@ -63,7 +66,40 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
         }
         state.stack.push({ componentName: name ?? 'Anonymous', jsxIndex: 0 });
       },
-      exit() {
+      exit(path) {
+        const scope = state.stack[state.stack.length - 1];
+        if (
+          scope &&
+          scope.jsxIndex > 0 &&
+          scope.componentName !== 'Anonymous' &&
+          /^[A-Z]/.test(scope.componentName)
+        ) {
+          const stmt = t.expressionStatement(
+            t.assignmentExpression(
+              '=',
+              t.memberExpression(t.identifier(scope.componentName), t.identifier('displayName')),
+              t.stringLiteral(scope.componentName)
+            )
+          );
+          if (t.isFunctionDeclaration(path.node)) {
+            const target =
+              path.parentPath &&
+              (t.isExportDefaultDeclaration(path.parent) || t.isExportNamedDeclaration(path.parent))
+                ? path.parentPath
+                : path;
+            target.insertAfter(stmt);
+          } else if (path.parentPath && t.isVariableDeclarator(path.parent)) {
+            let target = path.parentPath.parentPath; // VariableDeclaration
+            if (
+              target?.parentPath &&
+              (t.isExportDefaultDeclaration(target.parent) ||
+                t.isExportNamedDeclaration(target.parent))
+            ) {
+              target = target.parentPath;
+            }
+            target?.insertAfter(stmt);
+          }
+        }
         state.stack.pop();
       },
     },

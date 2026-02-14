@@ -9,6 +9,37 @@
 
 'use strict';
 
+// ─── DevTools hook 보장 ───────────────────────────────────────
+// DEV: React DevTools가 이미 hook을 설치 → 건너뜀.
+// Release: hook이 없으므로 MCP가 설치. React 로드 시 inject/onCommitFiberRoot로
+// renderer·fiber root를 캡처해 DEV와 동일하게 Fiber 트리 접근 가능.
+(function () {
+  var g =
+    typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : null;
+  if (!g || g.__REACT_DEVTOOLS_GLOBAL_HOOK__) return;
+
+  var _renderers = new Map();
+  var _roots = new Map();
+
+  g.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+    supportsFiber: true,
+    renderers: _renderers,
+    inject: function (internals) {
+      var id = _renderers.size + 1;
+      _renderers.set(id, internals);
+      return id;
+    },
+    onCommitFiberRoot: function (rendererID, root) {
+      if (!_roots.has(rendererID)) _roots.set(rendererID, new Set());
+      _roots.get(rendererID).add(root);
+    },
+    onCommitFiberUnmount: function () {},
+    getFiberRoots: function (rendererID) {
+      return _roots.get(rendererID) || new Set();
+    },
+  };
+})();
+
 var _pressHandlers = {};
 var _webViews = {};
 var _scrollRefs = {};
@@ -435,89 +466,109 @@ var MCP = {
 };
 if (typeof global !== 'undefined') global.__REACT_NATIVE_MCP__ = MCP;
 if (typeof globalThis !== 'undefined') globalThis.__REACT_NATIVE_MCP__ = MCP;
-if (typeof __DEV__ !== 'undefined' && __DEV__ && typeof console !== 'undefined' && console.warn) {
+
+var _isDevMode = typeof __DEV__ !== 'undefined' && __DEV__;
+
+if (_isDevMode && typeof console !== 'undefined' && console.warn) {
   console.warn('[MCP] runtime loaded, __REACT_NATIVE_MCP__ available');
 }
 
-// ─── WebSocket 연결 (DEV 전용) ──────────────────────────────────
+// ─── WebSocket 연결 (__DEV__ 자동 · 릴리즈는 MCP.enable() 호출) ─
 
-if (typeof __DEV__ !== 'undefined' && __DEV__) {
-  var wsUrl = 'ws://localhost:12300';
-  var ws = null;
-  var _reconnectTimer = null;
-  var reconnectDelay = 1000;
+var wsUrl = 'ws://localhost:12300';
+var ws = null;
+var _reconnectTimer = null;
+var reconnectDelay = 1000;
+var _mcpEnabled = _isDevMode;
 
-  function connect() {
-    if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
-    if (ws)
-      try {
-        ws.close();
-      } catch (_e) {}
-    ws = new WebSocket(wsUrl);
-    ws.onopen = function () {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('[MCP] Connected to server', wsUrl);
-      }
-      reconnectDelay = 1000;
-      if (_reconnectTimer != null) clearTimeout(_reconnectTimer);
-      _reconnectTimer = null;
-      try {
-        var rn = require('react-native');
-        var scriptURL =
-          rn.NativeModules && rn.NativeModules.SourceCode && rn.NativeModules.SourceCode.scriptURL;
-        if (scriptURL && typeof scriptURL === 'string') {
-          var origin = new URL(scriptURL).origin;
-          ws.send(JSON.stringify({ type: 'init', metroBaseUrl: origin }));
-        }
-      } catch (_e) {}
-    };
-    ws.onmessage = function (ev) {
-      try {
-        var msg = JSON.parse(ev.data);
-        if (msg.method === 'eval' && msg.id != null) {
-          var result;
-          var errMsg = null;
-          try {
-            // oxlint-disable-next-line no-eval -- MCP evaluate_script 도구용 의도적 사용
-            result = eval(msg.params && msg.params.code != null ? msg.params.code : 'undefined');
-          } catch (e) {
-            errMsg = e && e.message != null ? e.message : String(e);
-          }
-          if (ws && ws.readyState === 1) {
-            ws.send(
-              JSON.stringify(
-                errMsg != null ? { id: msg.id, error: errMsg } : { id: msg.id, result: result }
-              )
-            );
-          }
-        }
-      } catch {}
-    };
-    ws.onclose = function () {
-      ws = null;
-      _reconnectTimer = setTimeout(function () {
-        connect();
-        if (reconnectDelay < 30000) reconnectDelay = Math.min(reconnectDelay * 1.5, 30000);
-      }, reconnectDelay);
-    };
-    ws.onerror = function () {};
-  }
-
-  // 번들 로드 직후 한 번 시도
-  connect();
-
-  // runApplication 시점에 미연결이면 한 번 더 시도
-  var _AppRegistry = require('react-native').AppRegistry;
-  var _originalRun = _AppRegistry.runApplication;
-  _AppRegistry.runApplication = function () {
-    if (!ws || ws.readyState !== 1) connect();
-    return _originalRun.apply(this, arguments);
-  };
-
-  // 주기적 재시도: 앱이 먼저 떠 있고 나중에 MCP를 켜도 자동 연결 (순서 무관)
-  var PERIODIC_INTERVAL_MS = 5000;
-  setInterval(function () {
-    if (ws && ws.readyState === 1) return;
-    connect();
-  }, PERIODIC_INTERVAL_MS);
+function _shouldConnect() {
+  if (_mcpEnabled) return true;
+  if (typeof global !== 'undefined' && global.__REACT_NATIVE_MCP_ENABLED__) return true;
+  if (typeof globalThis !== 'undefined' && globalThis.__REACT_NATIVE_MCP_ENABLED__) return true;
+  return false;
 }
+
+function connect() {
+  if (!_shouldConnect()) return;
+  if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+  if (ws)
+    try {
+      ws.close();
+    } catch (_e) {}
+  ws = new WebSocket(wsUrl);
+  ws.onopen = function () {
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[MCP] Connected to server', wsUrl);
+    }
+    reconnectDelay = 1000;
+    if (_reconnectTimer != null) clearTimeout(_reconnectTimer);
+    _reconnectTimer = null;
+    try {
+      var rn = require('react-native');
+      var scriptURL =
+        rn.NativeModules && rn.NativeModules.SourceCode && rn.NativeModules.SourceCode.scriptURL;
+      if (scriptURL && typeof scriptURL === 'string') {
+        var origin = new URL(scriptURL).origin;
+        ws.send(JSON.stringify({ type: 'init', metroBaseUrl: origin }));
+      }
+    } catch (_e) {}
+  };
+  ws.onmessage = function (ev) {
+    try {
+      var msg = JSON.parse(ev.data);
+      if (msg.method === 'eval' && msg.id != null) {
+        var result;
+        var errMsg = null;
+        try {
+          // oxlint-disable-next-line no-eval -- MCP evaluate_script 도구용 의도적 사용
+          result = eval(msg.params && msg.params.code != null ? msg.params.code : 'undefined');
+        } catch (e) {
+          errMsg = e && e.message != null ? e.message : String(e);
+        }
+        if (ws && ws.readyState === 1) {
+          ws.send(
+            JSON.stringify(
+              errMsg != null ? { id: msg.id, error: errMsg } : { id: msg.id, result: result }
+            )
+          );
+        }
+      }
+    } catch {}
+  };
+  ws.onclose = function () {
+    ws = null;
+    _reconnectTimer = setTimeout(function () {
+      connect();
+      if (reconnectDelay < 30000) reconnectDelay = Math.min(reconnectDelay * 1.5, 30000);
+    }, reconnectDelay);
+  };
+  ws.onerror = function () {};
+}
+
+/**
+ * 릴리즈 빌드에서 MCP WebSocket 연결을 활성화한다.
+ * 앱 진입점에서 __REACT_NATIVE_MCP__.enable() 호출.
+ */
+MCP.enable = function () {
+  _mcpEnabled = true;
+  connect();
+};
+
+// DEV: 번들 로드 직후 자동 연결
+if (_isDevMode) connect();
+
+// runApplication 시점에 미연결이면 한 번 더 시도
+var _AppRegistry = require('react-native').AppRegistry;
+var _originalRun = _AppRegistry.runApplication;
+_AppRegistry.runApplication = function () {
+  if (_shouldConnect() && (!ws || ws.readyState !== 1)) connect();
+  return _originalRun.apply(this, arguments);
+};
+
+// 주기적 재시도: 앱이 먼저 떠 있고 나중에 MCP를 켜도 자동 연결 (순서 무관)
+var PERIODIC_INTERVAL_MS = 5000;
+setInterval(function () {
+  if (!_shouldConnect()) return;
+  if (ws && ws.readyState === 1) return;
+  connect();
+}, PERIODIC_INTERVAL_MS);
