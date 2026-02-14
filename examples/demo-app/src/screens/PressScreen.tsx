@@ -93,6 +93,7 @@ export function PressScreen({ isDarkMode }: PressScreenProps) {
           <Button
             title={`RN Button (${rnButtonTaps})`}
             onPress={() => setRnButtonTaps((n) => n + 1)}
+            testID="press-rn-button"
           />
         </View>
         <Pressable
