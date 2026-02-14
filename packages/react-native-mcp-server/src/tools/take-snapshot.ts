@@ -15,7 +15,7 @@ const schema = z.object({
     .min(1)
     .max(100)
     .optional()
-    .describe('트리 깊이 제한. 기본 30. 큰 앱에서 페이로드 방지'),
+    .describe('Max tree depth. Default 30. Reduces payload on large apps.'),
 });
 
 export function registerTakeSnapshot(server: McpServer, appSession: AppSession): void {
@@ -31,7 +31,7 @@ export function registerTakeSnapshot(server: McpServer, appSession: AppSession):
     'take_snapshot',
     {
       description:
-        'React Native Fiber에서 컴포넌트 트리 스냅샷 캡처. uid, type(ScrollView, FlatList, Text, View 등), testID, accessibilityLabel, text 포함. querySelector처럼 탐색할 때 사용. uid는 testID가 있으면 testID, 없으면 경로(예: "0.1.2"); uid가 testID일 때 click(uid) 사용.',
+        'Capture component tree snapshot from React Native Fiber. Includes uid, type (ScrollView, FlatList, Text, View, etc.), testID, accessibilityLabel, text. Use for querySelector-like traversal. uid is testID when present, otherwise path (e.g. "0.1.2"); use click(uid) when uid is testID.',
       inputSchema: schema,
     },
     async (args) => {

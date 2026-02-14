@@ -9,8 +9,10 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
 
 const schema = z.object({
-  webViewId: z.string().describe('앱에서 registerWebView(ref, id)로 등록한 웹뷰 식별자'),
-  selector: z.string().describe('WebView 내부 DOM의 CSS selector (예: "button.submit", "#ok")'),
+  webViewId: z.string().describe('WebView id registered in the app via registerWebView(ref, id).'),
+  selector: z
+    .string()
+    .describe('CSS selector for the element inside the WebView (e.g. "button.submit", "#ok").'),
 });
 
 export function registerClickWebView(server: McpServer, appSession: AppSession): void {
@@ -26,7 +28,7 @@ export function registerClickWebView(server: McpServer, appSession: AppSession):
     'click_webview',
     {
       description:
-        '앱 내 WebView에서 CSS selector에 해당하는 요소를 클릭. 앱에서 __REACT_NATIVE_MCP__.registerWebView(ref, id)로 웹뷰를 등록해야 함 (react-native-webview 사용).',
+        'Click the element matching the CSS selector inside the in-app WebView. App must register the WebView via __REACT_NATIVE_MCP__.registerWebView(ref, id) (react-native-webview).',
       inputSchema: schema,
     },
     async (args: unknown) => {

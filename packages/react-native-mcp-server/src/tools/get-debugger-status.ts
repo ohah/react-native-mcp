@@ -23,7 +23,7 @@ export function registerGetDebuggerStatus(server: McpServer, appSession: AppSess
     'get_debugger_status',
     {
       description:
-        'MCP 연결 상태 확인. appConnected: 앱이 MCP 서버에 붙어 있으면 true (스냅샷/클릭/스크롤/eval 사용 가능). cdpConnected: Metro CDP 연결이면 true (콘솔/네트워크 이벤트 수집 가능).',
+        'MCP connection status. appConnected: true when app is connected to MCP server (snapshot/click/scroll/eval available). cdpConnected: true when Metro CDP is connected (console/network event collection available).',
       inputSchema: schema,
     },
     async (args: unknown) => {

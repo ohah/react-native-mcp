@@ -20,7 +20,7 @@ export function registerListClickableTextContent(server: McpServer, appSession: 
     'list_clickable_text_content',
     {
       description:
-        'onPress 있는 노드별 전체 텍스트(textContent) 목록. 버튼/클릭 영역 표시 텍스트 검증용. 반환: [{ text, testID? }].',
+        'List full text (textContent) per node that has onPress. For verifying button/click-area display text. Returns [{ text, testID? }].',
       inputSchema: z.object({}),
     },
     async () => {
