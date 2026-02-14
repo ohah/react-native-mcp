@@ -419,6 +419,9 @@ var MCP = {
   registerWebView: function (ref, id) {
     if (ref && typeof id === 'string') _webViews[id] = ref;
   },
+  unregisterWebView: function (id) {
+    if (typeof id === 'string') delete _webViews[id];
+  },
   clickInWebView: function (id, selector) {
     var ref = _webViews[id];
     if (!ref || typeof ref.injectJavaScript !== 'function')
