@@ -302,7 +302,8 @@ var MCP = {
       function buildNode(fiber, path, depth) {
         if (!fiber || depth > maxDepth) return null;
         var props = fiber.memoizedProps || {};
-        var testID = typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : undefined;
+        var testID =
+          typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : undefined;
         var typeName = getFiberTypeName(fiber);
         var uid = testID || path;
         var node = {
@@ -404,7 +405,10 @@ if (typeof __DEV__ !== 'undefined' && __DEV__) {
 
   function connect() {
     if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
-    if (ws) try { ws.close(); } catch (_e) {}
+    if (ws)
+      try {
+        ws.close();
+      } catch (_e) {}
     ws = new WebSocket(wsUrl);
     ws.onopen = function () {
       reconnectDelay = 1000;

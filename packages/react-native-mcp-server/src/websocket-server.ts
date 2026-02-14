@@ -78,7 +78,9 @@ export class AppSession {
     });
     wss.on('listening', () => {
       this.server = wss;
-      console.error(`[react-native-mcp-server] WebSocket server listening on ws://localhost:${port}`);
+      console.error(
+        `[react-native-mcp-server] WebSocket server listening on ws://localhost:${port}`
+      );
     });
     wss.on('error', (err: Error & { code?: string }) => {
       if (err.code === 'EADDRINUSE' || err.message.includes('EADDRINUSE')) {
