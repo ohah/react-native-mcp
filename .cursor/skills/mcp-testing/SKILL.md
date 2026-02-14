@@ -217,20 +217,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 13. get_metro_url / list_pages
-
-**목적**: Metro base URL 조회; RN은 단일 앱이라 list_pages는 페이지 1개 반환.
-
-**테스트 절차**
-
-1. `get_metro_url`: 앱에서 전달한 Metro origin 반환 확인.
-2. `list_pages`: 단일 페이지(React Native App) 반환 확인.
-
-**성공 기준**: URL이 나오고, list_pages 길이가 1이다.
-
----
-
-## 14. get_by_label / get_by_labels
+## 13. get_by_label / get_by_labels
 
 **목적**: 라벨로 클릭 가능한 노드 검색 디버깅. click_by_label이 안 될 때 원인 확인.
 
@@ -244,7 +231,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 15. click_webview
+## 14. click_webview
 
 **목적**: 앱 내 WebView에서 CSS selector로 요소 클릭. WebView가 `__REACT_NATIVE_MCP__.registerWebView(ref, id)`로 등록되어 있어야 함.
 
@@ -273,7 +260,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 | list_console_messages       | Console 버튼 후 로그/경고 수집                         |
 | list_network_requests       | Network 버튼 후 httpbin 요청 수집                      |
 | get_debugger_status         | connected: true                                        |
-| get_metro_url / list_pages  | URL·단일 페이지 반환                                   |
+| list_pages                  | 단일 페이지(React Native App) 반환                     |
 | get_by_label                | 훅·라벨 목록·match                                     |
 | click_webview               | 등록 WebView 내 selector 클릭                          |
 
