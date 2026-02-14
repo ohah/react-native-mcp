@@ -60,6 +60,14 @@ function getTagName(
   return parts.join('.');
 }
 
+/**
+ * Fiber 직접 접근으로 대체 가능 — 재활성화 시 true로 변경
+ * - INJECT_PRESS_HANDLER: onPress를 registerPressHandler로 래핑. Fiber memoizedProps.onPress()로 직접 호출 가능.
+ * - INJECT_SCROLL_REF: ScrollView/FlatList에 registerScrollRef ref 주입. Fiber stateNode.scrollTo()로 직접 접근 가능.
+ */
+const INJECT_PRESS_HANDLER = false;
+const INJECT_SCROLL_REF = false;
+
 export default function (babel: BabelApi): { name: string; visitor: Record<string, unknown> } {
   const t = babel.types;
   return {
@@ -287,7 +295,7 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
             }
           }
         }
-        if (tagName === 'ScrollView' || tagName === 'FlatList') {
+        if (INJECT_SCROLL_REF && (tagName === 'ScrollView' || tagName === 'FlatList')) {
           const scrollTidAttr =
             testIdAttr ??
             (el.attributes.find(
@@ -406,6 +414,8 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
             }
           }
         }
+        // → Fiber memoizedProps.onPress()로 직접 호출 가능하므로 비활성화됨
+        if (!INJECT_PRESS_HANDLER) return;
         const onPressAttr = el.attributes.find(
           (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'onPress'
         ) as t.JSXAttribute | undefined;

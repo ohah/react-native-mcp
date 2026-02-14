@@ -125,7 +125,10 @@ export default () => (
     expect(code).toContain('testID="Anonymous-1-Text"');
   });
 
-  it('testID와 onPress가 있으면 onPress를 registerPressHandler 래퍼로 감싼다', async () => {
+  // INJECT_PRESS_HANDLER=false: registerPressHandler 주입이 비활성화됨
+  // Fiber memoizedProps.onPress()로 직접 호출 가능하므로 Babel 래핑 불필요
+  // 재활성화: inject-testid.ts에서 INJECT_PRESS_HANDLER = true로 변경
+  it('INJECT_PRESS_HANDLER=false: onPress가 registerPressHandler로 래핑되지 않는다', async () => {
     const src = `
 function App() {
   const [n, setN] = useState(0);
@@ -137,12 +140,15 @@ function App() {
 }
 `;
     const { code } = await injectTestIds(src);
-    expect(code).toContain('__REACT_NATIVE_MCP__.registerPressHandler');
+    expect(code).not.toContain('__REACT_NATIVE_MCP__.registerPressHandler');
     expect(code).toContain('demo-app-counter-button');
     expect(code).toContain('onPress=');
   });
 
-  it('ScrollView에 testID만 있으면 ref만 주입된다 (합성 아님)', async () => {
+  // INJECT_SCROLL_REF=false: ScrollView ref 주입이 비활성화됨
+  // Fiber stateNode.scrollTo()로 직접 접근 가능하므로 Babel ref 주입 불필요
+  // 재활성화: inject-testid.ts에서 INJECT_SCROLL_REF = true로 변경
+  it('INJECT_SCROLL_REF=false: ScrollView에 registerScrollRef가 주입되지 않는다', async () => {
     const src = `
 function Screen() {
   return (
@@ -153,18 +159,12 @@ function Screen() {
 }
 `;
     const { code } = await injectTestIds(src);
-    expect(code).toContain('registerScrollRef');
-    expect(code).toContain('unregisterScrollRef');
+    expect(code).not.toContain('registerScrollRef');
+    expect(code).not.toContain('unregisterScrollRef');
     expect(code).toContain('demo-app-scroll-view');
-    // 사용자 ref 합성 없음: typeof xxx === 'function' / .current 할당이 없어야 함 (우리 콜백만 있음)
-    const refInjected = /ref=\{[^}]*registerScrollRef[^}]*\}/s.test(code) || code.includes('ref={');
-    expect(refInjected).toBe(true);
-    // 합성 시 나오는 패턴: typeof ... === 'function' 이 없음 (ref 없으면 그 블록 자체가 없음)
-    const hasUserRefBranch = code.includes('typeof') && code.includes("'function'");
-    expect(hasUserRefBranch).toBe(false);
   });
 
-  it('동적 testID(TemplateLiteral)와 onPress가 있으면 registerPressHandler 래퍼로 감싼다', async () => {
+  it('INJECT_PRESS_HANDLER=false: 동적 testID(TemplateLiteral)도 registerPressHandler 래핑 안 됨', async () => {
     const src = `
 function ListItem({ item, onPress }) {
   return (
@@ -175,12 +175,12 @@ function ListItem({ item, onPress }) {
 }
 `;
     const { code } = await injectTestIds(src);
-    expect(code).toContain('__REACT_NATIVE_MCP__.registerPressHandler');
+    expect(code).not.toContain('__REACT_NATIVE_MCP__.registerPressHandler');
     expect(code).toContain('item.id');
     expect(code).toContain('onPress=');
   });
 
-  it('동적 testID(변수 참조)와 onPress가 있으면 registerPressHandler 래퍼로 감싼다', async () => {
+  it('INJECT_PRESS_HANDLER=false: 동적 testID(변수 참조)도 registerPressHandler 래핑 안 됨', async () => {
     const src = `
 function MyBtn({ tid, onTap }) {
   return (
@@ -191,7 +191,7 @@ function MyBtn({ tid, onTap }) {
 }
 `;
     const { code } = await injectTestIds(src);
-    expect(code).toContain('__REACT_NATIVE_MCP__.registerPressHandler');
+    expect(code).not.toContain('__REACT_NATIVE_MCP__.registerPressHandler');
     expect(code).toContain('onPress=');
   });
 
@@ -232,7 +232,7 @@ function Screen() {
     expect(code).toContain('.current');
   });
 
-  it('ScrollView에 testID와 ref가 있으면 ref가 합성된다', async () => {
+  it('INJECT_SCROLL_REF=false: ScrollView에 ref가 있어도 합성되지 않는다', async () => {
     const src = `
 function Screen() {
   const scrollRef = useRef(null);
@@ -244,13 +244,10 @@ function Screen() {
 }
 `;
     const { code } = await injectTestIds(src);
-    expect(code).toContain('registerScrollRef');
-    expect(code).toContain('unregisterScrollRef');
+    expect(code).not.toContain('registerScrollRef');
+    expect(code).not.toContain('unregisterScrollRef');
     expect(code).toContain('my-scroll');
-    // 사용자 ref 합성: typeof ... === "function" 분기와 .current 할당이 있어야 함
-    expect(code).toContain('typeof');
-    expect(code).toMatch(/"function"|'function'/);
-    expect(code).toContain('scrollRef');
-    expect(code).toContain('.current');
+    // 원본 ref가 그대로 유지됨
+    expect(code).toContain('ref={scrollRef}');
   });
 });

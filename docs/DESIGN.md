@@ -271,14 +271,24 @@ packages/react-native-mcp-server/
 
 > 별도 패키지 없음. `packages/react-native-mcp-server/src/babel/inject-testid.ts`에 통합.
 
-**주입 기능** (개발/프로덕션 모두 적용):
+**활성 기능** (개발/프로덕션 모두 적용):
 
 1. **자동 testID**: JSX 요소에 `ComponentName-index-TagName` 형식 ID 주입
 2. **displayName 주입**: PascalCase 함수 컴포넌트에 `.displayName` 자동 설정 (Release Fiber 트리 이름 보존)
-3. **onPress 래핑**: testID + onPress가 있는 요소에 `registerPressHandler` 주입
-4. **ScrollView/FlatList ref 주입**: testID가 있으면 `registerScrollRef`/`unregisterScrollRef` 자동 주입
-5. **WebView ref 주입**: testID가 있으면 `registerWebView`/`unregisterWebView` 자동 주입
-6. **동적 testID 지원**: TemplateLiteral, 변수 참조 등 동적 표현식 처리
+3. **WebView ref 주입**: testID가 있으면 `registerWebView`/`unregisterWebView` 자동 주입 (Fiber 대체 불가)
+4. **동적 testID 지원**: TemplateLiteral, 변수 참조 등 동적 표현식 처리
+
+**비활성화된 기능** (`inject-testid.ts`의 플래그로 제어):
+
+- `INJECT_PRESS_HANDLER = false` — onPress `registerPressHandler` 래핑
+  - Fiber `memoizedProps.onPress()`로 직접 호출 가능 (`click_by_label` 도구)
+  - 재활성화: `INJECT_PRESS_HANDLER = true`로 변경
+- `INJECT_SCROLL_REF = false` — ScrollView/FlatList `registerScrollRef` ref 주입
+  - Fiber `stateNode.scrollTo()` / `scrollToOffset()`로 직접 접근 가능
+  - 재활성화: `INJECT_SCROLL_REF = true`로 변경
+  - **주의**: ScrollView/FlatList가 class→function component로 전환되면 `stateNode=null`이 되므로 재활성화 필요
+
+> **WebView만 Babel 주입이 필수인 이유**: `react-native-webview`의 WebView는 `forwardRef` 기반 function component라 Fiber `stateNode`가 `null`. `injectJavaScript`는 ref callback으로만 접근 가능.
 
 **변환 예시**:
 
@@ -296,14 +306,13 @@ function MyButton({ title, onPress }) {
 MyButton.displayName = 'MyButton';
 function MyButton({ title, onPress }) {
   return (
-    <TouchableOpacity
-      testID="my-btn"
-      onPress={__REACT_NATIVE_MCP__.registerPressHandler('my-btn', onPress)}
-    >
+    <TouchableOpacity testID="my-btn" onPress={onPress}>
       <Text testID="MyButton-0-Text">{title}</Text>
     </TouchableOpacity>
   );
 }
+// onPress는 래핑되지 않음 (INJECT_PRESS_HANDLER=false)
+// Fiber memoizedProps.onPress()로 직접 호출
 ```
 
 ### 4.3 Runtime (runtime.js)
@@ -314,10 +323,13 @@ function MyButton({ title, onPress }) {
 
 1. **DevTools hook 설치**: `__REACT_DEVTOOLS_GLOBAL_HOOK__` 없으면 자동 생성 (Release 빌드 Fiber 접근)
 2. **Fiber 트리 헬퍼**: `getFiberRoot`, `collectText`, `getLabel`, `getFiberTypeName`, `getComponentTree` 등
-3. **Press 관리**: `registerPressHandler`, `triggerPress`, `getClickables`, `pressByLabel`
-4. **Scroll 관리**: `registerScrollRef`, `unregisterScrollRef`, `scrollTo`
-5. **WebView 관리**: `registerWebView`, `unregisterWebView`, `clickInWebView`, `evaluateInWebView`
+3. **Press**: `pressByLabel` (Fiber 직접 접근), `registerPressHandler`/`triggerPress`/`getClickables` (레거시, 코드 유지)
+4. **Scroll**: Fiber `stateNode.scrollTo()` 직접 접근 가능. `registerScrollRef`/`scrollTo` (레거시, 코드 유지)
+5. **WebView**: `registerWebView`, `unregisterWebView`, `evaluateInWebView` (Babel 주입 필수 — Fiber 대체 불가)
 6. **WebSocket 연결**: `__DEV__` 자동 연결, `MCP.enable()` 수동 활성화, 지수 백오프 재연결 (최대 30초)
+
+> runtime.js의 레거시 함수(registerPressHandler, registerScrollRef 등)는 코드가 유지되어 있으나,
+> Babel 플래그 비활성화로 호출되지 않음. Babel 플래그 재활성화 시 즉시 동작.
 
 **WebSocket 연결 조건**:
 
@@ -453,9 +465,61 @@ function MyButton({ title, onPress }) {
 
 ---
 
-## 6. 참고 자료
+## 6. Fiber 직접 접근 vs Babel 주입 분석
 
-### 6.1 오픈소스
+### 6.1 검증 결과
+
+`evaluate_script`로 Fiber 트리에서 직접 조작이 가능한지 검증한 결과:
+
+| 동작                   | Fiber 직접 접근 | 방법                                                                     |
+| ---------------------- | --------------- | ------------------------------------------------------------------------ |
+| ScrollView 스크롤      | **가능**        | `fiber.stateNode.scrollTo({y: 300})` (class component, tag:1)            |
+| FlatList 스크롤        | **가능**        | `fiber.stateNode.scrollToOffset({offset: 500})` (class component, tag:1) |
+| FlatList scrollToIndex | **가능**        | `fiber.stateNode.scrollToIndex({index: 5})`                              |
+| 버튼 클릭 (onPress)    | **가능**        | `fiber.memoizedProps.onPress()`                                          |
+| 텍스트로 클릭          | **가능**        | Fiber 순회 → 텍스트 매칭 → `onPress()`                                   |
+| WebView JS 실행        | **불가능**      | `stateNode=null` (forwardRef function component, tag:11)                 |
+
+### 6.2 WebView만 Babel 필수인 이유
+
+| 컴포넌트                       | Fiber tag       | stateNode           | 메서드 접근                  |
+| ------------------------------ | --------------- | ------------------- | ---------------------------- |
+| ScrollView                     | 1 (Class)       | ScrollView instance | `.scrollTo()` 있음           |
+| FlatList                       | 1 (Class)       | FlatList instance   | `.scrollToOffset()` 있음     |
+| WebView (react-native-webview) | 11 (ForwardRef) | `null`              | `injectJavaScript` 접근 불가 |
+
+`react-native-webview`의 WebView는 `forwardRef` 기반이라 Fiber `stateNode`가 `null`.
+`injectJavaScript`는 React imperative handle로 노출되며, ref callback으로만 캡처 가능.
+
+### 6.3 Fiber 내부 API 의존성
+
+현재 모든 Fiber 기반 기능이 의존하는 React 내부 API:
+
+- `fiber.child` / `fiber.sibling` — 트리 순회
+- `fiber.memoizedProps` — props 접근 (onPress, testID 등)
+- `fiber.stateNode` — 컴포넌트 인스턴스 (class component만)
+- `fiber.type` — 컴포넌트 타입 판별
+- `fiber.tag` — 노드 종류 (0=Function, 1=Class, 5=Host, 11=ForwardRef 등)
+
+이 중 어느 하나라도 바뀌면 전체 Fiber 기반 기능이 영향받음. `stateNode`만의 리스크가 아님.
+React DevTools도 동일한 내부 API에 의존.
+
+### 6.4 재활성화 가이드
+
+ScrollView/FlatList가 class→function component로 전환되거나,
+`memoizedProps` 구조가 변경될 경우 Babel 주입 재활성화:
+
+```ts
+// packages/react-native-mcp-server/src/babel/inject-testid.ts
+const INJECT_PRESS_HANDLER = true; // false → true
+const INJECT_SCROLL_REF = true; // false → true
+```
+
+---
+
+## 7. 참고 자료
+
+### 7.1 오픈소스
 
 1. **React DevTools**
    - `packages/react-devtools-shared/src/backend/`
@@ -473,7 +537,7 @@ function MyButton({ title, onPress }) {
    - WebSocket 개발 도구
    - 네트워크/상태 추적
 
-### 6.2 공식 문서
+### 7.2 공식 문서
 
 - Metro: https://metrobundler.dev/
 - Babel Plugin Handbook: https://github.com/jamiebuilds/babel-handbook
@@ -482,9 +546,9 @@ function MyButton({ title, onPress }) {
 
 ---
 
-## 7. 리스크 & 제약사항
+## 8. 리스크 & 제약사항
 
-### 7.1 기술적 리스크
+### 8.1 기술적 리스크
 
 1. **React Fiber 내부 API 변경**
    - 완화: React DevTools 패턴 따르기
@@ -498,13 +562,13 @@ function MyButton({ title, onPress }) {
 4. **보안**
    - 완화: localhost만 허용, 프로덕션 제거
 
-### 7.2 기능적 제약
+### 8.2 기능적 제약
 
 1. **iOS 실기기 스크린샷** - simctl은 시뮬레이터 전용이라 실기기에서는 미지원
 2. **가상화 목록 한계** - FlatList 미렌더링 아이템은 scroll 도구로 수동 스크롤 후 조회 가능하지만, 에이전트가 자동으로 전체 목록을 탐색하는 기능은 미구현
 3. **서드파티 네이티브 컴포넌트** - 제어 어려움
 
-### 7.3 현실적 접근
+### 8.3 현실적 접근
 
 - **완벽 불필요**: Chrome MCP도 한계 존재
 - **점진적 개선**: Phase 1만으로도 유용
@@ -512,7 +576,7 @@ function MyButton({ title, onPress }) {
 
 ---
 
-## 8. 성공 기준
+## 9. 성공 기준
 
 ### Phase 1 (MVP)
 
@@ -543,11 +607,84 @@ function MyButton({ title, onPress }) {
 
 ---
 
-## 9. 다음 단계
+## 10. 프로그래매틱 테스트 러너 (YAML / 스크립트 기반)
+
+### 10.1 개요
+
+MCP 서버는 AI 에이전트뿐 아니라 **비-AI 테스트 러너**에서도 동일하게 사용 가능하다.
+MCP는 프로토콜일 뿐이므로 클라이언트가 AI일 필요가 없다.
+
+```
+AI 에이전트  ─┐
+              ├→ MCP 클라이언트 → MCP 서버 (12300) → React Native 앱
+YAML 러너   ─┘
+```
+
+Maestro 등 기존 E2E 도구는 플랫폼별 네이티브 API(XCUITest, UiAutomator)에 의존하지만,
+본 MCP 서버는 **Fiber 트리 하나로 iOS/Android 동일 동작**한다.
+
+### 10.2 YAML 기반 테스트 예시
+
+```yaml
+name: 로그인 플로우
+steps:
+  - click_by_label: '이메일'
+  - type: { text: 'user@example.com' }
+  - click_by_label: '비밀번호'
+  - type: { text: 'secret123' }
+  - click_by_label: '로그인'
+  - wait: 2000
+  - assert_text: '환영합니다'
+  - screenshot: { path: './results/login-success.png' }
+```
+
+### 10.3 MCP 클라이언트 직접 호출 (스크립트)
+
+```ts
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+
+const client = new Client({ name: 'test-runner', version: '1.0.0' });
+await client.connect(
+  new StdioClientTransport({
+    command: 'bun',
+    args: ['dist/index.js'],
+  })
+);
+
+// 테스트 시나리오
+await client.callTool({ name: 'click_by_label', arguments: { label: 'Count:' } });
+const texts = await client.callTool({ name: 'list_text_nodes', arguments: {} });
+assert(texts.content[0].text.includes('Count: 1'));
+await client.callTool({ name: 'scroll', arguments: { uid: 'main-scroll', y: 300 } });
+```
+
+### 10.4 Babel 필요 여부
+
+| 테스트 방식                    | Babel 필요?         | 설명                      |
+| ------------------------------ | ------------------- | ------------------------- |
+| 텍스트 기반 (`click_by_label`) | 불필요              | Fiber 순회로 텍스트 매칭  |
+| testID 기반 (`click(uid)`)     | 자동 testID 시 필요 | 수동 testID면 불필요      |
+| 스크롤 (`scroll(uid)`)         | 불필요              | Fiber stateNode 직접 접근 |
+| WebView 제어                   | **필요**            | ref 주입은 Babel만 가능   |
+| 스크린샷                       | 불필요              | adb/simctl 호스트 CLI     |
+
+### 10.5 구현 계획
+
+1. **YAML 스키마 정의**: 지원 액션 목록 (click, scroll, type, assert, wait, screenshot)
+2. **YAML 파서 → MCP 도구 매핑**: 각 액션을 `client.callTool()` 호출로 1:1 변환
+3. **assert 도구 추가**: `list_text_nodes` 기반 텍스트 존재 확인, 스크린샷 비교
+4. **CLI 엔트리포인트**: `npx react-native-mcp-test run tests/login.yaml`
+5. **리포트 출력**: 성공/실패 요약, 실패 시 스크린샷 첨부
+
+---
+
+## 11. 다음 단계
 
 1. **Phase 3 보완**: set_props, Dead code elimination 검증
 2. **Phase 5**: CDP 기반 네트워크/콘솔 모니터링 재활성화
 3. **FlatList 가상화 자동 탐색**: 전체 목록 자동 스크롤 + 수집 기능
-4. **안정화**: npm 배포, 문서 정비
+4. **프로그래매틱 테스트 러너**: 섹션 10 구현
+5. **안정화**: npm 배포, 문서 정비
 
 이 설계는 실험적이며, 구현 중 발견되는 제약사항에 따라 수정 가능합니다.
