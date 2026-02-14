@@ -166,32 +166,33 @@ react-native-mcp/
 └───────────────────┬─────────────────────────────┘
                     │ stdio (MCP protocol)
 ┌───────────────────▼─────────────────────────────┐
-│  MCP Server (packages/server)                   │
-│  - Tools: get_component_tree, evaluate_script, etc.   │
+│  MCP Server                                     │
+│  - Tools: evaluate_script, list_clickables, etc.│
 │  - WebSocket Server (ws://localhost:12300)      │
-└───────────────────┬─────────────────────────────┘
-                    │ WebSocket
-┌───────────────────▼─────────────────────────────┐
-│  React Native App (iOS/Android)                 │
-│                                                  │
-│  ┌────────────────────────────────────────┐     │
-│  │  Runtime (packages/runtime)            │     │
-│  │  - WebSocket Client                    │     │
-│  │  - Fiber Hook                          │     │
-│  │  - Eval Bridge                         │     │
-│  └────────────────────────────────────────┘     │
-│                                                  │
-│  ┌────────────────────────────────────────┐     │
-│  │  Babel Plugin 주입 코드                │     │
-│  │  - Auto testID                         │     │
-│  │  - Component tracking                  │     │
-│  └────────────────────────────────────────┘     │
-│                                                  │
-│  ┌────────────────────────────────────────┐     │
-│  │  (스크린샷: 호스트 CLI adb/simctl)      │     │
-│  └────────────────────────────────────────┘     │
-└──────────────────────────────────────────────────┘
+│  - CDP Client (Metro /json → WebSocket 직접 연결)│
+└──────┬────────────────────────┬─────────────────┘
+       │ WebSocket (12300)      │ CDP WebSocket
+       │                        │ (Metro webSocketDebuggerUrl)
+┌──────▼────────────┐  ┌───────▼──────────────────┐
+│  React Native App │  │  Metro (InspectorProxy)  │
+│  (iOS/Android)    │  │  :8230/json → 타겟 목록   │
+│                    │  │  :8230/inspector/debug    │
+│  ┌──────────────┐ │  └──────────────────────────┘
+│  │  runtime.js  │ │
+│  │  - WS Client │ │  ┌──────────────────────────┐
+│  │  - Fiber Hook│ │  │  스크린샷 (호스트 CLI)    │
+│  │  - Eval Bridg│ │  │  adb / xcrun simctl      │
+│  └──────────────┘ │  └──────────────────────────┘
+│                    │
+│  ┌──────────────┐ │
+│  │  Babel 주입   │ │
+│  │  - testID    │ │
+│  │  - presHandler│ │
+│  └──────────────┘ │
+└────────────────────┘
 ```
+
+**CDP 이벤트 수집**: 앱 init 시 `metroBaseUrl` 전송 → MCP 서버가 Metro `/json`에서 타겟 발견 → `webSocketDebuggerUrl`로 직접 CDP 연결 → Runtime/Network/Log.enable → 이벤트 in-memory 수집. `node -r`이나 `metro.config.js` 수정 불필요. 상세: `docs/cdp-interceptor-library-design.md`
 
 ### 3.3 빌드 파이프라인
 
@@ -252,13 +253,17 @@ packages/react-native-mcp-server/
 
 **제공 Tools**:
 
-- `evaluate_script` - 앱에서 함수 실행 (Chrome DevTools MCP 스펙) ✅ (triggerPress 등 호출 가능)
-- `get_component_tree` - (예정)
-- `find_component` - (예정)
-- `click_component` - evaluate_script로 `triggerPress(testID)` 호출로 대체 ✅
-- `set_props` - (예정)
+- `evaluate_script` - 앱에서 함수 실행 (Chrome DevTools MCP 스펙) ✅
+- `list_clickables` - Fiber 트리에서 클릭 가능 요소 목록 (uid + label) ✅
+- `click` - testID(uid) 기반 클릭 ✅
+- `click_by_label` - 텍스트 라벨로 onPress 호출 (testID 불필요) ✅
+- `get_by_label` - Fiber 트리에서 라벨 검색 + 디버그 정보 ✅
+- `list_console_messages` - CDP Runtime.consoleAPICalled 수집 ✅
+- `list_network_requests` - CDP Network.\* 이벤트 수집 ✅
+- `get_debugger_status` - CDP WebSocket 연결 상태 확인 ✅
 - `take_screenshot` - ADB(Android) / simctl(iOS 시뮬레이터)로 캡처 ✅
-- `list_network_requests` / `get_console_logs` - (예정)
+- `get_component_tree` - (예정)
+- `set_props` - (예정)
 
 ### 4.2 packages/metro-plugin
 
@@ -478,13 +483,16 @@ if (__DEV__) {
 
 ### Phase 5: 고급 기능
 
-**목표**: Modal, FlatList 등
+**목표**: Modal, FlatList, 네트워크/콘솔 모니터링 등
 
 **구현**:
 
 - [ ] Modal 추적
 - [ ] FlatList 가상화 처리
-- [ ] 네트워크 모니터링
+- [x] 네트워크 모니터링 — CDP 직접 연결로 `Network.*` 이벤트 수집 (`list_network_requests`) ✅
+- [x] 콘솔 모니터링 — `Runtime.consoleAPICalled` 수집 (`list_console_messages`) ✅
+- [x] CDP 연결 상태 확인 (`get_debugger_status`) ✅
+- [x] Fiber 트리 기반 라벨 검색 (`get_by_label`, `click_by_label`, `list_clickables`) ✅
 - [ ] 성능 모니터링
 
 **산출물**: 프로덕션급 완성
