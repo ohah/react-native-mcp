@@ -11,6 +11,7 @@
 
 var _pressHandlers = {};
 var _webViews = {};
+var _scrollRefs = {};
 
 // ─── Fiber 트리 헬퍼 ────────────────────────────────────────────
 
@@ -62,10 +63,13 @@ function collectText(fiber, TextComponent) {
   if (fiber.type === TextComponent && fiber.memoizedProps) {
     var c = fiber.memoizedProps.children;
     if (typeof c === 'string') return c.trim();
+    if (typeof c === 'number' || typeof c === 'boolean') return String(c);
     if (Array.isArray(c))
       return c
         .map(function (x) {
-          return typeof x === 'string' ? x : '';
+          if (typeof x === 'string') return x;
+          if (typeof x === 'number' || typeof x === 'boolean') return String(x);
+          return '';
         })
         .join('')
         .trim();
@@ -259,6 +263,14 @@ var MCP = {
     return MCP.getByLabel('');
   },
   /**
+   * onPress 있는 노드별 전체 텍스트(textContent). querySelector + textContent처럼 검증용.
+   * 반환: [{ text, testID? }] — text는 해당 버튼 하위 Text 전체 이어붙인 값.
+   */
+  getClickableTextContent: function () {
+    var r = MCP.getByLabel('');
+    return r && r.labelsWithOnPress ? r.labelsWithOnPress : [];
+  },
+  /**
    * Fiber 트리 전체에서 Text 노드 내용 수집. 버튼 여부와 무관하게 모든 보이는 텍스트.
    * 반환: [{ text, testID? }] — testID는 해당 Text의 조상 중 가장 가까운 testID.
    */
@@ -336,29 +348,24 @@ var MCP = {
     }
   },
   /**
-   * Fiber 트리에서 라벨(텍스트)에 해당하는 노드를 찾아 onPress 호출. testID 없어도 동작.
+   * Fiber 트리에서 라벨(텍스트)에 해당하는 onPress 노드들을 순서대로 수집한 뒤, index번째(0-based) 호출.
+   * index 생략 시 0 (첫 번째). querySelectorAll()[index]와 유사.
    */
-  pressByLabel: function (labelSubstring) {
+  pressByLabel: function (labelSubstring, index) {
     if (typeof labelSubstring !== 'string' || !labelSubstring.trim()) return false;
     try {
       var root = getFiberRoot();
       if (!root) return false;
       var c = getRNComponents();
       var search = labelSubstring.trim();
-      var found = false;
+      var matches = [];
       function visit(fiber) {
-        if (!fiber || found) return;
+        if (!fiber) return;
         var props = fiber.memoizedProps;
         var onPress = props && props.onPress;
         if (typeof onPress === 'function') {
           var label = getLabel(fiber, c.Text, c.Image);
-          if (label.indexOf(search) !== -1) {
-            try {
-              onPress();
-            } catch (e) {}
-            found = true;
-            return;
-          }
+          if (label.indexOf(search) !== -1) matches.push(onPress);
           visit(fiber.sibling);
           return;
         }
@@ -366,7 +373,14 @@ var MCP = {
         visit(fiber.sibling);
       }
       visit(root);
-      return found;
+      var idx = typeof index === 'number' && index >= 0 ? index : 0;
+      if (matches[idx]) {
+        try {
+          matches[idx]();
+        } catch (e) {}
+        return true;
+      }
+      return false;
     } catch (e) {
       return false;
     }
@@ -387,6 +401,36 @@ var MCP = {
   },
   getRegisteredWebViewIds: function () {
     return Object.keys(_webViews);
+  },
+  registerScrollRef: function (testID, ref) {
+    if (typeof testID === 'string' && ref != null) _scrollRefs[testID] = ref;
+  },
+  unregisterScrollRef: function (testID) {
+    if (typeof testID === 'string') delete _scrollRefs[testID];
+  },
+  scrollTo: function (testID, options) {
+    var ref = _scrollRefs[testID];
+    if (!ref) return { ok: false, error: 'ScrollView ref not found or scrollTo not available' };
+    var opts = typeof options === 'object' && options !== null ? options : {};
+    var x = opts.x || 0;
+    var y = opts.y || 0;
+    var animated = opts.animated !== false;
+    try {
+      if (typeof ref.scrollTo === 'function') {
+        ref.scrollTo({ x: x, y: y, animated: animated });
+        return { ok: true };
+      }
+      if (typeof ref.scrollToOffset === 'function') {
+        ref.scrollToOffset({ offset: y, animated: animated });
+        return { ok: true };
+      }
+      return { ok: false, error: 'ScrollView ref not found or scrollTo not available' };
+    } catch (e) {
+      return { ok: false, error: e && e.message ? e.message : String(e) };
+    }
+  },
+  getRegisteredScrollTestIDs: function () {
+    return Object.keys(_scrollRefs);
   },
 };
 if (typeof global !== 'undefined') global.__REACT_NATIVE_MCP__ = MCP;
@@ -411,6 +455,9 @@ if (typeof __DEV__ !== 'undefined' && __DEV__) {
       } catch (_e) {}
     ws = new WebSocket(wsUrl);
     ws.onopen = function () {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[MCP] Connected to server', wsUrl);
+      }
       reconnectDelay = 1000;
       if (_reconnectTimer != null) clearTimeout(_reconnectTimer);
       _reconnectTimer = null;
