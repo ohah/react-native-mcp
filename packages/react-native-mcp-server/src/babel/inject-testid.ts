@@ -7,7 +7,27 @@
  *
  * PascalCase 함수 컴포넌트에 displayName을 자동 주입해
  * release 빌드에서도 Fiber 트리에서 컴포넌트 이름을 보존한다.
+ *
+ * --- Fiber 직접 접근으로 대체 가능한 주입 (비활성화됨) ---
+ *
+ * 아래 플래그로 제어되는 기능들은 Fiber 트리의 stateNode/memoizedProps로
+ * 직접 접근 가능하므로 비활성화됨. 재활성화 시 플래그를 true로 변경.
+ *
+ * - INJECT_PRESS_HANDLER: onPress를 registerPressHandler로 래핑.
+ *   → Fiber memoizedProps.onPress()로 직접 호출 가능 (click_by_label 도구).
+ *
+ * - INJECT_SCROLL_REF: ScrollView/FlatList에 registerScrollRef ref 주입.
+ *   → Fiber stateNode.scrollTo() / scrollToOffset()로 직접 접근 가능.
+ *     단, ScrollView/FlatList가 class→function component로 전환되면
+ *     stateNode가 null이 되므로 재활성화 필요.
+ *
+ * WebView registerWebView ref 주입은 Fiber로 대체 불가 (forwardRef, stateNode=null)
+ * 하므로 항상 활성화 상태.
  */
+
+/** Fiber 직접 접근으로 대체 가능 — 재활성화 시 true로 변경 */
+const INJECT_PRESS_HANDLER = false;
+const INJECT_SCROLL_REF = false;
 
 // 번들 후 CJS/ESM interop으로 default가 달라질 수 있음
 import traverseModule from '@babel/traverse';
@@ -234,7 +254,7 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
           }
         }
       }
-      if (tagName === 'ScrollView' || tagName === 'FlatList') {
+      if (INJECT_SCROLL_REF && (tagName === 'ScrollView' || tagName === 'FlatList')) {
         const scrollTidAttr =
           testIdAttr ??
           (el.attributes.find(
@@ -350,6 +370,8 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
         }
       }
       // testID + onPress 있으면 onPress를 등록 래퍼로 감싸서 MCP triggerPress 가능하게 함
+      // → Fiber memoizedProps.onPress()로 직접 호출 가능하므로 비활성화됨
+      if (!INJECT_PRESS_HANDLER) return;
       const onPressAttr = el.attributes.find(
         (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'onPress'
       ) as t.JSXAttribute | undefined;
