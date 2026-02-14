@@ -7,22 +7,25 @@
     "android:release": "react-native run-android --port 8230 --mode=release",
     "ios": "react-native run-ios --port 8230",
     "ios:release": "react-native run-ios --port 8230 --mode Release",
-    "start": "react-native start --port 8230 --config ./metro.config.js --reset-cache"
+    "start": "react-native start --port 8230 --reset-cache"
   },
   "dependencies": {
-    "@ohah/react-native-mcp-server": "workspace:*",
     "react": "^19.2.3",
-    "react-native": "0.83.1"
+    "react-native": "0.83.1",
+    "react-native-webview": "^13.16.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.25.0",
+    "@ohah/react-native-mcp-server": "workspace:*",
     "@react-native-community/cli": "20.0.0",
     "@react-native-community/cli-platform-android": "20.0.0",
     "@react-native-community/cli-platform-ios": "20.0.0",
     "@react-native/babel-preset": "0.83.1",
     "@react-native/codegen": "0.83.1",
+    "@react-native/eslint-config": "0.83.1",
+    "@react-native/gradle-plugin": "0.83.1",
     "@react-native/metro-config": "0.83.1",
     "@react-native/typescript-config": "0.83.1",
     "@types/react": "^19.2.7",

@@ -5,7 +5,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 
-export type TabId = 'scroll' | 'list';
+export type TabId = 'scroll' | 'list' | 'webview';
 
 export type TabBarProps = {
   activeTab: TabId;
@@ -44,6 +44,21 @@ export function TabBar({ activeTab, onTabChange, isDarkMode }: TabBarProps) {
           ]}
         >
           FlatList
+        </Text>
+      </Pressable>
+      <Pressable
+        style={[styles.tab, activeTab === 'webview' && styles.tabActive]}
+        onPress={() => onTabChange('webview')}
+        testID="demo-app-tab-webview"
+      >
+        <Text
+          style={[
+            styles.tabText,
+            activeTab === 'webview' && styles.tabTextActive,
+            isDarkMode && styles.textDark,
+          ]}
+        >
+          WebView
         </Text>
       </Pressable>
     </View>
