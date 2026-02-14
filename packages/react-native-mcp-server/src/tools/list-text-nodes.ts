@@ -7,6 +7,12 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
+import { deviceParam, platformParam } from './device-param.js';
+
+const schema = z.object({
+  deviceId: deviceParam,
+  platform: platformParam,
+});
 
 export function registerListTextNodes(server: McpServer, appSession: AppSession): void {
   (
@@ -22,10 +28,14 @@ export function registerListTextNodes(server: McpServer, appSession: AppSession)
     {
       description:
         'List text node contents from React Native Fiber tree. Returns all visible text (not only clickables). Each item: text, optional testID (nearest ancestor). Requires DevTools hook.',
-      inputSchema: z.object({}),
+      inputSchema: schema,
     },
-    async () => {
-      if (!appSession.isConnected()) {
+    async (args: unknown) => {
+      const parsed = schema.safeParse(args ?? {});
+      const deviceId = parsed.success ? parsed.data.deviceId : undefined;
+      const platform = parsed.success ? parsed.data.platform : undefined;
+
+      if (!appSession.isConnected(deviceId, platform)) {
         return {
           content: [
             {
@@ -37,7 +47,12 @@ export function registerListTextNodes(server: McpServer, appSession: AppSession)
       }
       const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.getTextNodes ? __REACT_NATIVE_MCP__.getTextNodes() : []; })();`;
       try {
-        const res = await appSession.sendRequest({ method: 'eval', params: { code } });
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
         if (res.error != null) {
           return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }

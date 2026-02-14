@@ -6,6 +6,12 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
+import { deviceParam, platformParam } from './device-param.js';
+
+const schema = z.object({
+  deviceId: deviceParam,
+  platform: platformParam,
+});
 
 export function registerListClickableTextContent(server: McpServer, appSession: AppSession): void {
   (
@@ -21,10 +27,14 @@ export function registerListClickableTextContent(server: McpServer, appSession: 
     {
       description:
         'List full text (textContent) per node that has onPress. For verifying button/click-area display text. Returns [{ text, testID? }].',
-      inputSchema: z.object({}),
+      inputSchema: schema,
     },
-    async () => {
-      if (!appSession.isConnected()) {
+    async (args: unknown) => {
+      const parsed = schema.safeParse(args ?? {});
+      const deviceId = parsed.success ? parsed.data.deviceId : undefined;
+      const platform = parsed.success ? parsed.data.platform : undefined;
+
+      if (!appSession.isConnected(deviceId, platform)) {
         return {
           content: [
             {
@@ -36,7 +46,12 @@ export function registerListClickableTextContent(server: McpServer, appSession: 
       }
       const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.getClickableTextContent ? __REACT_NATIVE_MCP__.getClickableTextContent() : []; })();`;
       try {
-        const res = await appSession.sendRequest({ method: 'eval', params: { code } });
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
         if (res.error != null) {
           return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }

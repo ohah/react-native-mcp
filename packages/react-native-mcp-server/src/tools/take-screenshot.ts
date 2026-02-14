@@ -15,10 +15,7 @@ const schema = z.object({
   platform: z
     .enum(['android', 'ios'])
     .describe('android: adb shell screencap. ios: xcrun simctl (simulator only).'),
-  filePath: z
-    .string()
-    .optional()
-    .describe('Path to save screenshot (optional, Chrome DevTools MCP spec).'),
+  filePath: z.string().optional().describe('Path to save screenshot (optional).'),
   format: z
     .enum(['png', 'jpeg', 'webp'])
     .optional()
@@ -116,7 +113,7 @@ export function registerTakeScreenshot(server: McpServer): void {
     'take_screenshot',
     {
       description:
-        'Capture current screen of connected Android device (adb) or booted iOS simulator (xcrun simctl). No in-app native module. Returns PNG as MCP image for client display (Chrome DevTools MCP spec).',
+        'Capture current screen of connected Android device (adb) or booted iOS simulator (xcrun simctl). No in-app native module. Returns PNG as MCP image for client display.',
       inputSchema: schema,
     },
     async (args: unknown) => {

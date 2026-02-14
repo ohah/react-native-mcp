@@ -8,6 +8,12 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
+import { deviceParam, platformParam } from './device-param.js';
+
+const schema = z.object({
+  deviceId: deviceParam,
+  platform: platformParam,
+});
 
 export function registerListClickables(server: McpServer, appSession: AppSession): void {
   (
@@ -23,10 +29,14 @@ export function registerListClickables(server: McpServer, appSession: AppSession
     {
       description:
         'List clickable elements (uid + label). Search by label text then call click(uid). Labels collected from Fiber tree (runtime text when DevTools hook present).',
-      inputSchema: z.object({}),
+      inputSchema: schema,
     },
-    async () => {
-      if (!appSession.isConnected()) {
+    async (args: unknown) => {
+      const parsed = schema.safeParse(args ?? {});
+      const deviceId = parsed.success ? parsed.data.deviceId : undefined;
+      const platform = parsed.success ? parsed.data.platform : undefined;
+
+      if (!appSession.isConnected(deviceId, platform)) {
         return {
           content: [
             {
@@ -38,7 +48,12 @@ export function registerListClickables(server: McpServer, appSession: AppSession
       }
       const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.getClickables ? __REACT_NATIVE_MCP__.getClickables() : []; })();`;
       try {
-        const res = await appSession.sendRequest({ method: 'eval', params: { code } });
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
         if (res.error != null) {
           return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }

@@ -23,8 +23,7 @@ export function registerListPages(server: McpServer): void {
   ).registerTool(
     'list_pages',
     {
-      description:
-        'List open pages. React Native returns a single app as one page (Chrome DevTools MCP spec).',
+      description: 'List open pages. React Native returns a single app as one page.',
       inputSchema: z.object({}),
     },
     async () => {

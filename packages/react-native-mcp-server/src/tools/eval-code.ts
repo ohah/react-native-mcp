@@ -7,12 +7,15 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
+import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
   function: z
     .string()
     .describe('JavaScript function to run in the app (e.g. () => document.title or (x) => x + 1).'),
   args: z.array(z.unknown()).optional().describe('Array of arguments to pass to the function.'),
+  deviceId: deviceParam,
+  platform: platformParam,
 });
 
 function formatResult(value: unknown): string {
@@ -41,13 +44,13 @@ export function registerEvaluateScript(server: McpServer, appSession: AppSession
     'evaluate_script',
     {
       description:
-        'Run a JavaScript function in the React Native app context. Same as Chrome DevTools MCP: function (string), args (array). Returns JSON-serializable result.',
+        'Run a JavaScript function in the React Native app context. function (string), args (array). Returns JSON-serializable result.',
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const { function: fnStr, args: fnArgs } = schema.parse(args);
+      const { function: fnStr, args: fnArgs, deviceId, platform } = schema.parse(args);
 
-      if (!appSession.isConnected()) {
+      if (!appSession.isConnected(deviceId, platform)) {
         return {
           content: [
             {
@@ -62,7 +65,12 @@ export function registerEvaluateScript(server: McpServer, appSession: AppSession
       const code = `(function(){try{var __f=(${fnStr});return __f.apply(null,${argsJson});}catch(e){return e.message||String(e);}})()`;
 
       try {
-        const res = await appSession.sendRequest({ method: 'eval', params: { code } });
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
         if (res.error != null) {
           return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }
