@@ -1,11 +1,19 @@
 /**
- * 하단 탭 바 — ScrollView / FlatList 전환
+ * 하단 탭 바 — Scroll / Press / Input / FlatList / WebView
  */
 
 import React from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 
-export type TabId = 'scroll' | 'list' | 'webview';
+export type TabId = 'scroll' | 'press' | 'input' | 'list' | 'webview';
+
+const tabs: { id: TabId; label: string; testID: string }[] = [
+  { id: 'scroll', label: 'Scroll', testID: 'tab-scroll' },
+  { id: 'press', label: 'Press', testID: 'tab-press' },
+  { id: 'input', label: 'Input', testID: 'tab-input' },
+  { id: 'list', label: 'List', testID: 'tab-list' },
+  { id: 'webview', label: 'WebView', testID: 'tab-webview' },
+];
 
 export type TabBarProps = {
   activeTab: TabId;
@@ -16,51 +24,24 @@ export type TabBarProps = {
 export function TabBar({ activeTab, onTabChange, isDarkMode }: TabBarProps) {
   return (
     <View style={[styles.tabBar, isDarkMode && styles.tabBarDark]}>
-      <Pressable
-        style={[styles.tab, activeTab === 'scroll' && styles.tabActive]}
-        onPress={() => onTabChange('scroll')}
-        testID="demo-app-tab-scroll"
-      >
-        <Text
-          style={[
-            styles.tabText,
-            activeTab === 'scroll' && styles.tabTextActive,
-            isDarkMode && styles.textDark,
-          ]}
+      {tabs.map((tab) => (
+        <Pressable
+          key={tab.id}
+          style={[styles.tab, activeTab === tab.id && styles.tabActive]}
+          onPress={() => onTabChange(tab.id)}
+          testID={tab.testID}
         >
-          ScrollView
-        </Text>
-      </Pressable>
-      <Pressable
-        style={[styles.tab, activeTab === 'list' && styles.tabActive]}
-        onPress={() => onTabChange('list')}
-        testID="demo-app-tab-list"
-      >
-        <Text
-          style={[
-            styles.tabText,
-            activeTab === 'list' && styles.tabTextActive,
-            isDarkMode && styles.textDark,
-          ]}
-        >
-          FlatList
-        </Text>
-      </Pressable>
-      <Pressable
-        style={[styles.tab, activeTab === 'webview' && styles.tabActive]}
-        onPress={() => onTabChange('webview')}
-        testID="demo-app-tab-webview"
-      >
-        <Text
-          style={[
-            styles.tabText,
-            activeTab === 'webview' && styles.tabTextActive,
-            isDarkMode && styles.textDark,
-          ]}
-        >
-          WebView
-        </Text>
-      </Pressable>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === tab.id && styles.tabTextActive,
+              isDarkMode && styles.textDark,
+            ]}
+          >
+            {tab.label}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -75,7 +56,7 @@ const styles = StyleSheet.create({
   tabBarDark: { backgroundColor: '#2a2a2a', borderTopColor: '#444' },
   tab: { flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   tabActive: { borderBottomWidth: 3, borderBottomColor: '#0066cc' },
-  tabText: { fontSize: 15, fontWeight: '500', color: '#333' },
+  tabText: { fontSize: 13, fontWeight: '500', color: '#333' },
   tabTextActive: { color: '#0066cc', fontWeight: '600' },
   textDark: { color: '#fff' },
 });
