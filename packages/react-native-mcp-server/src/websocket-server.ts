@@ -1,7 +1,7 @@
 /**
- * MCP 서버 ↔ React Native 앱 간 WebSocket 서버 (Multi-Device)
- * 포트 12300에서 N대 앱 연결 수락. 각 디바이스에 고유 deviceId 할당.
- * deviceId/platform 기반 라우팅으로 특정 디바이스에 요청 전송.
+ * MCP 서버 ↔ React Native 앱 간 WebSocket 서버 (Phase 1)
+ * 포트 12300에서 앱 연결 수락, eval 요청 전송 및 응답 수신.
+ * 다중 연결 지원: 디바이스별 deviceId(예: ios-1, android-1) 할당.
  */
 
 import { WebSocketServer, WebSocket } from 'ws';
@@ -25,7 +25,10 @@ interface AppRequest {
 
 type PendingResolver = { resolve: (value: AppResponse) => void; reject: (err: Error) => void };
 
-/** 개별 디바이스 연결 */
+/**
+ * 디바이스 하나당 하나의 WebSocket 연결.
+ * 테스트에서 _testInjectDevice로 주입할 때 이 형태 사용.
+ */
 export interface DeviceConnection {
   deviceId: string;
   platform: string;
@@ -35,98 +38,54 @@ export interface DeviceConnection {
   metroBaseUrl: string | null;
 }
 
-/** 디바이스 정보 (외부 공개용) */
-export interface DeviceInfo {
-  deviceId: string;
-  platform: string;
-  deviceName: string | null;
-  connected: boolean;
-}
-
 /**
- * 다중 디바이스 세션: deviceId로 키, platform 기반 라우팅 지원
+ * 앱 연결 세션: 다중 WebSocket, 디바이스별 요청/응답 매칭
  */
 export class AppSession {
   private devices = new Map<string, DeviceConnection>();
-  private platformCounters = new Map<string, number>();
+  private deviceByWs = new Map<WebSocket, string>();
+  private awaitingInit = new Set<WebSocket>();
   private server: WebSocketServer | null = null;
 
-  /** deviceId 생성: "{platform}-{순번}" */
-  private generateDeviceId(platform: string): string {
-    const count = (this.platformCounters.get(platform) ?? 0) + 1;
-    this.platformCounters.set(platform, count);
-    return `${platform}-${count}`;
-  }
-
-  /** 같은 platform+deviceName의 기존 디바이스 찾기 (재연결 대응) */
-  private findExistingDevice(platform: string, deviceName: string | null): DeviceConnection | null {
-    if (deviceName === null) return null;
-    for (const device of this.devices.values()) {
-      if (device.platform === platform && device.deviceName === deviceName) {
-        return device;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * 디바이스 라우팅:
-   * - deviceId 지정 → 해당 디바이스
-   * - platform 지정 → 해당 platform 1대면 자동 선택, 2대+ 에러
-   * - 미지정 → 전체 1대면 자동 선택, 2대+ 에러
-   */
+  /** 연결된 디바이스 중 열린 것 하나로 해석 (deviceId/platform 미지정 시) */
   resolveDevice(deviceId?: string, platform?: string): DeviceConnection {
-    if (deviceId) {
-      const device = this.devices.get(deviceId);
-      if (!device || device.ws.readyState !== WebSocket.OPEN) {
-        throw new Error(
-          `Device "${deviceId}" not connected. Run get_debugger_status to see connected devices.`
-        );
+    const open = () => [...this.devices.values()].filter((c) => c.ws.readyState === WebSocket.OPEN);
+
+    if (deviceId != null && deviceId !== '') {
+      const conn = this.devices.get(deviceId);
+      if (!conn || conn.ws.readyState !== WebSocket.OPEN) {
+        throw new Error('Device not connected: ' + deviceId);
       }
-      return device;
+      return conn;
     }
-
-    let candidates: DeviceConnection[];
-
-    if (platform) {
-      candidates = [...this.devices.values()].filter(
-        (d) => d.platform === platform && d.ws.readyState === WebSocket.OPEN
-      );
-      if (candidates.length === 0) {
-        throw new Error(
-          `No ${platform} app connected. Start the app with Metro and ensure the MCP runtime is loaded.`
-        );
-      }
-      if (candidates.length > 1) {
-        const ids = candidates.map((d) => d.deviceId).join(', ');
-        throw new Error(
-          `Multiple ${platform} devices connected (${ids}). Specify deviceId to target a specific device.`
-        );
-      }
-      return candidates[0]!;
+    if (platform != null && platform !== '') {
+      const list = open().filter((c) => c.platform === platform);
+      if (list.length === 0) throw new Error('No ' + platform + ' device connected');
+      if (list.length > 1) throw new Error('Multiple ' + platform + ' devices connected');
+      const byPlatform = list[0];
+      if (!byPlatform) throw new Error('No ' + platform + ' device connected');
+      return byPlatform;
     }
-
-    candidates = [...this.devices.values()].filter((d) => d.ws.readyState === WebSocket.OPEN);
-    if (candidates.length === 0) {
+    const list = open();
+    if (list.length === 0) {
       throw new Error(
-        'No React Native app connected. Start the app with Metro and ensure the MCP runtime is loaded.'
+        'No React Native app connected. Start the app with Metro and ensure the runtime is loaded.'
       );
     }
-    if (candidates.length > 1) {
-      const ids = candidates.map((d) => `${d.deviceId}(${d.deviceName ?? d.platform})`).join(', ');
-      throw new Error(
-        `Multiple devices connected (${ids}). Specify deviceId or platform to target a specific device.`
-      );
+    if (list.length > 1) {
+      throw new Error('Multiple devices connected. Specify deviceId or platform.');
     }
-    return candidates[0]!;
+    const single = list[0];
+    if (!single) throw new Error('No React Native app connected.');
+    return single;
   }
 
-  /** 연결 여부: 인자 없으면 1대라도 연결되어 있으면 true */
+  /** 현재 앱이 연결되어 있는지 (인자 없음: 1대 이상 연결 시 true) */
   isConnected(deviceId?: string, platform?: string): boolean {
-    if (!deviceId && !platform) {
-      return [...this.devices.values()].some((d) => d.ws.readyState === WebSocket.OPEN);
-    }
     try {
+      if (deviceId == null && platform == null) {
+        return [...this.devices.values()].some((c) => c.ws.readyState === WebSocket.OPEN);
+      }
       this.resolveDevice(deviceId, platform);
       return true;
     } catch {
@@ -134,21 +93,67 @@ export class AppSession {
     }
   }
 
-  /** 테스트 전용: 디바이스 직접 등록 */
-  _testInjectDevice(device: DeviceConnection): void {
-    this.devices.set(device.deviceId, device);
+  /**
+   * 연결된 디바이스 목록 (get_debugger_status 등에서 사용).
+   * 열린 연결만 반환, 각 항목에 connected: true 포함.
+   */
+  getConnectedDevices(): Array<{
+    deviceId: string;
+    platform: string;
+    deviceName: string | null;
+    connected: true;
+  }> {
+    return [...this.devices.values()]
+      .filter((c) => c.ws.readyState === WebSocket.OPEN)
+      .map((c) => ({
+        deviceId: c.deviceId,
+        platform: c.platform,
+        deviceName: c.deviceName,
+        connected: true as const,
+      }));
   }
 
-  /** 연결된 전체 디바이스 목록 */
-  getConnectedDevices(): DeviceInfo[] {
-    return [...this.devices.values()]
-      .filter((d) => d.ws.readyState === WebSocket.OPEN)
-      .map((d) => ({
-        deviceId: d.deviceId,
-        platform: d.platform,
-        deviceName: d.deviceName,
-        connected: true,
-      }));
+  /** 디버깅: WebSocket 서버/클라이언트 상태 */
+  getConnectionStatus(): { connected: boolean; hasServer: boolean; deviceCount: number } {
+    const open = [...this.devices.values()].filter((c) => c.ws.readyState === WebSocket.OPEN);
+    return {
+      connected: open.length > 0,
+      hasServer: this.server != null,
+      deviceCount: open.length,
+    };
+  }
+
+  /** 테스트용: 디바이스를 직접 주입 (테스트에서만 사용) */
+  _testInjectDevice(conn: DeviceConnection): void {
+    this.devices.set(conn.deviceId, conn);
+    this.deviceByWs.set(conn.ws, conn.deviceId);
+  }
+
+  private nextDeviceId(platform: string): string {
+    const samePlatform = [...this.devices.values()].filter((c) => c.platform === platform);
+    const indices = samePlatform.map((c) => {
+      const m = c.deviceId.match(/^(.+)-(\d+)$/);
+      return m && m[2] !== undefined ? parseInt(m[2], 10) : 0;
+    });
+    const max = indices.length > 0 ? Math.max(...indices) : 0;
+    return `${platform}-${max + 1}`;
+  }
+
+  private removeConnection(ws: WebSocket): void {
+    const deviceId = this.deviceByWs.get(ws);
+    if (deviceId) {
+      setMetroBaseUrlFromApp(null, deviceId);
+      const conn = this.devices.get(deviceId);
+      if (conn) {
+        for (const { reject } of conn.pending.values()) {
+          reject(new Error('Device disconnected'));
+        }
+        conn.pending.clear();
+      }
+      this.devices.delete(deviceId);
+      this.deviceByWs.delete(ws);
+    }
+    this.awaitingInit.delete(ws);
   }
 
   /**
@@ -156,42 +161,23 @@ export class AppSession {
    */
   start(port: number = DEFAULT_PORT): void {
     if (this.server) return;
-    const wss = new WebSocketServer({ port });
-    wss.on('connection', (ws: WebSocket) => {
-      // init 메시지를 기다려 디바이스 등록
-      let registered = false;
+    this.server = new WebSocketServer({ port });
+    this.server.on('connection', (ws: WebSocket) => {
+      console.error('[react-native-mcp-server] WebSocket client connected');
+      this.awaitingInit.add(ws);
 
       ws.on('message', (data: Buffer | string) => {
         try {
           const msg = JSON.parse(data.toString()) as Record<string, unknown>;
 
-          // init 메시지: 디바이스 등록
-          if (!registered && msg?.type === 'init') {
-            registered = true;
+          if (this.awaitingInit.has(ws) && msg?.type === 'init') {
+            this.awaitingInit.delete(ws);
             const platform = typeof msg.platform === 'string' ? msg.platform : 'unknown';
+            const deviceId = this.nextDeviceId(platform);
             const deviceName = typeof msg.deviceName === 'string' ? msg.deviceName : null;
             const metroBaseUrl = typeof msg.metroBaseUrl === 'string' ? msg.metroBaseUrl : null;
 
-            // 같은 platform+deviceName 기존 세션 교체 (앱 재시작)
-            const existing = this.findExistingDevice(platform, deviceName);
-            let deviceId: string;
-            if (existing) {
-              deviceId = existing.deviceId;
-              // 기존 WebSocket 닫기
-              try {
-                existing.ws.close(1000, 'Replaced by new connection');
-              } catch {}
-              // 기존 pending 요청 에러 처리
-              for (const { reject } of existing.pending.values()) {
-                reject(new Error('Device reconnected'));
-              }
-              existing.pending.clear();
-              this.devices.delete(deviceId);
-            } else {
-              deviceId = this.generateDeviceId(platform);
-            }
-
-            const device: DeviceConnection = {
+            const conn: DeviceConnection = {
               deviceId,
               platform,
               deviceName,
@@ -199,29 +185,19 @@ export class AppSession {
               pending: new Map(),
               metroBaseUrl,
             };
-            this.devices.set(deviceId, device);
-
-            if (metroBaseUrl) {
-              setMetroBaseUrlFromApp(metroBaseUrl, deviceId);
-            }
-
-            // deviceId를 앱에 알려줌
-            ws.send(JSON.stringify({ type: 'deviceId', deviceId }));
-
-            console.error(
-              `[react-native-mcp-server] Device connected: ${deviceId} (${platform}${deviceName ? ', ' + deviceName : ''})`
-            );
+            this.devices.set(deviceId, conn);
+            this.deviceByWs.set(ws, deviceId);
+            if (metroBaseUrl) setMetroBaseUrlFromApp(metroBaseUrl, deviceId);
             return;
           }
 
-          // 응답 메시지: 해당 디바이스의 pending 에서 찾기
-          const res = msg as unknown as AppResponse;
-          if (res.id) {
-            // 이 ws에 해당하는 device 찾기
-            const device = this.findDeviceByWs(ws);
-            if (device && device.pending.has(res.id)) {
-              const { resolve } = device.pending.get(res.id)!;
-              device.pending.delete(res.id);
+          const respDeviceId = this.deviceByWs.get(ws);
+          if (respDeviceId != null) {
+            const conn = this.devices.get(respDeviceId);
+            const res = msg as unknown as AppResponse;
+            if (res?.id && conn?.pending.has(res.id)) {
+              const { resolve } = conn.pending.get(res.id)!;
+              conn.pending.delete(res.id);
               resolve(res);
             }
           }
@@ -231,53 +207,34 @@ export class AppSession {
       });
 
       ws.on('close', () => {
-        const device = this.findDeviceByWs(ws);
-        if (device) {
-          console.error(`[react-native-mcp-server] Device disconnected: ${device.deviceId}`);
-          setMetroBaseUrlFromApp(null, device.deviceId);
-          this.devices.delete(device.deviceId);
-        }
+        console.error('[react-native-mcp-server] WebSocket client disconnected');
+        this.removeConnection(ws);
       });
-
       ws.on('error', () => {
-        const device = this.findDeviceByWs(ws);
-        if (device) {
-          setMetroBaseUrlFromApp(null, device.deviceId);
-          this.devices.delete(device.deviceId);
-        }
+        this.removeConnection(ws);
       });
     });
-    wss.on('listening', () => {
-      this.server = wss;
+    this.server.on('listening', () => {
       console.error(
         `[react-native-mcp-server] WebSocket server listening on ws://localhost:${port}`
       );
     });
-    wss.on('error', (err: Error & { code?: string }) => {
-      if (err.code === 'EADDRINUSE' || err.message.includes('EADDRINUSE')) {
-        this.server = null;
-        wss.close();
+    this.server.on('error', (err: Error) => {
+      if (err.message?.includes('EADDRINUSE')) {
         console.error(
-          '[react-native-mcp-server] Port',
+          '[react-native-mcp-server] Port %s already in use. Only one MCP server should run. Kill the other process: kill $(lsof -t -i :%s)',
           port,
-          'already in use (another MCP instance?). Close other Cursor windows or restart Cursor so only one instance runs.'
+          port
         );
-        return;
+        process.exit(1);
       }
       console.error('[react-native-mcp-server] WebSocket server error:', err.message);
     });
   }
 
-  /** ws 인스턴스로 DeviceConnection 찾기 */
-  private findDeviceByWs(ws: WebSocket): DeviceConnection | null {
-    for (const device of this.devices.values()) {
-      if (device.ws === ws) return device;
-    }
-    return null;
-  }
-
   /**
-   * 디바이스에 요청 전송 후 응답 대기 (타임아웃 ms)
+   * 앱에 요청 전송 후 응답 대기 (타임아웃 ms).
+   * deviceId/platform 지정 시 해당 디바이스로, 미지정 시 연결 1대일 때만 가능.
    */
   async sendRequest(
     request: Omit<AppRequest, 'id'>,
@@ -285,17 +242,23 @@ export class AppSession {
     deviceId?: string,
     platform?: string
   ): Promise<AppResponse> {
-    const device = this.resolveDevice(deviceId, platform);
+    const conn = this.resolveDevice(deviceId, platform);
     const id = crypto.randomUUID();
     const msg: AppRequest = { ...request, id };
 
+    if (conn.ws.readyState !== WebSocket.OPEN) {
+      throw new Error(
+        'No React Native app connected. Start the app with Metro and ensure the runtime is loaded.'
+      );
+    }
+
     return new Promise<AppResponse>((resolve, reject) => {
       const t = setTimeout(() => {
-        if (device.pending.delete(id)) {
+        if (conn.pending.delete(id)) {
           reject(new Error('Request timeout: no response from app'));
         }
       }, timeoutMs);
-      device.pending.set(id, {
+      conn.pending.set(id, {
         resolve: (res) => {
           clearTimeout(t);
           resolve(res);
@@ -305,7 +268,7 @@ export class AppSession {
           reject(err);
         },
       });
-      device.ws.send(JSON.stringify(msg));
+      conn.ws.send(JSON.stringify(msg));
     });
   }
 
@@ -315,13 +278,9 @@ export class AppSession {
       this.server.close();
       this.server = null;
     }
-    for (const device of this.devices.values()) {
-      for (const { reject } of device.pending.values()) {
-        reject(new Error('Server stopped'));
-      }
-      device.pending.clear();
+    for (const [ws] of this.deviceByWs) {
+      this.removeConnection(ws);
     }
-    this.devices.clear();
   }
 }
 

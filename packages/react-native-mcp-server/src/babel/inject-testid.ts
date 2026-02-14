@@ -1,12 +1,9 @@
 /**
- * Babel AST 변환: JSX 요소에 자동 testID 주입 + displayName 보존
+ * Babel AST 변환: JSX 요소에 자동 testID 주입
  *
  * DESIGN.md Phase 3 계획에 따른 자동 testID 생성.
  * 커스텀 컴포넌트 내부의 JSX 요소 중 testID가 없으면
  * ComponentName-index-TagName 형식으로 주입한다.
- *
- * PascalCase 함수 컴포넌트에 displayName을 자동 주입해
- * release 빌드에서도 Fiber 트리에서 컴포넌트 이름을 보존한다.
  */
 
 // 번들 후 CJS/ESM interop으로 default가 달라질 수 있음
@@ -66,40 +63,7 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
         }
         state.stack.push({ componentName: name ?? 'Anonymous', jsxIndex: 0 });
       },
-      exit(path) {
-        const scope = state.stack[state.stack.length - 1];
-        if (
-          scope &&
-          scope.jsxIndex > 0 &&
-          scope.componentName !== 'Anonymous' &&
-          /^[A-Z]/.test(scope.componentName)
-        ) {
-          const stmt = t.expressionStatement(
-            t.assignmentExpression(
-              '=',
-              t.memberExpression(t.identifier(scope.componentName), t.identifier('displayName')),
-              t.stringLiteral(scope.componentName)
-            )
-          );
-          if (t.isFunctionDeclaration(path.node)) {
-            const target =
-              path.parentPath &&
-              (t.isExportDefaultDeclaration(path.parent) || t.isExportNamedDeclaration(path.parent))
-                ? path.parentPath
-                : path;
-            target.insertAfter(stmt);
-          } else if (path.parentPath && t.isVariableDeclarator(path.parent)) {
-            let target = path.parentPath.parentPath; // VariableDeclaration
-            if (
-              target?.parentPath &&
-              (t.isExportDefaultDeclaration(target.parent) ||
-                t.isExportNamedDeclaration(target.parent))
-            ) {
-              target = target.parentPath;
-            }
-            target?.insertAfter(stmt);
-          }
-        }
+      exit() {
         state.stack.pop();
       },
     },
@@ -117,238 +81,6 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
         el.attributes.push(t.jsxAttribute(t.jsxIdentifier('testID'), t.stringLiteral(value)));
         scope.jsxIndex += 1;
       }
-      // ScrollView/FlatList는 위에서 testID가 없으면 이미 자동 주입됨 → 모두 ref 주입/합성 (scroll 도구 + 사용자 ref 동시 동작)
-      const tagName = getTagName(el.name);
-      if (tagName === 'WebView') {
-        const webViewTidAttr =
-          testIdAttr ??
-          (el.attributes.find(
-            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'testID'
-          ) as t.JSXAttribute | undefined);
-        const webViewTestIdValue = webViewTidAttr ? getTestIdStringLiteral(webViewTidAttr) : null;
-        if (webViewTestIdValue != null) {
-          const refAttr = el.attributes.find(
-            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'ref'
-          ) as t.JSXAttribute | undefined;
-          const mcpRegister = t.expressionStatement(
-            t.logicalExpression(
-              '&&',
-              t.optionalMemberExpression(
-                t.identifier('__REACT_NATIVE_MCP__'),
-                t.identifier('registerWebView'),
-                false,
-                true
-              ),
-              t.callExpression(
-                t.memberExpression(
-                  t.optionalMemberExpression(
-                    t.identifier('__REACT_NATIVE_MCP__'),
-                    t.identifier('registerWebView'),
-                    false,
-                    true
-                  ),
-                  t.identifier('call'),
-                  false
-                ),
-                [
-                  t.identifier('__REACT_NATIVE_MCP__'),
-                  t.identifier('r'),
-                  t.stringLiteral(webViewTestIdValue),
-                ]
-              )
-            )
-          );
-          const mcpUnregister = t.expressionStatement(
-            t.logicalExpression(
-              '&&',
-              t.optionalMemberExpression(
-                t.identifier('__REACT_NATIVE_MCP__'),
-                t.identifier('unregisterWebView'),
-                false,
-                true
-              ),
-              t.callExpression(
-                t.memberExpression(
-                  t.optionalMemberExpression(
-                    t.identifier('__REACT_NATIVE_MCP__'),
-                    t.identifier('unregisterWebView'),
-                    false,
-                    true
-                  ),
-                  t.identifier('call'),
-                  false
-                ),
-                [t.identifier('__REACT_NATIVE_MCP__'), t.stringLiteral(webViewTestIdValue)]
-              )
-            )
-          );
-          const bodyStatements: t.Statement[] = [
-            t.ifStatement(t.identifier('r'), mcpRegister, mcpUnregister),
-          ];
-          const userRefExpr =
-            refAttr?.value && t.isJSXExpressionContainer(refAttr.value)
-              ? refAttr.value.expression
-              : null;
-          const hasUserRef = userRefExpr != null && !t.isJSXEmptyExpression(userRefExpr);
-          if (hasUserRef) {
-            bodyStatements.push(
-              t.ifStatement(
-                t.binaryExpression('!=', t.cloneNode(userRefExpr as t.Expression), t.nullLiteral()),
-                t.blockStatement([
-                  t.ifStatement(
-                    t.binaryExpression(
-                      '===',
-                      t.unaryExpression('typeof', t.cloneNode(userRefExpr as t.Expression)),
-                      t.stringLiteral('function')
-                    ),
-                    t.expressionStatement(
-                      t.callExpression(t.cloneNode(userRefExpr as t.Expression), [
-                        t.identifier('r'),
-                      ])
-                    ),
-                    t.expressionStatement(
-                      t.assignmentExpression(
-                        '=',
-                        t.memberExpression(
-                          t.cloneNode(userRefExpr as t.Expression),
-                          t.identifier('current')
-                        ),
-                        t.identifier('r')
-                      )
-                    )
-                  ),
-                ])
-              )
-            );
-          }
-          const composedRef = t.arrowFunctionExpression(
-            [t.identifier('r')],
-            t.blockStatement(bodyStatements)
-          );
-          if (refAttr) {
-            refAttr.value = t.jsxExpressionContainer(composedRef);
-          } else {
-            el.attributes.push(
-              t.jsxAttribute(t.jsxIdentifier('ref'), t.jsxExpressionContainer(composedRef))
-            );
-          }
-        }
-      }
-      if (tagName === 'ScrollView' || tagName === 'FlatList') {
-        const scrollTidAttr =
-          testIdAttr ??
-          (el.attributes.find(
-            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'testID'
-          ) as t.JSXAttribute | undefined);
-        const scrollTestIdValue = scrollTidAttr ? getTestIdStringLiteral(scrollTidAttr) : null;
-        if (scrollTestIdValue != null) {
-          const refAttr = el.attributes.find(
-            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'ref'
-          ) as t.JSXAttribute | undefined;
-          const mcpRegister = t.expressionStatement(
-            t.logicalExpression(
-              '&&',
-              t.optionalMemberExpression(
-                t.identifier('__REACT_NATIVE_MCP__'),
-                t.identifier('registerScrollRef'),
-                false,
-                true
-              ),
-              t.callExpression(
-                t.memberExpression(
-                  t.optionalMemberExpression(
-                    t.identifier('__REACT_NATIVE_MCP__'),
-                    t.identifier('registerScrollRef'),
-                    false,
-                    true
-                  ),
-                  t.identifier('call'),
-                  false
-                ),
-                [
-                  t.identifier('__REACT_NATIVE_MCP__'),
-                  t.stringLiteral(scrollTestIdValue),
-                  t.identifier('r'),
-                ]
-              )
-            )
-          );
-          const mcpUnregister = t.expressionStatement(
-            t.logicalExpression(
-              '&&',
-              t.optionalMemberExpression(
-                t.identifier('__REACT_NATIVE_MCP__'),
-                t.identifier('unregisterScrollRef'),
-                false,
-                true
-              ),
-              t.callExpression(
-                t.memberExpression(
-                  t.optionalMemberExpression(
-                    t.identifier('__REACT_NATIVE_MCP__'),
-                    t.identifier('unregisterScrollRef'),
-                    false,
-                    true
-                  ),
-                  t.identifier('call'),
-                  false
-                ),
-                [t.identifier('__REACT_NATIVE_MCP__'), t.stringLiteral(scrollTestIdValue)]
-              )
-            )
-          );
-          const bodyStatements: t.Statement[] = [
-            t.ifStatement(t.identifier('r'), mcpRegister, mcpUnregister),
-          ];
-          const userRefExpr =
-            refAttr?.value && t.isJSXExpressionContainer(refAttr.value)
-              ? refAttr.value.expression
-              : null;
-          const hasUserRef = userRefExpr != null && !t.isJSXEmptyExpression(userRefExpr);
-          if (hasUserRef) {
-            bodyStatements.push(
-              t.ifStatement(
-                t.binaryExpression('!=', t.cloneNode(userRefExpr as t.Expression), t.nullLiteral()),
-                t.blockStatement([
-                  t.ifStatement(
-                    t.binaryExpression(
-                      '===',
-                      t.unaryExpression('typeof', t.cloneNode(userRefExpr as t.Expression)),
-                      t.stringLiteral('function')
-                    ),
-                    t.expressionStatement(
-                      t.callExpression(t.cloneNode(userRefExpr as t.Expression), [
-                        t.identifier('r'),
-                      ])
-                    ),
-                    t.expressionStatement(
-                      t.assignmentExpression(
-                        '=',
-                        t.memberExpression(
-                          t.cloneNode(userRefExpr as t.Expression),
-                          t.identifier('current')
-                        ),
-                        t.identifier('r')
-                      )
-                    )
-                  ),
-                ])
-              )
-            );
-          }
-          const composedRef = t.arrowFunctionExpression(
-            [t.identifier('r')],
-            t.blockStatement(bodyStatements)
-          );
-          if (refAttr) {
-            refAttr.value = t.jsxExpressionContainer(composedRef);
-          } else {
-            el.attributes.push(
-              t.jsxAttribute(t.jsxIdentifier('ref'), t.jsxExpressionContainer(composedRef))
-            );
-          }
-        }
-      }
       // testID + onPress 있으면 onPress를 등록 래퍼로 감싸서 MCP triggerPress 가능하게 함
       const onPressAttr = el.attributes.find(
         (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'onPress'
@@ -359,8 +91,8 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
           (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'testID'
         ) as t.JSXAttribute | undefined);
       if (!tidAttr?.value || !onPressAttr?.value) return;
-      const testIdExpr = getTestIdExpression(tidAttr);
-      if (testIdExpr == null) return;
+      const testIdValue = getTestIdStringLiteral(tidAttr);
+      if (testIdValue == null) return;
       const rawExpr = t.isJSXExpressionContainer(onPressAttr.value)
         ? onPressAttr.value.expression
         : null;
@@ -384,7 +116,7 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
                     t.identifier('__REACT_NATIVE_MCP__'),
                     t.identifier('registerPressHandler')
                   ),
-                  [t.cloneNode(testIdExpr), t.identifier('f')]
+                  [t.stringLiteral(testIdValue), t.identifier('f')]
                 )
               )
             ),
@@ -413,17 +145,6 @@ function getTestIdStringLiteral(attr: t.JSXAttribute): string | null {
   if (t.isStringLiteral(attr.value)) return attr.value.value;
   if (t.isJSXExpressionContainer(attr.value) && t.isStringLiteral(attr.value.expression))
     return attr.value.expression.value;
-  return null;
-}
-
-/**
- * testID 속성에서 AST Expression 추출 (StringLiteral, TemplateLiteral 등 모든 표현식)
- */
-function getTestIdExpression(attr: t.JSXAttribute): t.Expression | null {
-  if (!attr.value) return null;
-  if (t.isStringLiteral(attr.value)) return attr.value;
-  if (t.isJSXExpressionContainer(attr.value) && !t.isJSXEmptyExpression(attr.value.expression))
-    return attr.value.expression as t.Expression;
   return null;
 }
 

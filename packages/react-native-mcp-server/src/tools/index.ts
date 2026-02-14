@@ -13,11 +13,12 @@ import { registerGetByLabel } from './get-by-label.js';
 import { registerGetDebuggerStatus } from './get-debugger-status.js';
 import { registerListClickables } from './list-clickables.js';
 import { registerListClickableTextContent } from './list-clickable-text-content.js';
-import { registerListTextNodes } from './list-text-nodes.js';
 import { registerListPages } from './list-pages.js';
-import { registerTakeSnapshot } from './take-snapshot.js';
-import { registerTakeScreenshot } from './take-screenshot.js';
+import { registerListTextNodes } from './list-text-nodes.js';
+import { registerNavigateWebView } from './navigate-webview.js';
 import { registerScroll } from './scroll.js';
+import { registerTakeScreenshot } from './take-screenshot.js';
+import { registerTakeSnapshot } from './take-snapshot.js';
 
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
@@ -27,6 +28,7 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerClick(server, appSession);
   registerClickByLabel(server, appSession);
   registerClickWebView(server, appSession);
+  registerNavigateWebView(server, appSession);
   registerListClickables(server, appSession);
   registerListClickableTextContent(server, appSession);
   registerListTextNodes(server, appSession);
