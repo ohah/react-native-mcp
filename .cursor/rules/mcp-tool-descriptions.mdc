@@ -1,0 +1,13 @@
+---
+description: MCP 도구 등록 시 description·파라미터 설명 규칙
+alwaysApply: true
+---
+
+# MCP 도구 description 규칙
+
+**MCP 서버에 등록하는 도구의 `description`과 스키마 파라미터 `describe()`는 모두 영어로 작성한다.**
+
+- `registerTool(..., { description: '...' })` 의 description 문자열 → 영어
+- zod 스키마의 `.describe('...')` (사용자에게 노출되는 파라미터 설명) → 영어
+
+코드 주석(JSDoc, 인라인)은 프로젝트 코딩 스타일대로 한글 가능. 사용자/클라이언트에 노출되는 도구 설명만 영어.
