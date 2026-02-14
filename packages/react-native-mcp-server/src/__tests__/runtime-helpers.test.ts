@@ -266,9 +266,7 @@ describe('getComponentTree — 컴포넌트 트리 스냅샷', () => {
 
   it('루트·자식 타입·testID·text 포함', () => {
     const root = makeFiber('View', { testID: 'screen' }, [
-      makeFiber('ScrollView', {}, [
-        makeFiber(MockText, { children: 'Hello' }),
-      ]),
+      makeFiber('ScrollView', {}, [makeFiber(MockText, { children: 'Hello' })]),
     ]);
     setMockFiberRoot(root);
     const tree = MCP.getComponentTree({}) as {
@@ -289,9 +287,7 @@ describe('getComponentTree — 컴포넌트 트리 스냅샷', () => {
   });
 
   it('testID 없으면 uid가 경로', () => {
-    const root = makeFiber('View', {}, [
-      makeFiber(MockText, { children: 'A' }),
-    ]);
+    const root = makeFiber('View', {}, [makeFiber(MockText, { children: 'A' })]);
     setMockFiberRoot(root);
     const tree = MCP.getComponentTree({}) as { uid: string; children?: Array<{ uid: string }> };
     expect(tree.uid).toBe('0');
@@ -301,9 +297,7 @@ describe('getComponentTree — 컴포넌트 트리 스냅샷', () => {
 
   it('maxDepth 초과 시 하위 생략', () => {
     const root = makeFiber('View', {}, [
-      makeFiber('View', {}, [
-        makeFiber('View', {}, [makeFiber(MockText, { children: 'Deep' })]),
-      ]),
+      makeFiber('View', {}, [makeFiber('View', {}, [makeFiber(MockText, { children: 'Deep' })])]),
     ]);
     setMockFiberRoot(root);
     const tree = MCP.getComponentTree({ maxDepth: 2 }) as { children?: unknown[] };

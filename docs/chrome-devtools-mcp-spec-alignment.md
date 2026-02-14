@@ -16,13 +16,13 @@ React Native MCP 서버는 [Chrome DevTools MCP](https://github.com/ChromeDevToo
 
 ### 2.1 Debugging
 
-| 도구                    | 지원    | 비고                                                                                                                                |
-| ----------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `take_screenshot`       | ✅      | RN: `platform`(android\|ios) 필수. Chrome과 동일하게 `filePath`, `format`, `quality` 옵션 지원.                                     |
-| `take_snapshot`         | ✅      | Fiber 컴포넌트 트리(타입/testID/자식) 기반 스냅샷. uid = testID 또는 경로 "0.1.2". maxDepth 옵션. querySelector 대체용.              |
-| `evaluate_script`       | ✅      | Chrome과 동일: `function`(string), `args`(array). WebSocket eval로 앱에서 실행.                                                     |
-| `list_console_messages` | ✅      | CDP 가로채기(/**mcp_cdp_events**)에서 Runtime.consoleAPICalled 등 수집. `pageIdx`, `pageSize`, `types`, `includePreservedMessages`. |
-| `get_console_message`   | ✅      | `msgid`로 단건 조회.                                                                                                                |
+| 도구                    | 지원 | 비고                                                                                                                                |
+| ----------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `take_screenshot`       | ✅   | RN: `platform`(android\|ios) 필수. Chrome과 동일하게 `filePath`, `format`, `quality` 옵션 지원.                                     |
+| `take_snapshot`         | ✅   | Fiber 컴포넌트 트리(타입/testID/자식) 기반 스냅샷. uid = testID 또는 경로 "0.1.2". maxDepth 옵션. querySelector 대체용.             |
+| `evaluate_script`       | ✅   | Chrome과 동일: `function`(string), `args`(array). WebSocket eval로 앱에서 실행.                                                     |
+| `list_console_messages` | ✅   | CDP 가로채기(/**mcp_cdp_events**)에서 Runtime.consoleAPICalled 등 수집. `pageIdx`, `pageSize`, `types`, `includePreservedMessages`. |
+| `get_console_message`   | ✅   | `msgid`로 단건 조회.                                                                                                                |
 
 ### 2.2 Network
 
