@@ -195,6 +195,43 @@ function MyBtn({ tid, onTap }) {
     expect(code).toContain('onPress=');
   });
 
+  it('WebView에 testID만 있으면 ref가 주입된다 (합성 아님)', async () => {
+    const src = `
+function Screen() {
+  return (
+    <WebView testID="my-webview" source={{ uri: 'https://example.com' }} />
+  );
+}
+`;
+    const { code } = await injectTestIds(src);
+    expect(code).toContain('registerWebView');
+    expect(code).toContain('unregisterWebView');
+    expect(code).toContain('my-webview');
+    const refInjected = /ref=\{[^}]*registerWebView[^}]*\}/s.test(code) || code.includes('ref={');
+    expect(refInjected).toBe(true);
+    const hasUserRefBranch = code.includes('typeof') && code.includes("'function'");
+    expect(hasUserRefBranch).toBe(false);
+  });
+
+  it('WebView에 testID와 ref가 있으면 ref가 합성된다', async () => {
+    const src = `
+function Screen() {
+  const webViewRef = useRef(null);
+  return (
+    <WebView testID="my-webview" ref={webViewRef} source={{ uri: 'https://example.com' }} />
+  );
+}
+`;
+    const { code } = await injectTestIds(src);
+    expect(code).toContain('registerWebView');
+    expect(code).toContain('unregisterWebView');
+    expect(code).toContain('my-webview');
+    expect(code).toContain('typeof');
+    expect(code).toMatch(/"function"|'function'/);
+    expect(code).toContain('webViewRef');
+    expect(code).toContain('.current');
+  });
+
   it('ScrollView에 testID와 ref가 있으면 ref가 합성된다', async () => {
     const src = `
 function Screen() {

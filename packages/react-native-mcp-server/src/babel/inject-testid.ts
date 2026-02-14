@@ -119,6 +119,121 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
       }
       // ScrollView/FlatList는 위에서 testID가 없으면 이미 자동 주입됨 → 모두 ref 주입/합성 (scroll 도구 + 사용자 ref 동시 동작)
       const tagName = getTagName(el.name);
+      if (tagName === 'WebView') {
+        const webViewTidAttr =
+          testIdAttr ??
+          (el.attributes.find(
+            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'testID'
+          ) as t.JSXAttribute | undefined);
+        const webViewTestIdValue = webViewTidAttr ? getTestIdStringLiteral(webViewTidAttr) : null;
+        if (webViewTestIdValue != null) {
+          const refAttr = el.attributes.find(
+            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'ref'
+          ) as t.JSXAttribute | undefined;
+          const mcpRegister = t.expressionStatement(
+            t.logicalExpression(
+              '&&',
+              t.optionalMemberExpression(
+                t.identifier('__REACT_NATIVE_MCP__'),
+                t.identifier('registerWebView'),
+                false,
+                true
+              ),
+              t.callExpression(
+                t.memberExpression(
+                  t.optionalMemberExpression(
+                    t.identifier('__REACT_NATIVE_MCP__'),
+                    t.identifier('registerWebView'),
+                    false,
+                    true
+                  ),
+                  t.identifier('call'),
+                  false
+                ),
+                [
+                  t.identifier('__REACT_NATIVE_MCP__'),
+                  t.identifier('r'),
+                  t.stringLiteral(webViewTestIdValue),
+                ]
+              )
+            )
+          );
+          const mcpUnregister = t.expressionStatement(
+            t.logicalExpression(
+              '&&',
+              t.optionalMemberExpression(
+                t.identifier('__REACT_NATIVE_MCP__'),
+                t.identifier('unregisterWebView'),
+                false,
+                true
+              ),
+              t.callExpression(
+                t.memberExpression(
+                  t.optionalMemberExpression(
+                    t.identifier('__REACT_NATIVE_MCP__'),
+                    t.identifier('unregisterWebView'),
+                    false,
+                    true
+                  ),
+                  t.identifier('call'),
+                  false
+                ),
+                [t.identifier('__REACT_NATIVE_MCP__'), t.stringLiteral(webViewTestIdValue)]
+              )
+            )
+          );
+          const bodyStatements: t.Statement[] = [
+            t.ifStatement(t.identifier('r'), mcpRegister, mcpUnregister),
+          ];
+          const userRefExpr =
+            refAttr?.value && t.isJSXExpressionContainer(refAttr.value)
+              ? refAttr.value.expression
+              : null;
+          const hasUserRef = userRefExpr != null && !t.isJSXEmptyExpression(userRefExpr);
+          if (hasUserRef) {
+            bodyStatements.push(
+              t.ifStatement(
+                t.binaryExpression('!=', t.cloneNode(userRefExpr as t.Expression), t.nullLiteral()),
+                t.blockStatement([
+                  t.ifStatement(
+                    t.binaryExpression(
+                      '===',
+                      t.unaryExpression('typeof', t.cloneNode(userRefExpr as t.Expression)),
+                      t.stringLiteral('function')
+                    ),
+                    t.expressionStatement(
+                      t.callExpression(t.cloneNode(userRefExpr as t.Expression), [
+                        t.identifier('r'),
+                      ])
+                    ),
+                    t.expressionStatement(
+                      t.assignmentExpression(
+                        '=',
+                        t.memberExpression(
+                          t.cloneNode(userRefExpr as t.Expression),
+                          t.identifier('current')
+                        ),
+                        t.identifier('r')
+                      )
+                    )
+                  ),
+                ])
+              )
+            );
+          }
+          const composedRef = t.arrowFunctionExpression(
+            [t.identifier('r')],
+            t.blockStatement(bodyStatements)
+          );
+          if (refAttr) {
+            refAttr.value = t.jsxExpressionContainer(composedRef);
+          } else {
+            el.attributes.push(
+              t.jsxAttribute(t.jsxIdentifier('ref'), t.jsxExpressionContainer(composedRef))
+            );
+          }
+        }
+      }
       if (tagName === 'ScrollView' || tagName === 'FlatList') {
         const scrollTidAttr =
           testIdAttr ??
