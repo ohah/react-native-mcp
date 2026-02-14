@@ -10,7 +10,6 @@ import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
   uid: z.string().describe('testID of the element (from snapshot or Babel-injected id)'),
-  dblClick: z.boolean().optional().describe('Double-click. Default false.'),
   includeSnapshot: z.boolean().optional().describe('Include snapshot in response. Ignored on RN.'),
   deviceId: deviceParam,
   platform: platformParam,
@@ -33,7 +32,7 @@ export function registerClick(server: McpServer, appSession: AppSession): void {
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const { uid, dblClick, deviceId, platform } = schema.parse(args);
+      const { uid, deviceId, platform } = schema.parse(args);
 
       if (!appSession.isConnected(deviceId, platform)) {
         return {
@@ -70,17 +69,7 @@ export function registerClick(server: McpServer, appSession: AppSession): void {
           };
         }
 
-        if (dblClick) {
-          await appSession.sendRequest(
-            { method: 'eval', params: { code } },
-            10000,
-            deviceId,
-            platform
-          );
-        }
-
-        const text = dblClick ? 'pressed twice (dblClick)' : 'pressed';
-        return { content: [{ type: 'text' as const, text }] };
+        return { content: [{ type: 'text' as const, text: 'pressed' }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return { content: [{ type: 'text' as const, text: `click failed: ${message}` }] };
