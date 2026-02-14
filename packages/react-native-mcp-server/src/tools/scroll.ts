@@ -36,23 +36,7 @@ export function registerScroll(server: McpServer, appSession: AppSession): void 
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const parsed = schema.safeParse(args);
-      const uid = parsed.success ? parsed.data.uid : (args as { uid?: string })?.uid;
-      const y = parsed.success ? parsed.data.y : (args as { y?: number })?.y;
-      const x = parsed.success ? parsed.data.x : (args as { x?: number })?.x;
-      const animated = parsed.success
-        ? parsed.data.animated
-        : (args as { animated?: boolean })?.animated;
-      const deviceId = parsed.success
-        ? parsed.data.deviceId
-        : (args as { deviceId?: string })?.deviceId;
-      const platform = parsed.success
-        ? parsed.data.platform
-        : (args as { platform?: 'ios' | 'android' })?.platform;
-
-      if (typeof uid !== 'string') {
-        return { content: [{ type: 'text' as const, text: 'uid (testID) is required.' }] };
-      }
+      const { uid, y, x, animated, deviceId, platform } = schema.parse(args);
 
       if (!appSession.isConnected(deviceId, platform)) {
         return {
