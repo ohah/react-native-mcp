@@ -141,4 +141,48 @@ function App() {
     expect(code).toContain('demo-app-counter-button');
     expect(code).toContain('onPress=');
   });
+
+  it('ScrollView에 testID만 있으면 ref만 주입된다 (합성 아님)', async () => {
+    const src = `
+function Screen() {
+  return (
+    <ScrollView testID="demo-app-scroll-view">
+      <Text>content</Text>
+    </ScrollView>
+  );
+}
+`;
+    const { code } = await injectTestIds(src);
+    expect(code).toContain('registerScrollRef');
+    expect(code).toContain('unregisterScrollRef');
+    expect(code).toContain('demo-app-scroll-view');
+    // 사용자 ref 합성 없음: typeof xxx === 'function' / .current 할당이 없어야 함 (우리 콜백만 있음)
+    const refInjected = /ref=\{[^}]*registerScrollRef[^}]*\}/s.test(code) || code.includes('ref={');
+    expect(refInjected).toBe(true);
+    // 합성 시 나오는 패턴: typeof ... === 'function' 이 없음 (ref 없으면 그 블록 자체가 없음)
+    const hasUserRefBranch = code.includes('typeof') && code.includes("'function'");
+    expect(hasUserRefBranch).toBe(false);
+  });
+
+  it('ScrollView에 testID와 ref가 있으면 ref가 합성된다', async () => {
+    const src = `
+function Screen() {
+  const scrollRef = useRef(null);
+  return (
+    <ScrollView testID="my-scroll" ref={scrollRef}>
+      <Text>content</Text>
+    </ScrollView>
+  );
+}
+`;
+    const { code } = await injectTestIds(src);
+    expect(code).toContain('registerScrollRef');
+    expect(code).toContain('unregisterScrollRef');
+    expect(code).toContain('my-scroll');
+    // 사용자 ref 합성: typeof ... === "function" 분기와 .current 할당이 있어야 함
+    expect(code).toContain('typeof');
+    expect(code).toMatch(/"function"|'function'/);
+    expect(code).toContain('scrollRef');
+    expect(code).toContain('.current');
+  });
 });
