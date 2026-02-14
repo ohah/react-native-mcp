@@ -1,6 +1,6 @@
 ---
 name: mcp-testing
-description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검증하는 방법. MCP 테스트, take_snapshot, click, click_by_label, 콘솔/네트워크 수집 확인 시 참고.
+description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검증하는 방법. take_snapshot, click, click_by_label, scroll, list_clickable_text_content, 콘솔/네트워크 수집 확인 시 참고.
 ---
 
 # React Native MCP 기능 테스트 가이드
@@ -93,7 +93,42 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 5. list_text_nodes
+## 5. scroll
+
+**목적**: testID로 등록된 ScrollView를 scrollTo({ x, y, animated })로 스크롤. 앱에서 `__REACT_NATIVE_MCP__.registerScrollRef(testID, ref)`로 등록 필요(Babel이 ScrollView에 ref 자동 주입).
+
+**테스트 절차**
+
+1. `take_snapshot`으로 ScrollView의 uid(testID) 확인. 예: `demo-app-scroll-view`, `demo-app-scroll-view-with-ref`.
+2. `scroll` 호출 시 `uid`에 해당 testID, `y`에 픽셀 오프셋(예: 200). 선택: `x`, `animated`.
+3. 데모 앱 ScrollView 탭에서 testID 있는 블록이 스크롤되면 성공.
+
+**데모 앱 uid 예시**
+
+| uid                             | 동작                  |
+| ------------------------------- | --------------------- |
+| `demo-app-scroll-view`          | ref 없음 → Babel 주입 |
+| `demo-app-scroll-view-with-ref` | ref 있음 → Babel 합성 |
+
+**성공 기준**: 반환에 스크롤 완료 메시지가 오고, 앱에서 해당 ScrollView가 움직인다.
+
+---
+
+## 6. list_clickable_text_content
+
+**목적**: onPress 있는 노드별 전체 텍스트(textContent) 목록. 버튼/클릭 영역 표시 텍스트 검증용. `[{ text, testID? }]` 반환.
+
+**테스트 절차**
+
+1. ScrollView 탭 또는 FlatList 탭에서 `list_clickable_text_content` 호출.
+2. 반환 배열에 각 클릭 가능 요소의 전체 텍스트와(선택) testID가 나오는지 확인.
+3. `list_clickables`(uid+label)와 비교해, 같은 노드가 text로 더 풀어서 나오는지 확인.
+
+**성공 기준**: onPress가 있는 노드들의 textContent가 배열로 나온다.
+
+---
+
+## 7. list_text_nodes
 
 **목적**: Fiber 트리에서 보이는 텍스트 전부. testID는 조상 중 가장 가까운 testID.
 
@@ -107,7 +142,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 6. take_screenshot
+## 8. take_screenshot
 
 **목적**: 연결된 Android 기기 또는 iOS 시뮬레이터 화면 캡처.
 
@@ -121,7 +156,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 7. evaluate_script
+## 9. evaluate_script
 
 **목적**: 앱 컨텍스트에서 JavaScript 실행. 디버깅·상태 조회·triggerPress 등 내부 호출에 사용.
 
@@ -135,7 +170,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 8. list_console_messages / get_console_message
+## 10. list_console_messages / get_console_message
 
 **목적**: CDP를 통해 수집된 콘솔 로그/경고/에러 목록.
 
@@ -152,7 +187,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 9. list_network_requests / get_network_request
+## 11. list_network_requests / get_network_request
 
 **목적**: CDP로 수집된 네트워크 요청 목록.
 
@@ -169,7 +204,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 10. get_debugger_status
+## 12. get_debugger_status
 
 **목적**: CDP WebSocket 연결 여부. 콘솔/네트워크 수집 가능 여부 판단.
 
@@ -182,7 +217,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 11. get_metro_url / list_pages
+## 13. get_metro_url / list_pages
 
 **목적**: Metro base URL 조회; RN은 단일 앱이라 list_pages는 페이지 1개 반환.
 
@@ -195,7 +230,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 12. get_by_label / get_by_labels
+## 14. get_by_label / get_by_labels
 
 **목적**: 라벨로 클릭 가능한 노드 검색 디버깅. click_by_label이 안 될 때 원인 확인.
 
@@ -209,7 +244,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 13. click_webview
+## 15. click_webview
 
 **목적**: 앱 내 WebView에서 CSS selector로 요소 클릭. WebView가 `__REACT_NATIVE_MCP__.registerWebView(ref, id)`로 등록되어 있어야 함.
 
@@ -224,19 +259,22 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ## 체크리스트 (요약)
 
-| 도구                       | 확인 항목                                              |
-| -------------------------- | ------------------------------------------------------ |
-| take_snapshot              | ScrollView/FlatList type·uid(testID vs 경로)           |
-| click                      | testID로 버튼 눌림, Count/탭 전환 등                   |
-| click_by_label             | "testID 없음" 등 라벨로 버튼 눌림                      |
-| list_clickables            | uid·label 목록, click과 일치                           |
-| list_text_nodes            | 화면 텍스트 목록                                       |
-| take_screenshot            | platform 지정 시 이미지 반환                           |
-| evaluate_script            | **REACT_NATIVE_MCP** 존재·getRegisteredPressTestIDs 등 |
-| list_console_messages      | Console 버튼 후 로그/경고 수집                         |
-| list_network_requests      | Network 버튼 후 httpbin 요청 수집                      |
-| get_debugger_status        | connected: true                                        |
-| get_metro_url / list_pages | URL·단일 페이지 반환                                   |
-| get_by_label               | 훅·라벨 목록·match                                     |
+| 도구                        | 확인 항목                                              |
+| --------------------------- | ------------------------------------------------------ |
+| take_snapshot               | ScrollView/FlatList type·uid(testID vs 경로)           |
+| click                       | testID로 버튼 눌림, Count/탭 전환 등                   |
+| click_by_label              | "testID 없음" 등 라벨로 버튼 눌림                      |
+| list_clickables             | uid·label 목록, click과 일치                           |
+| scroll                      | uid(testID)로 ScrollView scrollTo, Babel ref 등록      |
+| list_clickable_text_content | onPress 노드별 textContent, [{ text, testID? }]        |
+| list_text_nodes             | 화면 텍스트 목록                                       |
+| take_screenshot             | platform 지정 시 이미지 반환                           |
+| evaluate_script             | **REACT_NATIVE_MCP** 존재·getRegisteredPressTestIDs 등 |
+| list_console_messages       | Console 버튼 후 로그/경고 수집                         |
+| list_network_requests       | Network 버튼 후 httpbin 요청 수집                      |
+| get_debugger_status         | connected: true                                        |
+| get_metro_url / list_pages  | URL·단일 페이지 반환                                   |
+| get_by_label                | 훅·라벨 목록·match                                     |
+| click_webview               | 등록 WebView 내 selector 클릭                          |
 
 데모 앱 구조(ScrollView 탭 / FlatList 탭, testID 있음·없음 블록)는 `examples/demo-app/src/` 참고.
