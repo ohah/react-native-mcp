@@ -334,6 +334,15 @@ describe('querySelector — 반환 형식', () => {
     expect(MCP.querySelector('')).toBeNull();
     expect(MCP.querySelectorAll('')).toEqual([]);
   });
+
+  it('따옴표 미닫힘(:text("...) 등) 시 파싱 실패 → null / 빈 배열', () => {
+    const root = makeFiber('View', {}, [makeFiber('Text', { children: 'Hi' })]);
+    setMockFiberRoot(root);
+    expect(MCP.querySelector('Text:text("Hi')).toBeNull();
+    expect(MCP.querySelectorAll('Text:text("Hi')).toEqual([]);
+    expect(MCP.querySelector('View[attr="unclosed')).toBeNull();
+    expect(MCP.querySelectorAll('View[attr="unclosed')).toEqual([]);
+  });
 });
 
 describe('querySelector — 복합 셀렉터', () => {
