@@ -1,0 +1,73 @@
+/**
+ * Babel 플러그인: AppRegistry.registerComponent → __REACT_NATIVE_MCP__.registerComponent 치환
+ * + 진입점 상단에 MCP 런타임 require 주입
+ *
+ * Metro transformer 대신 babel.config.js plugins에 넣어 사용.
+ */
+
+import type * as t from '@babel/types';
+
+const MCP_RUNTIME_ID = '__REACT_NATIVE_MCP__';
+const RUNTIME_MODULE_ID = '@ohah/react-native-mcp-server/runtime';
+
+interface BabelApi {
+  types: typeof t;
+}
+
+interface PluginState {
+  runtimeInjected: boolean;
+}
+
+export default function (babel: BabelApi): { name: string; visitor: Record<string, unknown> } {
+  const t = babel.types;
+  return {
+    name: 'react-native-mcp-app-registry',
+    visitor: {
+      Program: {
+        enter(_path: unknown, state: PluginState) {
+          state.runtimeInjected = false;
+        },
+      },
+      CallExpression(
+        path: {
+          node: t.CallExpression;
+          replaceWith: (n: t.Node) => void;
+          findParent: (fn: (p: unknown) => boolean) => unknown;
+        },
+        state: PluginState
+      ) {
+        const node = path.node;
+        const filename =
+          (path as unknown as { hub?: { file?: { opts?: { filename?: string } } } }).hub?.file?.opts
+            ?.filename ?? '';
+        if (filename.includes('node_modules')) return;
+        if (!t.isCallExpression(node)) return;
+        if (!t.isMemberExpression(node.callee)) return;
+        const { object, property } = node.callee;
+        if (!t.isIdentifier(object) || !t.isIdentifier(property)) return;
+        if (object.name !== 'AppRegistry' || property.name !== 'registerComponent') return;
+
+        if (!state.runtimeInjected) {
+          const programPath = path.findParent(
+            (p) => (p as { isProgram?: () => boolean }).isProgram?.() === true
+          ) as { node: t.Program } | null | undefined;
+          if (programPath?.node?.body) {
+            programPath.node.body.unshift(
+              t.expressionStatement(
+                t.callExpression(t.identifier('require'), [t.stringLiteral(RUNTIME_MODULE_ID)])
+              )
+            );
+            state.runtimeInjected = true;
+          }
+        }
+
+        path.replaceWith(
+          t.callExpression(
+            t.memberExpression(t.identifier(MCP_RUNTIME_ID), t.identifier('registerComponent')),
+            node.arguments
+          )
+        );
+      },
+    },
+  };
+}

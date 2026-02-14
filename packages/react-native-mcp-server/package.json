@@ -26,7 +26,10 @@
   "files": [
     "dist",
     "runtime.js",
-    "cdp-interceptor.cjs"
+    "cdp-interceptor.cjs",
+    "babel-preset.cjs",
+    "babel-plugin-app-registry.cjs",
+    "babel-plugin-inject-testid.cjs"
   ],
   "type": "module",
   "main": "dist/index.js",
@@ -39,13 +42,16 @@
     },
     "./cdp-interceptor": "./cdp-interceptor.cjs",
     "./runtime": "./runtime.js",
-    "./runtime.js": "./runtime.js"
+    "./runtime.js": "./runtime.js",
+    "./babel-preset": "./babel-preset.cjs",
+    "./babel-plugin-app-registry": "./babel-plugin-app-registry.cjs",
+    "./babel-plugin-inject-testid": "./babel-plugin-inject-testid.cjs"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "bunup && bun build src/index.ts --outdir=dist --target=node && bun build src/transformer-entry.ts --outdir=dist --target=node && bun scripts/chmod-dist.mjs",
+    "build": "bunup && bun build src/index.ts --outdir=dist --target=node && bun build src/transformer-entry.ts --outdir=dist --target=node && bun build src/babel-plugin-app-registry.ts --outfile=dist/babel-plugin-app-registry.cjs --target=node --format=cjs && bun build src/babel-plugin-inject-testid.ts --outfile=dist/babel-plugin-inject-testid.cjs --target=node --format=cjs && bun scripts/chmod-dist.mjs",
     "prepublishOnly": "bun run build",
     "dev": "bun run --watch src/index.ts",
     "mcp:run": "bun dist/index.js",

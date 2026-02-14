@@ -49,7 +49,32 @@ export default withReactNativeMCP({
 });
 ```
 
-5. In your app entry file (e.g. `index.js`), enable the MCP runtime:
+5. Add the Babel preset to your app (AppRegistry wrapping, auto testID injection):
+
+```js
+// babel.config.js
+module.exports = {
+  presets: ['module:@react-native/babel-preset', '@ohah/react-native-mcp-server/babel-preset'],
+};
+```
+
+**Applying the preset per build type**  
+You can use `process.env` in `babel.config.js` to include the preset only for certain builds.
+
+- **Dev only** (exclude from release):
+
+```js
+const isDev = process.env.NODE_ENV !== 'production';
+const mcpPreset = isDev ? ['@ohah/react-native-mcp-server/babel-preset'] : [];
+module.exports = {
+  presets: ['module:@react-native/babel-preset', ...mcpPreset],
+};
+```
+
+- **Release only**: use `process.env.NODE_ENV === 'production'` instead of `isDev`.
+- **Custom env**: e.g. add the preset only when `process.env.ENABLE_MCP === '1'`.
+
+6. In your app entry file (e.g. `index.js`), enable the MCP runtime:
 
 ```js
 __REACT_NATIVE_MCP__?.enable();

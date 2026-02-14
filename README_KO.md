@@ -47,6 +47,31 @@ export default withReactNativeMCP({
 });
 ```
 
+5. 앱에 Babel 프리셋 추가 (AppRegistry 래핑, testID 자동 주입):
+
+```js
+// babel.config.js
+module.exports = {
+  presets: ['module:@react-native/babel-preset', '@ohah/react-native-mcp-server/babel-preset'],
+};
+```
+
+**빌드별로 프리셋 적용하기**  
+`babel.config.js`는 일반 JS이므로 `process.env`로 분기할 수 있습니다.
+
+- **개발 빌드에서만 적용** (릴리즈 번들에는 미포함):
+
+```js
+const isDev = process.env.NODE_ENV !== 'production';
+const mcpPreset = isDev ? ['@ohah/react-native-mcp-server/babel-preset'] : [];
+module.exports = {
+  presets: ['module:@react-native/babel-preset', ...mcpPreset],
+};
+```
+
+- **릴리즈에서만 적용**: `isDev` 대신 `process.env.NODE_ENV === 'production'` 사용.
+- **커스텀 env로 제어**: 예) `process.env.ENABLE_MCP === '1'`일 때만 프리셋 추가.
+
 ### Claude Desktop
 
 Claude Desktop 설정 파일 편집:
