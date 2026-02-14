@@ -243,7 +243,7 @@ packages/react-native-mcp-server/
 │   ├── metro/
 │   │   └── transform-source.ts  # 진입점 runtime 주입 + registerComponent 래핑 ✅
 │   └── transformer-entry.ts    # Metro에서 로드하는 진입점
-├── runtime.js                   # 앱에 주입되는 런타임 (WebSocket 클라이언트, eval, triggerPress) ✅
+├── runtime.js                   # 앱에 주입되는 런타임 (WebSocket, eval, Fiber 트리, WebView, Scroll) ✅
 ├── metro-transformer.cjs        # Metro babelTransformerPath
 └── scripts/
     └── chmod-dist.mjs           # 빌드 후 실행 권한
@@ -251,23 +251,27 @@ packages/react-native-mcp-server/
 
 **제공 Tools** (모든 도구에 `deviceId`, `platform` 파라미터 지원):
 
-- `evaluate_script` - 앱에서 함수 실행 ✅
+- `evaluate_script` - 앱 컨텍스트에서 JS 함수 실행 ✅
+- `webview_evaluate_script` - 앱 내 WebView에서 임의 JS 실행 (injectJavaScript) ✅
 - `take_snapshot` - React Fiber 트리 스냅샷 (컴포넌트 구조 JSON) ✅
+- `take_screenshot` - ADB(Android) / simctl(iOS 시뮬레이터)로 캡처 ✅
+- `scroll` - 등록된 ScrollView/FlatList의 scrollTo 호출 ✅
+- `click` - testID(uid) 기반 클릭 ✅
+- `click_by_label` - 텍스트 라벨로 onPress 호출 (testID 불필요) ✅
 - `list_clickables` - Fiber 트리에서 클릭 가능 요소 목록 (uid + label) ✅
 - `list_clickable_text_content` - 클릭 가능 요소의 전체 텍스트 ✅
 - `list_text_nodes` - Fiber 트리의 모든 텍스트 노드 ✅
-- `click` - testID(uid) 기반 클릭 ✅
-- `click_by_label` - 텍스트 라벨로 onPress 호출 (testID 불필요) ✅
-- `click_webview` - WebView 내 CSS 셀렉터로 클릭 ✅
-- `scroll` - 등록된 ScrollView의 scrollTo 호출 ✅
+- `list_pages` - 연결된 앱 페이지 목록 ✅
 - `get_by_label` / `get_by_labels` - Fiber 트리에서 라벨 검색 + 디버그 정보 ✅
 - `get_debugger_status` - 앱 연결 상태 + 디바이스 목록 ✅
-- `take_screenshot` - ADB(Android) / simctl(iOS 시뮬레이터)로 캡처 ✅
-- `list_pages` - 연결된 앱 페이지 목록 ✅
 - `list_console_messages` - CDP Runtime.consoleAPICalled 수집 (보류 — CDP 연결 기능 일시 비활성화)
 - `list_network_requests` - CDP Network.\* 이벤트 수집 (보류 — CDP 연결 기능 일시 비활성화)
-- `get_component_tree` - (예정)
 - `set_props` - (예정)
+
+**삭제된 Tools**:
+
+- `click_webview` - `webview_evaluate_script`로 대체 (CSS selector 클릭만 가능 → 임의 JS 실행)
+- `navigate_webview` - `webview_evaluate_script`로 대체 (`window.location.href = url`로 동일 동작)
 
 ### 4.2 packages/metro-plugin
 
@@ -433,24 +437,26 @@ if (__DEV__) {
 
 **산출물**: AI가 앱에서 임의 코드 실행 가능 ✅
 
-### Phase 2: Component Tree 읽기
+### Phase 2: Component Tree 읽기 ✅
 
 **목표**: 컴포넌트 구조 파악
 
 **구현**:
 
-- [ ] Fiber Hook 구현
-  - [ ] `__REACT_DEVTOOLS_GLOBAL_HOOK__` 패턴 연구
-  - [ ] Fiber tree 순회 함수
-  - [ ] 컴포넌트 정보 직렬화 (name, props, state)
-- [ ] MCP Tools 추가
-  - [ ] `get_component_tree` - 전체 트리 반환
-  - [ ] `find_component` - testID/이름 검색
+- [x] Fiber Hook 구현
+  - [x] `__REACT_DEVTOOLS_GLOBAL_HOOK__` 패턴 — runtime.js에서 hook 없으면 자동 설치 (Release 빌드 지원)
+  - [x] Fiber tree 순회 함수 (`getFiberRoot`, `collectText`, `getLabel`, `getFiberTypeName` 등)
+  - [x] 컴포넌트 정보 직렬화 (`getComponentTree` → uid, type, testID, accessibilityLabel, text, children)
+- [x] MCP Tools 추가
+  - [x] `take_snapshot` - Fiber 트리 기반 컴포넌트 트리 JSON ✅
+  - [x] `list_text_nodes` - 모든 텍스트 노드 수집 ✅
+  - [x] `list_clickables` - 클릭 가능 요소 목록 ✅
+  - [x] `get_by_label` - testID/이름 검색 ✅
 - [ ] Metro Plugin 확장
   - [ ] 컴포넌트 메타데이터 수집
   - [ ] 소스맵 연동
 
-**산출물**: AI가 렌더링된 컴포넌트 목록 조회
+**산출물**: AI가 렌더링된 컴포넌트 목록 조회 ✅
 
 ### Phase 3: Babel 코드 주입
 
@@ -472,7 +478,7 @@ if (__DEV__) {
 
 **산출물**: AI가 컴포넌트 선택 및 조작 (버튼 클릭 등) ✅
 
-### Phase 4: CLI 스크린샷 (ADB / simctl)
+### Phase 4: CLI 스크린샷 (ADB / simctl) ✅
 
 **목표**: 시각적 피드백. 네이티브 모듈 없이 호스트 CLI로 캡처.
 
@@ -483,7 +489,7 @@ if (__DEV__) {
   - [x] Base64 PNG 반환 (data URL 또는 content)
 - [ ] 선택: 압축/크기 조절 (미구현)
 
-**산출물**: AI가 화면 보고 판단 (Android 기기 또는 iOS 시뮬레이터)
+**산출물**: AI가 화면 보고 판단 (Android 기기 또는 iOS 시뮬레이터) ✅
 
 ### Phase 5: 고급 기능
 
@@ -573,17 +579,17 @@ if (__DEV__) {
 
 ### Phase 2
 
-- [ ] 컴포넌트 트리 조회
-- [ ] testID로 컴포넌트 검색
+- [x] 컴포넌트 트리 조회 (take_snapshot, list_text_nodes)
+- [x] testID로 컴포넌트 검색 (get_by_label, list_clickables)
 
 ### Phase 3
 
-- [x] AI가 버튼 클릭 등 조작 (triggerPress via evaluate_script)
+- [x] AI가 버튼 클릭 등 조작 (click, click_by_label, triggerPress)
 - [ ] 프로덕션 빌드에서 코드 완전 제거
 
 ### Phase 4
 
-- [ ] AI가 화면 보고 판단
+- [x] AI가 화면 보고 판단 (take_screenshot)
 
 ### 최종
 
@@ -595,9 +601,9 @@ if (__DEV__) {
 
 ## 9. 다음 단계
 
-1. **Phase 2**: Fiber Hook + get_component_tree / find_component
-2. **Phase 3 보완**: set_props, 추적 코드, 프로덕션 제거 검증
-3. **Phase 4**: CLI 스크린샷 (ADB / simctl) ✅
+1. **Phase 3 보완**: set_props, 추적 코드, 프로덕션 제거 검증
+2. **Phase 5**: CDP 기반 네트워크/콘솔 모니터링 재활성화
+3. **안정화**: npm 배포, 문서 정비
 4. **피드백 반영**
 
 이 설계는 실험적이며, 구현 중 발견되는 제약사항에 따라 수정 가능합니다.
