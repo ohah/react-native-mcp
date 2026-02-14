@@ -15,16 +15,20 @@ import { registerGetMetroUrl } from './get-metro-url.js';
 import { registerListConsoleMessages } from './list-console-messages.js';
 import { registerListNetworkRequests } from './list-network-requests.js';
 import { registerListClickables } from './list-clickables.js';
+import { registerListTextNodes } from './list-text-nodes.js';
 import { registerListPages } from './list-pages.js';
+import { registerTakeSnapshot } from './take-snapshot.js';
 import { registerTakeScreenshot } from './take-screenshot.js';
 
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
+  registerTakeSnapshot(server, appSession);
   registerTakeScreenshot(server);
   registerClick(server, appSession);
   registerClickByLabel(server, appSession);
   registerClickWebView(server, appSession);
   registerListClickables(server, appSession);
+  registerListTextNodes(server, appSession);
   registerListPages(server);
   registerGetMetroUrl(server);
   registerGetByLabel(server, appSession);
