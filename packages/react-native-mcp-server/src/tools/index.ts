@@ -11,7 +11,6 @@ import { registerClickWebView } from './click-webview.js';
 import { registerEvaluateScript } from './eval-code.js';
 import { registerGetByLabel } from './get-by-label.js';
 import { registerGetDebuggerStatus } from './get-debugger-status.js';
-import { registerGetMetroUrl } from './get-metro-url.js';
 import { registerListClickables } from './list-clickables.js';
 import { registerListClickableTextContent } from './list-clickable-text-content.js';
 import { registerListTextNodes } from './list-text-nodes.js';
@@ -32,7 +31,6 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerListClickableTextContent(server, appSession);
   registerListTextNodes(server, appSession);
   registerListPages(server);
-  registerGetMetroUrl(server);
   registerGetByLabel(server, appSession);
   registerGetDebuggerStatus(server, appSession);
 }

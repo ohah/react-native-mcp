@@ -1,6 +1,6 @@
 /**
  * MCP 도구: list_console_messages, get_console_message
- * Chrome DevTools MCP 스펙. CDP 가로채기(/__mcp_cdp_events__)에서 Runtime.consoleAPICalled 등 수집
+ * Chrome DevTools MCP 스펙. CDP에서 Runtime.consoleAPICalled 등 수집 (현재 stub)
  * @see docs/chrome-devtools-mcp-spec-alignment.md
  * @see https://github.com/ChromeDevTools/chrome-devtools-mcp/blob/main/docs/tool-reference.md
  */
@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 // CDP 기능 보류 — 이 파일은 현재 index.ts에서 등록되지 않음.
-// CDP 복구 시 metro-cdp.ts에 fetchCdpEvents, CdpEventEntry를 다시 추가해야 함.
+// CDP 기능 보류 — 이 파일은 현재 index.ts에서 등록되지 않음.
 
 interface CdpEventEntry {
   direction: string;
