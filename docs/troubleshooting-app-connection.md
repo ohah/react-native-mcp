@@ -186,4 +186,4 @@ MCP 도구 호출 시 "No React Native app connected"가 나올 때 가능한 �
 
 5. **동작 확인 (선택)**
    - `click_by_label` 에 라벨(예: `"No test ID"`) 넣어서 호출 → 앱에서 해당 버튼이 눌린 것처럼 동작하면 정상.
-   - `get_metro_url` → Metro 주소(예: `http://localhost:8230`) 반환되면 앱이 init 메시지를 보낸 상태.
+   - `get_debugger_status` → devices 목록에 디바이스가 보이면 앱이 연결·init을 보낸 상태.

@@ -71,8 +71,7 @@ class CdpClient {
 
 1. `Module._load` 후크 → `@react-native/dev-middleware` 최초 로드 시 `createDevMiddleware` 래핑
 2. `unstable_customInspectorMessageHandler`로 모든 CDP 메시지를 eventStore에 push
-3. `unstable_extraMiddleware`로 `GET /__mcp_cdp_events__` 엔드포인트 등록
-4. MCP 서버가 HTTP로 이벤트 조회
+3. `unstable_extraMiddleware`로 `GET /__mcp_cdp_events__` 엔드포인트 등록 (현재 MCP 서버에서 미사용)
 
 ### 2.2 문제점
 
@@ -91,20 +90,14 @@ packages/react-native-mcp-server/
 
 ## 3. MCP 서버와의 연동
 
-### 3.1 이벤트 조회 (현재)
+### 3.1 이벤트 조회
 
-```typescript
-// metro-cdp.ts — in-memory 직접 반환
-fetchCdpEvents()     → CdpEventEntry[]
-fetchCdpEventsRaw()  → { events, lastEventTimestamp }
-getDebuggerStatus()  → { connected, lastEventTimestamp, eventCount }
-```
+CDP 이벤트 HTTP 조회(`fetchCdpEvents`, `GET /__mcp_cdp_events__`)는 제거됨.  
+`list_console_messages`, `list_network_requests`는 stub 상태로 index에 미등록.
 
 ### 3.2 도구에서 사용
 
-- `list_console_messages`: `fetchCdpEvents()`에서 `Runtime.consoleAPICalled` 필터링
-- `list_network_requests`: `fetchCdpEvents()`에서 `Network.*` 필터링
-- `get_debugger_status`: `getDebuggerStatus()`로 연결 상태 확인
+- `get_debugger_status`: 앱 WebSocket 연결 상태(appSession) 확인
 
 ---
 
