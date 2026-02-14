@@ -7,15 +7,8 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const workspaceRoot = path.resolve(__dirname, '../..');
 
 /**
- * MCP transformer: AppRegistry 감싸기 + testID 자동 주입
- */
-const mcpTransformerPath = path.resolve(
-  workspaceRoot,
-  'packages/react-native-mcp-server/metro-transformer.cjs'
-);
-
-/**
  * Metro 설정
+ * MCP 변환(AppRegistry 래핑, testID 주입)은 babel.config.js 플러그인으로 적용.
  * @type {import('@react-native/metro-config').MetroConfig}
  */
 const config = getDefaultConfig(__dirname);
@@ -24,10 +17,6 @@ module.exports = mergeConfig(config, {
     port: 8230,
   },
   watchFolders: [workspaceRoot],
-  transformer: {
-    ...config.transformer,
-    babelTransformerPath: mcpTransformerPath,
-  },
   resolver: {
     ...config.resolver,
     nodeModulesPaths: [
