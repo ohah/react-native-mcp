@@ -30,7 +30,7 @@ React Native 앱을 AI가 제어하고 모니터링할 수 있도록 MCP 서버 
 ### 1.3 핵심 전략
 
 1. **Metro 번들러**: 컴포넌트 구조 파악 및 런타임 코드 자동 주입
-2. **Babel Plugin**: AST 변환으로 개발 모드 추적 코드 삽입
+2. **Babel Plugin**: AST 변환으로 testID·ref·onPress 래핑 코드 주입
 3. **React Fiber Hook**: 런타임 컴포넌트 트리 추적 (React DevTools 방식)
 4. **WebSocket**: MCP 서버 ↔ 앱 양방향 통신
 5. **스크린샷**: 네이티브 모듈 없이 호스트에서 ADB(Android)·simctl(iOS 시뮬레이터)로 캡처
@@ -50,8 +50,8 @@ React Native 앱을 AI가 제어하고 모니터링할 수 있도록 MCP 서버 
 
 #### Babel Plugin
 
-- AST 변환으로 컴포넌트 코드 주입
-- `__DEV__` 플래그로 프로덕션 자동 제거
+- AST 변환으로 컴포넌트 코드 주입 (testID, ref, onPress 래핑)
+- 프로덕션 빌드에서도 Babel 변환은 적용됨 (runtime WebSocket만 `__DEV__` 체크)
 - 자동 testID 생성 및 삽입
 - **참고**: react-native-reanimated (worklet 주입 패턴)
 
@@ -69,7 +69,7 @@ React Native 앱을 AI가 제어하고 모니터링할 수 있도록 MCP 서버 
 
 #### 스크린샷 (CLI 기반, 네이티브 모듈 없음)
 
-- **Android**: `adb shell screencap -p` — OS가 화면 덤프, 앱 코드 불필요
+- **Android**: `adb exec-out screencap -p` — OS가 화면 덤프, PTY 손상 없이 raw PNG 수신
 - **iOS 시뮬레이터**: `xcrun simctl io booted screenshot <path>` — 시뮬레이터만 지원, 실기기는 미지원
 - 앱에 네이티브 모듈을 설치하지 않아도 되며, MCP 서버가 호스트에서 위 명령을 실행해 캡처
 
@@ -101,21 +101,15 @@ React Native 앱을 AI가 제어하고 모니터링할 수 있도록 MCP 서버 
 
 **문제**: 미렌더링 요소 접근 불가
 
-**해결책**:
+**현재 구현**:
 
-- Fiber tree의 virtualized node 추적
-- `scrollToIndex()` API로 강제 렌더링
-- Metro 번들 정보로 전체 구조 파악
+- Babel이 ScrollView/FlatList에 `registerScrollRef` 자동 주입
+- `scroll` 도구로 수동 스크롤 → 렌더링된 항목을 `list_clickables`/`list_text_nodes`로 조회
+- 자동화된 전체 목록 탐색은 미구현
 
-#### Modal/Overlay 추적
+#### Modal/Overlay 추적 ✅
 
-**문제**: 네이티브 레이어 가능성
-
-**해결책**:
-
-- Babel로 Modal 컴포넌트 래핑
-- RN의 Modal은 JS 컴포넌트
-- `AppRegistry` 훅으로 추적
+RN의 Modal은 JS 컴포넌트이므로 Fiber 트리에 포함됨. 기존 도구(take_snapshot, list_clickables, click 등)로 별도 처리 없이 동작.
 
 ### 2.3 난이도
 
@@ -185,33 +179,33 @@ react-native-mcp/
   - 미지정 + 전체 2대+ → 에러
 
 스크린샷 (호스트 CLI):
-  adb shell screencap (Android) / xcrun simctl io (iOS 시뮬레이터)
+  adb exec-out screencap (Android) / xcrun simctl io (iOS 시뮬레이터)
 ```
 
-**디바이스 등록 흐름**: 앱 시작 → runtime.js가 ws://localhost:12300에 연결 → `{ type: 'init', platform, deviceName, metroBaseUrl }` 전송 → 서버가 deviceId 할당 (`{platform}-{순번}`) → `{ type: 'deviceId', deviceId }` 응답 → 이후 모든 요청은 deviceId로 라우팅
+**디바이스 등록 흐름**: 앱 시작 → runtime.js가 ws://localhost:12300에 연결 → `{ type: 'init', platform, deviceName, metroBaseUrl }` 전송 → 서버가 내부적으로 deviceId 할당 (`{platform}-{순번}`) → 이후 해당 WebSocket의 모든 요청/응답은 deviceId로 라우팅
 
-**재연결**: 같은 platform+deviceName의 기존 세션이 있으면 deviceId를 재사용하고 기존 WebSocket을 교체
+**재연결**: 서버는 매번 새 deviceId를 할당. 클라이언트(runtime.js)는 연결 끊길 시 지수 백오프(최대 30초)로 재접속 시도
 
 ### 3.3 빌드 파이프라인
 
 ```
 개발 모드:
 Source Code
-  ↓ Babel Plugin (testID 주입, 추적 코드)
+  ↓ Babel Plugin (testID, ref 주입, onPress 래핑 — 항상 적용)
   ↓ Metro Transformer (runtime 자동 번들링)
   ↓
-Bundle (with runtime + tracking)
+Bundle (with runtime + Babel 변환)
   ↓
-App 실행 → WebSocket 연결 → MCP 제어 가능
+App 실행 → runtime이 __DEV__ 감지 → WebSocket 자동 연결 → MCP 제어 가능
 
 프로덕션 빌드:
 Source Code
-  ↓ Babel Plugin (__DEV__ = false, 코드 주입 skip)
-  ↓ Metro Transformer (runtime 제외)
+  ↓ Babel Plugin (testID, ref 주입 — 동일하게 적용)
+  ↓ Metro Transformer (runtime 포함되나 WebSocket 미연결)
   ↓
-Bundle (clean, no MCP code)
+Bundle (Babel 변환 포함, runtime 포함)
   ↓
-App 실행 → MCP 코드 완전 제거됨
+App 실행 → __DEV__=false → WebSocket 미연결 (MCP.enable() 호출 시 수동 활성화 가능)
 ```
 
 ---
@@ -273,130 +267,73 @@ packages/react-native-mcp-server/
 - `click_webview` - `webview_evaluate_script`로 대체 (CSS selector 클릭만 가능 → 임의 JS 실행)
 - `navigate_webview` - `webview_evaluate_script`로 대체 (`window.location.href = url`로 동일 동작)
 
-### 4.2 packages/metro-plugin
+### 4.2 Babel Plugin (inject-testid.ts)
 
-**역할**: Metro 번들러 커스터마이징
+> 별도 패키지 없음. `packages/react-native-mcp-server/src/babel/inject-testid.ts`에 통합.
 
-**기능**:
+**주입 기능** (개발/프로덕션 모두 적용):
 
-1. **Runtime 자동 번들링**: 앱 진입점에 runtime 코드 자동 삽입
-2. **HMR 확장**: MCP WebSocket과 통합
-3. **소스맵 관리**: 디버깅용
-4. **번들 메타데이터 수집**: 컴포넌트 구조 정보
-
-**사용법**:
-
-```js
-// metro.config.js
-const { withReactNativeMCP } = require('@ohah/react-native-mcp-metro-plugin');
-
-module.exports = withReactNativeMCP({
-  // 기존 Metro 설정
-});
-```
-
-### 4.3 packages/babel-plugin
-
-**역할**: AST 변환으로 코드 주입
-
-**주입 대상**:
-
-1. **자동 testID**: 모든 컴포넌트에 고유 ID
-2. **추적 코드**: render, state change 이벤트
-3. **Modal 래핑**: Modal 컴포넌트 감지
+1. **자동 testID**: JSX 요소에 `ComponentName-index-TagName` 형식 ID 주입
+2. **displayName 주입**: PascalCase 함수 컴포넌트에 `.displayName` 자동 설정 (Release Fiber 트리 이름 보존)
+3. **onPress 래핑**: testID + onPress가 있는 요소에 `registerPressHandler` 주입
+4. **ScrollView/FlatList ref 주입**: testID가 있으면 `registerScrollRef`/`unregisterScrollRef` 자동 주입
+5. **WebView ref 주입**: testID가 있으면 `registerWebView`/`unregisterWebView` 자동 주입
+6. **동적 testID 지원**: TemplateLiteral, 변수 참조 등 동적 표현식 처리
 
 **변환 예시**:
 
 ```jsx
 // Before (원본 코드)
-function MyButton({ title }) {
+function MyButton({ title, onPress }) {
   return (
-    <TouchableOpacity>
+    <TouchableOpacity testID="my-btn" onPress={onPress}>
       <Text>{title}</Text>
     </TouchableOpacity>
   );
 }
 
-// After (개발 모드, Babel 변환 후)
-function MyButton({ title }) {
-  if (__DEV__) {
-    __REACT_NATIVE_MCP__.trackComponent('MyButton', this);
-  }
+// After (Babel 변환 후 — 개발/프로덕션 동일)
+MyButton.displayName = 'MyButton';
+function MyButton({ title, onPress }) {
   return (
-    <TouchableOpacity testID="MyButton-0-TouchableOpacity">
+    <TouchableOpacity
+      testID="my-btn"
+      onPress={__REACT_NATIVE_MCP__.registerPressHandler('my-btn', onPress)}
+    >
       <Text testID="MyButton-0-Text">{title}</Text>
     </TouchableOpacity>
   );
 }
-
-// After (프로덕션 빌드, __DEV__ = false)
-function MyButton({ title }) {
-  return (
-    <TouchableOpacity>
-      <Text>{title}</Text>
-    </TouchableOpacity>
-  );
-}
 ```
 
-**사용법**:
+### 4.3 Runtime (runtime.js)
 
-```js
-// babel.config.js
-module.exports = {
-  plugins: ['@ohah/react-native-mcp-babel-plugin'],
-};
-```
+> 별도 패키지 없음. `packages/react-native-mcp-server/runtime.js` 단일 파일.
 
-### 4.4 packages/runtime
+**구성** (하나의 파일에 모두 포함):
 
-**역할**: 앱에 자동 주입되는 최소한의 런타임 코드
+1. **DevTools hook 설치**: `__REACT_DEVTOOLS_GLOBAL_HOOK__` 없으면 자동 생성 (Release 빌드 Fiber 접근)
+2. **Fiber 트리 헬퍼**: `getFiberRoot`, `collectText`, `getLabel`, `getFiberTypeName`, `getComponentTree` 등
+3. **Press 관리**: `registerPressHandler`, `triggerPress`, `getClickables`, `pressByLabel`
+4. **Scroll 관리**: `registerScrollRef`, `unregisterScrollRef`, `scrollTo`
+5. **WebView 관리**: `registerWebView`, `unregisterWebView`, `clickInWebView`, `evaluateInWebView`
+6. **WebSocket 연결**: `__DEV__` 자동 연결, `MCP.enable()` 수동 활성화, 지수 백오프 재연결 (최대 30초)
 
-**주요 모듈**:
+**WebSocket 연결 조건**:
 
-#### websocket.ts
+- `__DEV__ === true` → 자동 연결
+- `__DEV__ === false` → `MCP.enable()` 호출 시 수동 연결
+- `runApplication` 시점에 미연결이면 재시도
+- 5초 주기 재시도 (MCP 서버가 나중에 뜨는 경우 대응)
 
-- MCP 서버 WebSocket 연결
-- 재연결 로직 (지수 백오프)
-- 메시지 송수신
-
-#### fiber-hook.ts
-
-- React Fiber tree 훅
-- `__REACT_DEVTOOLS_GLOBAL_HOOK__` 패턴
-- 컴포넌트 직렬화
-
-#### eval-bridge.ts
-
-- 원격 코드 실행
-- HMR 메시지 리스너 확장
-- 안전성 체크 (개발 모드만)
-
-**초기화 코드**:
-
-```ts
-// 앱 진입점에 Metro가 자동 삽입
-if (__DEV__) {
-  require('@ohah/react-native-mcp-runtime').initialize({
-    serverUrl: 'ws://localhost:12300',
-  });
-}
-```
-
-**프로덕션 처리**:
-
-- `__DEV__` = false 시 모든 코드 no-op
-- Dead code elimination으로 완전 제거
-- 번들 크기 영향 없음
-
-### 4.5 스크린샷 (CLI 기반, 네이티브 모듈 없음)
+### 4.4 스크린샷 (CLI 기반, 네이티브 모듈 없음)
 
 **역할**: 호스트(MCP 서버 실행 환경)에서 ADB / simctl로 화면 캡처. 앱 내 네이티브 모듈은 사용하지 않음.
 
 **Android**:
 
-- `adb shell screencap -p` — stdout으로 PNG 출력 → Base64 인코딩 후 MCP 응답으로 반환
-- 기기 1대 연결 가정 (또는 `-s <serial>` 지정)
+- `adb exec-out screencap -p` — stdout으로 raw PNG 출력 (`shell` 대신 `exec-out`으로 PTY 바이너리 손상 방지)
+- PNG 시그니처 검증 후 Base64 인코딩 → MCP 응답 반환
 
 **iOS (시뮬레이터만)**:
 
@@ -468,12 +405,18 @@ if (__DEV__) {
   - [x] AST visitor 구현
   - [x] 컴포넌트 감지 (JSX)
   - [x] testID 자동 생성 및 주입
+  - [x] PascalCase 컴포넌트에 displayName 자동 주입 (Release 빌드에서 Fiber 트리 이름 보존)
+  - [x] ScrollView/FlatList ref → `registerScrollRef` 자동 주입 (scroll 도구)
+  - [x] WebView ref + testID → `registerWebView` 자동 주입 (webview_evaluate_script 도구)
   - [ ] 추적 코드 삽입 (미구현)
-- [ ] 프로덕션 제거 로직
-  - [ ] `__DEV__` 조건부 컴파일 (Babel 주입은 항상 적용, runtime만 **DEV** 시 연결)
-  - [ ] Dead code elimination 검증
+- [x] 프로덕션 처리
+  - [x] Babel 변환은 항상 적용 (testID, ref, onPress 래핑)
+  - [x] runtime은 `__DEV__` 체크 → false이면 WebSocket 미연결 (`MCP.enable()`으로 수동 활성화 가능)
+  - [ ] Dead code elimination 검증 (미검증)
 - [x] MCP 조작 (evaluate_script로 구현)
   - [x] testID로 onPress 트리거 (runtime `triggerPress(testID)` + Babel에서 `registerPressHandler` 주입)
+  - [x] scroll 도구 — 등록된 ScrollView/FlatList의 scrollTo 호출
+  - [x] webview_evaluate_script 도구 — WebView 내 임의 JS 실행
   - [ ] `set_props` - props 변경 (미구현)
 
 **산출물**: AI가 컴포넌트 선택 및 조작 (버튼 클릭 등) ✅
@@ -485,7 +428,7 @@ if (__DEV__) {
 **구현**:
 
 - [x] MCP Tool 추가
-  - [x] `take_screenshot` — Android: `adb shell screencap -p`, iOS 시뮬레이터: `xcrun simctl io booted screenshot`
+  - [x] `take_screenshot` — Android: `adb exec-out screencap -p`, iOS 시뮬레이터: `xcrun simctl io booted screenshot`
   - [x] Base64 PNG 반환 (data URL 또는 content)
 - [ ] 선택: 압축/크기 조절 (미구현)
 
@@ -497,8 +440,8 @@ if (__DEV__) {
 
 **구현**:
 
-- [ ] Modal 추적
-- [ ] FlatList 가상화 처리
+- [x] Modal — React Fiber 트리에 포함되므로 기존 도구(take_snapshot, list_clickables, click 등)로 별도 처리 없이 동작
+- [x] FlatList/ScrollView — scroll 도구로 수동 스크롤 후 list_clickables/list_text_nodes 조회·클릭 가능 (자동화된 가상화 탐색은 미구현)
 - [ ] 네트워크 모니터링 — CDP 직접 연결로 `Network.*` 이벤트 수집 (`list_network_requests`) (보류 — CDP 연결 기능 일시 비활성화)
 - [ ] 콘솔 모니터링 — `Runtime.consoleAPICalled` 수집 (`list_console_messages`) (보류 — CDP 연결 기능 일시 비활성화)
 - [x] 연결 상태 + 디바이스 목록 확인 (`get_debugger_status`) ✅
@@ -558,7 +501,7 @@ if (__DEV__) {
 ### 7.2 기능적 제약
 
 1. **iOS 실기기 스크린샷** - simctl은 시뮬레이터 전용이라 실기기에서는 미지원
-2. **가상화 목록 한계** - FlatList 미렌더링 아이템 접근 어려움
+2. **가상화 목록 한계** - FlatList 미렌더링 아이템은 scroll 도구로 수동 스크롤 후 조회 가능하지만, 에이전트가 자동으로 전체 목록을 탐색하는 기능은 미구현
 3. **서드파티 네이티브 컴포넌트** - 제어 어려움
 
 ### 7.3 현실적 접근
@@ -585,7 +528,8 @@ if (__DEV__) {
 ### Phase 3
 
 - [x] AI가 버튼 클릭 등 조작 (click, click_by_label, triggerPress)
-- [ ] 프로덕션 빌드에서 코드 완전 제거
+- [x] 프로덕션 빌드에서 WebSocket 미연결 (`__DEV__` 체크, `MCP.enable()` 수동 활성화)
+- [ ] Dead code elimination 검증
 
 ### Phase 4
 
@@ -601,9 +545,9 @@ if (__DEV__) {
 
 ## 9. 다음 단계
 
-1. **Phase 3 보완**: set_props, 추적 코드, 프로덕션 제거 검증
+1. **Phase 3 보완**: set_props, Dead code elimination 검증
 2. **Phase 5**: CDP 기반 네트워크/콘솔 모니터링 재활성화
-3. **안정화**: npm 배포, 문서 정비
-4. **피드백 반영**
+3. **FlatList 가상화 자동 탐색**: 전체 목록 자동 스크롤 + 수집 기능
+4. **안정화**: npm 배포, 문서 정비
 
 이 설계는 실험적이며, 구현 중 발견되는 제약사항에 따라 수정 가능합니다.
