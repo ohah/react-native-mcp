@@ -19,10 +19,6 @@ const mcpTransformerPath = path.resolve(
  * @type {import('@react-native/metro-config').MetroConfig}
  */
 const config = getDefaultConfig(__dirname);
-/**
- * Metro 설정
- * @type {import('@react-native/metro-config').MetroConfig}
- */
 module.exports = mergeConfig(config, {
   server: {
     port: 8230,

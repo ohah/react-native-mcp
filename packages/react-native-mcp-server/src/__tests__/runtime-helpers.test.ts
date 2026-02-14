@@ -261,7 +261,7 @@ describe('getComponentTree — 컴포넌트 트리 스냅샷', () => {
 
   it('hook 없으면 null', () => {
     clearMockFiberRoot();
-    expect(MCP.getComponentTree({})).toBeNull();
+    expect(MCP!.getComponentTree!({})).toBeNull();
   });
 
   it('루트·자식 타입·testID·text 포함', () => {
