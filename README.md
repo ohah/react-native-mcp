@@ -49,6 +49,12 @@ export default withReactNativeMCP({
 });
 ```
 
+5. In your app entry file (e.g. `index.js`), enable the MCP runtime:
+
+```js
+__REACT_NATIVE_MCP__?.enable();
+```
+
 ### Claude Desktop
 
 Edit Claude Desktop configuration file:
