@@ -22,7 +22,7 @@ export function registerListClickables(server: McpServer, appSession: AppSession
     'list_clickables',
     {
       description:
-        'List clickable elements (uid + label). Use label to find by text, then call click(uid). Labels come from Fiber tree traversal (runtime text, when DevTools hook is available).',
+        '클릭 가능한 요소 목록(uid + label). 라벨로 텍스트 검색 후 click(uid) 호출. 라벨은 Fiber 트리 순회로 수집(DevTools 훅 있을 때 런타임 텍스트).',
       inputSchema: z.object({}),
     },
     async () => {

@@ -20,7 +20,7 @@ export function registerGetMetroUrl(server: McpServer): void {
     'get_metro_url',
     {
       description:
-        'Return the Metro base URL used for CDP events (list_console_messages, list_network_requests). From connected app when available, else METRO_BASE_URL env or http://localhost:8230.',
+        'CDP 이벤트(list_console_messages, list_network_requests)에 사용 중인 Metro base URL 반환. 연결된 앱에서 가져오거나, 없으면 METRO_BASE_URL env 또는 http://localhost:8230.',
       inputSchema: z.object({}),
     },
     async () => {

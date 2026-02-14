@@ -14,22 +14,14 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 const schema = z.object({
   platform: z
     .enum(['android', 'ios'])
-    .describe('android: adb shell screencap. ios: xcrun simctl (simulator only)'),
-  filePath: z
-    .string()
-    .optional()
-    .describe('Optional path to save screenshot (Chrome DevTools MCP spec)'),
+    .describe('android: adb shell screencap. ios: xcrun simctl(시뮬레이터만)'),
+  filePath: z.string().optional().describe('스크린샷 저장 경로(선택, Chrome DevTools MCP 스펙)'),
   format: z
     .enum(['png', 'jpeg', 'webp'])
     .optional()
     .default('png')
-    .describe('Image format (adb/simctl output is PNG)'),
-  quality: z
-    .number()
-    .min(0)
-    .max(100)
-    .optional()
-    .describe('JPEG/WebP quality 0-100, ignored for PNG'),
+    .describe('이미지 형식(adb/simctl 기본 PNG)'),
+  quality: z.number().min(0).max(100).optional().describe('JPEG/WebP 품질 0–100, PNG는 무시'),
 });
 
 function runCommand(
@@ -116,7 +108,7 @@ export function registerTakeScreenshot(server: McpServer): void {
     'take_screenshot',
     {
       description:
-        'Capture the current screen of the connected Android device (adb) or booted iOS Simulator (xcrun simctl). No native module in the app. Returns PNG as MCP image content so the client can display it (e.g. like Chrome DevTools MCP).',
+        '연결된 Android 기기(adb) 또는 부팅된 iOS 시뮬레이터(xcrun simctl)의 현재 화면 캡처. 앱 내 네이티브 모듈 없음. PNG를 MCP 이미지로 반환해 클라이언트에서 표시(Chrome DevTools MCP와 동일).',
       inputSchema: schema,
     },
     async (args: unknown) => {

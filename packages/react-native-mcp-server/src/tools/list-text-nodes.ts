@@ -21,7 +21,7 @@ export function registerListTextNodes(server: McpServer, appSession: AppSession)
     'list_text_nodes',
     {
       description:
-        'List text node contents from the React Native Fiber tree. Returns all visible text (not only clickables). Each item has text and optional testID (nearest ancestor). Requires DevTools hook.',
+        'React Native Fiber 트리에서 텍스트 노드 내용 목록. 보이는 모든 텍스트 반환(클릭 가능 요소만 아님). 각 항목: text, 선택 testID(가장 가까운 조상). DevTools 훅 필요.',
       inputSchema: z.object({}),
     },
     async () => {

@@ -23,7 +23,7 @@ export function registerGetDebuggerStatus(server: McpServer): void {
     'get_debugger_status',
     {
       description:
-        'MCP 서버의 CDP WebSocket 연결 상태 확인. connected: true면 콘솔/네트워크 이벤트 수집 중.',
+        'CDP WebSocket 연결 상태 확인. connected: true이면 콘솔/네트워크 이벤트 수집 중.',
       inputSchema: schema,
     },
     async (args: unknown) => {

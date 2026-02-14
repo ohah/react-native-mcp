@@ -11,7 +11,7 @@ const schema = z.object({
   label: z
     .string()
     .optional()
-    .describe('찾고 싶은 라벨(부분 문자열). 없으면 훅 상태와 라벨 목록만 반환.'),
+    .describe('찾을 라벨(부분 문자열). 생략 시 훅 상태와 전체 라벨 목록만 반환.'),
 });
 
 function runGetByLabel(
@@ -66,7 +66,7 @@ export function registerGetByLabel(server: McpServer, appSession: AppSession): v
 
   register(
     'get_by_label',
-    'Fiber 라벨 검색 디버그: hookPresent, rendererPresent, rootPresent, labelsWithOnPress 목록, match(해당 라벨 매칭 여부) 반환. click_by_label이 안 될 때 원인 확인용.',
+    'Fiber 라벨 검색 디버그: hookPresent, rendererPresent, rootPresent, labelsWithOnPress, match 반환. click_by_label이 안 될 때 원인 확인용.',
     (args) => handle('getByLabel', args)
   );
 
