@@ -54,7 +54,9 @@ export function registerClickWebView(server: McpServer, appSession: AppSession):
         const result = res.result as { ok?: boolean; error?: string } | undefined;
         if (result && result.ok === true) {
           return {
-            content: [{ type: 'text' as const, text: 'OK: WebView 내부 요소에 click() 실행됨.' }],
+            content: [
+              { type: 'text' as const, text: 'OK: click() executed on element inside WebView.' },
+            ],
           };
         }
         return {

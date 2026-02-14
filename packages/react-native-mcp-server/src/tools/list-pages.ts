@@ -24,7 +24,7 @@ export function registerListPages(server: McpServer): void {
     'list_pages',
     {
       description:
-        'List pages open in the browser. For React Native, returns the single app as one page (Chrome DevTools MCP spec).',
+        '브라우저에서 열린 페이지 목록. React Native는 단일 앱을 한 페이지로 반환(Chrome DevTools MCP 스펙).',
       inputSchema: z.object({}),
     },
     async () => {

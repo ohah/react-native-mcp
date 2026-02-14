@@ -9,9 +9,9 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
 
 const schema = z.object({
-  uid: z.string().describe('testID of the element (from snapshot or Babel auto-injected id)'),
-  dblClick: z.boolean().optional().describe('Double click. Default false.'),
-  includeSnapshot: z.boolean().optional().describe('Include snapshot in response. RN: ignored.'),
+  uid: z.string().describe('요소의 testID (스냅샷 또는 Babel 자동 주입 id)'),
+  dblClick: z.boolean().optional().describe('더블 클릭 여부. 기본 false.'),
+  includeSnapshot: z.boolean().optional().describe('응답에 스냅샷 포함 여부. RN에서는 무시됨.'),
 });
 
 export function registerClick(server: McpServer, appSession: AppSession): void {
@@ -27,7 +27,7 @@ export function registerClick(server: McpServer, appSession: AppSession): void {
     'click',
     {
       description:
-        'Clicks the element with the given testID (uid). Uses triggerPress in the app. Use for Pressable/TouchableOpacity etc. with testID or Babel-injected testID.',
+        '지정한 testID(uid)를 가진 요소를 클릭. 앱에서 triggerPress 호출. Pressable/TouchableOpacity 등 testID 또는 Babel 주입 testID에 사용.',
       inputSchema: schema,
     },
     async (args: unknown) => {

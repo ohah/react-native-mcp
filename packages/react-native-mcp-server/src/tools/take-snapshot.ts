@@ -31,7 +31,7 @@ export function registerTakeSnapshot(server: McpServer, appSession: AppSession):
     'take_snapshot',
     {
       description:
-        'Capture component tree snapshot from React Native Fiber. Returns tree of nodes with uid, type (ScrollView, FlatList, Text, View, etc.), testID, accessibilityLabel, text. Use for querySelector-like exploration. uid = testID when present, else path (e.g. "0.1.2"); click(uid) works when uid is testID.',
+        'React Native Fiber에서 컴포넌트 트리 스냅샷 캡처. uid, type(ScrollView, FlatList, Text, View 등), testID, accessibilityLabel, text 포함. querySelector처럼 탐색할 때 사용. uid는 testID가 있으면 testID, 없으면 경로(예: "0.1.2"); uid가 testID일 때 click(uid) 사용.',
       inputSchema: schema,
     },
     async (args) => {

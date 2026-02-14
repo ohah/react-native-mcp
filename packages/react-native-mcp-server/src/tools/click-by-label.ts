@@ -9,8 +9,24 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
 
 const schema = z.object({
-  label: z.string().describe('텍스트(라벨) 부분 문자열. 이 텍스트를 포함한 버튼의 onPress 호출.'),
+  label: z
+    .string()
+    .describe('찾을 라벨(텍스트) 부분 문자열. 이 텍스트를 포함한 버튼의 onPress 호출.'),
+  index: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      '0부터 시작하는 인덱스. 같은 라벨이 여러 개일 때 n번째 요소 클릭. 생략 시 0(첫 번째).'
+    ),
 });
+
+/** eval용 코드 문자열 생성 (테스트·검증용 export) */
+export function buildPressByLabelEvalCode(label: string, index?: number): string {
+  const indexArg = typeof index === 'number' ? `, ${index}` : '';
+  return `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.pressByLabel && __REACT_NATIVE_MCP__.pressByLabel(${JSON.stringify(label)}${indexArg}); })();`;
+}
 
 export function registerClickByLabel(server: McpServer, appSession: AppSession): void {
   (
@@ -25,11 +41,12 @@ export function registerClickByLabel(server: McpServer, appSession: AppSession):
     'click_by_label',
     {
       description:
-        'Fiber 노드로 라벨(텍스트)이 일치하는 요소를 찾아 클릭. testID 없는 버튼도 가능. DevTools 훅 필요.',
+        'Fiber 트리에서 라벨(텍스트)이 일치하는 요소를 찾아 클릭. index로 n번째 매칭 지정 가능(0-based). testID 없는 버튼도 가능. DevTools 훅 필요.',
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const { label } = schema.parse(args);
+      const parsed = schema.parse(args);
+      const { label, index } = parsed;
 
       if (!appSession.isConnected()) {
         return {
@@ -42,7 +59,7 @@ export function registerClickByLabel(server: McpServer, appSession: AppSession):
         };
       }
 
-      const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.pressByLabel && __REACT_NATIVE_MCP__.pressByLabel(${JSON.stringify(label)}); })();`;
+      const code = buildPressByLabelEvalCode(label, index);
       try {
         const res = await appSession.sendRequest({ method: 'eval', params: { code } });
         if (res.error != null) {
@@ -50,8 +67,10 @@ export function registerClickByLabel(server: McpServer, appSession: AppSession):
         }
         const fired = res.result === true;
         const text = fired
-          ? 'pressed (Fiber에서 라벨로 찾아 onPress 호출됨)'
-          : 'No matching button. DevTools 훅이 있나요? 라벨 문자열이 화면 텍스트에 포함돼 있나요?';
+          ? typeof index === 'number'
+            ? `pressed (label "${label}" nth match (index ${index}) onPress triggered)`
+            : 'pressed (onPress triggered via Fiber label match)'
+          : 'No matching button. Is DevTools hook present? Does an element match the label/index?';
         return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
