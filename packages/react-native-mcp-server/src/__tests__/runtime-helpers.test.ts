@@ -80,6 +80,8 @@ describe('runtime.js MCP 객체', () => {
     expect(typeof MCP.getByLabel).toBe('function');
     expect(typeof MCP.pressByLabel).toBe('function');
     expect(typeof MCP.getClickables).toBe('function');
+    expect(typeof MCP.getTextNodes).toBe('function');
+    expect(typeof MCP.getComponentTree).toBe('function');
   });
 });
 
@@ -218,6 +220,98 @@ describe('getByLabel — fiber 트리 탐색', () => {
     const result = MCP.getByLabel('') as Record<string, unknown>;
     const labels = result.labelsWithOnPress as Array<{ text: string; testID?: string }>;
     expect(labels[0].testID).toBe('btn-login');
+  });
+});
+
+describe('getTextNodes — Text 노드 내용 수집', () => {
+  beforeEach(() => clearMockFiberRoot());
+
+  it('hook 없으면 빈 배열', () => {
+    clearMockFiberRoot();
+    const result = MCP.getTextNodes() as Array<{ text: string; testID?: string }>;
+    expect(result).toEqual([]);
+  });
+
+  it('onPress 없는 Text 노드도 수집', () => {
+    const root = makeFiber('View', {}, [
+      makeFiber(MockText, { children: 'Hello' }),
+      makeFiber(MockText, { children: 'World' }),
+    ]);
+    setMockFiberRoot(root);
+    const result = MCP.getTextNodes() as Array<{ text: string; testID?: string }>;
+    expect(result.length).toBe(2);
+    expect(result[0].text).toBe('Hello');
+    expect(result[1].text).toBe('World');
+  });
+
+  it('조상 testID 있으면 testID 포함', () => {
+    const root = makeFiber('View', { testID: 'screen' }, [
+      makeFiber(MockText, { children: 'Title' }),
+    ]);
+    setMockFiberRoot(root);
+    const result = MCP.getTextNodes() as Array<{ text: string; testID?: string }>;
+    expect(result.length).toBe(1);
+    expect(result[0].text).toBe('Title');
+    expect(result[0].testID).toBe('screen');
+  });
+});
+
+describe('getComponentTree — 컴포넌트 트리 스냅샷', () => {
+  beforeEach(() => clearMockFiberRoot());
+
+  it('hook 없으면 null', () => {
+    clearMockFiberRoot();
+    expect(MCP.getComponentTree({})).toBeNull();
+  });
+
+  it('루트·자식 타입·testID·text 포함', () => {
+    const root = makeFiber('View', { testID: 'screen' }, [
+      makeFiber('ScrollView', {}, [
+        makeFiber(MockText, { children: 'Hello' }),
+      ]),
+    ]);
+    setMockFiberRoot(root);
+    const tree = MCP.getComponentTree({}) as {
+      uid: string;
+      type: string;
+      testID?: string;
+      children?: Array<{ uid: string; type: string; text?: string; children?: unknown[] }>;
+    };
+    expect(tree).not.toBeNull();
+    expect(tree.uid).toBe('screen');
+    expect(tree.type).toBe('View');
+    expect(tree.testID).toBe('screen');
+    expect(tree.children).toHaveLength(1);
+    expect(tree.children![0].type).toBe('ScrollView');
+    expect(tree.children![0].children).toHaveLength(1);
+    expect(tree.children![0].children![0].type).toBe('Text');
+    expect((tree.children![0].children![0] as { text?: string }).text).toBe('Hello');
+  });
+
+  it('testID 없으면 uid가 경로', () => {
+    const root = makeFiber('View', {}, [
+      makeFiber(MockText, { children: 'A' }),
+    ]);
+    setMockFiberRoot(root);
+    const tree = MCP.getComponentTree({}) as { uid: string; children?: Array<{ uid: string }> };
+    expect(tree.uid).toBe('0');
+    expect(tree.children).toHaveLength(1);
+    expect(tree.children![0].uid).toBe('0.0');
+  });
+
+  it('maxDepth 초과 시 하위 생략', () => {
+    const root = makeFiber('View', {}, [
+      makeFiber('View', {}, [
+        makeFiber('View', {}, [makeFiber(MockText, { children: 'Deep' })]),
+      ]),
+    ]);
+    setMockFiberRoot(root);
+    const tree = MCP.getComponentTree({ maxDepth: 2 }) as { children?: unknown[] };
+    expect(tree.children).toHaveLength(1);
+    const level1 = tree.children![0] as { children?: unknown[] };
+    expect(level1.children).toHaveLength(1);
+    const level2 = level1.children![0] as { children?: unknown[] };
+    expect(level2.children).toBeUndefined();
   });
 });
 

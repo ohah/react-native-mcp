@@ -111,6 +111,42 @@ function getRNComponents() {
   return { Text: rn && rn.Text, Image: rn && rn.Image };
 }
 
+/** fiber 자신(또는 조상)에서 처음 나오는 testID */
+function getAncestorTestID(fiber) {
+  var f = fiber;
+  while (f && f.memoizedProps) {
+    if (typeof f.memoizedProps.testID === 'string' && f.memoizedProps.testID.trim())
+      return f.memoizedProps.testID.trim();
+    f = f.return;
+  }
+  return undefined;
+}
+
+/** Text fiber 한 노드의 직접 children 문자열만 (자식 Text 노드 제외) */
+function getTextNodeContent(fiber, TextComponent) {
+  if (!fiber || fiber.type !== TextComponent || !fiber.memoizedProps) return '';
+  var c = fiber.memoizedProps.children;
+  if (typeof c === 'string') return c.trim();
+  if (Array.isArray(c))
+    return c
+      .map(function (x) {
+        return typeof x === 'string' ? x : '';
+      })
+      .join('')
+      .trim();
+  return '';
+}
+
+/** Fiber의 컴포넌트 타입 이름 (displayName/name/문자열) */
+function getFiberTypeName(fiber) {
+  if (!fiber || !fiber.type) return 'Unknown';
+  var t = fiber.type;
+  if (typeof t === 'string') return t;
+  if (t.displayName && typeof t.displayName === 'string') return t.displayName;
+  if (t.name && typeof t.name === 'string') return t.name;
+  return 'Component';
+}
+
 // ─── MCP 글로벌 객체 ────────────────────────────────────────────
 
 var MCP = {
@@ -223,6 +259,82 @@ var MCP = {
     return MCP.getByLabel('');
   },
   /**
+   * Fiber 트리 전체에서 Text 노드 내용 수집. 버튼 여부와 무관하게 모든 보이는 텍스트.
+   * 반환: [{ text, testID? }] — testID는 해당 Text의 조상 중 가장 가까운 testID.
+   */
+  getTextNodes: function () {
+    try {
+      var root = getFiberRoot();
+      if (!root) return [];
+      var c = getRNComponents();
+      var TextComponent = c && c.Text;
+      if (!TextComponent) return [];
+      var out = [];
+      function visit(fiber) {
+        if (!fiber) return;
+        if (fiber.type === TextComponent) {
+          var text = getTextNodeContent(fiber, TextComponent);
+          if (text) out.push({ text: text.replace(/\s+/g, ' '), testID: getAncestorTestID(fiber) });
+        }
+        visit(fiber.child);
+        visit(fiber.sibling);
+      }
+      visit(root);
+      return out;
+    } catch (e) {
+      return [];
+    }
+  },
+  /**
+   * Fiber 트리 전체를 컴포넌트 트리로 직렬화. querySelector 대체용 스냅샷.
+   * 노드: { uid, type, testID?, accessibilityLabel?, text?, children? }
+   * uid: testID 있으면 testID, 없으면 경로 "0.1.2". click(uid)는 testID일 때만 동작.
+   * options: { maxDepth } (기본 무제한, 권장 20~30)
+   */
+  getComponentTree: function (options) {
+    try {
+      var root = getFiberRoot();
+      if (!root) return null;
+      var c = getRNComponents();
+      var TextComponent = c && c.Text;
+      var ImageComponent = c && c.Image;
+      var maxDepth = options && typeof options.maxDepth === 'number' ? options.maxDepth : 999;
+      function buildNode(fiber, path, depth) {
+        if (!fiber || depth > maxDepth) return null;
+        var props = fiber.memoizedProps || {};
+        var testID = typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : undefined;
+        var typeName = getFiberTypeName(fiber);
+        var uid = testID || path;
+        var node = {
+          uid: uid,
+          type: typeName,
+        };
+        if (testID) node.testID = testID;
+        var a11y = typeof props.accessibilityLabel === 'string' && props.accessibilityLabel.trim();
+        if (a11y) node.accessibilityLabel = props.accessibilityLabel.trim();
+        if (fiber.type === TextComponent) {
+          var text = getTextNodeContent(fiber, TextComponent);
+          if (text) node.text = text.replace(/\s+/g, ' ');
+        }
+        var children = [];
+        var child = fiber.child;
+        var idx = 0;
+        while (child) {
+          var childPath = path + '.' + idx;
+          var childNode = buildNode(child, childPath, depth + 1);
+          if (childNode) children.push(childNode);
+          child = child.sibling;
+          idx += 1;
+        }
+        if (children.length) node.children = children;
+        return node;
+      }
+      return buildNode(root, '0', 0);
+    } catch (e) {
+      return null;
+    }
+  },
+  /**
    * Fiber 트리에서 라벨(텍스트)에 해당하는 노드를 찾아 onPress 호출. testID 없어도 동작.
    */
   pressByLabel: function (labelSubstring) {
@@ -291,6 +403,8 @@ if (typeof __DEV__ !== 'undefined' && __DEV__) {
   var reconnectDelay = 1000;
 
   function connect() {
+    if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+    if (ws) try { ws.close(); } catch (_e) {}
     ws = new WebSocket(wsUrl);
     ws.onopen = function () {
       reconnectDelay = 1000;
@@ -338,11 +452,21 @@ if (typeof __DEV__ !== 'undefined' && __DEV__) {
     ws.onerror = function () {};
   }
 
-  // 네이티브 브릿지 준비 후 연결: runApplication은 호스트가 앱을 시작할 때 호출
+  // 번들 로드 직후 한 번 시도
+  connect();
+
+  // runApplication 시점에 미연결이면 한 번 더 시도
   var _AppRegistry = require('react-native').AppRegistry;
   var _originalRun = _AppRegistry.runApplication;
   _AppRegistry.runApplication = function () {
-    if (!ws) connect();
+    if (!ws || ws.readyState !== 1) connect();
     return _originalRun.apply(this, arguments);
   };
+
+  // 주기적 재시도: 앱이 먼저 떠 있고 나중에 MCP를 켜도 자동 연결 (순서 무관)
+  var PERIODIC_INTERVAL_MS = 5000;
+  setInterval(function () {
+    if (ws && ws.readyState === 1) return;
+    connect();
+  }, PERIODIC_INTERVAL_MS);
 }

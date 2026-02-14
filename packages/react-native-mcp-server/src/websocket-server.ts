@@ -43,8 +43,8 @@ export class AppSession {
    */
   start(port: number = DEFAULT_PORT): void {
     if (this.server) return;
-    this.server = new WebSocketServer({ port });
-    this.server.on('connection', (ws: WebSocket) => {
+    const wss = new WebSocketServer({ port });
+    wss.on('connection', (ws: WebSocket) => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         ws.close(1000, 'Another app already connected');
         return;
@@ -76,10 +76,23 @@ export class AppSession {
         this.ws = null;
       });
     });
-    this.server.on('error', (err: Error) => {
+    wss.on('listening', () => {
+      this.server = wss;
+      console.error(`[react-native-mcp-server] WebSocket server listening on ws://localhost:${port}`);
+    });
+    wss.on('error', (err: Error & { code?: string }) => {
+      if (err.code === 'EADDRINUSE' || err.message.includes('EADDRINUSE')) {
+        this.server = null;
+        wss.close();
+        console.error(
+          '[react-native-mcp-server] Port',
+          port,
+          'already in use (another MCP instance?). Close other Cursor windows or restart Cursor so only one instance runs.'
+        );
+        return;
+      }
       console.error('[react-native-mcp-server] WebSocket server error:', err.message);
     });
-    console.error(`[react-native-mcp-server] WebSocket server listening on ws://localhost:${port}`);
   }
 
   /**
