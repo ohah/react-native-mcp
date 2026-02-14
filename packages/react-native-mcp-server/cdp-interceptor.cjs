@@ -1,32 +1,55 @@
 /**
- * CDP 이벤트 가로채기 진입점 (Metro config에서 require 시 패치 적용)
- * 디바이스→디버거, 디버거→디바이스 모든 CDP 메시지를 수집해 GET /__mcp_cdp_events__ 로 노출.
+ * CDP 이벤트 가로채기 진입점 (Metro config에서 require 또는 node -r로 적용)
+ * 디바이스↔디버거 모든 CDP 메시지를 수집해 GET /__mcp_cdp_events__ 로 노출.
  *
- * Metro 문서(https://metrobundler.dev/docs/configuration/)의 server.enhanceMiddleware는
- * "Metro 미들웨어"(createConnectMiddleware 결과)만 감싸므로, RN CLI가 unstable_extraMiddleware로
- * 넣는 communityMiddleware·devMiddleware보다 뒤에 실행됨. 그들이 모르는 경로에서 404를 반환하면
- * 우리 경로에 도달하지 않으므로, runServer를 패치해 unstable_extraMiddleware 맨 앞에
- * /__mcp_cdp_events__ 전용 핸들러를 넣음.
- *
- * CDP 수집: CLI가 require('@react-native/dev-middleware')하는 시점보다 먼저 Module._load 후크를
- * 걸어야 하므로, Metro를 node -r @ohah/react-native-mcp-server/cdp-interceptor 로 실행하면
- * 이벤트가 수집됨. config에서만 require하면 엔드포인트만 동작하고 events는 빈 배열.
+ * 두 가지 패치를 적용:
+ * 1. Module._load 후크 → @react-native/dev-middleware 최초 로드 시 래핑 (node -r 필요)
+ * 2. Metro runServer 패치 → unstable_extraMiddleware 선두에 엔드포인트 등록
  *
  * @see docs/cdp-interceptor-library-design.md
  */
 
 'use strict';
 
-const MAX_EVENTS = 2000;
+// ─── 이벤트 스토어 ──────────────────────────────────────────────
 
+const MAX_EVENTS = 2000;
 const eventStore = [];
+
 function pushEvent(entry) {
   eventStore.push(entry);
-  if (eventStore.length > MAX_EVENTS) {
-    eventStore.shift();
-  }
+  if (eventStore.length > MAX_EVENTS) eventStore.shift();
 }
 
+// ─── 공통 헬퍼 ──────────────────────────────────────────────────
+
+const CDP_EVENTS_PATH = '/__mcp_cdp_events__';
+
+/** /__mcp_cdp_events__ JSON 응답 */
+function sendCdpEventsResponse(res) {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  const lastEventTimestamp =
+    eventStore.length > 0 ? eventStore[eventStore.length - 1].timestamp : null;
+  res.end(JSON.stringify({ events: eventStore, lastEventTimestamp }));
+}
+
+/** cwd, cwd/node_modules, __dirname 순서로 모듈 resolve 후 require */
+function requireFromProject(moduleId) {
+  const path = require('path');
+  for (const p of [process.cwd(), path.join(process.cwd(), 'node_modules'), __dirname]) {
+    try {
+      return require(require.resolve(moduleId, { paths: [p] }));
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+// ─── CDP 메시지 핸들러 ──────────────────────────────────────────
+
+/** customInspectorMessageHandler 팩토리: 기존 핸들러를 감싸서 이벤트 수집 추가 */
 function createOurHandler(existingFactory) {
   return function (connection) {
     const existing = existingFactory ? existingFactory(connection) : null;
@@ -59,73 +82,55 @@ function createOurHandler(existingFactory) {
   };
 }
 
-const CDP_EVENTS_PATH = '/__mcp_cdp_events__';
+// ─── createDevMiddleware 래핑 ───────────────────────────────────
 
-/** /__mcp_cdp_events__ 요청을 맨 앞에서 처리 (communityMiddleware가 먼저 404 내지 않도록) */
-function createCdpEventsMiddleware() {
-  return function (req, res, next) {
-    const pathname = req.url?.split('?')[0];
-    if (pathname !== CDP_EVENTS_PATH) {
-      return next();
-    }
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.end(JSON.stringify({ events: eventStore }));
-  };
-}
+/** 이미 래핑 했는지 추적 (Module._load과 직접 패치 이중 적용 방지) */
+let devMiddlewarePatched = false;
 
-function wrapMiddleware(originalMiddleware) {
-  if (typeof originalMiddleware !== 'function') return originalMiddleware;
-  return function (req, res, next) {
-    const pathname = req.url?.split('?')[0];
-    if (pathname === CDP_EVENTS_PATH) {
-      res.setHeader('Content-Type', 'application/json; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.end(JSON.stringify({ events: eventStore }));
-      return;
-    }
-    return originalMiddleware(req, res, next);
-  };
-}
-
-/** createDevMiddleware 래퍼: customInspectorMessageHandler 주입 + middleware에 /__mcp_cdp_events__ 처리 */
-function createWrappedCreateDevMiddleware(original) {
+/** createDevMiddleware를 래핑: CDP 핸들러 주입 + 미들웨어에 이벤트 엔드포인트 추가 */
+function wrapCreateDevMiddleware(original) {
   return function (options) {
     const opts = Object.assign({}, options);
     opts.unstable_customInspectorMessageHandler = createOurHandler(
       opts.unstable_customInspectorMessageHandler
     );
     const result = original(opts);
-    if (result && result.middleware) {
-      result.middleware = wrapMiddleware(result.middleware);
+    if (result && typeof result.middleware === 'function') {
+      const originalMiddleware = result.middleware;
+      result.middleware = function (req, res, next) {
+        if (req.url?.split('?')[0] === CDP_EVENTS_PATH) {
+          sendCdpEventsResponse(res);
+          return;
+        }
+        return originalMiddleware(req, res, next);
+      };
     }
     return result;
   };
 }
 
-/**
- * Module._load 후크: @react-native/dev-middleware 최초 로드 시 exports를 래핑.
- * CLI가 require하기 전에 후크가 걸려 있어야 하므로, Metro는 다음처럼 실행해야 이벤트가 수집됨:
- *   node -r @ohah/react-native-mcp-server/cdp-interceptor node_modules/.bin/react-native start --port 8230
- * Node가 _load에 넘기는 request는 require() 인자(패키지명 또는 경로). 반환값은 module.exports라서 filename 사용 불가.
- */
+// ─── 패치 1: Module._load 후크 ─────────────────────────────────
+
 function installDevMiddlewareLoadHook() {
   const Module = require('module');
   const originalLoad = Module._load;
   if (typeof originalLoad !== 'function') return;
-  function isDevMiddlewareRequest(request) {
-    if (typeof request !== 'string') return false;
-    if (request === '@react-native/dev-middleware') return true;
-    return request.includes('dev-middleware');
-  }
+
   Module._load = function (request, _parent, _isMain) {
     const result = originalLoad.apply(this, arguments);
-    if (!isDevMiddlewareRequest(request)) return result;
+    if (typeof request !== 'string') return result;
+    if (request !== '@react-native/dev-middleware' && !request.includes('dev-middleware')) {
+      return result;
+    }
+    if (devMiddlewarePatched) return result;
+    devMiddlewarePatched = true;
+
     const orig = result;
     const originalFn =
       typeof orig === 'function' ? orig : (orig?.createDevMiddleware ?? orig?.default);
     if (typeof originalFn !== 'function') return result;
-    const wrapped = createWrappedCreateDevMiddleware(originalFn);
+
+    const wrapped = wrapCreateDevMiddleware(originalFn);
     return new Proxy(orig, {
       get(target, prop) {
         if (prop === 'default' || prop === 'createDevMiddleware') return wrapped;
@@ -135,34 +140,10 @@ function installDevMiddlewareLoadHook() {
   };
 }
 
-installDevMiddlewareLoadHook();
+// ─── 패치 2: Metro runServer ────────────────────────────────────
 
-/**
- * CLI가 사용하는 것과 같은 metro 인스턴스를 얻기 위해, config를 로드하는 프로젝트(cwd) 기준으로 resolve.
- * 서버 패키지에서 require('metro')하면 모노레포 루트의 metro를 가져와 CLI(demo-app의 metro)와 달라질 수 있음.
- */
-function getMetroModule() {
-  const path = require('path');
-  const searchPaths = [process.cwd(), path.join(process.cwd(), 'node_modules'), __dirname];
-  for (const p of searchPaths) {
-    try {
-      const metroPath = require.resolve('metro', { paths: [p] });
-      return require(metroPath);
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
-/**
- * Metro runServer에서 unstable_extraMiddleware 맨 앞에 /__mcp_cdp_events__ 핸들러 추가.
- * 문서의 server.enhanceMiddleware는 "Metro 미들웨어"만 감싸므로, RN CLI가 넣는 communityMiddleware
- * 다음에 실행됨. 그쪽이 알 수 없는 경로에서 404를 내면 우리 경로에 도달하지 않으므로,
- * extraMiddleware 배열 선두에 넣어서 우리가 먼저 처리하도록 패치.
- */
 function patchMetroRunServer() {
-  const metro = getMetroModule();
+  const metro = requireFromProject('metro');
   if (!metro) {
     console.warn(
       '[react-native-mcp] cdp-interceptor: metro module not found, /__mcp_cdp_events__ will not be registered.'
@@ -177,50 +158,37 @@ function patchMetroRunServer() {
   const wrapped = function (config, options) {
     const opts = { ...options };
     const extra = opts.unstable_extraMiddleware ?? [];
-    opts.unstable_extraMiddleware = [createCdpEventsMiddleware(), ...extra];
+    opts.unstable_extraMiddleware = [
+      function (req, res, next) {
+        if (req.url?.split('?')[0] === CDP_EVENTS_PATH) {
+          sendCdpEventsResponse(res);
+          return;
+        }
+        return next();
+      },
+      ...extra,
+    ];
     return runServer.call(this, config, opts);
   };
   if (metro.runServer) metro.runServer = wrapped;
-  if (metro.default && typeof metro.default.runServer === 'function')
+  if (metro.default && typeof metro.default.runServer === 'function') {
     metro.default.runServer = wrapped;
-}
-
-/** 프로젝트(cwd) 또는 현재 패키지 기준으로 모듈 resolve (모노레포에서 demo-app의 dev-middleware 찾기) */
-function requireFromProject(moduleId) {
-  const path = require('path');
-  for (const p of [process.cwd(), path.join(process.cwd(), 'node_modules'), __dirname]) {
-    try {
-      return require(require.resolve(moduleId, { paths: [p] }));
-    } catch {
-      continue;
-    }
   }
-  return null;
 }
 
-function patchCreateDevMiddlewareAndWrapReturn() {
+// ─── 패치 3: 직접 모듈 패치 (Module._load이 먼저 로드된 경우 fallback) ──
+
+function patchDevMiddlewareDirect() {
+  if (devMiddlewarePatched) return;
+
   const devMiddleware = requireFromProject('@react-native/dev-middleware');
-  if (!devMiddleware) {
-    console.warn(
-      '[react-native-mcp] cdp-interceptor: @react-native/dev-middleware not found. Skipping CDP event collection (GET /__mcp_cdp_events__ will return []).'
-    );
-    return;
-  }
+  if (!devMiddleware) return;
+
   const original = devMiddleware.default ?? devMiddleware.createDevMiddleware ?? devMiddleware;
-  if (typeof original !== 'function') {
-    console.warn('[react-native-mcp] cdp-interceptor: createDevMiddleware not found. Skipping.');
-    return;
-  }
-  const wrapped = function (options) {
-    const opts = { ...options };
-    const existing = opts.unstable_customInspectorMessageHandler;
-    opts.unstable_customInspectorMessageHandler = createOurHandler(existing);
-    const result = original(opts);
-    if (result && result.middleware) {
-      result.middleware = wrapMiddleware(result.middleware);
-    }
-    return result;
-  };
+  if (typeof original !== 'function') return;
+
+  devMiddlewarePatched = true;
+  const wrapped = wrapCreateDevMiddleware(original);
 
   function assignIfWritable(obj, key, value) {
     if (obj[key] === undefined) return;
@@ -238,14 +206,15 @@ function patchCreateDevMiddlewareAndWrapReturn() {
           writable: true,
         });
       }
-    } catch (_) {
-      // getter-only 등 쓸 수 없으면 무시
-    }
+    } catch (_) {}
   }
 
   assignIfWritable(devMiddleware, 'default', wrapped);
   assignIfWritable(devMiddleware, 'createDevMiddleware', wrapped);
 }
 
+// ─── 실행 ───────────────────────────────────────────────────────
+
+installDevMiddlewareLoadHook();
 patchMetroRunServer();
-patchCreateDevMiddlewareAndWrapReturn();
+patchDevMiddlewareDirect();

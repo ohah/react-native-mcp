@@ -5,8 +5,7 @@
   "scripts": {
     "android": "react-native run-android --port 8230",
     "ios": "react-native run-ios --port 8230",
-    "start": "node -r @ohah/react-native-mcp-server/cdp-interceptor node_modules/.bin/react-native start --port 8230 --config ./metro.config.js",
-    "start:reset": "node -r @ohah/react-native-mcp-server/cdp-interceptor node_modules/.bin/react-native start --port 8230 --config ./metro.config.js --reset-cache"
+    "start": "react-native start --port 8230 --config ./metro.config.js --reset-cache"
   },
   "dependencies": {
     "@ohah/react-native-mcp-server": "workspace:*",
