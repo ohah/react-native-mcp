@@ -17,7 +17,7 @@
     "mcp": "bun run --filter @ohah/react-native-mcp-server mcp",
     "test": "bun run --filter @ohah/react-native-mcp-server test",
     "test:mcp": "bun run build && bun run scripts/test-mcp-server.ts",
-    "typecheck": "bunx tsc --noEmit -p packages/server",
+    "typecheck": "bunx tsc --noEmit -p packages/react-native-mcp-server",
     "lint": "oxlint .",
     "format": "oxfmt .",
     "format:check": "oxfmt . --check",
