@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android --port 8230",
+    "android:release": "react-native run-android --port 8230 --mode=release",
     "ios": "react-native run-ios --port 8230",
+    "ios:release": "react-native run-ios --port 8230 --mode Release",
     "start": "react-native start --port 8230 --config ./metro.config.js --reset-cache"
   },
   "dependencies": {
