@@ -28,6 +28,7 @@
         "zod": "^3.25.0",
       },
       "devDependencies": {
+        "@babel/core": "^7.26.0",
         "@babel/generator": "^7.26.0",
         "@babel/parser": "^7.26.0",
         "@babel/traverse": "^7.26.0",
