@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
+import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
   uid: z
@@ -14,6 +15,8 @@ const schema = z.object({
   y: z.number().optional().describe('Vertical offset in pixels. Default 0.'),
   x: z.number().optional().describe('Horizontal offset in pixels. Default 0.'),
   animated: z.boolean().optional().describe('Whether to animate. Default true.'),
+  deviceId: deviceParam,
+  platform: platformParam,
 });
 
 export function registerScroll(server: McpServer, appSession: AppSession): void {
@@ -40,12 +43,18 @@ export function registerScroll(server: McpServer, appSession: AppSession): void 
       const animated = parsed.success
         ? parsed.data.animated
         : (args as { animated?: boolean })?.animated;
+      const deviceId = parsed.success
+        ? parsed.data.deviceId
+        : (args as { deviceId?: string })?.deviceId;
+      const platform = parsed.success
+        ? parsed.data.platform
+        : (args as { platform?: 'ios' | 'android' })?.platform;
 
       if (typeof uid !== 'string') {
         return { content: [{ type: 'text' as const, text: 'uid (testID) is required.' }] };
       }
 
-      if (!appSession.isConnected()) {
+      if (!appSession.isConnected(deviceId, platform)) {
         return {
           content: [
             {
@@ -59,11 +68,16 @@ export function registerScroll(server: McpServer, appSession: AppSession): void 
       const options = { x: x ?? 0, y: y ?? 0, animated: animated !== false };
       const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.scrollTo ? __REACT_NATIVE_MCP__.scrollTo(${JSON.stringify(uid)}, ${JSON.stringify(options)}) : { ok: false, error: 'scrollTo not available' }; })();`;
       try {
-        const res = await appSession.sendRequest({ method: 'eval', params: { code } });
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
         if (res.error != null) {
           return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }
-        const out = res.result;
+        const out = res.result as { ok?: boolean; error?: string } | undefined;
         const ok = out && typeof out.ok === 'boolean' ? out.ok : false;
         const text = ok
           ? `scrolled to x=${options.x}, y=${options.y}`

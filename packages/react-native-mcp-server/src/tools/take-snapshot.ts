@@ -7,6 +7,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
+import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
   maxDepth: z
@@ -16,6 +17,8 @@ const schema = z.object({
     .max(100)
     .optional()
     .describe('Max tree depth. Default 30. Reduces payload on large apps.'),
+  deviceId: deviceParam,
+  platform: platformParam,
 });
 
 export function registerTakeSnapshot(server: McpServer, appSession: AppSession): void {
@@ -35,7 +38,11 @@ export function registerTakeSnapshot(server: McpServer, appSession: AppSession):
       inputSchema: schema,
     },
     async (args) => {
-      if (!appSession.isConnected()) {
+      const parsed = schema.safeParse(args ?? {});
+      const deviceId = parsed.success ? parsed.data.deviceId : undefined;
+      const platform = parsed.success ? parsed.data.platform : undefined;
+
+      if (!appSession.isConnected(deviceId, platform)) {
         return {
           content: [
             {
@@ -45,11 +52,15 @@ export function registerTakeSnapshot(server: McpServer, appSession: AppSession):
           ],
         };
       }
-      const parsed = schema.safeParse(args ?? {});
       const maxDepth = parsed.success && parsed.data.maxDepth != null ? parsed.data.maxDepth : 30;
       const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.getComponentTree ? __REACT_NATIVE_MCP__.getComponentTree({ maxDepth: ${maxDepth} }) : null; })();`;
       try {
-        const res = await appSession.sendRequest({ method: 'eval', params: { code } });
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
         if (res.error != null) {
           return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }

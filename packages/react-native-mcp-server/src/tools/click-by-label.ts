@@ -7,6 +7,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
+import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
   label: z
@@ -22,6 +23,8 @@ const schema = z.object({
     .describe(
       '0-based index. When multiple elements match the label, click the nth one. Omit for first.'
     ),
+  deviceId: deviceParam,
+  platform: platformParam,
 });
 
 /** eval용 코드 문자열 생성 (테스트·검증용 export) */
@@ -48,9 +51,9 @@ export function registerClickByLabel(server: McpServer, appSession: AppSession):
     },
     async (args: unknown) => {
       const parsed = schema.parse(args);
-      const { label, index } = parsed;
+      const { label, index, deviceId, platform } = parsed;
 
-      if (!appSession.isConnected()) {
+      if (!appSession.isConnected(deviceId, platform)) {
         return {
           content: [
             {
@@ -63,7 +66,12 @@ export function registerClickByLabel(server: McpServer, appSession: AppSession):
 
       const code = buildPressByLabelEvalCode(label, index);
       try {
-        const res = await appSession.sendRequest({ method: 'eval', params: { code } });
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
         if (res.error != null) {
           return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }

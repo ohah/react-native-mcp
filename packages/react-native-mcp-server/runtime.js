@@ -505,12 +505,23 @@ function connect() {
     _reconnectTimer = null;
     try {
       var rn = require('react-native');
+      var platform = rn.Platform && rn.Platform.OS;
+      var deviceName =
+        (rn.Platform && rn.Platform.constants && rn.Platform.constants.Model) || null;
       var scriptURL =
         rn.NativeModules && rn.NativeModules.SourceCode && rn.NativeModules.SourceCode.scriptURL;
+      var origin = null;
       if (scriptURL && typeof scriptURL === 'string') {
-        var origin = new URL(scriptURL).origin;
-        ws.send(JSON.stringify({ type: 'init', metroBaseUrl: origin }));
+        origin = new URL(scriptURL).origin;
       }
+      ws.send(
+        JSON.stringify({
+          type: 'init',
+          platform: platform,
+          deviceName: deviceName,
+          metroBaseUrl: origin,
+        })
+      );
     } catch (_e) {}
   };
   ws.onmessage = function (ev) {

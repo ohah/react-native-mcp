@@ -7,12 +7,15 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
+import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
   webViewId: z.string().describe('WebView id registered in the app via registerWebView(ref, id).'),
   selector: z
     .string()
     .describe('CSS selector for the element inside the WebView (e.g. "button.submit", "#ok").'),
+  deviceId: deviceParam,
+  platform: platformParam,
 });
 
 export function registerClickWebView(server: McpServer, appSession: AppSession): void {
@@ -32,9 +35,9 @@ export function registerClickWebView(server: McpServer, appSession: AppSession):
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const { webViewId, selector } = schema.parse(args);
+      const { webViewId, selector, deviceId, platform } = schema.parse(args);
 
-      if (!appSession.isConnected()) {
+      if (!appSession.isConnected(deviceId, platform)) {
         return {
           content: [
             {
@@ -47,7 +50,12 @@ export function registerClickWebView(server: McpServer, appSession: AppSession):
 
       const code = `(function(){ return __REACT_NATIVE_MCP__.clickInWebView(${JSON.stringify(webViewId)}, ${JSON.stringify(selector)}); })();`;
       try {
-        const res = await appSession.sendRequest({ method: 'eval', params: { code } });
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
         if (res.error != null) {
           return {
             content: [{ type: 'text' as const, text: `Error: ${res.error}` }],

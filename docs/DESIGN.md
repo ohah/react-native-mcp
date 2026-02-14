@@ -158,7 +158,7 @@ react-native-mcp/
 
 (향후 분리 가능: metro-plugin, babel-plugin, runtime, native-snapshot)
 
-### 3.2 데이터 흐름
+### 3.2 데이터 흐름 (Multi-Device)
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -169,30 +169,28 @@ react-native-mcp/
 │  MCP Server                                     │
 │  - Tools: evaluate_script, list_clickables, etc.│
 │  - WebSocket Server (ws://localhost:12300)      │
-│  - CDP Client (Metro /json → WebSocket 직접 연결)│
-└──────┬────────────────────────┬─────────────────┘
-       │ WebSocket (12300)      │ CDP WebSocket
-       │                        │ (Metro webSocketDebuggerUrl)
-┌──────▼────────────┐  ┌───────▼──────────────────┐
-│  React Native App │  │  Metro (InspectorProxy)  │
-│  (iOS/Android)    │  │  :8230/json → 타겟 목록   │
-│                    │  │  :8230/inspector/debug    │
-│  ┌──────────────┐ │  └──────────────────────────┘
-│  │  runtime.js  │ │
-│  │  - WS Client │ │  ┌──────────────────────────┐
-│  │  - Fiber Hook│ │  │  스크린샷 (호스트 CLI)    │
-│  │  - Eval Bridg│ │  │  adb / xcrun simctl      │
-│  └──────────────┘ │  └──────────────────────────┘
-│                    │
-│  ┌──────────────┐ │
-│  │  Babel 주입   │ │
-│  │  - testID    │ │
-│  │  - onPress   │ │
-│  └──────────────┘ │
-└────────────────────┘
+│  - 모든 도구에 deviceId/platform 파라미터 지원   │
+└──────┬──────────┬───────────┬───────────────────┘
+       │          │           │  WebSocket (12300)
+┌──────▼───┐ ┌───▼────┐ ┌───▼─────┐
+│ ios-1    │ │ ios-2  │ │android-1│  ...N대
+│ iPhone15 │ │iPad Pro│ │ Pixel 7 │
+└──────────┘ └────────┘ └─────────┘
+
+라우팅: resolveDevice(deviceId?, platform?)
+  - deviceId 지정 → 해당 디바이스
+  - platform 지정 + 1대 → 자동 선택
+  - platform 지정 + 2대+ → 에러 (deviceId 지정 필요)
+  - 미지정 + 전체 1대 → 자동 선택 (기존 호환)
+  - 미지정 + 전체 2대+ → 에러
+
+스크린샷 (호스트 CLI):
+  adb shell screencap (Android) / xcrun simctl io (iOS 시뮬레이터)
 ```
 
-**CDP 이벤트 수집**: 앱 init 시 `metroBaseUrl` 전송 → MCP 서버가 Metro `/json`에서 타겟 발견 → `webSocketDebuggerUrl`로 직접 CDP 연결 → Runtime/Network/Log.enable → 이벤트 in-memory 수집. `node -r`이나 `metro.config.js` 수정 불필요. 상세: `docs/cdp-interceptor-library-design.md`
+**디바이스 등록 흐름**: 앱 시작 → runtime.js가 ws://localhost:12300에 연결 → `{ type: 'init', platform, deviceName, metroBaseUrl }` 전송 → 서버가 deviceId 할당 (`{platform}-{순번}`) → `{ type: 'deviceId', deviceId }` 응답 → 이후 모든 요청은 deviceId로 라우팅
+
+**재연결**: 같은 platform+deviceName의 기존 세션이 있으면 deviceId를 재사용하고 기존 WebSocket을 교체
 
 ### 3.3 빌드 파이프라인
 
@@ -236,7 +234,7 @@ App 실행 → MCP 코드 완전 제거됨
 packages/react-native-mcp-server/
 ├── src/
 │   ├── index.ts                 # 진입점 (stdio transport)
-│   ├── websocket-server.ts      # WS 서버 (앱 연결, 12300)
+│   ├── websocket-server.ts      # WS 서버 (다중 디바이스, 12300)
 │   ├── tools/
 │   │   ├── index.ts             # 도구 등록
 │   │   └── eval-code.ts         # evaluate_script ✅
@@ -251,17 +249,24 @@ packages/react-native-mcp-server/
     └── chmod-dist.mjs           # 빌드 후 실행 권한
 ```
 
-**제공 Tools**:
+**제공 Tools** (모든 도구에 `deviceId`, `platform` 파라미터 지원):
 
 - `evaluate_script` - 앱에서 함수 실행 (Chrome DevTools MCP 스펙) ✅
+- `take_snapshot` - React Fiber 트리 스냅샷 (컴포넌트 구조 JSON) ✅
 - `list_clickables` - Fiber 트리에서 클릭 가능 요소 목록 (uid + label) ✅
+- `list_clickable_text_content` - 클릭 가능 요소의 전체 텍스트 ✅
+- `list_text_nodes` - Fiber 트리의 모든 텍스트 노드 ✅
 - `click` - testID(uid) 기반 클릭 ✅
 - `click_by_label` - 텍스트 라벨로 onPress 호출 (testID 불필요) ✅
-- `get_by_label` - Fiber 트리에서 라벨 검색 + 디버그 정보 ✅
-- `list_console_messages` - CDP Runtime.consoleAPICalled 수집 ✅
-- `list_network_requests` - CDP Network.\* 이벤트 수집 ✅
-- `get_debugger_status` - CDP WebSocket 연결 상태 확인 ✅
+- `click_webview` - WebView 내 CSS 셀렉터로 클릭 ✅
+- `scroll` - 등록된 ScrollView의 scrollTo 호출 ✅
+- `get_by_label` / `get_by_labels` - Fiber 트리에서 라벨 검색 + 디버그 정보 ✅
+- `get_debugger_status` - 앱 연결 상태 + 디바이스 목록 ✅
+- `get_metro_url` - Metro 번들러 Base URL 조회 ✅
 - `take_screenshot` - ADB(Android) / simctl(iOS 시뮬레이터)로 캡처 ✅
+- `list_pages` - 연결된 앱 페이지 목록 ✅
+- `list_console_messages` - CDP Runtime.consoleAPICalled 수집 (보류 — CDP 연결 기능 일시 비활성화)
+- `list_network_requests` - CDP Network.\* 이벤트 수집 (보류 — CDP 연결 기능 일시 비활성화)
 - `get_component_tree` - (예정)
 - `set_props` - (예정)
 
@@ -489,10 +494,11 @@ if (__DEV__) {
 
 - [ ] Modal 추적
 - [ ] FlatList 가상화 처리
-- [x] 네트워크 모니터링 — CDP 직접 연결로 `Network.*` 이벤트 수집 (`list_network_requests`) ✅
-- [x] 콘솔 모니터링 — `Runtime.consoleAPICalled` 수집 (`list_console_messages`) ✅
-- [x] CDP 연결 상태 확인 (`get_debugger_status`) ✅
+- [ ] 네트워크 모니터링 — CDP 직접 연결로 `Network.*` 이벤트 수집 (`list_network_requests`) (보류 — CDP 연결 기능 일시 비활성화)
+- [ ] 콘솔 모니터링 — `Runtime.consoleAPICalled` 수집 (`list_console_messages`) (보류 — CDP 연결 기능 일시 비활성화)
+- [x] 연결 상태 + 디바이스 목록 확인 (`get_debugger_status`) ✅
 - [x] Fiber 트리 기반 라벨 검색 (`get_by_label`, `click_by_label`, `list_clickables`) ✅
+- [x] 다중 디바이스 지원 — N대 동시 연결, deviceId/platform 기반 라우팅 ✅
 - [ ] 성능 모니터링
 
 **산출물**: 프로덕션급 완성

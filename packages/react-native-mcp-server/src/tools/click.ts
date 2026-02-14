@@ -7,11 +7,14 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
+import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
   uid: z.string().describe('testID of the element (from snapshot or Babel-injected id)'),
   dblClick: z.boolean().optional().describe('Double-click. Default false.'),
   includeSnapshot: z.boolean().optional().describe('Include snapshot in response. Ignored on RN.'),
+  deviceId: deviceParam,
+  platform: platformParam,
 });
 
 export function registerClick(server: McpServer, appSession: AppSession): void {
@@ -31,9 +34,9 @@ export function registerClick(server: McpServer, appSession: AppSession): void {
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const { uid, dblClick } = schema.parse(args);
+      const { uid, dblClick, deviceId, platform } = schema.parse(args);
 
-      if (!appSession.isConnected()) {
+      if (!appSession.isConnected(deviceId, platform)) {
         return {
           content: [
             {
@@ -46,12 +49,22 @@ export function registerClick(server: McpServer, appSession: AppSession): void {
 
       const triggerCode = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.triggerPress && __REACT_NATIVE_MCP__.triggerPress(${JSON.stringify(uid)}); })();`;
       try {
-        const res = await appSession.sendRequest({ method: 'eval', params: { code: triggerCode } });
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code: triggerCode } },
+          10000,
+          deviceId,
+          platform
+        );
         if (res.error != null) {
           return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }
         if (dblClick) {
-          await appSession.sendRequest({ method: 'eval', params: { code: triggerCode } });
+          await appSession.sendRequest(
+            { method: 'eval', params: { code: triggerCode } },
+            10000,
+            deviceId,
+            platform
+          );
           return { content: [{ type: 'text' as const, text: 'pressed twice (dblClick)' }] };
         }
         const fired = res.result === true;

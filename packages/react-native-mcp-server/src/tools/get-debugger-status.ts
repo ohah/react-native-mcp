@@ -1,12 +1,11 @@
 /**
  * MCP 도구: get_debugger_status
- * 앱↔MCP 연결(appConnected)과 MCP↔Metro CDP 연결(cdpConnected) 상태 확인.
+ * 앱↔MCP 연결 상태 확인. 다중 디바이스: 연결된 전체 디바이스 목록 포함.
  */
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
-import { getDebuggerStatus } from './metro-cdp.js';
 
 const schema = z.object({});
 
@@ -23,24 +22,20 @@ export function registerGetDebuggerStatus(server: McpServer, appSession: AppSess
     'get_debugger_status',
     {
       description:
-        'MCP connection status. appConnected: true when app is connected to MCP server (snapshot/click/scroll/eval available). cdpConnected: true when Metro CDP is connected (console/network event collection available).',
+        'MCP connection status. appConnected: true when app is connected to MCP server (snapshot/click/scroll/eval available). devices: list of connected devices with deviceId, platform, deviceName.',
       inputSchema: schema,
     },
     async (args: unknown) => {
       schema.parse(args ?? {});
-      const cdp = await getDebuggerStatus();
       const appConnected = appSession.isConnected();
+      const devices = appSession.getConnectedDevices();
       const status = {
         appConnected,
-        cdpConnected: cdp.connected,
-        lastEventTimestamp: cdp.lastEventTimestamp,
-        eventCount: cdp.eventCount,
+        devices,
       };
       const text = [
         `appConnected: ${appConnected}`,
-        `cdpConnected: ${cdp.connected}`,
-        `lastEventTimestamp: ${cdp.lastEventTimestamp ?? 'null'}`,
-        `eventCount: ${cdp.eventCount}`,
+        `devices: ${devices.length > 0 ? devices.map((d) => `${d.deviceId}(${d.platform}${d.deviceName ? ', ' + d.deviceName : ''})`).join(', ') : 'none'}`,
       ].join('\n');
       return {
         content: [
