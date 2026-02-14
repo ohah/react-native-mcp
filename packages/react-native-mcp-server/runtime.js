@@ -43,6 +43,9 @@
 var _pressHandlers = {};
 var _webViews = {};
 var _scrollRefs = {};
+var _consoleLogs = [];
+var _consoleLogId = 0;
+var _CONSOLE_BUFFER_SIZE = 500;
 
 // ─── Fiber 트리 헬퍼 ────────────────────────────────────────────
 
@@ -818,6 +821,37 @@ var MCP = {
     return Object.keys(_scrollRefs);
   },
   /**
+   * 콘솔 로그 조회. options: { level?, since?, limit? }
+   * level 맵핑: 0=log, 1=info, 2=warn, 3=error
+   */
+  getConsoleLogs: function (options) {
+    var opts = typeof options === 'object' && options !== null ? options : {};
+    var levelMap = { log: 0, info: 1, warn: 2, error: 3 };
+    var out = _consoleLogs;
+    if (opts.level != null) {
+      var targetLevel = typeof opts.level === 'string' ? levelMap[opts.level] : opts.level;
+      if (targetLevel != null) {
+        out = out.filter(function (entry) {
+          return entry.level === targetLevel;
+        });
+      }
+    }
+    if (typeof opts.since === 'number') {
+      var since = opts.since;
+      out = out.filter(function (entry) {
+        return entry.timestamp > since;
+      });
+    }
+    var limit = typeof opts.limit === 'number' && opts.limit > 0 ? opts.limit : 100;
+    if (out.length > limit) out = out.slice(out.length - limit);
+    return out;
+  },
+  /** 콘솔 로그 버퍼 초기화 */
+  clearConsoleLogs: function () {
+    _consoleLogs = [];
+    _consoleLogId = 0;
+  },
+  /**
    * querySelector(selector) → 첫 번째 매칭 fiber 정보 또는 null.
    * 셀렉터 문법: Type#testID[attr="val"]:text("..."):nth(N):has-press:has-scroll
    * 콤비네이터: ">" (직접 자식), " " (후손), "," (OR)
@@ -896,6 +930,17 @@ var MCP = {
 };
 if (typeof global !== 'undefined') global.__REACT_NATIVE_MCP__ = MCP;
 if (typeof globalThis !== 'undefined') globalThis.__REACT_NATIVE_MCP__ = MCP;
+
+// ─── nativeLoggingHook 체이닝 — 콘솔 로그 캡처 ─────────────────
+var _origNativeLoggingHook = typeof global !== 'undefined' ? global.nativeLoggingHook : undefined;
+if (typeof global !== 'undefined') {
+  global.nativeLoggingHook = function (msg, level) {
+    _consoleLogId++;
+    _consoleLogs.push({ id: _consoleLogId, message: msg, level: level, timestamp: Date.now() });
+    if (_consoleLogs.length > _CONSOLE_BUFFER_SIZE) _consoleLogs.shift();
+    if (typeof _origNativeLoggingHook === 'function') _origNativeLoggingHook(msg, level);
+  };
+}
 
 var _isDevMode = typeof __DEV__ !== 'undefined' && __DEV__;
 
