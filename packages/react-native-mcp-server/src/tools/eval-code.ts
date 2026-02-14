@@ -11,8 +11,8 @@ import type { AppSession } from '../websocket-server.js';
 const schema = z.object({
   function: z
     .string()
-    .describe('앱에서 실행할 JavaScript 함수 (예: () => document.title 또는 (x) => x + 1)'),
-  args: z.array(z.unknown()).optional().describe('함수에 넘길 인자 배열'),
+    .describe('JavaScript function to run in the app (e.g. () => document.title or (x) => x + 1).'),
+  args: z.array(z.unknown()).optional().describe('Array of arguments to pass to the function.'),
 });
 
 function formatResult(value: unknown): string {
@@ -41,7 +41,7 @@ export function registerEvaluateScript(server: McpServer, appSession: AppSession
     'evaluate_script',
     {
       description:
-        'React Native 앱 컨텍스트에서 JavaScript 함수 실행. Chrome DevTools MCP와 동일: function(문자열), args(배열). JSON 직렬 가능한 결과 반환.',
+        'Run a JavaScript function in the React Native app context. Same as Chrome DevTools MCP: function (string), args (array). Returns JSON-serializable result.',
       inputSchema: schema,
     },
     async (args: unknown) => {

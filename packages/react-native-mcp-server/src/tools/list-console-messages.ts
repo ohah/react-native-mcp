@@ -132,7 +132,7 @@ export function registerListConsoleMessages(server: McpServer): void {
     'list_console_messages',
     {
       description:
-        '현재 페이지의 콘솔 메시지 목록(마지막 네비게이션 이후). Metro CDP 이벤트 사용. 비기본 포트면 METRO_BASE_URL 설정.',
+        'List console messages for the current page since last navigation. Uses Metro CDP events. Set METRO_BASE_URL if Metro runs on non-default port.',
       inputSchema: listSchema,
     },
     async (args: unknown) => {
@@ -176,7 +176,7 @@ export function registerListConsoleMessages(server: McpServer): void {
   s.registerTool(
     'get_console_message',
     {
-      description: 'msgid(list_console_messages의 ID)로 콘솔 메시지 단건 조회.',
+      description: 'Get a console message by its ID (msgid from list_console_messages).',
       inputSchema: getSchema,
     },
     async (args: unknown) => {

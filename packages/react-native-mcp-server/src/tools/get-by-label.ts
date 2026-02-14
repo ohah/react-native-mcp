@@ -11,7 +11,7 @@ const schema = z.object({
   label: z
     .string()
     .optional()
-    .describe('찾을 라벨(부분 문자열). 생략 시 훅 상태와 전체 라벨 목록만 반환.'),
+    .describe('Label (substring) to find. Omit to return hook status and full label list only.'),
 });
 
 function runGetByLabel(
@@ -66,13 +66,13 @@ export function registerGetByLabel(server: McpServer, appSession: AppSession): v
 
   register(
     'get_by_label',
-    'Fiber 라벨 검색 디버그: hookPresent, rendererPresent, rootPresent, labelsWithOnPress, match 반환. click_by_label이 안 될 때 원인 확인용.',
+    'Debug Fiber label lookup: returns hookPresent, rendererPresent, rootPresent, labelsWithOnPress, match. Use when click_by_label fails.',
     (args) => handle('getByLabel', args)
   );
 
   register(
     'get_by_labels',
-    'Fiber에서 onPress 있는 노드 전체 목록(훅 상태 + labelsWithOnPress) 반환. getByLabels()와 동일.',
+    'Return full list of nodes with onPress from Fiber (hook status + labelsWithOnPress). Same as getByLabels().',
     () => handle('getByLabels', null)
   );
 }

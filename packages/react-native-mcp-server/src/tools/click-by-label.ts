@@ -11,14 +11,16 @@ import type { AppSession } from '../websocket-server.js';
 const schema = z.object({
   label: z
     .string()
-    .describe('찾을 라벨(텍스트) 부분 문자열. 이 텍스트를 포함한 버튼의 onPress 호출.'),
+    .describe(
+      'Label (text) substring to find. Clicks the button that contains this text (onPress).'
+    ),
   index: z
     .number()
     .int()
     .min(0)
     .optional()
     .describe(
-      '0부터 시작하는 인덱스. 같은 라벨이 여러 개일 때 n번째 요소 클릭. 생략 시 0(첫 번째).'
+      '0-based index. When multiple elements match the label, click the nth one. Omit for first.'
     ),
 });
 
@@ -41,7 +43,7 @@ export function registerClickByLabel(server: McpServer, appSession: AppSession):
     'click_by_label',
     {
       description:
-        'Fiber 트리에서 라벨(텍스트)이 일치하는 요소를 찾아 클릭. index로 n번째 매칭 지정 가능(0-based). testID 없는 버튼도 가능. DevTools 훅 필요.',
+        'Find and click the element matching the label (text) in the Fiber tree. Use index for nth match (0-based). Works without testID. Requires DevTools hook.',
       inputSchema: schema,
     },
     async (args: unknown) => {

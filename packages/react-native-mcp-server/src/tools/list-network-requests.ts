@@ -75,7 +75,7 @@ export function registerListNetworkRequests(server: McpServer): void {
     'list_network_requests',
     {
       description:
-        '현재 페이지의 네트워크 요청 목록. Metro CDP 이벤트 사용. 비기본 포트면 METRO_BASE_URL 설정.',
+        'List network requests for the current page. Uses Metro CDP events. Set METRO_BASE_URL if Metro runs on non-default port.',
       inputSchema: listSchema,
     },
     async (args: unknown) => {
@@ -113,7 +113,8 @@ export function registerListNetworkRequests(server: McpServer): void {
   s.registerTool(
     'get_network_request',
     {
-      description: 'reqid(list_network_requests의 requestId)로 네트워크 요청 상세 조회.',
+      description:
+        'Get details of a network request by reqid (requestId from list_network_requests).',
       inputSchema: getSchema,
     },
     async (args: unknown) => {

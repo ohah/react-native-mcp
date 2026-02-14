@@ -8,10 +8,12 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
 
 const schema = z.object({
-  uid: z.string().describe('ScrollView의 testID (앱에서 registerScrollRef로 등록 필요)'),
-  y: z.number().optional().describe('세로 오프셋(픽셀). 기본 0.'),
-  x: z.number().optional().describe('가로 오프셋(픽셀). 기본 0.'),
-  animated: z.boolean().optional().describe('애니메이션 여부. 기본 true.'),
+  uid: z
+    .string()
+    .describe('testID of the ScrollView (must be registered via registerScrollRef in the app)'),
+  y: z.number().optional().describe('Vertical offset in pixels. Default 0.'),
+  x: z.number().optional().describe('Horizontal offset in pixels. Default 0.'),
+  animated: z.boolean().optional().describe('Whether to animate. Default true.'),
 });
 
 export function registerScroll(server: McpServer, appSession: AppSession): void {
@@ -27,7 +29,7 @@ export function registerScroll(server: McpServer, appSession: AppSession): void 
     'scroll',
     {
       description:
-        '지정한 testID(uid)의 ScrollView를 스크롤. 앱에서 __REACT_NATIVE_MCP__.registerScrollRef(testID, ref)로 ScrollView ref 등록 필요. scrollTo({ x, y, animated }) 사용.',
+        'Scroll the ScrollView with the given testID (uid). App must register via __REACT_NATIVE_MCP__.registerScrollRef(testID, ref). Uses scrollTo({ x, y, animated }).',
       inputSchema: schema,
     },
     async (args: unknown) => {
