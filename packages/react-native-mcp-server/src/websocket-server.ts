@@ -60,6 +60,7 @@ export class AppSession {
 
   /** 같은 platform+deviceName의 기존 디바이스 찾기 (재연결 대응) */
   private findExistingDevice(platform: string, deviceName: string | null): DeviceConnection | null {
+    if (deviceName === null) return null;
     for (const device of this.devices.values()) {
       if (device.platform === platform && device.deviceName === deviceName) {
         return device;
@@ -131,6 +132,11 @@ export class AppSession {
     } catch {
       return false;
     }
+  }
+
+  /** 테스트 전용: 디바이스 직접 등록 */
+  _testInjectDevice(device: DeviceConnection): void {
+    this.devices.set(device.deviceId, device);
   }
 
   /** 연결된 전체 디바이스 목록 */

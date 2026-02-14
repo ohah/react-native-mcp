@@ -251,7 +251,7 @@ packages/react-native-mcp-server/
 
 **제공 Tools** (모든 도구에 `deviceId`, `platform` 파라미터 지원):
 
-- `evaluate_script` - 앱에서 함수 실행 (Chrome DevTools MCP 스펙) ✅
+- `evaluate_script` - 앱에서 함수 실행 ✅
 - `take_snapshot` - React Fiber 트리 스냅샷 (컴포넌트 구조 JSON) ✅
 - `list_clickables` - Fiber 트리에서 클릭 가능 요소 목록 (uid + label) ✅
 - `list_clickable_text_content` - 클릭 가능 요소의 전체 텍스트 ✅

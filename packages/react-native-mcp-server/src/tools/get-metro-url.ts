@@ -26,7 +26,7 @@ export function registerGetMetroUrl(server: McpServer): void {
     'get_metro_url',
     {
       description:
-        'Return Metro base URL used for the connected app. From connected app, or METRO_BASE_URL env, or http://localhost:8230. Multi-device: specify deviceId (e.g. "ios-1") or platform to target a specific device.',
+        'Return Metro base URL used for the connected app. From connected app, or METRO_BASE_URL env, or http://localhost:8230.',
       inputSchema: schema,
     },
     async (args: unknown) => {

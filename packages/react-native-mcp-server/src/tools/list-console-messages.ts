@@ -7,7 +7,20 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { fetchCdpEvents, type CdpEventEntry } from './metro-cdp.js';
+// CDP 기능 보류 — 이 파일은 현재 index.ts에서 등록되지 않음.
+// CDP 복구 시 metro-cdp.ts에 fetchCdpEvents, CdpEventEntry를 다시 추가해야 함.
+
+interface CdpEventEntry {
+  direction: string;
+  method: string;
+  params?: unknown;
+  id?: number;
+  timestamp: number;
+}
+
+async function fetchCdpEvents(): Promise<CdpEventEntry[]> {
+  return [];
+}
 
 const CONSOLE_METHODS = new Set([
   'Runtime.consoleAPICalled',
