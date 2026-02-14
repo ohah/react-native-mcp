@@ -217,8 +217,9 @@ function parseSelector(input) {
       if (input.charAt(pos) === '\\') pos++; // skip escaped char
       pos++;
     }
+    if (pos >= len) return null; // 따옴표 미닫힘 → 파싱 실패로 처리
     var str = input.substring(start, pos);
-    if (pos < len) pos++; // skip closing quote
+    pos++; // skip closing quote
     return str;
   }
 
@@ -261,6 +262,7 @@ function parseSelector(input) {
         pos++; // skip =
         skipSpaces();
         var attrVal = readQuotedString();
+        if (attrVal === null) throw new Error('Unclosed quote in selector [attr="..."]');
         sel.attrs.push({ name: attrName, value: attrVal });
       }
       skipSpaces();
@@ -275,7 +277,9 @@ function parseSelector(input) {
         if (pos < len && input.charAt(pos) === '(') {
           pos++; // skip (
           skipSpaces();
-          sel.text = readQuotedString();
+          var textVal = readQuotedString();
+          if (textVal === null) throw new Error('Unclosed quote in selector :text(...)');
+          sel.text = textVal;
           skipSpaces();
           if (pos < len && input.charAt(pos) === ')') pos++; // skip )
         }
@@ -755,7 +759,12 @@ var MCP = {
       var root = getFiberRoot();
       if (!root) return [];
       var c = getRNComponents();
-      var parsed = parseSelector(selector.trim());
+      var parsed;
+      try {
+        parsed = parseSelector(selector.trim());
+      } catch (parseErr) {
+        return []; // 따옴표 미닫힘 등 파싱 실패 시 빈 배열
+      }
       var results = [];
 
       for (var si = 0; si < parsed.selectors.length; si++) {

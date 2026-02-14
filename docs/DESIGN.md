@@ -330,6 +330,8 @@ function MyButton({ title, onPress }) {
 
 > runtime.js의 레거시 함수(registerPressHandler, registerScrollRef 등)는 코드가 유지되어 있으나,
 > Babel 플래그 비활성화로 호출되지 않음. Babel 플래그 재활성화 시 즉시 동작.
+>
+> **getByLabel / getByLabels / getClickableTextContent**: 런타임에 그대로 유지. MCP 도구 `get_by_label`·`get_by_labels`·`list_clickable_text_content`에서 사용. `query_selector`로 대체 가능하나 하위 호환·디버깅(훅/라벨 확인)용으로 유지.
 
 **WebSocket 연결 조건**:
 
