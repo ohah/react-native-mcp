@@ -1,6 +1,6 @@
 /**
  * React Native MCP 데모 앱
- * 하단 탭: ScrollView / FlatList
+ * 하단 탭: ScrollView / FlatList / WebView
  * @format
  */
 
@@ -8,6 +8,7 @@ import React from 'react';
 import { StyleSheet, View, useColorScheme, StatusBar } from 'react-native';
 import { ScrollViewScreen } from './screens/ScrollViewScreen';
 import { FlatListScreen } from './screens/FlatListScreen';
+import { WebViewScreen } from './screens/WebViewScreen';
 import { TabBar, type TabId } from './components/TabBar';
 
 function App(): React.JSX.Element {
@@ -56,6 +57,7 @@ function App(): React.JSX.Element {
           />
         )}
         {activeTab === 'list' && <FlatListScreen isDarkMode={isDarkMode} />}
+        {activeTab === 'webview' && <WebViewScreen isDarkMode={isDarkMode} />}
       </View>
       <TabBar activeTab={activeTab} onTabChange={setActiveTab} isDarkMode={isDarkMode} />
     </View>
