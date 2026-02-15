@@ -44,7 +44,7 @@ export function registerIdbSwipe(server: McpServer): void {
     'idb_swipe',
     {
       description:
-        'Swipe from (x1,y1) to (x2,y2) on iOS simulator via idb. Coordinates in points. Use for drawer open/close, pager swipe, bottom sheet drag, and other native gestures that cannot be triggered via JS. Get coordinates via evaluate_script with measureView(testID). Verify result with assert_text instead of take_screenshot to save tokens.',
+        'Swipe from (x1,y1) to (x2,y2) on iOS simulator via idb. Coordinates in points. Use for drawer open/close, pager swipe, bottom sheet drag, and other native gestures. Get coordinates via evaluate_script with measureView(testID). If testID is unknown, use query_selector first. Verify result with assert_text instead of take_screenshot to save tokens.',
       inputSchema: schema,
     },
     async (args: unknown) => {
