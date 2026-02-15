@@ -1,17 +1,15 @@
 /**
- * 하단 탭 바 — Scroll / Press / Input / FlatList / WebView
+ * 하단 탭 바 — Scroll / Interact / WebView / Network / Gesture (5탭)
  */
 
 import React from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 
-export type TabId = 'scroll' | 'press' | 'input' | 'list' | 'webview' | 'network' | 'gesture';
+export type TabId = 'scroll' | 'interact' | 'webview' | 'network' | 'gesture';
 
 const tabs: { id: TabId; label: string; testID: string }[] = [
   { id: 'scroll', label: 'Scroll', testID: 'tab-scroll' },
-  { id: 'press', label: 'Press', testID: 'tab-press' },
-  { id: 'input', label: 'Input', testID: 'tab-input' },
-  { id: 'list', label: 'List', testID: 'tab-list' },
+  { id: 'interact', label: 'Interact', testID: 'tab-interact' },
   { id: 'webview', label: 'WebView', testID: 'tab-webview' },
   { id: 'network', label: 'Network', testID: 'tab-network' },
   { id: 'gesture', label: 'Gesture', testID: 'tab-gesture' },

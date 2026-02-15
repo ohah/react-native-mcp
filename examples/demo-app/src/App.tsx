@@ -1,16 +1,14 @@
 /**
  * React Native MCP 데모 앱
- * 하단 탭: Scroll / Press / Input / FlatList / WebView / Network / Gesture
+ * 하단 탭: Scroll / Interact / WebView / Network / Gesture (5탭)
  * @format
  */
 
 import React from 'react';
 import { StyleSheet, View, useColorScheme, StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ScrollViewScreen } from './screens/ScrollViewScreen';
-import { PressScreen } from './screens/PressScreen';
-import { InputScreen } from './screens/InputScreen';
-import { FlatListScreen } from './screens/FlatListScreen';
+import { ScrollListScreen } from './screens/ScrollListScreen';
+import { InteractScreen } from './screens/InteractScreen';
 import { WebViewScreen } from './screens/WebViewScreen';
 import { NetworkScreen } from './screens/NetworkScreen';
 import { GestureScreen } from './screens/GestureScreen';
@@ -25,10 +23,8 @@ function App(): React.JSX.Element {
       <View style={[styles.container, isDarkMode && styles.containerDark]}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <View style={styles.content}>
-          {activeTab === 'scroll' && <ScrollViewScreen isDarkMode={isDarkMode} />}
-          {activeTab === 'press' && <PressScreen isDarkMode={isDarkMode} />}
-          {activeTab === 'input' && <InputScreen isDarkMode={isDarkMode} />}
-          {activeTab === 'list' && <FlatListScreen isDarkMode={isDarkMode} />}
+          {activeTab === 'scroll' && <ScrollListScreen isDarkMode={isDarkMode} />}
+          {activeTab === 'interact' && <InteractScreen isDarkMode={isDarkMode} />}
           {activeTab === 'webview' && <WebViewScreen isDarkMode={isDarkMode} />}
           {activeTab === 'network' && <NetworkScreen isDarkMode={isDarkMode} />}
           {activeTab === 'gesture' && <GestureScreen isDarkMode={isDarkMode} />}

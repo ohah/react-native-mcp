@@ -25,7 +25,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 2. 반환 JSON에서 확인:
    - **ScrollView**: `type: "ScrollView"`, testID 있으면 `uid: "demo-app-scroll-view"`, 없으면 `uid: "0.1.x"` 형태 경로.
    - **FlatList**: `type: "FlatList"` 또는 "VirtualizedList", testID 있으면 `uid: "demo-app-flat-list"`.
-   - **버튼**: `uid: "demo-app-counter-button"`, `uid: "demo-app-tab-scroll"` 등.
+   - **버튼**: `uid: "demo-app-counter-button"`, `uid: "tab-scroll"` 등.
 3. 데모 앱에서:
    - ScrollView 탭: testID 있는 ScrollView 블록 / testID 없는 ScrollView 블록 둘 다 노드로 보이는지 확인.
    - FlatList 탭: testID 있는 FlatList / testID 없는 FlatList 둘 다 확인.
@@ -47,13 +47,14 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 **데모 앱 uid 예시**
 
-| uid                       | 동작                                               |
-| ------------------------- | -------------------------------------------------- |
-| `demo-app-counter-button` | Count 증가                                         |
-| `demo-app-tab-scroll`     | ScrollView 탭 선택                                 |
-| `demo-app-tab-list`       | FlatList 탭 선택                                   |
-| `demo-app-console-button` | 콘솔 로그/경고 출력 → list_console_messages로 확인 |
-| `demo-app-network-button` | httpbin 요청 → list_network_requests로 확인        |
+| uid                        | 동작                                                  |
+| -------------------------- | ----------------------------------------------------- |
+| `demo-app-counter-button`  | Count 증가                                            |
+| `tab-scroll`               | Scroll 탭 선택 (내부 세그먼트: ScrollView / FlatList) |
+| `scroll-list-segment-list` | Scroll 탭 내 FlatList 세그먼트 선택                   |
+| `tab-interact`             | Interact 탭 선택 (내부 세그먼트: Press / Input)       |
+| `demo-app-console-button`  | 콘솔 로그/경고 출력 → list_console_messages로 확인    |
+| `demo-app-network-button`  | httpbin 요청 → list_network_requests로 확인           |
 
 **성공 기준**: 반환에 "pressed"가 오고, 앱에서 해당 버튼이 눌린 것처럼 동작한다.
 
@@ -73,7 +74,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 - `"testID 없음"` → testID 없는 버튼 (탭 수 증가)
 - `"TouchableOpacity"` → 해당 버튼
-- `"FlatList"` → 하단 FlatList 탭
+- `"FlatList"` → Scroll 탭 내 FlatList 세그먼트
 
 **성공 기준**: 반환에 "pressed (Fiber에서 라벨로 찾아 onPress 호출됨)"가 온다. 실패 시 `get_by_label`로 훅/라벨 목록 디버깅.
 
