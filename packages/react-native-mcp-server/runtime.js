@@ -1041,6 +1041,152 @@ var MCP = {
       return [];
     }
   },
+
+  // ─── 화면 정보 · 뷰 좌표 측정 ─────────────────────────────────
+
+  /**
+   * getScreenInfo() → { screen, window, scale, fontScale, orientation }
+   * - screen: 물리 디스플레이 크기 (points)
+   * - window: 앱 윈도우 크기 (points, 상태바·노치 제외 가능)
+   * - scale: 픽셀 밀도 (1x, 2x, 3x)
+   * - fontScale: 접근성 글꼴 배율
+   * - orientation: 'portrait' | 'landscape'
+   */
+  getScreenInfo: function () {
+    try {
+      var rn = typeof require !== 'undefined' && require('react-native');
+      if (!rn) return { error: 'react-native not available' };
+      var screen = rn.Dimensions.get('screen');
+      var win = rn.Dimensions.get('window');
+      var pixelRatio = rn.PixelRatio ? rn.PixelRatio.get() : 1;
+      var fontScale = rn.PixelRatio ? rn.PixelRatio.getFontScale() : 1;
+      return {
+        screen: { width: screen.width, height: screen.height },
+        window: { width: win.width, height: win.height },
+        scale: pixelRatio,
+        fontScale: fontScale,
+        orientation: win.width > win.height ? 'landscape' : 'portrait',
+      };
+    } catch (e) {
+      return { error: String(e) };
+    }
+  },
+
+  /**
+   * measureView(testID) → Promise<{ x, y, width, height, pageX, pageY }>
+   * testID로 Fiber에서 native node를 찾아 measureInWindow (Fabric) 또는 measure (Bridge)로 절대 좌표를 반환.
+   * pageX/pageY: 화면 왼쪽 상단 기준 절대 좌표 (points).
+   */
+  measureView: function (testID) {
+    return new Promise(function (resolve, reject) {
+      try {
+        var root = getFiberRoot();
+        if (!root) return reject(new Error('no fiber root'));
+
+        // testID로 host fiber 찾기
+        var found = null;
+        (function find(fiber) {
+          if (!fiber || found) return;
+          if (fiber.memoizedProps && fiber.memoizedProps.testID === testID && fiber.stateNode) {
+            found = fiber;
+            return;
+          }
+          find(fiber.child);
+          if (!found) find(fiber.sibling);
+        })(root);
+
+        if (!found) return reject(new Error('testID "' + testID + '" not found'));
+
+        var node = found.stateNode;
+
+        // Fabric: stateNode.node + nativeFabricUIManager.measureInWindow
+        var g = typeof globalThis !== 'undefined' ? globalThis : global;
+        if (g.nativeFabricUIManager && node) {
+          var shadowNode =
+            node.node ||
+            (node._internalInstanceHandle &&
+              node._internalInstanceHandle.stateNode &&
+              node._internalInstanceHandle.stateNode.node);
+          // Reanimated AnimatedComponent: _viewInfo.shadowNodeWrapper
+          if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) {
+            shadowNode = node._viewInfo.shadowNodeWrapper;
+          }
+          if (shadowNode) {
+            g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y, w, h) {
+              resolve({ x: x, y: y, width: w, height: h, pageX: x, pageY: y });
+            });
+            return;
+          }
+        }
+
+        // Bridge: UIManager.measure
+        var rn = typeof require !== 'undefined' && require('react-native');
+        if (rn && rn.UIManager && rn.findNodeHandle) {
+          var handle = rn.findNodeHandle(node);
+          if (handle) {
+            rn.UIManager.measure(handle, function (x, y, w, h, pageX, pageY) {
+              resolve({ x: x, y: y, width: w, height: h, pageX: pageX, pageY: pageY });
+            });
+            return;
+          }
+        }
+
+        reject(new Error('cannot measure: no native node'));
+      } catch (e) {
+        reject(e);
+      }
+    });
+  },
+
+  /**
+   * measureViewSync(testID) → { x, y, width, height, pageX, pageY } | null
+   * Fabric measureInWindow의 콜백은 동기적이므로 Fabric에서는 동기 호출 가능.
+   * Bridge에서는 비동기이므로 null 반환 → measureView() 사용 권장.
+   */
+  measureViewSync: function (testID) {
+    try {
+      var root = getFiberRoot();
+      if (!root) return null;
+
+      var found = null;
+      (function find(fiber) {
+        if (!fiber || found) return;
+        if (fiber.memoizedProps && fiber.memoizedProps.testID === testID && fiber.stateNode) {
+          found = fiber;
+          return;
+        }
+        find(fiber.child);
+        if (!found) find(fiber.sibling);
+      })(root);
+
+      if (!found) return null;
+
+      var node = found.stateNode;
+      var g = typeof globalThis !== 'undefined' ? globalThis : global;
+
+      if (g.nativeFabricUIManager && node) {
+        var shadowNode =
+          node.node ||
+          (node._internalInstanceHandle &&
+            node._internalInstanceHandle.stateNode &&
+            node._internalInstanceHandle.stateNode.node);
+        if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) {
+          shadowNode = node._viewInfo.shadowNodeWrapper;
+        }
+        if (shadowNode) {
+          var result = null;
+          g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y, w, h) {
+            result = { x: x, y: y, width: w, height: h, pageX: x, pageY: y };
+          });
+          return result; // Fabric에서는 콜백이 동기 실행
+        }
+      }
+
+      return null; // Bridge → measureView() 사용 필요
+    } catch (e) {
+      return null;
+    }
+  },
 };
 if (typeof global !== 'undefined') global.__REACT_NATIVE_MCP__ = MCP;
 if (typeof globalThis !== 'undefined') globalThis.__REACT_NATIVE_MCP__ = MCP;
