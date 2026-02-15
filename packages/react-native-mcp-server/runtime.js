@@ -1316,17 +1316,38 @@ function connect() {
     reconnectDelay = 1000;
     if (_reconnectTimer != null) clearTimeout(_reconnectTimer);
     _reconnectTimer = null;
+    // 메타데이터 수집 실패가 init 전송을 막지 않도록 분리
+    var platform = null;
+    var deviceName = null;
+    var origin = null;
     try {
       var rn = require('react-native');
-      var platform = rn.Platform && rn.Platform.OS;
-      var deviceName =
-        (rn.Platform && rn.Platform.constants && rn.Platform.constants.Model) || null;
-      var scriptURL =
-        rn.NativeModules && rn.NativeModules.SourceCode && rn.NativeModules.SourceCode.scriptURL;
-      var origin = null;
-      if (scriptURL && typeof scriptURL === 'string') {
-        origin = new URL(scriptURL).origin;
+      platform = rn.Platform && rn.Platform.OS;
+      deviceName = (rn.Platform && rn.Platform.constants && rn.Platform.constants.Model) || null;
+    } catch (_e) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[MCP] Failed to read platform info:', _e && _e.message);
       }
+    }
+    try {
+      var _rn = require('react-native');
+      var scriptURL =
+        _rn.NativeModules && _rn.NativeModules.SourceCode && _rn.NativeModules.SourceCode.scriptURL;
+      if (scriptURL && typeof scriptURL === 'string') {
+        // Hermes(RN 0.74 이하)에서 URL.origin 미구현 → protocol+host 수동 파싱
+        try {
+          origin = new URL(scriptURL).origin;
+        } catch (_ue) {
+          var match = scriptURL.match(/^(https?:\/\/[^/?#]+)/);
+          if (match) origin = match[1];
+        }
+      }
+    } catch (_e2) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[MCP] Failed to read metro URL:', _e2 && _e2.message);
+      }
+    }
+    try {
       ws.send(
         JSON.stringify({
           type: 'init',
@@ -1336,7 +1357,11 @@ function connect() {
           metroBaseUrl: origin,
         })
       );
-    } catch (_e) {}
+    } catch (_e3) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[MCP] Failed to send init:', _e3 && _e3.message);
+      }
+    }
   };
   ws.onmessage = function (ev) {
     try {
