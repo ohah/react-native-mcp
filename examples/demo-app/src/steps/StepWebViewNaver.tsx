@@ -4,16 +4,16 @@ import { WebView } from 'react-native-webview';
 
 export type StepProps = { isDarkMode: boolean };
 
-export function StepWebViewGoogle({ isDarkMode }: StepProps) {
+export function StepWebViewNaver({ isDarkMode }: StepProps) {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
       <Text style={[styles.hint, isDarkMode && styles.textDark]}>
-        https://google.com — webview_evaluate_script 테스트
+        네이버 검색 — webview_evaluate_script 테스트
       </Text>
       <WebView
-        source={{ uri: 'https://www.google.com' }}
+        source={{ uri: 'https://search.naver.com' }}
         style={styles.webview}
-        testID="demo-app-webview-google"
+        testID="demo-app-webview-naver"
       />
     </ScrollView>
   );

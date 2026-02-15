@@ -40,8 +40,8 @@ description: React Native MCP 서버 전체 기능 검증 절차. 데모 앱 31�
 | 10   | FlatList   | testID 있는 FlatList 스크롤 후 탭                                    | **swipe**로 스크롤 → query_selector `#demo-app-flat-list-btn-item-N` 또는 :text("탭:") → tap → "탭: 1" 이상 assert_text                                      |
 | 11   | FlatList   | testID 없는 FlatList 스크롤 후 탭                                    | **swipe**로 스크롤 → query_selector `:text("클릭:")` 등 → tap → 항목 숫자 증가 확인                                                                          |
 | 12   | WebView    | WebView 내부 버튼 클릭 또는 RN 탭                                    | webview_evaluate_script(webViewId `demo-app-webview`, script로 document.querySelector("button").click()) 또는 query_selector → tap → "RN 탭 수: 1" 이상 확인 |
-| 13   | WebView    | 등록 WebView ID·내부 스크립트 실행                                   | evaluate_script로 getRegisteredWebViewIds → webview_evaluate_script(`demo-app-webview-google`, document.title 등) 결과 확인                                  |
-| 14   | WebView    | testID 없는 WebView는 등록 목록에 없음                               | getRegisteredWebViewIds 호출 → 목록에 해당 WebView 없음 확인                                                                                                 |
+| 13   | WebView    | 등록 WebView ID·내부 스크립트 실행                                   | evaluate_script로 getRegisteredWebViewIds → webview_evaluate_script(`demo-app-webview-naver`, document.title 등) 결과 확인                                   |
+| 14   | WebView    | testID 없는 WebView에서 postMessage 수신 확인                        | query_selector로 WebView/버튼 영역 measure → tap → assert_text "#postmessage-count"로 "postMessage 수: 1" 이상 확인                                          |
 | 15   | Network    | GET /posts/1 요청·응답                                               | query_selector `#network-fetch-get` → tap → list_network_requests에서 /posts/1·응답 확인, assert_text "응답: 200"                                            |
 | 16   | Network    | POST /posts status 201                                               | query_selector `#network-fetch-post` → tap → list_network_requests에서 POST·201 확인                                                                         |
 | 17   | Network    | 3건 요청 수집                                                        | query_selector `#network-fetch-multiple` → tap → list_network_requests에서 users/1, todos/1, comments 3건 확인                                               |
@@ -113,7 +113,7 @@ MCP 서버에는 **scroll 도구가 없음**. ScrollView/FlatList 스크롤은 �
 | 5~6   | ☐ Input (testID 있음/없음)                                                            | type_text                                        |
 | 7~9   | ☐ ScrollView (ref 없음/있음/testID 없음)                                              | **swipe**로 스크롤 + query_selector + tap        |
 | 10~11 | ☐ FlatList (testID 있음/없음)                                                         | **swipe**로 스크롤 + tap                         |
-| 12~14 | ☐ WebView (내부 클릭·스크립트·미등록 확인)                                            | webview_evaluate_script, getRegisteredWebViewIds |
+| 12~14 | ☐ WebView (내부 클릭·스크립트·postMessage 수신 확인)                                  | webview_evaluate_script, getRegisteredWebViewIds |
 | 15~19 | ☐ Network (GET·POST·multiple·error·XHR)                                               | tap + list_network_requests                      |
 | 20~31 | ☐ Gesture (비교·탭·RNGH·Reanimated·스크롤·Swipeable·Refresh·Drawer·Pager·BottomSheet) | tap, **swipe**(스크롤 포함), assert_text         |
 

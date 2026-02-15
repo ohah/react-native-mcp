@@ -16,7 +16,7 @@ import { StepScrollNoTestId } from './steps/StepScrollNoTestId';
 import { StepFlatListWithId } from './steps/StepFlatListWithId';
 import { StepFlatListNoId } from './steps/StepFlatListNoId';
 import { StepWebViewInline } from './steps/StepWebViewInline';
-import { StepWebViewGoogle } from './steps/StepWebViewGoogle';
+import { StepWebViewNaver } from './steps/StepWebViewNaver';
 import { StepWebViewNoTestId } from './steps/StepWebViewNoTestId';
 import { StepNetworkGet } from './steps/StepNetworkGet';
 import { StepNetworkPost } from './steps/StepNetworkPost';
@@ -31,6 +31,7 @@ import { StepGestureReanimated } from './steps/StepGestureReanimated';
 import { StepGestureReanimatedNoId } from './steps/StepGestureReanimatedNoId';
 import { StepGestureReanimatedScroll } from './steps/StepGestureReanimatedScroll';
 import { StepGestureSwipeable } from './steps/StepGestureSwipeable';
+import { StepGestureDrag } from './steps/StepGestureDrag';
 import { StepGestureRefresh } from './steps/StepGestureRefresh';
 import { StepGestureDrawer } from './steps/StepGestureDrawer';
 import { StepGesturePager } from './steps/StepGesturePager';
@@ -111,12 +112,12 @@ export const STEPS: StepItem[] = [
   },
   {
     question:
-      'AI: getRegisteredWebViewIds로 등록된 WebView ID를 확인한 뒤, webview_evaluate_script(webViewId "demo-app-webview-google")로 document.title 등 스크립트를 실행해 결과를 확인하라.',
-    Component: StepWebViewGoogle,
+      'AI: getRegisteredWebViewIds로 등록된 WebView ID를 확인한 뒤, webview_evaluate_script(webViewId "demo-app-webview-naver")로 document.title 등 스크립트를 실행해 결과를 확인하라.',
+    Component: StepWebViewNaver,
   },
   {
     question:
-      'AI: getRegisteredWebViewIds를 호출해 목록을 받고, testID 없는 이 WebView는 목록에 포함되지 않음을 확인하라. (화면에는 "testID 없음" WebView가 보인다.)',
+      'AI: testID 없는 이 WebView 안에 "postMessage 보내기" 버튼이 있다. query_selector로 WebView나 버튼 영역을 찾아 measure 좌표를 얻고, tap(platform, x, y)으로 idb/adb 클릭한다. 버튼이 postMessage를 보내면 RN이 수신해 "postMessage 수: N"으로 표시한다. assert_text(selector "#postmessage-count")로 postMessage가 1 이상 수신되었는지 확인하라.',
     Component: StepWebViewNoTestId,
   },
   // Network (5)
@@ -153,7 +154,7 @@ export const STEPS: StepItem[] = [
   },
   {
     question:
-      'AI: query_selector로 testID "gesture-tap-detector-wrapper" 영역을 찾아 measure 좌표를 얻고, tap(platform, x, y)으로 idb/adb 클릭한다. (Gesture.Tap()은 네이티브 제스처라 MCP 터치로는 숫자가 안 올라갈 수 있음 — 동작 여부만 확인하면 됨)',
+      'AI: query_selector로 testID "gesture-tap-detector-wrapper" 영역을 찾아 measure 좌표를 얻고, tap(platform, x, y)으로 idb/adb 클릭한다. Gesture.Tap()이 idb 터치를 받아 숫자가 올라가므로 assert_text로 1 이상인지 확인하라.',
     Component: StepGestureTap,
   },
   {
@@ -185,6 +186,11 @@ export const STEPS: StepItem[] = [
     question:
       'AI: query_selector로 "스와이프 to delete 행 1" 등 행 요소를 찾아 measure로 위치를 얻고, swipe(platform, x1, y1, x2, y2)로 idb/adb 왼쪽 스와이프해 "삭제" 영역이 노출되는지 확인하라.',
     Component: StepGestureSwipeable,
+  },
+  {
+    question:
+      'AI: query_selector로 testID "gesture-drag-area" 영역(또는 "드래그" 박스)을 찾아 measure 좌표를 얻고, swipe(platform, x1, y1, x2, y2)로 idb/adb 드래그(시작점→끝점)를 수행한다. Gesture.Pan()이 인식되면 "드래그 완료: N"이 올라가므로 assert_text(selector "#gesture-drag-count")로 1 이상인지 확인하라.',
+    Component: StepGestureDrag,
   },
   {
     question:

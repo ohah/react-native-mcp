@@ -71,11 +71,11 @@ export function WebViewScreen({ isDarkMode }: WebViewScreenProps) {
           originWhitelist={['*']}
           onMessage={handleWebViewMessage}
         />
-        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>https://google.com</Text>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>네이버 검색</Text>
         <WebView
-          source={{ uri: 'https://www.google.com' }}
+          source={{ uri: 'https://search.naver.com' }}
           style={styles.webview}
-          testID="demo-app-webview-google"
+          testID="demo-app-webview-naver"
           onMessage={handleWebViewMessage}
         />
         <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
