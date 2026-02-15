@@ -1,222 +1,122 @@
 ---
 name: mcp-testing
-description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검증하는 방법. 클릭/탭은 무조건 query_selector로 좌표 획득 → tap(platform, x, y)으로 idb/adb 네이티브 클릭. take_snapshot, scroll, assert_text, 콘솔/네트워크 수집 확인 시 참고.
+description: React Native MCP 서버 전체 기능 검증 절차. 데모 앱 31개 스텝을 모두 순서대로 진행하면 MCP 내부 기능을 전부 검증한다. 클릭/탭은 query_selector → measure → tap(platform, x, y)으로 idb/adb 네이티브 터치 필수.
 ---
 
-# React Native MCP 기능 테스트 가이드
+# React Native MCP 전체 기능 테스트
 
-데모 앱(`examples/demo-app`)이 실행 중이고 MCP 서버에 연결된 상태에서, **문제(검증 목표)별로** 어떤 도구를 쓰고 어떻게 확인하는지 정리한다.
+데모 앱(`examples/demo-app`)은 **31개 스텝**으로 구성되어 있다. **이 31개 스텝을 모두 순서대로 진행**하고, 각 스텝의 성공 기준을 만족하면 MCP 서버의 내부 기능(tap, swipe, type_text, query_selector, assert_text, evaluate_script, webview_evaluate_script, list_network_requests 등)을 전부 검증한 것이다. **스크롤은 MCP scroll 도구가 없으므로 swipe(platform, x1, y1, x2, y2)로 한다.**
 
-**클릭/탭 흐름 (필수)**: `query_selector`(또는 take_snapshot)로 요소 찾기 → 반환된 `measure`(pageX, pageY, width, height)로 좌표 계산 → `tap(platform, x, y)`으로 idb(iOS)/adb(Android) 네이티브 클릭. JS 쪽 triggerPress/click이 아닌 실제 터치 주입.
+**클릭/탭 (필수 흐름)**: `query_selector`(또는 take_snapshot)로 요소 찾기 → 반환된 `measure`(pageX, pageY, width, height)로 좌표 계산 → `tap(platform, x, y)`으로 idb(iOS)/adb(Android) 네이티브 클릭. JS 쪽 triggerPress가 아닌 실제 터치 주입.
+
+**스텝 이동**: `#step-nav-next`(다음), `#step-nav-prev`(이전)으로 measure → tap.
+
+---
 
 ## 사전 조건
 
 - Metro: `cd examples/demo-app && npm start` (기본 포트 8230)
 - 앱: `npm run ios` 또는 `npm run android` (MCP 런타임 주입됨)
-- MCP 서버: 연결 후 앱에서 `__REACT_NATIVE_MCP__` 사용 가능
+- MCP 서버 연결 후 앱에서 `__REACT_NATIVE_MCP__` 사용 가능
+- iOS: idb 설치·연결. Android: adb 연결.
 
 ---
 
-## 문제별 테스트
+## 전체 테스트: 31개 스텝 순서 (모두 진행 필수)
 
-### 요소를 클릭(탭)하고 싶을 때
+아래 표는 **스텝 1부터 31까지 순서대로** 진행해야 하는 전체 목록이다. 각 스텝을 완료한 뒤 다음 스텝으로 넘어가고, 31까지 모두 통과하면 MCP 내부 기능 전체 검증이 끝난다.
 
-**사용 도구**: `query_selector` → `tap`
+| Step | 구분       | 검증 요약                                                            | 사용 도구·동작                                                                                                                                               |
+| ---- | ---------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | Press      | testID 버튼 탭 → Count 1 이상                                        | query_selector `#press-counter-button` → measure → tap → assert_text "Count: 1"                                                                              |
+| 2    | Press      | testID 없음 버튼 탭                                                  | query_selector `:text("testID 없음")` → measure → tap → 숫자 증가 확인                                                                                       |
+| 3    | Press      | TouchableOpacity·TouchableHighlight·Button·이미지·Icon+Label 각각 탭 | query_selector로 각 버튼 찾아 measure → tap 반복 → 각 카운트 1씩 증가 확인                                                                                   |
+| 4    | Press      | 롱프레스 버튼 2개                                                    | query_selector `#press-long-press-button`, `:text("롱프레스 testID없음")` → tap(..., duration) 롱프레스 → 카운트 증가 확인                                   |
+| 5    | Input      | testID 있는 TextInput에 입력                                         | type_text(uid `input-with-testid`, 문자열) → assert_text "입력값: (문자열)"                                                                                  |
+| 6    | Input      | testID 없는 TextInput에 입력                                         | query_selector로 placeholder 등으로 TextInput uid 획득 → type_text → "입력값:" 확인                                                                          |
+| 7    | ScrollView | scroll-view-no-ref 스크롤 후 버튼 탭                                 | **swipe**로 스크롤(ScrollView 영역에서 y1>y2) → query_selector `#scroll-btn-N` → tap → "버튼 N (1)" 확인                                                     |
+| 8    | ScrollView | scroll-view-with-ref 스크롤 후 버튼 탭                               | **swipe**로 스크롤 → query_selector `#scroll-btn-N` → tap → 버튼 숫자 증가 확인                                                                              |
+| 9    | ScrollView | testID 없는 ScrollView 스크롤 후 버튼 탭                             | **swipe**로 스크롤 → query_selector `:text("버튼 10")` 등 → tap → 카운트 확인                                                                                |
+| 10   | FlatList   | testID 있는 FlatList 스크롤 후 탭                                    | **swipe**로 스크롤 → query_selector `#demo-app-flat-list-btn-item-N` 또는 :text("탭:") → tap → "탭: 1" 이상 assert_text                                      |
+| 11   | FlatList   | testID 없는 FlatList 스크롤 후 탭                                    | **swipe**로 스크롤 → query_selector `:text("클릭:")` 등 → tap → 항목 숫자 증가 확인                                                                          |
+| 12   | WebView    | WebView 내부 버튼 클릭 또는 RN 탭                                    | webview_evaluate_script(webViewId `demo-app-webview`, script로 document.querySelector("button").click()) 또는 query_selector → tap → "RN 탭 수: 1" 이상 확인 |
+| 13   | WebView    | 등록 WebView ID·내부 스크립트 실행                                   | evaluate_script로 getRegisteredWebViewIds → webview_evaluate_script(`demo-app-webview-google`, document.title 등) 결과 확인                                  |
+| 14   | WebView    | testID 없는 WebView는 등록 목록에 없음                               | getRegisteredWebViewIds 호출 → 목록에 해당 WebView 없음 확인                                                                                                 |
+| 15   | Network    | GET /posts/1 요청·응답                                               | query_selector `#network-fetch-get` → tap → list_network_requests에서 /posts/1·응답 확인, assert_text "응답: 200"                                            |
+| 16   | Network    | POST /posts status 201                                               | query_selector `#network-fetch-post` → tap → list_network_requests에서 POST·201 확인                                                                         |
+| 17   | Network    | 3건 요청 수집                                                        | query_selector `#network-fetch-multiple` → tap → list_network_requests에서 users/1, todos/1, comments 3건 확인                                               |
+| 18   | Network    | 404 요청 확인                                                        | query_selector `#network-fetch-error` → tap → list_network_requests 404, assert_text "응답: 404"                                                             |
+| 19   | Network    | XHR GET /albums/1 캡처                                               | query_selector `#network-xhr-get` → tap → list_network_requests에서 XHR GET /albums/1 확인                                                                   |
+| 20   | Gesture    | Touchable·Pressable·RNGH 3개 탭                                      | query_selector gesture-compare-touchable, gesture-compare-pressable, gesture-compare-gh-touchable → tap 각각 → 카운트 1씩 증가                               |
+| 21   | Gesture    | gesture-tap-detector-wrapper 탭                                      | query_selector `#gesture-tap-detector-wrapper` → tap (동작 여부만 확인 가능)                                                                                 |
+| 22   | Gesture    | RNGH Pressable 탭                                                    | query_selector `#gesture-gh-pressable` → tap → "RNGH TouchableOpacity: 1" 이상 확인                                                                          |
+| 23   | Gesture    | testID 없음 RNGH 탭                                                  | query_selector `:text("RNGH 라벨만")` → tap → 숫자 증가 확인                                                                                                 |
+| 24   | Gesture    | Reanimated 트리거 탭                                                 | query_selector `#gesture-reanimated-trigger` 또는 `#gesture-reanimated-box` → tap → "눌러보세요" 아래 숫자 1 이상                                            |
+| 25   | Gesture    | Reanimated 라벨만 탭                                                 | query_selector `:text("눌러보세요 (라벨만)")` → tap → 스케일 박스 숫자 증가                                                                                  |
+| 26   | Gesture    | Reanimated ScrollView 스크롤                                         | **swipe**로 스크롤(해당 영역에서 y1>y2) → "Reanimated 목록 아이템 30" 등 하단 노출·스크롤 가능 확인                                                          |
+| 27   | Gesture    | Swipeable 행 스와이프                                                | query_selector "스와이프 to delete 행 1" 등 → measure → swipe 왼쪽 → "삭제" 영역 노출 확인                                                                   |
+| 28   | Gesture    | Pull to refresh                                                      | 화면 상단 근처에서 swipe 아래 방향 → assert_text "새로고침 횟수: 1" 이상                                                                                     |
+| 29   | Gesture    | Drawer 열기·닫기                                                     | query_selector `#gesture-drawer-open` → tap → assert_text "드로워: 열림" → "닫기" 또는 drawer-overlay tap → "닫힘" 확인                                      |
+| 30   | Gesture    | Pager 스와이프                                                       | 페이저 영역 measure → 가로 swipe → assert_text 또는 query_selector "현재 페이지: 1/2/3" (pager-status)                                                       |
+| 31   | Gesture    | Bottom sheet 스와이프                                                | 하단 시트 영역 measure → swipe 위쪽 → assert_text "상태: 열림" 또는 sheet-status 확인                                                                        |
+
+---
+
+## 스텝별 사용 도구 요약
+
+- **tap**: 항상 query_selector(또는 take_snapshot) → measure(pageX, pageY, width, height) → x = pageX + width/2, y = pageY + height/2 → tap(platform, x, y).
+- **롱프레스**: tap(platform, x, y, duration) 에 duration(ms) 지정.
+- **스크롤**: MCP에 scroll 도구는 없음. ScrollView/리스트 영역에서 **swipe**(platform, x1, y1, x2, y2)로 스크롤. 아래로 스크롤할 때는 y1 > y2(손가락을 위로 올리는 동작).
+- **type_text**: TextInput의 uid(testID 또는 query_selector로 얻은 uid)와 입력 문자열 전달.
+- **WebView**: webview_evaluate_script(webViewId, script). 등록된 WebView만 가능.
+- **네트워크**: tap으로 버튼 클릭 후 list_network_requests로 URL·method·status 확인.
+- **검증**: assert_text(기대 문자열), assert_visible(셀렉터).
+
+---
+
+## 공통 도구 사용법 (참고)
+
+### query_selector → tap
 
 1. `query_selector`로 요소 찾기. 예: `#press-counter-button`, `Pressable:text("testID 없음")`.
-2. 반환값의 `measure`(pageX, pageY, width, height)로 탭할 좌표 계산. 보통 중앙: `x = pageX + width/2`, `y = pageY + height/2`.
-3. `tap(platform: "ios" | "android", x, y)` 호출.
-4. 앱에서 해당 버튼이 눌린 것처럼 동작하는지(예: Count 증가) `assert_text`로 확인.
+2. 반환값의 `measure`로 좌표 계산: `x = pageX + width/2`, `y = pageY + height/2`.
+3. `tap(platform, x, y)` 호출.
+4. `assert_text`로 결과 검증.
 
-**데모 앱 셀렉터 예시**
+### 스크롤 (swipe 사용)
 
-| 셀렉터 / testID                 | 동작                                                           |
-| ------------------------------- | -------------------------------------------------------------- |
-| `#press-counter-button`         | Count 증가                                                     |
-| `Pressable:text("testID 없음")` | testID 없는 버튼 탭                                            |
-| `#scroll-view-no-ref` 등        | ScrollView → scroll 도구로 스크롤 후 버튼 query_selector → tap |
+MCP 서버에는 **scroll 도구가 없음**. ScrollView/FlatList 스크롤은 반드시 **swipe**로 한다. ScrollView 영역 중앙 좌표에서 `swipe(platform, x1, y1, x2, y2)`: 아래로 스크롤하려면 y1 > y2(손가락을 위로 올림).
 
-**성공 기준**: tap 호출 후 앱에서 해당 요소가 눌린 것처럼 동작하고, assert_text로 결과 검증 가능.
+### take_snapshot
 
----
+트리·uid 확인용. `take_snapshot`(옵션 maxDepth 20~30) → type·uid(testID 또는 경로) 확인.
 
-### 컴포넌트 트리·uid를 보고 싶을 때
+### evaluate_script
 
-**사용 도구**: `take_snapshot`
+`function: "() => typeof __REACT_NATIVE_MCP__ !== 'undefined'"`, `getRegisteredWebViewIds()` 등 앱 내 JS 실행·결과 반환.
 
-1. `take_snapshot` 호출 (옵션: `maxDepth` 20~30 권장).
-2. 반환 JSON에서 확인:
-   - **ScrollView**: `type: "ScrollView"`, testID 있으면 `uid: "demo-app-scroll-view"`, 없으면 `uid: "0.1.x"` 형태 경로.
-   - **FlatList**: `type: "FlatList"` 또는 "VirtualizedList", testID 있으면 `uid: "demo-app-flat-list"`.
-   - **버튼**: `uid: "demo-app-counter-button"`, `uid: "tab-scroll"` 등.
-3. 데모 앱 Scroll 탭에서 testID 있는/없는 ScrollView·FlatList 둘 다 노드로 보이는지 확인.
+### get_debugger_status
 
-**성공 기준**: 트리에 ScrollView, FlatList, Pressable 등이 type으로 나오고, testID가 있으면 uid가 testID와 일치한다.
+`connected: true`이면 list_console_messages, list_network_requests 수집 가능.
+
+### take_screenshot
+
+`platform: "ios"` 또는 `"android"` 지정. iOS 실기기는 시뮬레이터가 아니면 미지원일 수 있음.
 
 ---
 
-### 클릭 가능한 요소 목록이 필요할 때
+## 체크리스트 (31 스텝 모두 완료 = 전체 기능 검증)
 
-**사용 도구**: `list_clickables`
+| Step  | 통과                                                                                  | 비고                                             |
+| ----- | ------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| 1~4   | ☐ Press (testID·라벨·다양한 버튼·롱프레스)                                            | query_selector + tap / tap(..., duration)        |
+| 5~6   | ☐ Input (testID 있음/없음)                                                            | type_text                                        |
+| 7~9   | ☐ ScrollView (ref 없음/있음/testID 없음)                                              | **swipe**로 스크롤 + query_selector + tap        |
+| 10~11 | ☐ FlatList (testID 있음/없음)                                                         | **swipe**로 스크롤 + tap                         |
+| 12~14 | ☐ WebView (내부 클릭·스크립트·미등록 확인)                                            | webview_evaluate_script, getRegisteredWebViewIds |
+| 15~19 | ☐ Network (GET·POST·multiple·error·XHR)                                               | tap + list_network_requests                      |
+| 20~31 | ☐ Gesture (비교·탭·RNGH·Reanimated·스크롤·Swipeable·Refresh·Drawer·Pager·BottomSheet) | tap, **swipe**(스크롤 포함), assert_text         |
 
-1. ScrollView 탭 또는 FlatList 탭에서 `list_clickables` 호출.
-2. 반환 배열에 `{ uid, label }` 형태로 testID와 라벨이 나오는지 확인.
-3. 탭할 때는 여기 나온 uid로 `query_selector`(예: `#uid`) → measure → `tap`으로 검증.
+**31개 스텝을 모두 위 순서대로 진행하고 각각 성공 기준을 만족하면, MCP 서버의 내부 기능을 전부 검증한 것이다.**
 
-**성공 기준**: Pressable/TouchableOpacity 등 onPress+testID 조합이 목록에 포함된다.
-
----
-
-### ScrollView를 스크롤하고 싶을 때
-
-**사용 도구**: `scroll` (uid는 take_snapshot으로 확인)
-
-1. `take_snapshot`으로 ScrollView의 uid(testID) 확인. 예: `demo-app-scroll-view`, `demo-app-scroll-view-with-ref`.
-2. `scroll` 호출 시 `uid`에 해당 testID, `y`에 픽셀 오프셋(예: 200). 선택: `x`, `animated`.
-3. 데모 앱 Scroll 탭에서 testID 있는 블록이 스크롤되면 성공.
-
-**데모 앱 uid 예시**
-
-| uid                             | 동작                  |
-| ------------------------------- | --------------------- |
-| `demo-app-scroll-view`          | ref 없음 → Babel 주입 |
-| `demo-app-scroll-view-with-ref` | ref 있음 → Babel 합성 |
-
-**성공 기준**: 반환에 스크롤 완료 메시지가 오고, 앱에서 해당 ScrollView가 움직인다.
-
----
-
-### 버튼/클릭 영역의 텍스트를 검증하고 싶을 때
-
-**사용 도구**: `list_clickable_text_content`
-
-1. Scroll 탭 또는 FlatList 탭에서 `list_clickable_text_content` 호출.
-2. 반환 배열에 각 클릭 가능 요소의 전체 텍스트와(선택) testID가 나오는지 확인.
-3. `list_clickables`(uid+label)와 비교해, 같은 노드가 text로 더 풀어서 나오는지 확인.
-
-**성공 기준**: onPress가 있는 노드들의 textContent가 배열로 나온다.
-
----
-
-### 화면에 보이는 텍스트 목록이 필요할 때
-
-**사용 도구**: `list_text_nodes`
-
-1. `list_text_nodes` 호출.
-2. 반환 배열에 "React Native MCP Demo", "Count: 0", "testID 없음", "ScrollView", "FlatList" 등 데모 앱 텍스트가 포함되는지 확인.
-3. query_selector에서 `:text("...")`에 넣을 문자열 후보로 활용.
-
-**성공 기준**: 현재 화면에 보이는 문구들이 배열로 나온다.
-
----
-
-### 기기/시뮬레이터 화면을 캡처하고 싶을 때
-
-**사용 도구**: `take_screenshot`
-
-1. `take_screenshot` 호출 시 `platform: "android"` 또는 `platform: "ios"` 필수.
-2. 반환에 이미지(PNG 등)가 포함되는지 확인.
-3. iOS 실기기는 xcrun simctl 미지원이므로 시뮬레이터에서만 검증.
-
-**성공 기준**: 현재 앱 화면이 캡처되어 반환된다.
-
----
-
-### 앱에서 JS를 실행하거나 상태를 조회하고 싶을 때
-
-**사용 도구**: `evaluate_script`
-
-1. `evaluate_script` 호출. 예: `function: "() => typeof __REACT_NATIVE_MCP__ !== 'undefined'"`, `args: []`.
-2. 반환 결과가 `true`인지 확인.
-3. 예: `function: "() => __REACT_NATIVE_MCP__.getRegisteredPressTestIDs()"` → 등록된 testID 배열 반환 확인.
-
-**성공 기준**: 전달한 함수가 앱에서 실행되고, 직렬화 가능한 결과가 반환된다.
-
----
-
-### 콘솔 로그를 확인하고 싶을 때
-
-**사용 도구**: `list_console_messages` / `get_console_message`
-
-**사전 조건**: Metro에 CDP 가로채기 연결됨. `get_debugger_status`로 connected 여부 확인.
-
-1. 앱에서 "Console" 버튼 탭: query_selector → tap으로 `demo-app-console-button` 영역 탭.
-2. `list_console_messages` 호출 (옵션: `types: ["log","warning"]`).
-3. 반환 목록에 데모 앱에서 출력한 로그/경고가 포함되는지 확인.
-4. `get_console_message`에 `msgid`를 넘겨 단건 조회.
-
-**성공 기준**: Console 버튼 누른 뒤 list_console_messages에 해당 메시지가 보인다.
-
----
-
-### 네트워크 요청을 확인하고 싶을 때
-
-**사용 도구**: `list_network_requests` / `get_network_request`
-
-**사전 조건**: CDP 연결됨. `get_debugger_status`가 connected.
-
-1. 앱에서 "Network" 버튼 탭: query_selector → tap으로 `demo-app-network-button` 영역 탭.
-2. `list_network_requests` 호출.
-3. httpbin.org 요청이 목록에 있는지 확인.
-4. `get_network_request`에 `reqid`(requestId) 전달해 단건 조회.
-
-**성공 기준**: Network 버튼 누른 뒤 list_network_requests에 해당 요청이 보인다.
-
----
-
-### 콘솔/네트워크 수집이 되는지 확인하고 싶을 때
-
-**사용 도구**: `get_debugger_status`
-
-1. 앱이 Metro에 연결된 상태에서 `get_debugger_status` 호출.
-2. `connected: true`이면 list_console_messages, list_network_requests가 이벤트를 수집 중.
-
-**성공 기준**: 앱 실행 + Metro 연결 시 connected가 true이다.
-
----
-
-### 라벨(텍스트)로 탭이 안 될 때 원인을 찾고 싶을 때
-
-**사용 도구**: `get_by_label` / `get_by_labels`
-
-1. `get_by_label`에 `label: "testID 없음"` 등 부분 문자열 전달.
-2. 반환에 `hookPresent`, `rendererPresent`, `rootPresent`, `labelsWithOnPress`, `match` 등이 포함되는지 확인.
-3. `match`가 있으면 해당 라벨로 query_selector `:text("...")` → measure → tap 가능.
-
-**성공 기준**: 훅/렌더러/root 존재 여부와, onPress 있는 노드의 라벨 목록을 확인할 수 있다.
-
----
-
-### WebView 안에서 JS를 실행하고 싶을 때
-
-**사용 도구**: `webview_evaluate_script`
-
-WebView가 `__REACT_NATIVE_MCP__.registerWebView(ref, id)`로 등록되어 있어야 함. Babel이 testID 있는 WebView에 ref·onMessage 자동 주입.
-
-1. WebView 탭으로 이동 후, `webview_evaluate_script`에 `webViewId`(예: demo-app-webview), `script`(예: `document.querySelector('h1').innerText`) 전달.
-2. 결과가 도구 응답으로 반환되는지 확인. DOM 클릭은 `document.querySelector(selector).click()` 등으로 실행 가능.
-
-**성공 기준**: 등록된 WebView 내부에서 스크립트가 실행되고, 반환값이 MCP 응답으로 온다.
-
----
-
-## 체크리스트 (문제 → 도구)
-
-| 검증 목표                | 사용 도구                   | 확인 항목                                                                |
-| ------------------------ | --------------------------- | ------------------------------------------------------------------------ |
-| 요소 클릭                | query_selector + tap        | measure 좌표 → tap(platform, x, y)으로 idb/adb 네이티브 클릭 (필수 흐름) |
-| 트리·uid 확인            | take_snapshot               | Scroll 탭에서 type·uid(testID vs 경로)                                   |
-| 클릭 가능 목록           | list_clickables             | uid·label 목록 (탭은 query_selector → tap)                               |
-| ScrollView 스크롤        | scroll                      | uid(testID)로 scrollTo, Babel ref 등록 (Scroll 탭 내)                    |
-| 클릭 영역 텍스트 검증    | list_clickable_text_content | onPress 노드별 textContent, [{ text, testID? }]                          |
-| 화면 텍스트 목록         | list_text_nodes             | 화면 문구 배열                                                           |
-| 화면 캡처                | take_screenshot             | platform 지정 시 이미지 반환                                             |
-| 앱 JS 실행·상태 조회     | evaluate_script             | **REACT_NATIVE_MCP** 존재·getRegisteredPressTestIDs 등                   |
-| 콘솔 로그 확인           | list_console_messages       | Interact → Press에서 Console 버튼 후 로그/경고 수집                      |
-| 네트워크 요청 확인       | list_network_requests       | Interact → Press에서 Network 버튼 후 httpbin 요청 수집                   |
-| CDP 연결 여부            | get_debugger_status         | connected: true                                                          |
-| 단일 페이지 핸들         | list_pages                  | React Native App 페이지 반환                                             |
-| 라벨로 탭 실패 시 디버깅 | get_by_label                | 훅·라벨 목록·match                                                       |
-| WebView 내 JS 실행       | webview_evaluate_script     | WebView 탭에서 등록 WebView 내 스크립트 실행·결과 반환                   |
-
-데모 앱 구조: 하단 5탭(Scroll / Interact / WebView / Network / Gesture). Scroll은 세그먼트 ScrollView·FlatList, Interact는 Press·Input. `examples/demo-app/src/` 참고.
+데모 앱 구조: `examples/demo-app/src/stepConfig.tsx`에 STEPS 31개 정의. 한 화면에 한 스텝만 노출되며, 하단 step-nav로 이전/다음 이동.

@@ -148,7 +148,7 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
         }
         scope.jsxIndex += 1;
       }
-      // ScrollView/FlatList는 위에서 testID가 없으면 이미 자동 주입됨 → 모두 ref 주입/합성 (scroll 도구 + 사용자 ref 동시 동작)
+      // ScrollView/FlatList는 위에서 testID가 없으면 이미 자동 주입됨 → 모두 ref 주입/합성 (앱 내부 MCP.scrollTo 호출용. MCP 클라이언트용 scroll 도구는 없으며, 스크롤은 swipe 도구 사용)
       const tagName = getTagName(el.name);
       if (tagName === 'WebView') {
         const webViewTidAttr =
