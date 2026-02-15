@@ -24,4 +24,12 @@ module.exports = mergeConfig(config, {
       path.resolve(workspaceRoot, 'node_modules'),
     ],
   },
+  serializer: {
+    isThirdPartyModule(module) {
+      const defaultCheck = config.serializer.isThirdPartyModule;
+      if (defaultCheck && defaultCheck(module)) return true;
+      // watchFolders로 참조하는 MCP 런타임도 ignore list에 포함
+      return module.path.includes('react-native-mcp-server/runtime.js');
+    },
+  },
 });

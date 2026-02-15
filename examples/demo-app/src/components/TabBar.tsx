@@ -5,7 +5,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 
-export type TabId = 'scroll' | 'press' | 'input' | 'list' | 'webview';
+export type TabId = 'scroll' | 'press' | 'input' | 'list' | 'webview' | 'network';
 
 const tabs: { id: TabId; label: string; testID: string }[] = [
   { id: 'scroll', label: 'Scroll', testID: 'tab-scroll' },
@@ -13,6 +13,7 @@ const tabs: { id: TabId; label: string; testID: string }[] = [
   { id: 'input', label: 'Input', testID: 'tab-input' },
   { id: 'list', label: 'List', testID: 'tab-list' },
   { id: 'webview', label: 'WebView', testID: 'tab-webview' },
+  { id: 'network', label: 'Network', testID: 'tab-network' },
 ];
 
 export type TabBarProps = {
@@ -56,7 +57,7 @@ const styles = StyleSheet.create({
   tabBarDark: { backgroundColor: '#2a2a2a', borderTopColor: '#444' },
   tab: { flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   tabActive: { borderBottomWidth: 3, borderBottomColor: '#0066cc' },
-  tabText: { fontSize: 13, fontWeight: '500', color: '#333' },
+  tabText: { fontSize: 11, fontWeight: '500', color: '#333' },
   tabTextActive: { color: '#0066cc', fontWeight: '600' },
   textDark: { color: '#fff' },
 });
