@@ -1,118 +1,111 @@
 /**
- * MCP 도구: list_network_requests, get_network_request
- * Chrome DevTools MCP 스펙. CDP 가로채기에서 Network.* 이벤트 수집
- * @see docs/chrome-devtools-mcp-spec-alignment.md
+ * MCP 도구: list_network_requests, clear_network_requests
+ * XHR/fetch monkey-patch를 통해 캡처된 네트워크 요청을 조회/초기화.
+ * runtime.js의 getNetworkRequests / clearNetworkRequests를 eval로 호출.
  */
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-// CDP 기능 보류 — 이 파일은 현재 index.ts에서 등록되지 않음.
-
-interface CdpEventEntry {
-  direction: string;
-  method: string;
-  params?: unknown;
-  id?: number;
-  timestamp: number;
-}
-
-async function fetchCdpEvents(): Promise<CdpEventEntry[]> {
-  return [];
-}
-
-interface NetworkEntry {
-  requestId: string;
-  url: string;
-  method: string;
-  responseStatus?: number;
-  responseStatusText?: string;
-  receivedTime: number;
-}
-
-function buildNetworkList(events: CdpEventEntry[]): NetworkEntry[] {
-  const byId = new Map<string, NetworkEntry>();
-  for (const ev of events) {
-    if (ev.direction !== 'device') continue;
-    const params = ev.params as Record<string, unknown> | undefined;
-    const requestId = params?.requestId as string | undefined;
-    if (!requestId) continue;
-
-    if (ev.method === 'Network.requestWillBeSent') {
-      const request = params.request as { url?: string; method?: string } | undefined;
-      byId.set(requestId, {
-        requestId,
-        url: request?.url ?? '',
-        method: request?.method ?? 'GET',
-        receivedTime: ev.timestamp,
-      });
-    } else if (ev.method === 'Network.responseReceived') {
-      const entry = byId.get(requestId);
-      if (entry) {
-        const response = params.response as { status?: number; statusText?: string } | undefined;
-        entry.responseStatus = response?.status;
-        entry.responseStatusText = response?.statusText;
-      }
-    }
-  }
-  return Array.from(byId.values()).sort((a, b) => a.receivedTime - b.receivedTime);
-}
+import type { AppSession } from '../websocket-server.js';
+import { deviceParam, platformParam } from './device-param.js';
 
 const listSchema = z.object({
-  pageIdx: z.number().optional().describe('Page number (0-based). Omit for first page.'),
-  pageSize: z.number().optional().describe('Max requests to return. Omit for all.'),
-  resourceTypes: z.array(z.string()).optional().describe('Filter by resource type. Omit for all.'),
-  includePreservedRequests: z
-    .boolean()
-    .optional()
-    .describe('Include preserved requests. RN: same list.'),
+  url: z.string().optional().describe('URL substring filter.'),
+  method: z.string().optional().describe('HTTP method filter (GET, POST, etc.).'),
+  status: z.number().optional().describe('Status code filter (200, 404, etc.).'),
+  since: z.number().optional().describe('Return only requests after this timestamp (ms).'),
+  limit: z.number().optional().describe('Max number of requests to return (default 50).'),
+  deviceId: deviceParam,
+  platform: platformParam,
 });
 
-const getSchema = z.object({
-  reqid: z.string().describe('Request ID (requestId) from list_network_requests'),
+const clearSchema = z.object({
+  deviceId: deviceParam,
+  platform: platformParam,
 });
 
-function serverRegister(server: McpServer) {
-  return server as {
-    registerTool(
-      name: string,
-      def: { description: string; inputSchema: z.ZodTypeAny },
-      handler: (args: unknown) => Promise<unknown>
-    ): void;
-  };
-}
+type ServerWithRegisterTool = {
+  registerTool(
+    name: string,
+    def: { description: string; inputSchema: z.ZodTypeAny },
+    handler: (args: unknown) => Promise<unknown>
+  ): void;
+};
 
-export function registerListNetworkRequests(server: McpServer): void {
-  const s = serverRegister(server);
+export function registerListNetworkRequests(server: McpServer, appSession: AppSession): void {
+  const s = server as unknown as ServerWithRegisterTool;
+
   s.registerTool(
     'list_network_requests',
     {
       description:
-        'List network requests for the current page. Uses Metro CDP events. Set METRO_BASE_URL if Metro runs on non-default port.',
+        'List network requests captured via XHR/fetch monkey-patch. Filter by URL, method, status, timestamp, or limit. Returns request/response details including headers and body.',
       inputSchema: listSchema,
     },
     async (args: unknown) => {
-      const params = listSchema.parse(args);
-      try {
-        const events = await fetchCdpEvents();
-        let list = buildNetworkList(events);
-        const pageIdx = params.pageIdx ?? 0;
-        const pageSize = params.pageSize;
-        const slice =
-          pageSize != null && pageSize > 0
-            ? list.slice(pageIdx * pageSize, (pageIdx + 1) * pageSize)
-            : list;
-        const lines: string[] = [];
-        if (pageSize != null && pageSize > 0 && list.length > 0) {
-          const totalPages = Math.ceil(list.length / pageSize);
-          lines.push(
-            `Showing page ${pageIdx + 1} of ${totalPages}, ${slice.length} of ${list.length} requests.`
-          );
-        }
-        for (const r of slice) {
-          lines.push(`reqid=${r.requestId} ${r.method} ${r.url} ${r.responseStatus ?? '-'}`);
-        }
+      const parsed = listSchema.safeParse(args ?? {});
+      const deviceId = parsed.success ? parsed.data.deviceId : undefined;
+      const platform = parsed.success ? parsed.data.platform : undefined;
+
+      if (!appSession.isConnected(deviceId, platform)) {
         return {
-          content: [{ type: 'text' as const, text: lines.join('\n') || 'No network requests.' }],
+          content: [
+            {
+              type: 'text' as const,
+              text: 'No React Native app connected. Start the app with Metro and ensure the MCP runtime is loaded.',
+            },
+          ],
+        };
+      }
+
+      const options: Record<string, unknown> = {};
+      if (parsed.success) {
+        if (parsed.data.url != null) options.url = parsed.data.url;
+        if (parsed.data.method != null) options.method = parsed.data.method;
+        if (parsed.data.status != null) options.status = parsed.data.status;
+        if (parsed.data.since != null) options.since = parsed.data.since;
+        if (parsed.data.limit != null) options.limit = parsed.data.limit;
+      }
+
+      const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.getNetworkRequests ? __REACT_NATIVE_MCP__.getNetworkRequests(${JSON.stringify(options)}) : []; })();`;
+
+      try {
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
+        if (res.error != null) {
+          return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
+        }
+        const list = Array.isArray(res.result) ? res.result : [];
+        if (list.length === 0) {
+          return { content: [{ type: 'text' as const, text: 'No network requests.' }] };
+        }
+        const lines = list.map(
+          (entry: {
+            id?: number;
+            method?: string;
+            url?: string;
+            status?: number | null;
+            statusText?: string | null;
+            duration?: number | null;
+            error?: string | null;
+            state?: string;
+            requestBody?: string | null;
+            responseBody?: string | null;
+          }) => {
+            const status = entry.status != null ? String(entry.status) : '-';
+            const duration = entry.duration != null ? `${entry.duration}ms` : 'pending';
+            const error = entry.error ? ` [${entry.error}]` : '';
+            return `[${entry.id}] ${entry.method} ${entry.url} → ${status} (${duration})${error}`;
+          }
+        );
+        return {
+          content: [
+            { type: 'text' as const, text: `${list.length} request(s):\n${lines.join('\n')}` },
+          ],
         };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -122,43 +115,46 @@ export function registerListNetworkRequests(server: McpServer): void {
       }
     }
   );
+
   s.registerTool(
-    'get_network_request',
+    'clear_network_requests',
     {
-      description:
-        'Get details of a network request by reqid (requestId from list_network_requests).',
-      inputSchema: getSchema,
+      description: 'Clear all captured network requests from the buffer.',
+      inputSchema: clearSchema,
     },
     async (args: unknown) => {
-      const { reqid } = getSchema.parse(args);
+      const parsed = clearSchema.safeParse(args ?? {});
+      const deviceId = parsed.success ? parsed.data.deviceId : undefined;
+      const platform = parsed.success ? parsed.data.platform : undefined;
+
+      if (!appSession.isConnected(deviceId, platform)) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: 'No React Native app connected. Start the app with Metro and ensure the MCP runtime is loaded.',
+            },
+          ],
+        };
+      }
+
+      const code = `(function(){ if (typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.clearNetworkRequests) { __REACT_NATIVE_MCP__.clearNetworkRequests(); return true; } return false; })();`;
+
       try {
-        const events = await fetchCdpEvents();
-        const list = buildNetworkList(events);
-        const entry = list.find((r) => r.requestId === reqid);
-        if (!entry) {
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: `Network request not found for reqid ${reqid}. Use list_network_requests to get valid reqids.`,
-              },
-            ],
-          };
+        const res = await appSession.sendRequest(
+          { method: 'eval', params: { code } },
+          10000,
+          deviceId,
+          platform
+        );
+        if (res.error != null) {
+          return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }
-        const lines = [
-          `requestId: ${entry.requestId}`,
-          `url: ${entry.url}`,
-          `method: ${entry.method}`,
-          ...(entry.responseStatus != null ? [`responseStatus: ${entry.responseStatus}`] : []),
-          ...(entry.responseStatusText != null
-            ? [`responseStatusText: ${entry.responseStatusText}`]
-            : []),
-        ];
-        return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+        return { content: [{ type: 'text' as const, text: 'Network requests cleared.' }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
-          content: [{ type: 'text' as const, text: `get_network_request failed: ${message}` }],
+          content: [{ type: 'text' as const, text: `clear_network_requests failed: ${message}` }],
         };
       }
     }
