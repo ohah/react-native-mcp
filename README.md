@@ -131,6 +131,19 @@ Or manually edit `~/.copilot/mcp-config.json`:
 
 Restart the Copilot CLI.
 
+## Optional: Native Gesture Support (idb)
+
+For native gesture injection (swipe, drag, pan) on iOS simulators, install [idb (iOS Development Bridge)](https://fbidb.io/):
+
+```bash
+brew tap facebook/fb && brew install idb-companion
+pip3 install fb-idb
+```
+
+This enables `idb_tap`, `idb_swipe`, and other native touch tools for gestures that cannot be triggered via JavaScript (e.g., RNGH `Gesture.Pan`, drawer swipe, bottom sheet drag).
+
+See [idb Setup Guide](./docs/idb-setup.md) for details.
+
 ## Development
 
 - **Tools**: [mise](https://mise.jdx.dev/) (see `.mise.toml`), oxlint/oxfmt for linting/formatting
