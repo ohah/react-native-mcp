@@ -306,7 +306,7 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             MCP click(uid) 또는 수동 탭 시 카운터 증가 여부로 감지 가능 여부 확인. 플랫폼·아키텍처별
             차이 있을 수 있음.
           </Text>
-          <View style={styles.compareRow}>
+          <View style={styles.compareCol}>
             <TouchableOpacity
               style={[styles.compareBtn, styles.compareBtnTouchable]}
               onPress={() => setCompareTouchableTaps((n) => n + 1)}
@@ -658,9 +658,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, marginBottom: 12, color: '#333' },
   sectionTitle: { fontSize: 13, fontWeight: '600', marginBottom: 6, color: '#333' },
   hint: { fontSize: 12, marginBottom: 8, color: '#666' },
-  compareRow: { flexDirection: 'row', gap: 8, marginBottom: 20 },
+  compareCol: { gap: 12, marginBottom: 20 },
   compareBtn: {
-    flex: 1,
+    width: '100%',
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderRadius: 8,
