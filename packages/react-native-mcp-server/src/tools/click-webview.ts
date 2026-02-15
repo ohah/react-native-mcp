@@ -14,7 +14,7 @@ const schema = z.object({
   script: z
     .string()
     .describe(
-      'JavaScript code to execute inside the WebView (e.g. "document.querySelector(\'button\').click()" or "document.title").'
+      'JavaScript expression to execute in the WebView. To get the value back, the expression must evaluate to a value (e.g. "document.title" or "document.querySelector(\'h1\').innerText"). App must forward onMessage to handleWebViewMessage for result feedback.'
     ),
   deviceId: deviceParam,
   platform: platformParam,
@@ -33,7 +33,8 @@ export function registerClickWebView(server: McpServer, appSession: AppSession):
     'webview_evaluate_script',
     {
       description:
-        'Run a JavaScript function in the in-app WebView context. App must register the WebView via __REACT_NATIVE_MCP__.registerWebView(ref, id) (react-native-webview).',
+        'Run JavaScript in the in-app WebView context. App must register the WebView via __REACT_NATIVE_MCP__.registerWebView(ref, id) (react-native-webview). ' +
+        'Execution result: forward onMessage with __REACT_NATIVE_MCP__.createWebViewOnMessage(yourHandler) so MCP gets script result and your own postMessage logic still runs; otherwise only OK/error is returned.',
       inputSchema: schema,
     },
     async (args: unknown) => {
@@ -50,11 +51,11 @@ export function registerClickWebView(server: McpServer, appSession: AppSession):
         };
       }
 
-      const code = `(function(){ return __REACT_NATIVE_MCP__.evaluateInWebView(${JSON.stringify(webViewId)}, ${JSON.stringify(script)}); })();`;
+      const code = `(function(){ return __REACT_NATIVE_MCP__.evaluateInWebViewAsync(${JSON.stringify(webViewId)}, ${JSON.stringify(script)}); })();`;
       try {
         const res = await appSession.sendRequest(
           { method: 'eval', params: { code } },
-          10000,
+          15000,
           deviceId,
           platform
         );
@@ -63,13 +64,23 @@ export function registerClickWebView(server: McpServer, appSession: AppSession):
             content: [{ type: 'text' as const, text: `Error: ${res.error}` }],
           };
         }
-        const result = res.result as { ok?: boolean; error?: string } | undefined;
+        const result = res.result as { ok?: boolean; value?: string; error?: string } | undefined;
+        if (result && result.ok === true && result.value !== undefined) {
+          return {
+            content: [{ type: 'text' as const, text: result.value }],
+          };
+        }
+        if (result && result.ok === false && result.error != null) {
+          return {
+            content: [{ type: 'text' as const, text: `WebView error: ${result.error}` }],
+          };
+        }
         if (result && result.ok === true) {
           return {
             content: [
               {
                 type: 'text' as const,
-                text: `OK: script executed in WebView "${webViewId}".`,
+                text: `OK: script executed in WebView "${webViewId}". (No result: app may not forward onMessage to handleWebViewMessage.)`,
               },
             ],
           };

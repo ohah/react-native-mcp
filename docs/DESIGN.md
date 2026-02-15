@@ -287,7 +287,8 @@ packages/react-native-mcp-server/
 1. **자동 testID**: JSX 요소에 `ComponentName-index-TagName` 형식 ID 주입
 2. **displayName 주입**: PascalCase 함수 컴포넌트에 `.displayName` 자동 설정 (Release Fiber 트리 이름 보존)
 3. **WebView ref 주입**: testID가 있으면 `registerWebView`/`unregisterWebView` 자동 주입 (Fiber 대체 불가)
-4. **동적 testID 지원**: TemplateLiteral, 변수 참조 등 동적 표현식 처리
+4. **WebView onMessage 주입**: testID 있는 WebView에 `onMessage` 자동 설정 — 사용자 `onMessage`가 있으면 `createWebViewOnMessage(사용자핸들러)`로 감싸서 MCP 결과 수신과 사용자 postMessage 공존, 없으면 `(e) => handleWebViewMessage(e.nativeEvent.data)`만 주입. 앱에 MCP 전용 코드 불필요.
+5. **동적 testID 지원**: TemplateLiteral, 변수 참조 등 동적 표현식 처리
 
 **비활성화된 기능** (`inject-testid.ts`의 플래그로 제어):
 
@@ -446,7 +447,7 @@ function MyButton({ title, onPress }) {
 - [x] MCP 조작 (evaluate_script로 구현)
   - [x] testID로 onPress 트리거 (runtime `triggerPress(testID)` + Babel에서 `registerPressHandler` 주입)
   - [x] scroll 도구 — 등록된 ScrollView/FlatList의 scrollTo 호출
-  - [x] webview_evaluate_script 도구 — WebView 내 임의 JS 실행
+  - [x] webview_evaluate_script 도구 — WebView 내 임의 JS 실행. 실행 결과 피드백: **Babel이 testID 있는 WebView에 onMessage 자동 주입** (사용자 onMessage 있으면 createWebViewOnMessage로 감쌈, 없으면 handleWebViewMessage만). 앱에 MCP 전용 코드 불필요.
   - [ ] `set_props` - props 변경 (미구현)
 
 **산출물**: AI가 컴포넌트 선택 및 조작 (버튼 클릭 등) ✅

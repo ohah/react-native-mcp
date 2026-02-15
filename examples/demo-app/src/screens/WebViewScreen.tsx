@@ -1,5 +1,7 @@
 /**
- * WebView 탭 — MCP click_webview / navigate_webview 테스트용
+ * WebView 탭 — MCP click_webview / webview_evaluate_script 테스트용
+ * Babel이 testID 있는 WebView에 onMessage를 자동 주입(createWebViewOnMessage 래핑)하므로
+ * 앱에서는 사용자 postMessage 처리만 작성하면 됨.
  */
 
 import React from 'react';
@@ -36,29 +38,55 @@ export type WebViewScreenProps = {
 };
 
 export function WebViewScreen({ isDarkMode }: WebViewScreenProps) {
+  const [postMessageTapCount, setPostMessageTapCount] = React.useState(0);
+
+  const handleWebViewMessage = React.useCallback((e: { nativeEvent: { data: string } }) => {
+    try {
+      const data = JSON.parse(e.nativeEvent.data) as { type?: string };
+      if (data.type === 'tap') setPostMessageTapCount((c) => c + 1);
+    } catch {
+      // ignore parse error
+    }
+  }, []);
+
   return (
     <View style={styles.container}>
       <Text style={[styles.title, isDarkMode && styles.textDark]} testID="demo-app-webview-title">
         WebView
       </Text>
       <Text style={[styles.subtitle, isDarkMode && styles.textDark]}>
-        MCP click_webview / navigate_webview 테스트
+        MCP click_webview / webview_evaluate_script 테스트
       </Text>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
           인라인 HTML (postMessage)
+        </Text>
+        <Text style={[styles.hint, isDarkMode && styles.textDark]}>
+          RN이 받은 탭 수: {postMessageTapCount} — 버튼 클릭 시 증가 (MCP eval 결과는 서버로만 반환)
         </Text>
         <WebView
           source={{ html: HTML }}
           style={styles.webview}
           testID="demo-app-webview"
           originWhitelist={['*']}
+          onMessage={handleWebViewMessage}
         />
         <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>https://google.com</Text>
         <WebView
           source={{ uri: 'https://www.google.com' }}
           style={styles.webview}
           testID="demo-app-webview-google"
+          onMessage={handleWebViewMessage}
+        />
+        <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
+          testID 없는 WebView (MCP 미등록)
+        </Text>
+        <WebView
+          source={{
+            html: '<html><body style="font-family:system-ui;padding:16px"><h2>testID 없음</h2><p>getRegisteredWebViewIds에 포함되지 않음</p></body></html>',
+          }}
+          style={styles.webview}
+          onMessage={handleWebViewMessage}
         />
       </ScrollView>
     </View>
@@ -79,5 +107,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: '#333',
   },
+  hint: { fontSize: 12, marginBottom: 8, color: '#666' },
   webview: { height: 220, marginBottom: 8 },
 });

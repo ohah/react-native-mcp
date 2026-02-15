@@ -121,6 +121,8 @@ describe('runtime.js MCP 객체', () => {
       'unregisterWebView',
       'clickInWebView',
       'evaluateInWebView',
+      'handleWebViewMessage',
+      'createWebViewOnMessage',
       'getRegisteredWebViewIds',
       // Scroll
       'registerScrollRef',
@@ -405,6 +407,27 @@ describe('WebView 함수', () => {
     };
     expect(result.ok).toBe(false);
     expect(result.error).toBeDefined();
+  });
+
+  it('handleWebViewMessage — __mcpEvalResult면 true, 아니면 false', () => {
+    const handled = MCP.handleWebViewMessage(
+      JSON.stringify({ __mcpEvalResult: true, requestId: 'no-pending', value: 'x' })
+    ) as boolean;
+    expect(handled).toBe(false); // pending 없으면 소비 안 함
+    const notOurs = MCP.handleWebViewMessage(JSON.stringify({ type: 'user-msg' })) as boolean;
+    expect(notOurs).toBe(false);
+  });
+
+  it('createWebViewOnMessage — 일반 메시지는 userHandler에 전달', () => {
+    const userHandler = mock(() => {});
+    const wrapped = MCP.createWebViewOnMessage(userHandler) as (e: {
+      nativeEvent: { data: string };
+    }) => void;
+    wrapped({ nativeEvent: { data: JSON.stringify({ type: 'user-tap' }) } });
+    expect(userHandler).toHaveBeenCalledTimes(1);
+    expect(userHandler).toHaveBeenCalledWith({
+      nativeEvent: { data: JSON.stringify({ type: 'user-tap' }) },
+    });
   });
 });
 

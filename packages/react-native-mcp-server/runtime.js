@@ -42,6 +42,9 @@
 
 var _pressHandlers = {};
 var _webViews = {};
+/** requestId -> { resolve, reject } for webview_evaluate_script result feedback via postMessage */
+var _webViewEvalPending = {};
+var _webViewEvalRequestId = 0;
 var _scrollRefs = {};
 var _consoleLogs = [];
 var _consoleLogId = 0;
@@ -769,13 +772,79 @@ var MCP = {
     ref.injectJavaScript(script);
     return { ok: true };
   },
-  /** 등록된 WebView 내부에서 임의의 JavaScript를 실행 */
+  /** 등록된 WebView 내부에서 임의의 JavaScript를 실행 (동기, 반환값 없음) */
   evaluateInWebView: function (id, script) {
     var ref = _webViews[id];
     if (!ref || typeof ref.injectJavaScript !== 'function')
       return { ok: false, error: 'WebView not found or injectJavaScript not available' };
     ref.injectJavaScript(script);
     return { ok: true };
+  },
+  /**
+   * WebView에서 스크립트 실행 후 postMessage로 결과 수신. 앱이 WebView onMessage에서
+   * __REACT_NATIVE_MCP__.handleWebViewMessage(event.nativeEvent.data) 호출 시 결과 반환.
+   * @returns Promise<{ ok: true, value: string } | { ok: false, error: string }>
+   */
+  evaluateInWebViewAsync: function (id, script) {
+    var ref = _webViews[id];
+    if (!ref || typeof ref.injectJavaScript !== 'function')
+      return Promise.resolve({
+        ok: false,
+        error: 'WebView not found or injectJavaScript not available',
+      });
+    var requestId = 'wv_' + ++_webViewEvalRequestId + '_' + Date.now();
+    var wrapped =
+      '(function(){ var __reqId=' +
+      JSON.stringify(requestId) +
+      '; var __script=' +
+      JSON.stringify(script) +
+      '; try { var __r=(function(){ return eval(__script); })(); var __v=typeof __r==="string" ? __r : (function(){ try { return JSON.stringify(__r); } catch(e){ return String(__r); } })(); window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({__mcpEvalResult:true,requestId:__reqId,value:__v})); } catch(e) { window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({__mcpEvalResult:true,requestId:__reqId,error:(e&&e.message)||String(e)})); } })();';
+    return new Promise(function (resolve) {
+      var t = setTimeout(function () {
+        if (_webViewEvalPending[requestId]) {
+          delete _webViewEvalPending[requestId];
+          resolve({ ok: false, error: 'WebView eval timeout (10s)' });
+        }
+      }, 10000);
+      _webViewEvalPending[requestId] = { resolve: resolve, timeout: t };
+      ref.injectJavaScript(wrapped);
+    });
+  },
+  /**
+   * WebView onMessage에서 호출. postMessage로 온 __mcpEvalResult 수신 시 evaluateInWebViewAsync Promise resolve.
+   * @returns {boolean} true if the message was __mcpEvalResult (consumed), false otherwise. 사용자 onMessage와 함께 쓰려면 createWebViewOnMessage 사용.
+   */
+  handleWebViewMessage: function (data) {
+    if (!data || typeof data !== 'string') return false;
+    try {
+      var payload = JSON.parse(data);
+      if (!payload || payload.__mcpEvalResult !== true || !payload.requestId) return false;
+      var reqId = payload.requestId;
+      var pending = _webViewEvalPending[reqId];
+      if (!pending) return false;
+      delete _webViewEvalPending[reqId];
+      if (pending.timeout) clearTimeout(pending.timeout);
+      if (payload.error != null) pending.resolve({ ok: false, error: payload.error });
+      else pending.resolve({ ok: true, value: payload.value });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  },
+  /**
+   * WebView onMessage와 사용자 핸들러를 함께 쓰기 위한 래퍼. 우리 __mcpEvalResult는 처리하고, 나머지 메시지는 userHandler에 넘김.
+   * 사용: onMessage={__REACT_NATIVE_MCP__.createWebViewOnMessage((e) => { ... })}
+   */
+  createWebViewOnMessage: function (userHandler) {
+    if (typeof userHandler !== 'function')
+      return function (e) {
+        __REACT_NATIVE_MCP__.handleWebViewMessage(e.nativeEvent.data);
+      };
+    return function (e) {
+      var data = e && e.nativeEvent && e.nativeEvent.data;
+      var consumed = __REACT_NATIVE_MCP__.handleWebViewMessage(data);
+      if (!consumed) userHandler(e);
+    };
   },
   getRegisteredWebViewIds: function () {
     return Object.keys(_webViews);
@@ -1281,12 +1350,26 @@ function connect() {
         } catch (e) {
           errMsg = e && e.message != null ? e.message : String(e);
         }
-        if (ws && ws.readyState === 1) {
-          ws.send(
-            JSON.stringify(
-              errMsg != null ? { id: msg.id, error: errMsg } : { id: msg.id, result: result }
-            )
+        function sendEvalResponse(res, err) {
+          if (ws && ws.readyState === 1) {
+            ws.send(
+              JSON.stringify(err != null ? { id: msg.id, error: err } : { id: msg.id, result: res })
+            );
+          }
+        }
+        if (errMsg != null) {
+          sendEvalResponse(null, errMsg);
+        } else if (result != null && typeof result.then === 'function') {
+          result.then(
+            function (r) {
+              sendEvalResponse(r, null);
+            },
+            function (e) {
+              sendEvalResponse(null, e && e.message != null ? e.message : String(e));
+            }
           );
+        } else {
+          sendEvalResponse(result, null);
         }
       }
     } catch {}
