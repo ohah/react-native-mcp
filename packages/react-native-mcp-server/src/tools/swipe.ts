@@ -51,7 +51,7 @@ export function registerSwipe(server: McpServer): void {
     'swipe',
     {
       description:
-        'Swipe from (x1,y1) to (x2,y2) on iOS simulator or Android device. iOS: coordinates in points (idb). Android: coordinates in pixels (adb). Duration in ms (default 300). Use for drawer, pager, bottom sheet. Get coordinates via evaluate_script with measureView(testID). Verify result with assert_text instead of take_screenshot.',
+        'Swipe from (x1,y1) to (x2,y2) on iOS simulator or Android device. iOS: coordinates in points (idb). Android: coordinates in pixels (adb). Duration in ms (default 300). Use for drawer, pager, bottom sheet, scroll. Workflow: query_selector → evaluate_script(measureView(uid)) → swipe. Verify with assert_text.',
       inputSchema: schema,
     },
     async (args: unknown) => {
@@ -64,6 +64,7 @@ export function registerSwipe(server: McpServer): void {
           const durationSec = duration / 1000;
           const cmd = ['ui', 'swipe', String(x1), String(y1), String(x2), String(y2)];
           if (durationSec !== 0.3) cmd.push('--duration', String(durationSec));
+          cmd.push('--delta', '10');
           await runIdbCommand(cmd, udid);
           return {
             content: [

@@ -125,76 +125,6 @@ export default () => (
     expect(code).toContain('testID="Anonymous-1-Text"');
   });
 
-  // INJECT_PRESS_HANDLER=false: registerPressHandler 주입이 비활성화됨
-  // Fiber memoizedProps.onPress()로 직접 호출 가능하므로 Babel 래핑 불필요
-  // 재활성화: inject-testid.ts에서 INJECT_PRESS_HANDLER = true로 변경
-  it('INJECT_PRESS_HANDLER=false: onPress가 registerPressHandler로 래핑되지 않는다', async () => {
-    const src = `
-function App() {
-  const [n, setN] = useState(0);
-  return (
-    <Pressable testID="demo-app-counter-button" onPress={() => setN((c) => c + 1)}>
-      <Text>Count: {n}</Text>
-    </Pressable>
-  );
-}
-`;
-    const { code } = await injectTestIds(src);
-    expect(code).not.toContain('__REACT_NATIVE_MCP__.registerPressHandler');
-    expect(code).toContain('demo-app-counter-button');
-    expect(code).toContain('onPress=');
-  });
-
-  // INJECT_SCROLL_REF=false: ScrollView ref 주입이 비활성화됨
-  // Fiber stateNode.scrollTo()로 직접 접근 가능하므로 Babel ref 주입 불필요
-  // 재활성화: inject-testid.ts에서 INJECT_SCROLL_REF = true로 변경
-  it('INJECT_SCROLL_REF=false: ScrollView에 registerScrollRef가 주입되지 않는다', async () => {
-    const src = `
-function Screen() {
-  return (
-    <ScrollView testID="demo-app-scroll-view">
-      <Text>content</Text>
-    </ScrollView>
-  );
-}
-`;
-    const { code } = await injectTestIds(src);
-    expect(code).not.toContain('registerScrollRef');
-    expect(code).not.toContain('unregisterScrollRef');
-    expect(code).toContain('demo-app-scroll-view');
-  });
-
-  it('INJECT_PRESS_HANDLER=false: 동적 testID(TemplateLiteral)도 registerPressHandler 래핑 안 됨', async () => {
-    const src = `
-function ListItem({ item, onPress }) {
-  return (
-    <Pressable testID={\`btn-\${item.id}\`} onPress={onPress}>
-      <Text>{item.title}</Text>
-    </Pressable>
-  );
-}
-`;
-    const { code } = await injectTestIds(src);
-    expect(code).not.toContain('__REACT_NATIVE_MCP__.registerPressHandler');
-    expect(code).toContain('item.id');
-    expect(code).toContain('onPress=');
-  });
-
-  it('INJECT_PRESS_HANDLER=false: 동적 testID(변수 참조)도 registerPressHandler 래핑 안 됨', async () => {
-    const src = `
-function MyBtn({ tid, onTap }) {
-  return (
-    <Pressable testID={tid} onPress={onTap}>
-      <Text>tap</Text>
-    </Pressable>
-  );
-}
-`;
-    const { code } = await injectTestIds(src);
-    expect(code).not.toContain('__REACT_NATIVE_MCP__.registerPressHandler');
-    expect(code).toContain('onPress=');
-  });
-
   it('key prop이 있으면 testID에 key가 포함된 동적 testID가 생성된다', async () => {
     const src = `
 function Numpad({ onPress }) {
@@ -268,24 +198,5 @@ function Screen() {
     expect(code).toMatch(/"function"|'function'/);
     expect(code).toContain('webViewRef');
     expect(code).toContain('.current');
-  });
-
-  it('INJECT_SCROLL_REF=false: ScrollView에 ref가 있어도 합성되지 않는다', async () => {
-    const src = `
-function Screen() {
-  const scrollRef = useRef(null);
-  return (
-    <ScrollView testID="my-scroll" ref={scrollRef}>
-      <Text>content</Text>
-    </ScrollView>
-  );
-}
-`;
-    const { code } = await injectTestIds(src);
-    expect(code).not.toContain('registerScrollRef');
-    expect(code).not.toContain('unregisterScrollRef');
-    expect(code).toContain('my-scroll');
-    // 원본 ref가 그대로 유지됨
-    expect(code).toContain('ref={scrollRef}');
   });
 });

@@ -480,18 +480,27 @@ function fiberToResult(fiber, TextComp, ImgComp) {
       ? props.accessibilityLabel.trim()
       : undefined;
   var hasOnPress = typeof props.onPress === 'function';
+  var hasOnLongPress = typeof props.onLongPress === 'function';
   var sn = fiber.stateNode;
   var hasScrollTo = !!(
     sn &&
     (typeof sn.scrollTo === 'function' || typeof sn.scrollToOffset === 'function')
   );
 
-  var result = { uid: testID || getPathUid(fiber), type: typeName };
+  var uid = testID || getPathUid(fiber);
+  var result = { uid: uid, type: typeName };
   if (testID) result.testID = testID;
   if (text) result.text = text;
   if (a11y) result.accessibilityLabel = a11y;
   result.hasOnPress = hasOnPress;
+  result.hasOnLongPress = hasOnLongPress;
   result.hasScrollTo = hasScrollTo;
+  // Fabric: measureViewSync → 동기 좌표, Bridge: null
+  var measure = null;
+  try {
+    measure = MCP.measureViewSync(uid);
+  } catch (e) {}
+  result.measure = measure;
   return result;
 }
 
@@ -1068,6 +1077,55 @@ var MCP = {
     } catch (e) {
       return [];
     }
+  },
+
+  /**
+   * querySelectorWithMeasure(selector) → Promise<결과 | null>
+   * Fabric: fiberToResult의 measureViewSync로 이미 measure 포함 → 즉시 반환.
+   * Bridge: measure가 null인 경우 async measureView fallback.
+   */
+  querySelectorWithMeasure: function (selector) {
+    var el = MCP.querySelector(selector);
+    if (!el) return Promise.resolve(null);
+    if (el.measure) return Promise.resolve(el);
+    // Bridge fallback
+    return MCP.measureView(el.uid)
+      .then(function (m) {
+        el.measure = m;
+        return el;
+      })
+      .catch(function () {
+        return el;
+      });
+  },
+
+  /**
+   * querySelectorAllWithMeasure(selector) → Promise<배열>
+   * measure가 null인 요소만 비동기 보충.
+   */
+  querySelectorAllWithMeasure: function (selector) {
+    var list = MCP.querySelectorAll(selector);
+    if (!list.length) return Promise.resolve(list);
+    // measure가 null인 요소만 비동기 보충
+    var needsMeasure = [];
+    for (var i = 0; i < list.length; i++) {
+      if (!list[i].measure) needsMeasure.push(i);
+    }
+    if (!needsMeasure.length) return Promise.resolve(list);
+    // Bridge fallback — sequential measure
+    var chain = Promise.resolve();
+    needsMeasure.forEach(function (idx) {
+      chain = chain.then(function () {
+        return MCP.measureView(list[idx].uid)
+          .then(function (m) {
+            list[idx].measure = m;
+          })
+          .catch(function () {});
+      });
+    });
+    return chain.then(function () {
+      return list;
+    });
   },
 
   // ─── 화면 정보 · 뷰 좌표 측정 ─────────────────────────────────

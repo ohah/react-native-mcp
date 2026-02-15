@@ -29,7 +29,7 @@ const schema = z.object({
   text: z
     .string()
     .describe(
-      'Text to type into the currently focused input. ASCII only (English/numbers). For Korean/Unicode, use MCP type_text tool instead.'
+      'Text to type. ASCII only (English/numbers). For Korean/Unicode, use type_text instead.'
     ),
   deviceId: z
     .string()
@@ -52,7 +52,7 @@ export function registerInputText(server: McpServer): void {
     'input_text',
     {
       description:
-        'Type text into the currently focused input on iOS simulator or Android device. ASCII only (English, numbers, symbols). For Korean/Unicode input, use MCP type_text tool instead.',
+        'Type text into the currently focused input on iOS simulator or Android device. ASCII only (English, numbers, symbols). For Korean/Unicode, use type_text instead.',
       inputSchema: schema,
     },
     async (args: unknown) => {

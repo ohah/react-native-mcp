@@ -123,6 +123,38 @@ copilot
 
 Copilot CLI 재시작.
 
+## 필수: 네이티브 도구 (idb / adb)
+
+MCP 서버는 네이티브 터치 주입(`tap`, `swipe`, `input_text` 등)과 스크린샷을 위해 **idb**(iOS) / **adb**(Android)를 사용합니다. 전체 기능을 사용하려면 **설치가 필요**합니다.
+
+### Android (adb)
+
+adb는 Android Studio에 포함되어 있습니다. 별도 설치:
+
+```bash
+# macOS
+brew install --cask android-platform-tools
+
+# 또는 Android Studio 설치 시 ~/Library/Android/sdk/platform-tools/adb 에 위치
+```
+
+확인: `adb devices`
+
+### iOS 시뮬레이터 (idb)
+
+[idb (iOS Development Bridge)](https://fbidb.io/)는 iOS 시뮬레이터 자동화에 필요합니다:
+
+```bash
+brew tap facebook/fb && brew install idb-companion
+pip3 install fb-idb
+```
+
+확인: `idb list-targets`
+
+> **참고**: idb는 macOS 전용이며 시뮬레이터만 지원합니다. 실기기는 XCTest/WDA 설정이 필요합니다.
+
+자세한 내용은 [idb 설치 가이드](./docs/idb-setup.md)를 참고하세요.
+
 ## 개발
 
 - **도구**: [mise](https://mise.jdx.dev/) (`.mise.toml` 참고), oxlint/oxfmt (린트/포맷)

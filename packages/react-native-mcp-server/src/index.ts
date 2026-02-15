@@ -8,6 +8,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { appSession } from './websocket-server.js';
 import { registerAllTools } from './tools/index.js';
+import { registerAllResources } from './resources/index.js';
 
 export const VERSION = '0.1.0';
 
@@ -25,6 +26,7 @@ async function main() {
   });
 
   registerAllTools(server, appSession);
+  registerAllResources(server);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

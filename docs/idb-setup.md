@@ -56,39 +56,36 @@ idb list-targets
 | 바텀시트 드래그                   | 연속 터치 이벤트 필요         |
 | 페이저 스와이프                   | 네이티브 스크롤 제스처        |
 
-### MCP만으로 충분한 경우
+### 네이티브 도구 없이 가능한 경우
 
-| 상황            | MCP 도구                             |
-| --------------- | ------------------------------------ |
-| 버튼 탭         | `click` / `click_by_label`           |
-| 롱프레스        | `long_press` / `long_press_by_label` |
-| 스크롤          | `scroll`                             |
-| 텍스트 입력     | `type_text`                          |
-| WebView JS 실행 | `webview_evaluate_script`            |
+| 상황            | MCP 도구                  |
+| --------------- | ------------------------- |
+| 텍스트 입력     | `type_text`               |
+| WebView JS 실행 | `webview_evaluate_script` |
 
 ---
 
-## MCP에서 사용할 수 있는 idb 도구
+## MCP에서 사용할 수 있는 네이티브 도구
 
-설치 후 다음 MCP 도구를 사용할 수 있습니다:
+설치 후 다음 MCP 도구를 사용할 수 있습니다 (모두 `platform` 파라미터로 iOS/Android 통합):
 
-| 도구               | 설명                                        |
-| ------------------ | ------------------------------------------- |
-| `idb_list_targets` | 연결된 시뮬레이터/디바이스 목록 (UDID 확인) |
-| `idb_tap`          | 좌표 탭                                     |
-| `idb_swipe`        | 스와이프 (시작→끝 좌표 + 시간)              |
-| `idb_text`         | 텍스트 입력 (ASCII만)                       |
-| `idb_key`          | HID 키코드 전송                             |
-| `idb_describe`     | 접근성 트리 조회                            |
-| `idb_button`       | 물리 버튼 (HOME, LOCK 등)                   |
+| 도구           | 설명                                      |
+| -------------- | ----------------------------------------- |
+| `list_devices` | 연결된 시뮬레이터/디바이스 목록 (ID 확인) |
+| `tap`          | 좌표 탭                                   |
+| `swipe`        | 스와이프 (시작→끝 좌표 + 시간)            |
+| `input_text`   | 텍스트 입력 (ASCII만)                     |
+| `input_key`    | 키코드 전송 (iOS: HID, Android: keyevent) |
+| `describe_ui`  | 접근성/UI 트리 조회                       |
+| `press_button` | 물리 버튼 (HOME, LOCK 등)                 |
 
-### 권장 워크플로우 (MCP + idb 하이브리드)
+### 권장 워크플로우 (MCP + 네이티브 하이브리드)
 
-MCP를 "눈"(요소 탐색, 결과 검증), idb를 "손"(터치 주입)으로 사용합니다:
+MCP를 "눈"(요소 탐색, 결과 검증), 네이티브 도구를 "손"(터치 주입)으로 사용합니다:
 
 ```
 1. MCP query_selector → 요소 찾기 + 좌표 획득
-2. idb_tap / idb_swipe → 네이티브 터치 주입
+2. tap / swipe → 네이티브 터치 주입
 3. MCP assert_text → 결과 검증
 ```
 
@@ -124,7 +121,7 @@ brew list idb-companion
 idb list-targets
 
 # MCP 도구에서 udid 지정
-idb_tap(x=200, y=400, udid="87A53F69-25AA-4F96-8629-C14917CCEC44")
+tap(platform="ios", x=200, y=400, deviceId="87A53F69-25AA-4F96-8629-C14917CCEC44")
 ```
 
 ### 한글 입력이 안 됨
@@ -136,7 +133,7 @@ idb_tap(x=200, y=400, udid="87A53F69-25AA-4F96-8629-C14917CCEC44")
 
 1. **MCP `type_text` 사용 (권장)**: 키보드를 우회하여 `onChangeText`를 직접 호출합니다. 한글, 이모지 등 모든 유니코드를 지원합니다.
 
-2. **키보드 전환 후 `idb_text` 사용**: macOS에서 AppleScript로 시뮬레이터 키보드 언어를 전환할 수 있습니다.
+2. **키보드 전환 후 `input_text` 사용**: macOS에서 AppleScript로 시뮬레이터 키보드 언어를 전환할 수 있습니다.
 
 ```bash
 # macOS에서 iOS 시뮬레이터 키보드 언어 전환 (Ctrl+Space)
@@ -167,17 +164,17 @@ end tell
 | 작동 OS     | macOS만                          | macOS, Windows, Linux            |
 
 > React Native 앱이라면 MCP `type_text`가 iOS/Android 모두에서 한글을 포함한 모든 유니코드 입력을 지원합니다.
-> `idb_text`/`adb input text`는 영문(ASCII) 입력에만 사용하세요.
+> `input_text`는 영문(ASCII) 입력에만 사용하세요.
 
 ---
 
 ## 알려진 제한사항
 
-| 제한          | 설명                                    | 우회                                                    |
-| ------------- | --------------------------------------- | ------------------------------------------------------- |
-| iOS 실기기    | 터치 주입 미지원 (시뮬레이터만)         | XCTest/WDA 프레임워크 또는 MCP `click`/`type_text` 사용 |
-| 멀티터치      | 단일 터치만 지원                        | 핀치/회전 불가                                          |
-| 한글 입력     | `idb ui text`는 현재 키보드 언어에 의존 | MCP `type_text` 사용                                    |
-| 키보드 전환   | `idb`에 내장 전환 명령 없음             | AppleScript `Ctrl+Space` (macOS만)                      |
-| iPad HID      | Return(40)이 멀티태스킹 트리거 가능     | 앱별 확인 필요                                          |
-| Windows/Linux | idb는 macOS 전용                        | Android는 adb로 모든 OS에서 사용 가능                   |
+| 제한          | 설명                                    | 우회                                            |
+| ------------- | --------------------------------------- | ----------------------------------------------- |
+| iOS 실기기    | 터치 주입 미지원 (시뮬레이터만)         | XCTest/WDA 프레임워크 또는 MCP `type_text` 사용 |
+| 멀티터치      | 단일 터치만 지원                        | 핀치/회전 불가                                  |
+| 한글 입력     | `idb ui text`는 현재 키보드 언어에 의존 | MCP `type_text` 사용                            |
+| 키보드 전환   | `idb`에 내장 전환 명령 없음             | AppleScript `Ctrl+Space` (macOS만)              |
+| iPad HID      | Return(40)이 멀티태스킹 트리거 가능     | 앱별 확인 필요                                  |
+| Windows/Linux | idb는 macOS 전용                        | Android는 adb로 모든 OS에서 사용 가능           |

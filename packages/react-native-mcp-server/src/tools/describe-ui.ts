@@ -72,7 +72,7 @@ const schema = z.object({
     .optional()
     .default('all')
     .describe(
-      'iOS only. "all" for full accessibility tree, "point" for element at (x,y). Ignored on Android (always full hierarchy).'
+      'iOS only. "all" for full accessibility tree, "point" for element at (x,y). Ignored on Android.'
     ),
   x: z
     .number()
@@ -86,9 +86,7 @@ const schema = z.object({
     .boolean()
     .optional()
     .default(false)
-    .describe(
-      'iOS only. Show hierarchical tree structure instead of flat list. Ignored on Android.'
-    ),
+    .describe('iOS only. Hierarchical tree instead of flat list. Ignored on Android.'),
   deviceId: z
     .string()
     .optional()
@@ -110,7 +108,7 @@ export function registerDescribeUi(server: McpServer): void {
     'describe_ui',
     {
       description:
-        'Query UI hierarchy/accessibility tree. iOS (idb): "all" mode for full tree, "point" mode for element at coordinates. Android (adb): uiautomator dump (always full hierarchy, mode/nested ignored). WARNING: Large payload (high token cost). For RN elements, prefer query_selector then evaluate_script with measureView(testID).',
+        'Query UI hierarchy/accessibility tree. iOS (idb): "all" for full tree, "point" for element at coordinates. Android (adb): uiautomator dump (always full hierarchy). WARNING: Large payload. For RN elements, prefer query_selector instead.',
       inputSchema: schema,
     },
     async (args: unknown) => {

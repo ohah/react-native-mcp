@@ -131,18 +131,37 @@ Or manually edit `~/.copilot/mcp-config.json`:
 
 Restart the Copilot CLI.
 
-## Optional: Native Gesture Support (idb)
+## Required: Native Tools (idb / adb)
 
-For native gesture injection (swipe, drag, pan) on iOS simulators, install [idb (iOS Development Bridge)](https://fbidb.io/):
+The MCP server uses **idb** (iOS) and **adb** (Android) for native touch injection (`tap`, `swipe`, `input_text`, etc.) and screenshots. These are **required** for full functionality.
+
+### Android (adb)
+
+adb is included with Android Studio. If not already installed:
+
+```bash
+# macOS
+brew install --cask android-platform-tools
+
+# Or install Android Studio — adb is at ~/Library/Android/sdk/platform-tools/adb
+```
+
+Verify: `adb devices`
+
+### iOS Simulator (idb)
+
+[idb (iOS Development Bridge)](https://fbidb.io/) is required for iOS simulator automation:
 
 ```bash
 brew tap facebook/fb && brew install idb-companion
 pip3 install fb-idb
 ```
 
-This enables `idb_tap`, `idb_swipe`, and other native touch tools for gestures that cannot be triggered via JavaScript (e.g., RNGH `Gesture.Pan`, drawer swipe, bottom sheet drag).
+Verify: `idb list-targets`
 
-See [idb Setup Guide](./docs/idb-setup.md) for details.
+> **Note**: idb is macOS-only and supports simulators only. For real iOS devices, XCTest/WDA setup is needed.
+
+See [idb Setup Guide](./docs/idb-setup.md) for details and troubleshooting.
 
 ## Development
 
