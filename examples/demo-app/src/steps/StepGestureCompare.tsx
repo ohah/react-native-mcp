@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, Pressable, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Pressable, ScrollView } from 'react-native';
 import { TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-handler';
 
 export type StepProps = { isDarkMode: boolean };

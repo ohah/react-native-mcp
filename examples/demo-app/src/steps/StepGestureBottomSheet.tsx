@@ -15,20 +15,26 @@ export type StepProps = { isDarkMode: boolean };
 export function StepGestureBottomSheet({ isDarkMode }: StepProps) {
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const sheetOffset = useSharedValue(BOTTOM_SHEET_HEIGHT);
+  const startOffset = useSharedValue(BOTTOM_SHEET_HEIGHT);
   const sheetPan = useMemo(
     () =>
       Gesture.Pan()
+        .onStart(() => {
+          startOffset.value = sheetOffset.value;
+        })
         .onUpdate((e) => {
-          const next = BOTTOM_SHEET_HEIGHT + e.translationY;
+          const next = startOffset.value + e.translationY;
           if (next >= 0 && next <= BOTTOM_SHEET_HEIGHT) sheetOffset.value = next;
         })
         .onEnd((e) => {
-          if (e.velocityY < -100 || sheetOffset.value < BOTTOM_SHEET_HEIGHT / 2) {
-            sheetOffset.value = withSpring(0, { damping: 20, stiffness: 150 });
-            runOnJS(setSheetOpen)(true);
-          } else {
+          const wantOpen = e.velocityY < -100 || sheetOffset.value < BOTTOM_SHEET_HEIGHT / 2;
+          const wantClose = e.velocityY > 100 || sheetOffset.value >= BOTTOM_SHEET_HEIGHT / 2;
+          if (wantClose && !wantOpen) {
             sheetOffset.value = withSpring(BOTTOM_SHEET_HEIGHT, { damping: 20, stiffness: 150 });
             runOnJS(setSheetOpen)(false);
+          } else {
+            sheetOffset.value = withSpring(0, { damping: 20, stiffness: 150 });
+            runOnJS(setSheetOpen)(true);
           }
         }),
     []
