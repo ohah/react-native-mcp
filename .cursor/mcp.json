@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "react-native-mcp-local": {
-      "command": "npx",
-      "args": ["-y", "@ohah/react-native-mcp-server"]
+      "command": "/bin/zsh",
+      "args": ["-l", "-c", "npx -y @ohah/react-native-mcp-server"]
     }
   }
 }
