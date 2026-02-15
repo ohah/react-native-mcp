@@ -1,7 +1,11 @@
 /**
  * Gesture 탭 — react-native-gesture-handler + react-native-reanimated 예제
- * MCP: testID 있음 → click(uid), testID 없음 → click_by_label 로 각각 탭 가능
- * 하단: DESIGN.md 749–756 항목 테스트 (swipe to delete, pull to refresh, drag&drop, drawer, tab swipe, bottom sheet)
+ *
+ * - MCP 호환성 비교: RN TouchableOpacity / RN Pressable / RNGH TouchableOpacity 각각 testID + 카운터.
+ *   MCP click(uid) 또는 수동 탭 시 어떤 컴포넌트가 감지하는지 비교 가능 (플랫폼·아키텍처별 차이 있을 수 있음).
+ * - Gesture.Tap() 감지 테스트: RNGH Gesture.Tap() + runOnJS 카운터. 네이티브 제스처 인식기 기반이라
+ *   MCP/자동화 터치로는 카운터가 증가하지 않을 수 있음.
+ * - MCP: testID 있음 → click(uid), testID 없음 → click_by_label. 하단: swipe to delete, pull to refresh 등.
  */
 
 import React, { useMemo, useRef, useCallback } from 'react';
@@ -13,6 +17,8 @@ import {
   RefreshControl,
   PanResponder,
   Dimensions,
+  TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import {
   TouchableOpacity as GHTouchableOpacity,
@@ -20,7 +26,12 @@ import {
   Gesture,
   Swipeable,
 } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+} from 'react-native-reanimated';
 
 const DRAWER_WIDTH = 220;
 const BOTTOM_SHEET_HEIGHT = 180;
@@ -37,6 +48,22 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
   const [reanimatedTapsNoId, setReanimatedTapsNoId] = React.useState(0);
   const scale = useSharedValue(1);
   const scaleNoId = useSharedValue(1);
+
+  // MCP/자동화 호환성 비교: Touchable vs Pressable vs GestureHandler
+  const [compareTouchableTaps, setCompareTouchableTaps] = React.useState(0);
+  const [comparePressableTaps, setComparePressableTaps] = React.useState(0);
+  const [compareGhTaps, setCompareGhTaps] = React.useState(0);
+  // Gesture.Tap() 감지 테스트 (제스처 API는 네이티브 레벨이라 MCP 트리거 시 미동작 가능)
+  const [tapGestureCount, setTapGestureCount] = React.useState(0);
+  const incrementTapGestureCount = useCallback(() => {
+    setTapGestureCount((c) => c + 1);
+  }, []);
+
+  // Bottom sheet 상태 (드래그 검증용)
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+
+  // Tab swipe (페이저) 현재 페이지 인디케이터
+  const [currentPage, setCurrentPage] = React.useState(1);
 
   // Pull to refresh (DESIGN.md: onRefresh 호출 가능성)
   const [refreshing, setRefreshing] = React.useState(false);
@@ -70,37 +97,62 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
     []
   );
 
-  // Drawer (스와이프로 열기 / openDrawer 가능성)
+  // Drawer (스와이프로 열기·닫기 / openDrawer 가능성)
   const drawerOffset = useSharedValue(-DRAWER_WIDTH);
-  const drawerOpen = useSharedValue(0);
+  const [drawerIsOpen, setDrawerIsOpen] = React.useState(false);
   const openDrawer = useCallback(() => {
     drawerOffset.value = withSpring(0, { damping: 20, stiffness: 150 });
-    drawerOpen.value = 1;
+    setDrawerIsOpen(true);
   }, []);
   const closeDrawer = useCallback(() => {
     drawerOffset.value = withSpring(-DRAWER_WIDTH, { damping: 20, stiffness: 150 });
-    drawerOpen.value = 0;
+    setDrawerIsOpen(false);
   }, []);
-  const drawerPan = useMemo(
+  // 열기 제스처: 왼쪽 스트립에서 오른쪽으로 스와이프
+  const drawerOpenPan = useMemo(
     () =>
       Gesture.Pan()
+        .activeOffsetX(15)
+        .failOffsetY([-15, 15])
         .onUpdate((e) => {
-          const next = Math.max(-DRAWER_WIDTH, Math.min(0, -DRAWER_WIDTH + e.translationX));
-          drawerOffset.value = next;
+          drawerOffset.value = Math.max(-DRAWER_WIDTH, Math.min(0, -DRAWER_WIDTH + e.translationX));
         })
         .onEnd((e) => {
           if (e.velocityX > 100 || drawerOffset.value > -DRAWER_WIDTH / 2) {
             drawerOffset.value = withSpring(0, { damping: 20, stiffness: 150 });
-            drawerOpen.value = 1;
+            runOnJS(setDrawerIsOpen)(true);
           } else {
             drawerOffset.value = withSpring(-DRAWER_WIDTH, { damping: 20, stiffness: 150 });
-            drawerOpen.value = 0;
+            runOnJS(setDrawerIsOpen)(false);
+          }
+        }),
+    []
+  );
+  // 닫기 제스처: 드로워 패널에서 왼쪽으로 스와이프
+  const drawerClosePan = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX(-15)
+        .failOffsetY([-15, 15])
+        .onUpdate((e) => {
+          drawerOffset.value = Math.max(-DRAWER_WIDTH, Math.min(0, e.translationX));
+        })
+        .onEnd((e) => {
+          if (e.velocityX < -100 || drawerOffset.value < -DRAWER_WIDTH / 2) {
+            drawerOffset.value = withSpring(-DRAWER_WIDTH, { damping: 20, stiffness: 150 });
+            runOnJS(setDrawerIsOpen)(false);
+          } else {
+            drawerOffset.value = withSpring(0, { damping: 20, stiffness: 150 });
+            runOnJS(setDrawerIsOpen)(true);
           }
         }),
     []
   );
   const drawerStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: drawerOffset.value }],
+  }));
+  const drawerOverlayStyle = useAnimatedStyle(() => ({
+    opacity: ((drawerOffset.value + DRAWER_WIDTH) / DRAWER_WIDTH) * 0.5,
   }));
 
   // Bottom sheet (드래그로 시트 이동 / ref.snapToIndex 가능성)
@@ -115,8 +167,10 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
         .onEnd((e) => {
           if (e.velocityY < -100 || sheetOffset.value < BOTTOM_SHEET_HEIGHT / 2) {
             sheetOffset.value = withSpring(0, { damping: 20, stiffness: 150 });
+            runOnJS(setSheetOpen)(true);
           } else {
             sheetOffset.value = withSpring(BOTTOM_SHEET_HEIGHT, { damping: 20, stiffness: 150 });
+            runOnJS(setSheetOpen)(false);
           }
         }),
     []
@@ -146,6 +200,8 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
   };
 
   // ─── Reanimated worklet 제스처 (MCP 제어 불가 테스트): 드래그만 worklet에서 처리
+  const [workletDragCount, setWorkletDragCount] = React.useState(0);
+  const incrementWorkletDrag = useCallback(() => setWorkletDragCount((c) => c + 1), []);
   const workletTranslateX = useSharedValue(0);
   const workletTranslateY = useSharedValue(0);
   const workletSavedX = useSharedValue(0);
@@ -160,8 +216,9 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
         .onEnd(() => {
           workletSavedX.value = workletTranslateX.value;
           workletSavedY.value = workletTranslateY.value;
+          runOnJS(incrementWorkletDrag)();
         }),
-    []
+    [incrementWorkletDrag]
   );
   const workletBoxStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: workletTranslateX.value }, { translateY: workletTranslateY.value }],
@@ -211,22 +268,23 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
     ],
   }));
 
+  // Gesture.Tap() — 네이티브 제스처 인식. MCP/자동화 터치 시 onEnd 호출 여부 확인용.
+  const tapGesture = useMemo(
+    () =>
+      Gesture.Tap().onEnd(() => {
+        runOnJS(incrementTapGestureCount)();
+      }),
+    [incrementTapGestureCount]
+  );
+
   return (
     <View style={styles.screen}>
-      {/* Drawer: 왼쪽 패널. 스와이프(왼쪽 스트립) 또는 버튼(openDrawer 가능성)으로 열기 */}
-      <View style={styles.drawerWrap} pointerEvents="box-none">
-        <Animated.View style={[styles.drawer, drawerStyle]}>
-          <View style={[styles.drawerContent, isDarkMode && styles.drawerContentDark]}>
-            <Text style={[styles.drawerTitle, isDarkMode && styles.textDark]}>Drawer</Text>
-            <GHTouchableOpacity style={styles.drawerCloseBtn} onPress={closeDrawer}>
-              <Text style={styles.drawerCloseText}>닫기</Text>
-            </GHTouchableOpacity>
-          </View>
-        </Animated.View>
-        <GestureDetector gesture={drawerPan}>
+      {/* Drawer edge: 왼쪽 가장자리 스와이프로 열기 (ScrollView 아래에 렌더) */}
+      {!drawerIsOpen && (
+        <GestureDetector gesture={drawerOpenPan}>
           <View style={styles.drawerLeftStrip} />
         </GestureDetector>
-      </View>
+      )}
 
       <ScrollView
         style={styles.scroll}
@@ -239,6 +297,72 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
           <Text style={[styles.subtitle, isDarkMode && styles.textDark]}>
             react-native-gesture-handler + react-native-reanimated
           </Text>
+
+          {/* ─── MCP/자동화 호환성 비교: Touchable vs Pressable vs RNGH TouchableOpacity ─── */}
+          <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
+            MCP 호환성 비교 (Touchable / Pressable / GestureHandler)
+          </Text>
+          <Text style={[styles.hint, isDarkMode && styles.textDark]}>
+            MCP click(uid) 또는 수동 탭 시 카운터 증가 여부로 감지 가능 여부 확인. 플랫폼·아키텍처별
+            차이 있을 수 있음.
+          </Text>
+          <View style={styles.compareRow}>
+            <TouchableOpacity
+              style={[styles.compareBtn, styles.compareBtnTouchable]}
+              onPress={() => setCompareTouchableTaps((n) => n + 1)}
+              testID="gesture-compare-touchable"
+              activeOpacity={0.8}
+            >
+              <Text style={styles.compareBtnLabel}>RN TouchableOpacity</Text>
+              <Text style={styles.compareBtnCount}>{compareTouchableTaps}</Text>
+            </TouchableOpacity>
+            <Pressable
+              style={({ pressed }) => [
+                styles.compareBtn,
+                styles.compareBtnPressable,
+                pressed && styles.compareBtnPressed,
+              ]}
+              onPress={() => setComparePressableTaps((n) => n + 1)}
+              testID="gesture-compare-pressable"
+            >
+              <Text style={styles.compareBtnLabel}>RN Pressable</Text>
+              <Text style={styles.compareBtnCount}>{comparePressableTaps}</Text>
+            </Pressable>
+            <GHTouchableOpacity
+              style={[styles.compareBtn, styles.compareBtnGh]}
+              onPress={() => setCompareGhTaps((n) => n + 1)}
+              testID="gesture-compare-gh-touchable"
+              activeOpacity={0.8}
+            >
+              <Text style={styles.compareBtnLabel}>RNGH TouchableOpacity</Text>
+              <Text style={styles.compareBtnCount}>{compareGhTaps}</Text>
+            </GHTouchableOpacity>
+          </View>
+
+          {/* Gesture.Tap() 감지 테스트 — 제스처 API는 네이티브 레벨이라 MCP 터치 시 미동작 가능 */}
+          <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
+            Gesture.Tap() 감지 테스트
+          </Text>
+          <Text style={[styles.hint, isDarkMode && styles.textDark]}>
+            RNGH Gesture.Tap() 사용. 네이티브 제스처 인식기 기반이라 MCP/자동화 터치로는 카운터가
+            증가하지 않을 수 있음.
+          </Text>
+          <View
+            style={styles.tapGestureWrap}
+            testID="gesture-tap-detector-wrapper"
+            collapsable={false}
+          >
+            <GestureDetector gesture={tapGesture}>
+              <View style={[styles.tapGestureBox, isDarkMode && styles.tapGestureBoxDark]}>
+                <Text style={[styles.tapGestureLabel, isDarkMode && styles.textDark]}>
+                  Tap 제스처 영역 (testID: gesture-tap-detector-wrapper)
+                </Text>
+                <Text style={[styles.tapGestureCount, isDarkMode && styles.textDark]}>
+                  {tapGestureCount}
+                </Text>
+              </View>
+            </GestureDetector>
+          </View>
 
           {/* testID 있음 — MCP click(uid) */}
           <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
@@ -332,6 +456,9 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             <GestureDetector gesture={workletPanGesture}>
               <Animated.View style={[styles.workletBox, workletBoxStyle]}>
                 <Text style={styles.workletBoxText}>드래그</Text>
+                <Text testID="worklet-drag-count" style={styles.workletBoxText}>
+                  횟수: {workletDragCount}
+                </Text>
               </Animated.View>
             </GestureDetector>
           </View>
@@ -435,6 +562,10 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             style={styles.pager}
             contentContainerStyle={styles.pagerContent}
             showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH) + 1;
+              setCurrentPage(page);
+            }}
           >
             <View style={[styles.pagerPage, isDarkMode && styles.pagerPageDark]}>
               <Text style={[styles.pagerText, isDarkMode && styles.textDark]}>페이지 1</Text>
@@ -442,7 +573,13 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             <View style={[styles.pagerPage, isDarkMode && styles.pagerPageDark]}>
               <Text style={[styles.pagerText, isDarkMode && styles.textDark]}>페이지 2</Text>
             </View>
+            <View style={[styles.pagerPage, isDarkMode && styles.pagerPageDark]}>
+              <Text style={[styles.pagerText, isDarkMode && styles.textDark]}>페이지 3</Text>
+            </View>
           </ScrollView>
+          <Text testID="pager-status" style={[styles.pagerStatus, isDarkMode && styles.textDark]}>
+            현재 페이지: {currentPage} / 3
+          </Text>
 
           <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
             Bottom sheet drag (ref.snapToIndex 가능성 ❓)
@@ -464,9 +601,50 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             <Text style={[styles.sheetHint, isDarkMode && styles.textDark]}>
               위로 드래그해서 열기
             </Text>
+            <Text
+              testID="sheet-status"
+              style={[
+                styles.sheetHint,
+                { fontWeight: '700', marginTop: 8 },
+                isDarkMode && styles.textDark,
+              ]}
+            >
+              상태: {sheetOpen ? '열림 ✅' : '닫힘'}
+            </Text>
           </Animated.View>
         </GestureDetector>
       </View>
+
+      {/* Drawer overlay: 열려있을 때 탭하면 닫기 (최상위 레이어) */}
+      {drawerIsOpen && (
+        <Pressable
+          style={[StyleSheet.absoluteFill, { zIndex: 11 }]}
+          onPress={closeDrawer}
+          testID="drawer-overlay"
+        >
+          <Animated.View
+            style={[StyleSheet.absoluteFill, styles.drawerOverlay, drawerOverlayStyle]}
+          />
+        </Pressable>
+      )}
+
+      {/* Drawer: 왼쪽 패널. 스와이프로 닫기 (최상위 레이어) */}
+      <GestureDetector gesture={drawerClosePan}>
+        <Animated.View style={[styles.drawer, drawerStyle]}>
+          <View style={[styles.drawerContent, isDarkMode && styles.drawerContentDark]}>
+            <Text style={[styles.drawerTitle, isDarkMode && styles.textDark]}>Drawer</Text>
+            <Text
+              testID="drawer-status"
+              style={[styles.drawerStatusText, isDarkMode && styles.textDark]}
+            >
+              드로워: {drawerIsOpen ? '열림 ✅' : '닫힘'}
+            </Text>
+            <GHTouchableOpacity style={styles.drawerCloseBtn} onPress={closeDrawer}>
+              <Text style={styles.drawerCloseText}>닫기</Text>
+            </GHTouchableOpacity>
+          </View>
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }
@@ -480,6 +658,31 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, marginBottom: 12, color: '#333' },
   sectionTitle: { fontSize: 13, fontWeight: '600', marginBottom: 6, color: '#333' },
   hint: { fontSize: 12, marginBottom: 8, color: '#666' },
+  compareRow: { flexDirection: 'row', gap: 8, marginBottom: 20 },
+  compareBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  compareBtnTouchable: { backgroundColor: '#268' },
+  compareBtnPressable: { backgroundColor: '#682' },
+  compareBtnGh: { backgroundColor: '#826' },
+  compareBtnPressed: { opacity: 0.85 },
+  compareBtnLabel: { color: '#fff', fontSize: 11, fontWeight: '600' },
+  compareBtnCount: { color: '#fff', fontSize: 18, fontWeight: '700', marginTop: 4 },
+  tapGestureWrap: { marginBottom: 20 },
+  tapGestureBox: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#6b8',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  tapGestureBoxDark: { backgroundColor: '#2d5a4a' },
+  tapGestureLabel: { fontSize: 13, fontWeight: '600', color: '#000', marginBottom: 4 },
+  tapGestureCount: { fontSize: 20, fontWeight: '700', color: '#000' },
   ghButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -535,14 +738,7 @@ const styles = StyleSheet.create({
   },
   rnghBoxText: { color: '#fff', fontWeight: '600', fontSize: 12 },
   screen: { flex: 1 },
-  drawerWrap: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    zIndex: 10,
-    width: DRAWER_WIDTH + 24,
-  },
+  drawerOverlay: { backgroundColor: '#000' },
   drawer: {
     position: 'absolute',
     left: 0,
@@ -552,6 +748,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     paddingTop: 48,
     paddingHorizontal: 16,
+    zIndex: 12,
+    elevation: 12,
   },
   drawerContentDark: { backgroundColor: '#2a2a2a' },
   drawerContent: {},
@@ -564,7 +762,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   drawerCloseText: { color: '#fff', fontWeight: '600' },
-  drawerLeftStrip: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 24, zIndex: 11 },
+  drawerStatusText: { fontSize: 14, fontWeight: '600', marginBottom: 16, color: '#333' },
+  drawerLeftStrip: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 30, zIndex: 13 },
   drawerOpenBtn: {
     paddingVertical: 12,
     paddingHorizontal: 24,
@@ -615,6 +814,7 @@ const styles = StyleSheet.create({
   },
   pagerPageDark: { backgroundColor: '#333' },
   pagerText: { fontSize: 16, color: '#000' },
+  pagerStatus: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 24 },
   sheetWrap: {
     position: 'absolute',
     left: 0,
