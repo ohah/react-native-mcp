@@ -56,7 +56,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
 
   register(
     'query_selector',
-    'Find the first element matching a selector in the React Native Fiber tree. Returns { uid, type, testID?, text?, accessibilityLabel?, hasOnPress, hasScrollTo } or null. Use the uid with click() or scroll().',
+    'Find the first element matching a selector in the Fiber tree. Returns { uid, type, testID?, text?, ... }. Call this (or take_snapshot, list_clickables) to discover uid before click/scroll/measureView — you do not know uids in advance. Use returned uid with click(), scroll(), or evaluate_script(measureView(uid)).',
     async (args: unknown) => {
       const { selector, deviceId, platform } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {
@@ -87,7 +87,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
 
   register(
     'query_selector_all',
-    'Find all elements matching a selector in the React Native Fiber tree. Returns array of { uid, type, testID?, text?, accessibilityLabel?, hasOnPress, hasScrollTo }. WARNING: Can return large payloads (parent elements include all child text). Prefer query_selector (single) or evaluate_script with measureView(testID) for coordinates. Use this only when you need to enumerate multiple elements.',
+    'Find all elements matching a selector in the React Native Fiber tree. Returns array of { uid, type, testID?, text?, accessibilityLabel?, hasOnPress, hasScrollTo }. WARNING: Can return large payloads (parent elements include all child text). Prefer query_selector (single) or evaluate_script with measureView(uid) for coordinates (uid is testID or path). Use this only when you need to enumerate multiple elements.',
     async (args: unknown) => {
       const { selector, deviceId, platform } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {

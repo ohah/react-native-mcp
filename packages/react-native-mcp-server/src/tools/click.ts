@@ -9,7 +9,11 @@ import type { AppSession } from '../websocket-server.js';
 import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
-  uid: z.string().describe('testID of the element (from snapshot or Babel-injected id)'),
+  uid: z
+    .string()
+    .describe(
+      'testID or path of the element. You do not know uids in advance — get from take_snapshot, list_clickables, or query_selector first.'
+    ),
   includeSnapshot: z.boolean().optional().describe('Include snapshot in response. Ignored on RN.'),
   deviceId: deviceParam,
   platform: platformParam,
@@ -28,7 +32,7 @@ export function registerClick(server: McpServer, appSession: AppSession): void {
     'click',
     {
       description:
-        'Click the element with the given testID (uid). Calls triggerPress in the app. Use with Pressable/TouchableOpacity testID or Babel-injected testID.',
+        'Click the element with the given uid (testID or path). You do not know uids in advance — call take_snapshot, list_clickables, or query_selector first to discover them, then pass the uid here. If the element has no testID, use click_by_label instead.',
       inputSchema: schema,
     },
     async (args: unknown) => {

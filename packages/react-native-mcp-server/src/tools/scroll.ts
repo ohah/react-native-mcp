@@ -11,7 +11,9 @@ import { deviceParam, platformParam } from './device-param.js';
 const schema = z.object({
   uid: z
     .string()
-    .describe('testID of the ScrollView (must be registered via registerScrollRef in the app)'),
+    .describe(
+      'testID or path of the ScrollView. Get from take_snapshot or query_selector first — uids are not known in advance.'
+    ),
   y: z.number().optional().describe('Vertical offset in pixels. Default 0.'),
   x: z.number().optional().describe('Horizontal offset in pixels. Default 0.'),
   animated: z.boolean().optional().describe('Whether to animate. Default true.'),
@@ -32,7 +34,7 @@ export function registerScroll(server: McpServer, appSession: AppSession): void 
     'scroll',
     {
       description:
-        'Scroll the ScrollView with the given testID (uid). App must register via __REACT_NATIVE_MCP__.registerScrollRef(testID, ref). Uses scrollTo({ x, y, animated }).',
+        'Scroll the ScrollView with the given uid. Get uid from take_snapshot or query_selector first (uids are not known in advance). Uses scrollTo({ x, y, animated }).',
       inputSchema: schema,
     },
     async (args: unknown) => {

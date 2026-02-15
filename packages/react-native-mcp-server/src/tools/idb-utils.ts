@@ -71,7 +71,7 @@ export async function resolveUdid(udid?: string): Promise<string> {
   if (booted.length > 1) {
     const list = booted.map((t) => `  ${t.name} (${t.udid})`).join('\n');
     throw new Error(
-      `Multiple booted simulators found. Specify udid parameter.\n${list}\nUse idb_list_targets to see all devices.`
+      `Multiple booted simulators found. Specify udid parameter.\n${list}\nUse list_devices(platform="ios") to see all devices.`
     );
   }
   return booted[0]!.udid;

@@ -9,7 +9,11 @@ import type { AppSession } from '../websocket-server.js';
 import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
-  uid: z.string().describe('testID of the element to long-press'),
+  uid: z
+    .string()
+    .describe(
+      'testID or path of the element. Get from take_snapshot, list_clickables, or query_selector first — uids are not known in advance.'
+    ),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -27,7 +31,7 @@ export function registerLongPress(server: McpServer, appSession: AppSession): vo
     'long_press',
     {
       description:
-        'Long-press the element with the given testID (uid). Calls onLongPress in the app. Use with Pressable/TouchableOpacity that has onLongPress handler.',
+        'Long-press the element with the given uid. Get uid from take_snapshot, list_clickables, or query_selector first (uids are not known in advance). Calls onLongPress. Or use long_press_by_label if no testID.',
       inputSchema: schema,
     },
     async (args: unknown) => {

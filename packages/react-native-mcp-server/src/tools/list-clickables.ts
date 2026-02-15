@@ -28,7 +28,7 @@ export function registerListClickables(server: McpServer, appSession: AppSession
     'list_clickables',
     {
       description:
-        'List clickable elements (uid + label). Search by label text then call click(uid). Labels collected from Fiber tree (runtime text when DevTools hook present).',
+        'List clickable elements (uid + label). Call this or take_snapshot first to discover uids — Babel injects testIDs but you do not know them in advance. Then use click(uid) or click_by_label. Labels from Fiber tree (DevTools hook required for full text).',
       inputSchema: schema,
     },
     async (args: unknown) => {

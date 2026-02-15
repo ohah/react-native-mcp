@@ -9,7 +9,11 @@ import type { AppSession } from '../websocket-server.js';
 import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
-  uid: z.string().describe('testID of the TextInput element'),
+  uid: z
+    .string()
+    .describe(
+      'testID or path of the TextInput. Get from take_snapshot or query_selector first — uids are not known in advance.'
+    ),
   text: z.string().describe('Text to type into the TextInput'),
   deviceId: deviceParam,
   platform: platformParam,
@@ -28,7 +32,7 @@ export function registerTypeText(server: McpServer, appSession: AppSession): voi
     'type_text',
     {
       description:
-        'Type text into a TextInput element identified by testID (uid). Calls onChangeText and syncs native value via setNativeProps.',
+        'Type text into a TextInput identified by uid. Get uid from take_snapshot or query_selector first (uids are not known in advance). Calls onChangeText and setNativeProps.',
       inputSchema: schema,
     },
     async (args: unknown) => {
