@@ -25,6 +25,8 @@ mock.module('react-native', () => ({
 // __DEV__ false → WebSocket 연결 스킵
 (globalThis as Record<string, unknown>).__DEV__ = false;
 
+// XMLHttpRequest mock은 bunfig.toml preload (setup-globals.ts)에서 설정됨
+
 // MCP 객체 참조
 let MCP: Record<string, (...args: unknown[]) => unknown>;
 
@@ -105,6 +107,9 @@ describe('runtime.js MCP 객체', () => {
       // Console
       'getConsoleLogs',
       'clearConsoleLogs',
+      // Network
+      'getNetworkRequests',
+      'clearNetworkRequests',
       // 기타
       'enable',
     ];
@@ -746,5 +751,312 @@ describe('getConsoleLogs / clearConsoleLogs', () => {
     // 첫 10개가 제거되었으므로 msg-10이 첫 번째
     expect(all[0].message).toBe('msg-10');
     expect(all[499].message).toBe('msg-509');
+  });
+});
+
+// ─── Network Requests (XHR) ──────────────────────────────────────
+
+/** XHR mock 인스턴스 타입 (setup-globals.ts에서 등록한 MockXMLHttpRequest) */
+interface TestXHR {
+  status: number;
+  statusText: string;
+  responseText: string;
+  open(method: string, url: string): void;
+  send(body?: unknown): void;
+  setRequestHeader(name: string, value: string): void;
+  addEventListener(event: string, cb: () => void): void;
+  getAllResponseHeaders(): string;
+  _fireEvent(event: string): void;
+}
+
+describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
+  /** 패치된 XHR 인스턴스를 생성하고 테스트에 사용 */
+  function createXHR(opts?: {
+    status?: number;
+    statusText?: string;
+    responseText?: string;
+  }): TestXHR {
+    const XHRClass = (globalThis as Record<string, unknown>).XMLHttpRequest as new () => TestXHR;
+    const xhr = new XHRClass();
+    xhr.status = opts?.status ?? 200;
+    xhr.statusText = opts?.statusText ?? 'OK';
+    xhr.responseText = opts?.responseText ?? '{"ok":true}';
+    return xhr;
+  }
+
+  beforeEach(() => {
+    MCP.clearNetworkRequests();
+  });
+
+  it('초기 상태에서 빈 배열 반환', () => {
+    const requests = MCP.getNetworkRequests() as unknown[];
+    expect(requests).toEqual([]);
+  });
+
+  it('XHR open → send → load 시 버퍼에 추가', () => {
+    const xhr = createXHR();
+    xhr.open('GET', 'https://api.example.com/users');
+    xhr.send(null);
+    xhr._fireEvent('load');
+
+    const requests = MCP.getNetworkRequests() as Array<{
+      id: number;
+      method: string;
+      url: string;
+      status: number;
+      state: string;
+      duration: number;
+    }>;
+    expect(requests).toHaveLength(1);
+    expect(requests[0].method).toBe('GET');
+    expect(requests[0].url).toBe('https://api.example.com/users');
+    expect(requests[0].status).toBe(200);
+    expect(requests[0].state).toBe('done');
+    expect(typeof requests[0].duration).toBe('number');
+    expect(typeof requests[0].id).toBe('number');
+  });
+
+  it('XHR error 이벤트 시 error 마킹', () => {
+    const xhr = createXHR();
+    xhr.open('POST', 'https://api.example.com/fail');
+    xhr.send('{"data":1}');
+    xhr._fireEvent('error');
+
+    const requests = MCP.getNetworkRequests() as Array<{
+      error: string;
+      state: string;
+      method: string;
+    }>;
+    expect(requests).toHaveLength(1);
+    expect(requests[0].error).toBe('Network error');
+    expect(requests[0].state).toBe('error');
+    expect(requests[0].method).toBe('POST');
+  });
+
+  it('XHR timeout 이벤트 시 timeout 마킹', () => {
+    const xhr = createXHR();
+    xhr.open('GET', 'https://api.example.com/slow');
+    xhr.send(null);
+    xhr._fireEvent('timeout');
+
+    const requests = MCP.getNetworkRequests() as Array<{ error: string; state: string }>;
+    expect(requests).toHaveLength(1);
+    expect(requests[0].error).toBe('Timeout');
+    expect(requests[0].state).toBe('error');
+  });
+
+  it('setRequestHeader로 요청 헤더 수집', () => {
+    const xhr = createXHR();
+    xhr.open('POST', 'https://api.example.com/data');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Authorization', 'Bearer token123');
+    xhr.send('{"key":"value"}');
+    xhr._fireEvent('load');
+
+    const requests = MCP.getNetworkRequests() as Array<{
+      requestHeaders: Record<string, string>;
+      requestBody: string;
+    }>;
+    expect(requests).toHaveLength(1);
+    expect(requests[0].requestHeaders['Content-Type']).toBe('application/json');
+    expect(requests[0].requestHeaders['Authorization']).toBe('Bearer token123');
+    expect(requests[0].requestBody).toBe('{"key":"value"}');
+  });
+
+  it('url substring 필터', () => {
+    const xhr1 = createXHR();
+    xhr1.open('GET', 'https://api.example.com/users');
+    xhr1.send(null);
+    xhr1._fireEvent('load');
+
+    const xhr2 = createXHR();
+    xhr2.open('GET', 'https://api.example.com/posts');
+    xhr2.send(null);
+    xhr2._fireEvent('load');
+
+    const filtered = MCP.getNetworkRequests({ url: 'users' }) as Array<{ url: string }>;
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].url).toContain('users');
+  });
+
+  it('method 필터', () => {
+    const xhr1 = createXHR();
+    xhr1.open('GET', 'https://api.example.com/a');
+    xhr1.send(null);
+    xhr1._fireEvent('load');
+
+    const xhr2 = createXHR();
+    xhr2.open('POST', 'https://api.example.com/b');
+    xhr2.send(null);
+    xhr2._fireEvent('load');
+
+    const filtered = MCP.getNetworkRequests({ method: 'POST' }) as Array<{ method: string }>;
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].method).toBe('POST');
+  });
+
+  it('since 타임스탬프 필터', async () => {
+    const xhr1 = createXHR();
+    xhr1.open('GET', 'https://api.example.com/old');
+    xhr1.send(null);
+    xhr1._fireEvent('load');
+
+    const midpoint = Date.now();
+    await new Promise((r) => setTimeout(r, 5));
+
+    const xhr2 = createXHR();
+    xhr2.open('GET', 'https://api.example.com/new');
+    xhr2.send(null);
+    xhr2._fireEvent('load');
+
+    const filtered = MCP.getNetworkRequests({ since: midpoint }) as Array<{ url: string }>;
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].url).toContain('new');
+  });
+
+  it('clearNetworkRequests 후 빈 배열', () => {
+    const xhr = createXHR();
+    xhr.open('GET', 'https://api.example.com/test');
+    xhr.send(null);
+    xhr._fireEvent('load');
+
+    expect((MCP.getNetworkRequests() as unknown[]).length).toBeGreaterThan(0);
+    MCP.clearNetworkRequests();
+    expect(MCP.getNetworkRequests()).toEqual([]);
+  });
+
+  it('버퍼 크기 제한 (200개 초과 시 oldest 제거)', () => {
+    for (let i = 0; i < 210; i++) {
+      const xhr = createXHR();
+      xhr.open('GET', `https://api.example.com/item-${i}`);
+      xhr.send(null);
+      xhr._fireEvent('load');
+    }
+
+    const all = MCP.getNetworkRequests({ limit: 300 }) as Array<{ url: string }>;
+    expect(all).toHaveLength(200);
+    expect(all[0].url).toContain('item-10');
+    expect(all[199].url).toContain('item-209');
+  });
+
+  it('requestBody 크기 제한 (10000자 초과 시 잘림)', () => {
+    const longBody = 'x'.repeat(15000);
+    const xhr = createXHR();
+    xhr.open('POST', 'https://api.example.com/big');
+    xhr.send(longBody);
+    xhr._fireEvent('load');
+
+    const requests = MCP.getNetworkRequests() as Array<{ requestBody: string }>;
+    expect(requests).toHaveLength(1);
+    expect(requests[0].requestBody).toHaveLength(10000);
+  });
+
+  it('responseBody 크기 제한 (10000자 초과 시 잘림)', () => {
+    const longResponse = 'y'.repeat(15000);
+    const xhr = createXHR({ responseText: longResponse });
+    xhr.open('GET', 'https://api.example.com/big-response');
+    xhr.send(null);
+    xhr._fireEvent('load');
+
+    const requests = MCP.getNetworkRequests() as Array<{ responseBody: string }>;
+    expect(requests).toHaveLength(1);
+    expect(requests[0].responseBody).toHaveLength(10000);
+  });
+
+  it('status 필터', () => {
+    const xhr1 = createXHR({ status: 200 });
+    xhr1.open('GET', 'https://api.example.com/ok');
+    xhr1.send(null);
+    xhr1._fireEvent('load');
+
+    const xhr2 = createXHR({ status: 404 });
+    xhr2.open('GET', 'https://api.example.com/missing');
+    xhr2.send(null);
+    xhr2._fireEvent('load');
+
+    const filtered = MCP.getNetworkRequests({ status: 404 }) as Array<{
+      status: number;
+      url: string;
+    }>;
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].status).toBe(404);
+    expect(filtered[0].url).toContain('missing');
+  });
+
+  it('limit 옵션으로 최대 반환 수 제한', () => {
+    for (let i = 0; i < 10; i++) {
+      const xhr = createXHR();
+      xhr.open('GET', `https://api.example.com/item-${i}`);
+      xhr.send(null);
+      xhr._fireEvent('load');
+    }
+
+    const limited = MCP.getNetworkRequests({ limit: 3 }) as Array<{ url: string }>;
+    expect(limited).toHaveLength(3);
+    // 최근 3개 반환 (slice from end)
+    expect(limited[0].url).toContain('item-7');
+    expect(limited[2].url).toContain('item-9');
+  });
+});
+
+// ─── Network Requests (fetch) ────────────────────────────────────
+
+describe('getNetworkRequests / clearNetworkRequests (fetch)', () => {
+  beforeEach(() => {
+    MCP.clearNetworkRequests();
+  });
+
+  it('fetch GET 요청 캡처', async () => {
+    // globalThis.fetch가 패치되어 있는지 확인
+    const fetchFn = (globalThis as Record<string, unknown>).fetch as (
+      url: string,
+      init?: Record<string, unknown>
+    ) => Promise<unknown>;
+    if (typeof fetchFn !== 'function') return; // fetch 미지원 환경 스킵
+
+    try {
+      await fetchFn('https://api.example.com/fetch-test');
+    } catch (_e) {
+      // 실제 네트워크 에러는 무시 — 캡처 여부만 확인
+    }
+
+    // fetch 에러 시에도 entry가 추가되어야 함
+    const requests = MCP.getNetworkRequests() as Array<{
+      method: string;
+      url: string;
+      state: string;
+    }>;
+    expect(requests.length).toBeGreaterThanOrEqual(1);
+    expect(requests[0].url).toBe('https://api.example.com/fetch-test');
+    expect(requests[0].method).toBe('GET');
+  });
+
+  it('fetch POST 요청 캡처', async () => {
+    const fetchFn = (globalThis as Record<string, unknown>).fetch as (
+      url: string,
+      init?: Record<string, unknown>
+    ) => Promise<unknown>;
+    if (typeof fetchFn !== 'function') return;
+
+    try {
+      await fetchFn('https://api.example.com/fetch-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"hello":"world"}',
+      });
+    } catch (_e) {
+      // 실제 네트워크 에러는 무시
+    }
+
+    const requests = MCP.getNetworkRequests() as Array<{
+      method: string;
+      url: string;
+      requestBody: string | null;
+    }>;
+    expect(requests.length).toBeGreaterThanOrEqual(1);
+    const post = requests.find((r) => r.method === 'POST');
+    expect(post).toBeDefined();
+    expect(post!.url).toBe('https://api.example.com/fetch-post');
+    expect(post!.requestBody).toBe('{"hello":"world"}');
   });
 });

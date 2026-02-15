@@ -47,6 +47,11 @@ var _consoleLogs = [];
 var _consoleLogId = 0;
 var _CONSOLE_BUFFER_SIZE = 500;
 
+var _networkRequests = [];
+var _networkRequestId = 0;
+var _NETWORK_BUFFER_SIZE = 200;
+var _NETWORK_BODY_LIMIT = 10000;
+
 // ─── Fiber 트리 헬퍼 ────────────────────────────────────────────
 
 /** DevTools hook에서 root Fiber를 얻는다. hook.getFiberRoots 우선, fallback으로 getCurrentFiber 사용. */
@@ -852,6 +857,46 @@ var MCP = {
     _consoleLogId = 0;
   },
   /**
+   * 네트워크 요청 조회. options: { url?, method?, status?, since?, limit? }
+   * url: substring 매칭, method: 정확 매칭, status: 정확 매칭
+   */
+  getNetworkRequests: function (options) {
+    var opts = typeof options === 'object' && options !== null ? options : {};
+    var out = _networkRequests;
+    if (typeof opts.url === 'string' && opts.url) {
+      var urlFilter = opts.url;
+      out = out.filter(function (entry) {
+        return entry.url.indexOf(urlFilter) !== -1;
+      });
+    }
+    if (typeof opts.method === 'string' && opts.method) {
+      var methodFilter = opts.method.toUpperCase();
+      out = out.filter(function (entry) {
+        return entry.method === methodFilter;
+      });
+    }
+    if (typeof opts.status === 'number') {
+      var statusFilter = opts.status;
+      out = out.filter(function (entry) {
+        return entry.status === statusFilter;
+      });
+    }
+    if (typeof opts.since === 'number') {
+      var since = opts.since;
+      out = out.filter(function (entry) {
+        return entry.startTime > since;
+      });
+    }
+    var limit = typeof opts.limit === 'number' && opts.limit > 0 ? opts.limit : 50;
+    if (out.length > limit) out = out.slice(out.length - limit);
+    return out;
+  },
+  /** 네트워크 요청 버퍼 초기화 */
+  clearNetworkRequests: function () {
+    _networkRequests = [];
+    _networkRequestId = 0;
+  },
+  /**
    * querySelector(selector) → 첫 번째 매칭 fiber 정보 또는 null.
    * 셀렉터 문법: Type#testID[attr="val"]:text("..."):nth(N):has-press:has-scroll
    * 콤비네이터: ">" (직접 자식), " " (후손), "," (OR)
@@ -946,6 +991,224 @@ if (typeof global !== 'undefined') {
     if (typeof _origNativeLoggingHook === 'function') _origNativeLoggingHook(msg, level);
   };
 }
+
+// ─── 네트워크 캡처 공통 헬퍼 ─────────────────────────────────────
+function _pushNetworkEntry(entry) {
+  _networkRequestId++;
+  entry.id = _networkRequestId;
+  _networkRequests.push(entry);
+  if (_networkRequests.length > _NETWORK_BUFFER_SIZE) _networkRequests.shift();
+}
+
+function _truncateBody(body) {
+  if (body == null) return null;
+  var s = typeof body === 'string' ? body : String(body);
+  return s.length > _NETWORK_BODY_LIMIT ? s.substring(0, _NETWORK_BODY_LIMIT) : s;
+}
+
+// ─── XHR monkey-patch — 네트워크 요청 캡처 ──────────────────────
+// DEV/Release 무관하게 항상 설치. MCP.enable() 없이도 네트워크 캡처 동작.
+(function () {
+  if (typeof XMLHttpRequest === 'undefined') return;
+  var XHR = XMLHttpRequest.prototype;
+  var _origOpen = XHR.open;
+  var _origSend = XHR.send;
+  var _origSetRequestHeader = XHR.setRequestHeader;
+
+  XHR.open = function (method, url) {
+    this.__mcpNetworkEntry = {
+      id: 0,
+      method: (method || 'GET').toUpperCase(),
+      url: String(url || ''),
+      requestHeaders: {},
+      requestBody: null,
+      status: null,
+      statusText: null,
+      responseHeaders: null,
+      responseBody: null,
+      startTime: Date.now(),
+      duration: null,
+      error: null,
+      state: 'pending',
+    };
+    return _origOpen.apply(this, arguments);
+  };
+
+  XHR.setRequestHeader = function (name, value) {
+    if (this.__mcpNetworkEntry) {
+      this.__mcpNetworkEntry.requestHeaders[name] = value;
+    }
+    return _origSetRequestHeader.apply(this, arguments);
+  };
+
+  XHR.send = function (body) {
+    var entry = this.__mcpNetworkEntry;
+    if (entry) {
+      entry.requestBody = _truncateBody(body);
+      var xhr = this;
+
+      xhr.addEventListener('load', function () {
+        entry.status = xhr.status;
+        entry.statusText = xhr.statusText || null;
+        try {
+          entry.responseHeaders = xhr.getAllResponseHeaders() || null;
+        } catch (_e) {
+          entry.responseHeaders = null;
+        }
+        try {
+          entry.responseBody = _truncateBody(xhr.responseText);
+        } catch (_e) {
+          entry.responseBody = null;
+        }
+        entry.duration = Date.now() - entry.startTime;
+        entry.state = 'done';
+        _pushNetworkEntry(entry);
+      });
+
+      xhr.addEventListener('error', function () {
+        entry.duration = Date.now() - entry.startTime;
+        entry.error = 'Network error';
+        entry.state = 'error';
+        _pushNetworkEntry(entry);
+      });
+
+      xhr.addEventListener('timeout', function () {
+        entry.duration = Date.now() - entry.startTime;
+        entry.error = 'Timeout';
+        entry.state = 'error';
+        _pushNetworkEntry(entry);
+      });
+    }
+    return _origSend.apply(this, arguments);
+  };
+})();
+
+// ─── fetch monkey-patch — 네이티브 fetch 요청 캡처 ──────────────
+(function () {
+  var g =
+    typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : null;
+  if (!g || typeof g.fetch !== 'function') return;
+  var _origFetch = g.fetch;
+
+  g.fetch = function (input, init) {
+    var url = '';
+    var method = 'GET';
+    var requestHeaders = {};
+    var requestBody = null;
+
+    if (typeof input === 'string') {
+      url = input;
+    } else if (input && typeof input === 'object' && typeof input.url === 'string') {
+      url = input.url;
+      if (input.method) method = input.method.toUpperCase();
+      if (input.headers) {
+        try {
+          if (typeof input.headers.forEach === 'function') {
+            input.headers.forEach(function (v, k) {
+              requestHeaders[k] = v;
+            });
+          } else if (typeof input.headers === 'object') {
+            var hk = Object.keys(input.headers);
+            for (var i = 0; i < hk.length; i++) requestHeaders[hk[i]] = input.headers[hk[i]];
+          }
+        } catch (_e) {}
+      }
+      if (input.body != null) requestBody = input.body;
+    }
+
+    if (init && typeof init === 'object') {
+      if (init.method) method = init.method.toUpperCase();
+      if (init.headers) {
+        try {
+          if (typeof init.headers.forEach === 'function') {
+            init.headers.forEach(function (v, k) {
+              requestHeaders[k] = v;
+            });
+          } else if (typeof init.headers === 'object') {
+            var hk2 = Object.keys(init.headers);
+            for (var j = 0; j < hk2.length; j++) requestHeaders[hk2[j]] = init.headers[hk2[j]];
+          }
+        } catch (_e) {}
+      }
+      if (init.body != null) requestBody = init.body;
+    }
+
+    var bodyStr = null;
+    if (requestBody != null) {
+      bodyStr =
+        typeof requestBody === 'string'
+          ? requestBody
+          : typeof requestBody.toString === 'function'
+            ? requestBody.toString()
+            : String(requestBody);
+      if (bodyStr.length > _NETWORK_BODY_LIMIT) bodyStr = bodyStr.substring(0, _NETWORK_BODY_LIMIT);
+    }
+
+    var entry = {
+      id: 0,
+      method: method,
+      url: url,
+      requestHeaders: requestHeaders,
+      requestBody: bodyStr,
+      status: null,
+      statusText: null,
+      responseHeaders: null,
+      responseBody: null,
+      startTime: Date.now(),
+      duration: null,
+      error: null,
+      state: 'pending',
+    };
+
+    return _origFetch.apply(this, arguments).then(
+      function (response) {
+        entry.status = response.status;
+        entry.statusText = response.statusText || null;
+        try {
+          var headerObj = {};
+          if (response.headers && typeof response.headers.forEach === 'function') {
+            response.headers.forEach(function (v, k) {
+              headerObj[k] = v;
+            });
+          }
+          entry.responseHeaders = JSON.stringify(headerObj);
+        } catch (_e) {
+          entry.responseHeaders = null;
+        }
+        entry.duration = Date.now() - entry.startTime;
+        entry.state = 'done';
+
+        // Clone response to read body without consuming it
+        try {
+          var cloned = response.clone();
+          cloned
+            .text()
+            .then(function (text) {
+              entry.responseBody =
+                text && text.length > _NETWORK_BODY_LIMIT
+                  ? text.substring(0, _NETWORK_BODY_LIMIT)
+                  : text || null;
+              _pushNetworkEntry(entry);
+            })
+            .catch(function () {
+              _pushNetworkEntry(entry);
+            });
+        } catch (_e) {
+          _pushNetworkEntry(entry);
+        }
+
+        return response;
+      },
+      function (err) {
+        entry.duration = Date.now() - entry.startTime;
+        entry.error = err && err.message ? err.message : 'Network error';
+        entry.state = 'error';
+        _pushNetworkEntry(entry);
+        throw err;
+      }
+    );
+  };
+})();
 
 var _isDevMode = typeof __DEV__ !== 'undefined' && __DEV__;
 

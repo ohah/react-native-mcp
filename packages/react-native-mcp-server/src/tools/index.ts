@@ -13,6 +13,7 @@ import { registerEvaluateScript } from './eval-code.js';
 import { registerGetDebuggerStatus } from './get-debugger-status.js';
 import { registerListClickables } from './list-clickables.js';
 import { registerListConsoleMessages } from './list-console-messages.js';
+import { registerListNetworkRequests } from './list-network-requests.js';
 import { registerListPages } from './list-pages.js';
 import { registerListTextNodes } from './list-text-nodes.js';
 import { registerLongPress } from './long-press.js';
@@ -40,4 +41,5 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerAssert(server, appSession);
   registerGetDebuggerStatus(server, appSession);
   registerListConsoleMessages(server, appSession);
+  registerListNetworkRequests(server, appSession);
 }
