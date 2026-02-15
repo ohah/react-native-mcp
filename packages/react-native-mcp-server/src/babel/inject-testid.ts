@@ -252,6 +252,48 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
               t.jsxAttribute(t.jsxIdentifier('ref'), t.jsxExpressionContainer(composedRef))
             );
           }
+          // onMessage 자동 주입: webview_evaluate_script 결과 수신. 사용자 onMessage 있으면 createWebViewOnMessage로 감쌈.
+          const onMessageAttr = el.attributes.find(
+            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'onMessage'
+          ) as t.JSXAttribute | undefined;
+          const userOnMessageExpr =
+            onMessageAttr?.value && t.isJSXExpressionContainer(onMessageAttr.value)
+              ? onMessageAttr.value.expression
+              : null;
+          const hasUserOnMessage =
+            userOnMessageExpr != null && !t.isJSXEmptyExpression(userOnMessageExpr);
+          const mcpOnMessage = hasUserOnMessage
+            ? t.callExpression(
+                t.memberExpression(
+                  t.identifier('__REACT_NATIVE_MCP__'),
+                  t.identifier('createWebViewOnMessage'),
+                  false
+                ),
+                [userOnMessageExpr as t.Expression]
+              )
+            : t.arrowFunctionExpression(
+                [t.identifier('e')],
+                t.callExpression(
+                  t.memberExpression(
+                    t.identifier('__REACT_NATIVE_MCP__'),
+                    t.identifier('handleWebViewMessage'),
+                    false
+                  ),
+                  [
+                    t.memberExpression(
+                      t.memberExpression(t.identifier('e'), t.identifier('nativeEvent')),
+                      t.identifier('data')
+                    ),
+                  ]
+                )
+              );
+          if (onMessageAttr) {
+            onMessageAttr.value = t.jsxExpressionContainer(mcpOnMessage);
+          } else {
+            el.attributes.push(
+              t.jsxAttribute(t.jsxIdentifier('onMessage'), t.jsxExpressionContainer(mcpOnMessage))
+            );
+          }
         }
       }
       if (INJECT_SCROLL_REF && (tagName === 'ScrollView' || tagName === 'FlatList')) {
