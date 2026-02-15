@@ -1,6 +1,7 @@
 /**
  * MCP 도구: take_screenshot
  * DESIGN.md Phase 4 — 네이티브 모듈 없이 호스트 CLI(ADB / simctl)로 스크린샷 캡처
+ * AI vision 친화: 기본 JPEG 80% + 720p (full PNG는 타임아웃 유발)
  */
 
 import { spawn } from 'node:child_process';
@@ -10,7 +11,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-/** Chrome DevTools MCP 스펙 정렬: filePath, format, quality 옵션 지원. RN은 platform 필수 */
+/** Chrome DevTools MCP 스펙 정렬 + AI vision: 기본 jpeg/80%/720p */
 const schema = z.object({
   platform: z
     .enum(['android', 'ios'])
@@ -19,14 +20,23 @@ const schema = z.object({
   format: z
     .enum(['png', 'jpeg', 'webp'])
     .optional()
-    .default('png')
-    .describe('Image format (adb/simctl default PNG).'),
+    .default('jpeg')
+    .describe('Image format. Default jpeg for AI vision (avoids timeout).'),
   quality: z
     .number()
     .min(0)
     .max(100)
     .optional()
-    .describe('JPEG/WebP quality 0–100. Ignored for PNG.'),
+    .default(80)
+    .describe('JPEG/WebP quality 0–100. Default 80. Ignored for PNG.'),
+  maxHeight: z
+    .number()
+    .min(0)
+    .optional()
+    .default(720)
+    .describe(
+      'Max height in pixels (aspect ratio preserved). Default 720 for 720p. Set 0 to keep original size.'
+    ),
 });
 
 function runCommand(
@@ -97,8 +107,34 @@ async function captureIos(): Promise<Buffer> {
   }
 }
 
+type ProcessOptions = { format: 'png' | 'jpeg' | 'webp'; quality: number; maxHeight: number };
+
+/** Resize (720p by default) and encode to format. Reduces payload for AI vision. sharp는 동적 import (번들 시 네이티브 로드 이슈 회피). */
+async function processImage(
+  png: Buffer,
+  opts: ProcessOptions
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  const sharp = (await import('sharp')).default;
+  let pipeline = sharp(png);
+  if (opts.maxHeight > 0) {
+    pipeline = pipeline.resize({ height: opts.maxHeight, fit: 'inside' });
+  }
+  const q = opts.quality;
+  if (opts.format === 'jpeg') {
+    const buffer = await pipeline.jpeg({ quality: q }).toBuffer();
+    return { buffer, mimeType: 'image/jpeg' };
+  }
+  if (opts.format === 'webp') {
+    const buffer = await pipeline.webp({ quality: q }).toBuffer();
+    return { buffer, mimeType: 'image/webp' };
+  }
+  const buffer = await pipeline.png().toBuffer();
+  return { buffer, mimeType: 'image/png' };
+}
+
 /**
- * take_screenshot 도구 등록: Android(adb) 또는 iOS 시뮬레이터(simctl)로 화면 캡처 후 Base64 PNG 반환
+ * take_screenshot 도구 등록: Android(adb) 또는 iOS 시뮬레이터(simctl)로 화면 캡처 후
+ * 기본 JPEG 80% + 720p로 변환해 반환 (AI vision 타임아웃 방지)
  */
 export function registerTakeScreenshot(server: McpServer): void {
   (
@@ -113,40 +149,47 @@ export function registerTakeScreenshot(server: McpServer): void {
     'take_screenshot',
     {
       description:
-        'Capture current screen of connected Android device (adb) or booted iOS simulator (xcrun simctl). No in-app native module. Returns PNG as MCP image for client display.',
+        'Capture current screen of connected Android device (adb) or booted iOS simulator (xcrun simctl). No in-app native module. Default: JPEG 80% + 720p for AI vision (avoids timeout). Returns image as MCP image content.',
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const { platform, filePath, format } = schema.parse(args);
+      const { platform, filePath, format, quality, maxHeight } = schema.parse(args);
 
       try {
         const png = platform === 'android' ? await captureAndroid() : await captureIos();
         if (!isValidPng(png)) {
           throw new Error('Capture produced invalid PNG.');
         }
+        const { buffer, mimeType } = await processImage(png, {
+          format,
+          quality,
+          maxHeight,
+        });
         if (filePath) {
-          await writeFile(filePath, png);
+          await writeFile(filePath, buffer);
         }
-        const base64 = png.toString('base64');
+        const base64 = buffer.toString('base64');
 
         const textBlock = {
           type: 'text' as const,
-          text: `Screenshot captured (${platform}).${filePath ? ` Saved to ${filePath}.` : ''} Format: ${format}.`,
+          text: `Screenshot captured (${platform}).${filePath ? ` Saved to ${filePath}.` : ''} Format: ${format}, quality: ${quality}, maxHeight: ${maxHeight}.`,
         };
         const imageBlock = {
           type: 'image' as const,
           data: base64,
-          mimeType: 'image/png' as const,
+          mimeType: mimeType as 'image/png' | 'image/jpeg' | 'image/webp',
         };
 
         // Android: Cursor 등 일부 클라이언트에서 image content 처리 시 "Could not find MIME for Buffer" 발생.
-        // Android는 텍스트로만 반환(data URL). 클라이언트에서 data URL을 브라우저 등에서 열어 확인 가능.
-        const dataUrl = `data:image/png;base64,${base64}`;
+        const dataUrl = `data:${mimeType};base64,${base64}`;
         const content =
           platform === 'android'
             ? [
                 textBlock,
-                { type: 'text' as const, text: `Screenshot (PNG, base64 data URL):\n${dataUrl}` },
+                {
+                  type: 'text' as const,
+                  text: `Screenshot (${mimeType}, base64 data URL):\n${dataUrl}`,
+                },
               ]
             : [textBlock, imageBlock];
 
