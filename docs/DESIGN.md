@@ -267,7 +267,6 @@ packages/react-native-mcp-server/
 - `clear_console_messages` - 콘솔 로그 버퍼 초기화 ✅
 - `list_network_requests` - XHR/fetch monkey-patch 기반 네트워크 요청 조회 (url/method/status/since/limit 필터) ✅
 - `clear_network_requests` - 네트워크 요청 버퍼 초기화 ✅
-- `set_props` - (예정)
 
 **삭제된 Tools**:
 
@@ -448,7 +447,6 @@ function MyButton({ title, onPress }) {
   - [x] testID로 onPress 트리거 (runtime `triggerPress(testID)` + Babel에서 `registerPressHandler` 주입)
   - [x] scroll 도구 — 등록된 ScrollView/FlatList의 scrollTo 호출
   - [x] webview_evaluate_script 도구 — WebView 내 임의 JS 실행. 실행 결과 피드백: **Babel이 testID 있는 WebView에 onMessage 자동 주입** (사용자 onMessage 있으면 createWebViewOnMessage로 감쌈, 없으면 handleWebViewMessage만). 앱에 MCP 전용 코드 불필요.
-  - [ ] `set_props` - props 변경 (미구현)
 
 **산출물**: AI가 컴포넌트 선택 및 조작 (버튼 클릭 등) ✅
 
@@ -712,7 +710,7 @@ await client.callTool({ name: 'scroll', arguments: { uid: 'main-scroll', y: 300 
 
 ## 11. 다음 단계
 
-1. **Phase 3 보완**: set_props, Dead code elimination 검증
+1. **Phase 3 보완**: Dead code elimination 검증
 2. **Phase 5**: 네트워크·콘솔 모니터링 완료 (XHR/fetch monkey-patch + nativeLoggingHook)
 3. **FlatList 가상화 자동 탐색**: 전체 목록 자동 스크롤 + 수집 기능
 4. **프로그래매틱 테스트 러너**: 섹션 10 구현 (YAML 파서 + MCP Client + assertion)
@@ -861,19 +859,21 @@ Maestro/Detox처럼 경량 네이티브 모듈을 앱에 설치:
 Fiber props나 imperative handle을 통해 **JS 레벨에서 직접 호출 가능**한 제스처들.
 네이티브 터치 없이 동작하므로 가장 안정적이고 토큰 효율적.
 
-#### 추가 대상
+**이미 구현됨 (Tier 0)**: 탭(`click`), 롱프레스(`long_press`), 스크롤(`scroll`), **텍스트 입력(`type_text`)** — Tier 1 "추가 대상"은 이외 항목만 해당.
 
-| 컴포넌트                 | 제스처          | 호출 방식                                   |
-| ------------------------ | --------------- | ------------------------------------------- |
-| RefreshControl           | 당겨서 새로고침 | `onRefresh()` props 호출                    |
-| Switch                   | 토글            | `onValueChange(bool)` props 호출            |
-| Slider                   | 값 변경         | `onValueChange(number)` props 호출          |
-| TextInput                | 포커스/블러     | `ref.focus()` / `ref.blur()`                |
-| @gorhom/bottom-sheet     | 시트 이동       | `ref.snapToIndex(i)` / `ref.close()`        |
-| react-navigation Drawer  | 열기/닫기       | `navigation.openDrawer()` / `closeDrawer()` |
-| react-navigation TabView | 탭 전환         | `navigation.navigate(tabName)`              |
-| Swipeable (RNGH)         | 스와이프 메뉴   | `ref.openRight()` / `ref.close()`           |
-| Accordion/Collapsible    | 열기/닫기       | `onPress()` 또는 상태 토글                  |
+#### 추가 대상 (미구현 — `trigger_prop` 등으로 보완 예정)
+
+| 컴포넌트                 | 제스처          | 호출 방식                                                            |
+| ------------------------ | --------------- | -------------------------------------------------------------------- |
+| RefreshControl           | 당겨서 새로고침 | `onRefresh()` props 호출                                             |
+| Switch                   | 토글            | `onValueChange(bool)` props 호출                                     |
+| Slider                   | 값 변경         | `onValueChange(number)` props 호출                                   |
+| TextInput                | 포커스/블러만   | `ref.focus()` / `ref.blur()` (텍스트 입력은 `type_text`로 이미 지원) |
+| @gorhom/bottom-sheet     | 시트 이동       | `ref.snapToIndex(i)` / `ref.close()`                                 |
+| react-navigation Drawer  | 열기/닫기       | `navigation.openDrawer()` / `closeDrawer()`                          |
+| react-navigation TabView | 탭 전환         | `navigation.navigate(tabName)`                                       |
+| Swipeable (RNGH)         | 스와이프 메뉴   | `ref.openRight()` / `ref.close()`                                    |
+| Accordion/Collapsible    | 열기/닫기       | `onPress()` 또는 상태 토글                                           |
 
 #### 구현 방법
 
@@ -985,14 +985,14 @@ RN의 내부 이벤트 시스템을 활용.
 
 ### 13.5 토큰 효율성 비교
 
-| 작업                 | idb-only                         | MCP-only                                 | 하이브리드 (MCP+idb)       |
-| -------------------- | -------------------------------- | ---------------------------------------- | -------------------------- |
-| 요소 찾기            | `describe-all` ~2,000-4,000 토큰 | `query_selector` ~100 토큰               | `query_selector` ~100 토큰 |
-| 텍스트 확인          | `describe-all` ~2,000-4,000 토큰 | `assert_text` ~50 토큰                   | `assert_text` ~50 토큰     |
-| 좌표 확인            | `describe-point` ~50 토큰        | `evaluate_script(measureView)` ~150 토큰 | MCP ~150 토큰              |
-| 탭 실행              | `idb ui tap` ~30 토큰            | `click` ~80 토큰                         | 상황에 따라 선택           |
-| 스와이프 실행        | `idb ui swipe` ~30 토큰          | ❌ 불가                                  | `idb ui swipe` ~30 토큰    |
-| **드로워 열기+확인** | ~4,060 토큰                      | ❌ 불가                                  | **~180 토큰**              |
+| 작업                 | idb-only                         | MCP-only                                                                                       | 하이브리드 (MCP+idb)       |
+| -------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------- |
+| 요소 찾기            | `describe-all` ~2,000-4,000 토큰 | `query_selector` ~100 토큰                                                                     | `query_selector` ~100 토큰 |
+| 텍스트 확인          | `describe-all` ~2,000-4,000 토큰 | `assert_text` ~50 토큰                                                                         | `assert_text` ~50 토큰     |
+| 좌표 확인            | `describe-point` ~50 토큰        | `evaluate_script(measureView(uid))` ~150 토큰. uid = testID 또는 query_selector 경로("0.1.2"). | MCP ~150 토큰              |
+| 탭 실행              | `idb ui tap` ~30 토큰            | `click` ~80 토큰                                                                               | 상황에 따라 선택           |
+| 스와이프 실행        | `idb ui swipe` ~30 토큰          | ❌ 불가                                                                                        | `idb ui swipe` ~30 토큰    |
+| **드로워 열기+확인** | ~4,060 토큰                      | ❌ 불가                                                                                        | **~180 토큰**              |
 
 > **결론**: 하이브리드 방식이 idb-only 대비 **~20-50배** 토큰 효율적.
 > MCP를 "눈"(요소 탐색, 결과 검증)으로, idb/adb를 "손"(터치 주입)으로 사용.
@@ -1023,10 +1023,10 @@ RN의 내부 이벤트 시스템을 활용.
 
 ### 13.8 구현 로드맵
 
-| 단계        | 내용                                                            | 우선순위 |
-| ----------- | --------------------------------------------------------------- | -------- |
-| **Phase 1** | Tier 1 — `trigger_prop` 도구 추가 (onRefresh, onValueChange 등) | 높음     |
-| **Phase 2** | `measure_view` / `get_screen_info` MCP 도구 노출                | 높음     |
-| **Phase 3** | Tier 2 문서화 — idb/adb 명령어 가이드 + 워크플로우 예시         | 중간     |
-| **Phase 4** | Tier 2 자동화 — MCP 서버에서 idb/adb 프로세스 직접 실행 (옵션)  | 낮음     |
-| **Phase 5** | Tier 3 조사 — RN 내부 이벤트 합성 PoC                           | 낮음     |
+| 단계        | 내용                                                                                                               | 우선순위 |
+| ----------- | ------------------------------------------------------------------------------------------------------------------ | -------- |
+| **Phase 1** | Tier 1 — `trigger_prop` 도구 추가 (onRefresh, onValueChange, ref.focus 등). 탭/롱프레스/텍스트 입력은 이미 구현됨. | 높음     |
+| **Phase 2** | `measure_view` / `get_screen_info` MCP 도구 노출                                                                   | 높음     |
+| **Phase 3** | Tier 2 문서화 — idb/adb 명령어 가이드 + 워크플로우 예시                                                            | 중간     |
+| **Phase 4** | Tier 2 자동화 — MCP 서버에서 idb/adb 프로세스 직접 실행 (옵션)                                                     | 낮음     |
+| **Phase 5** | Tier 3 조사 — RN 내부 이벤트 합성 PoC                                                                              | 낮음     |

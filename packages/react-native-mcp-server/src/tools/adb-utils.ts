@@ -87,7 +87,7 @@ export async function resolveSerial(serial?: string): Promise<string> {
   if (online.length > 1) {
     const list = online.map((d) => `  ${d.serial}${d.model ? ` (${d.model})` : ''}`).join('\n');
     throw new Error(
-      `Multiple Android devices connected. Specify serial parameter.\n${list}\nUse adb_list_devices to see all devices.`
+      `Multiple Android devices connected. Specify serial parameter.\n${list}\nUse list_devices(platform="android") to see all devices.`
     );
   }
   return online[0]!.serial;

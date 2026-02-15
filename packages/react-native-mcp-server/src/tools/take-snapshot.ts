@@ -34,7 +34,7 @@ export function registerTakeSnapshot(server: McpServer, appSession: AppSession):
     'take_snapshot',
     {
       description:
-        'Capture component tree snapshot from React Native Fiber. Includes uid, type (ScrollView, FlatList, Text, View, etc.), testID, accessibilityLabel, text. Use for querySelector-like traversal. uid is testID when present, otherwise path (e.g. "0.1.2"); use click(uid) when uid is testID.',
+        'Capture component tree to discover uids before click/scroll/measureView. Returns uid, type, testID, accessibilityLabel, text. Babel-injected testIDs follow ComponentName-index-TagName (e.g. LoginForm-0-Button). uid is testID when present, else path like "0.1.2". Call this or list_clickables first — you do not know uids in advance. Then use click(uid), scroll(uid), or evaluate_script(measureView(uid)) for idb/adb.',
       inputSchema: schema,
     },
     async (args) => {
