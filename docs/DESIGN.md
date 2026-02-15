@@ -263,8 +263,10 @@ packages/react-native-mcp-server/
 - `list_text_nodes` - Fiber 트리의 모든 텍스트 노드 ✅
 - `list_pages` - 연결된 앱 페이지 목록 ✅
 - `get_debugger_status` - 앱 연결 상태 + 디바이스 목록 ✅
-- `list_console_messages` - CDP Runtime.consoleAPICalled 수집 (보류 — CDP 연결 기능 일시 비활성화)
-- `list_network_requests` - CDP Network.\* 이벤트 수집 (보류 — CDP 연결 기능 일시 비활성화)
+- `list_console_messages` - nativeLoggingHook 기반 콘솔 로그 조회 (level/since/limit 필터) ✅
+- `clear_console_messages` - 콘솔 로그 버퍼 초기화 ✅
+- `list_network_requests` - XHR/fetch monkey-patch 기반 네트워크 요청 조회 (url/method/status/since/limit 필터) ✅
+- `clear_network_requests` - 네트워크 요청 버퍼 초기화 ✅
 - `set_props` - (예정)
 
 **삭제된 Tools**:
@@ -273,6 +275,8 @@ packages/react-native-mcp-server/
 - `navigate_webview` - `webview_evaluate_script`로 대체 (`window.location.href = url`로 동일 동작)
 - `get_by_label` / `get_by_labels` - `query_selector`로 대체
 - `list_clickable_text_content` - `query_selector_all`로 대체
+- `get_console_message` - CDP 기반 단건 조회. `list_console_messages`의 필터 옵션으로 대체
+- `get_network_request` - CDP 기반 단건 조회. `list_network_requests`의 필터 옵션으로 대체
 
 ### 4.2 Babel Plugin (inject-testid.ts)
 
@@ -336,7 +340,9 @@ function MyButton({ title, onPress }) {
 6. **Scroll**: Fiber `stateNode.scrollTo()` 직접 접근. `registerScrollRef` 레지스트리 fallback 유지
 7. **querySelector**: `querySelector`/`querySelectorAll` — CSS querySelector 유사 Fiber 셀렉터 (타입, #testID, :text(), [attr], :has-press, :has-scroll, 계층 셀렉터, 콤마 OR). 동일 testID 중복 제거(dedup) 포함
 8. **WebView**: `registerWebView`, `unregisterWebView`, `evaluateInWebView` (Babel 주입 필수 — Fiber 대체 불가)
-9. **WebSocket 연결**: `__DEV__` 자동 연결, `MCP.enable()` 수동 활성화, 지수 백오프 재연결 (최대 30초)
+9. **콘솔 로그 캡처**: `nativeLoggingHook` 체이닝으로 콘솔 출력 버퍼링 (최대 500개). `getConsoleLogs(options)` / `clearConsoleLogs()`. level 맵핑: 0=log, 1=info, 2=warn, 3=error
+10. **네트워크 요청 캡처**: `XMLHttpRequest.prototype` + `fetch` monkey-patch로 네트워크 요청 버퍼링 (최대 200개, body 최대 10000자). `getNetworkRequests(options)` / `clearNetworkRequests()`. 필터: url(substring), method(정확), status(정확), since(timestamp), limit(기본 50)
+11. **WebSocket 연결**: `__DEV__` 자동 연결, `MCP.enable()` 수동 활성화, 지수 백오프 재연결 (최대 30초)
 
 > runtime.js의 레거시 함수(registerPressHandler, registerScrollRef 등)는 코드가 유지되어 있으나,
 > Babel 플래그 비활성화로 호출되지 않음. Babel 플래그 재활성화 시 즉시 동작.
@@ -466,8 +472,8 @@ function MyButton({ title, onPress }) {
 
 - [x] Modal — React Fiber 트리에 포함되므로 기존 도구(take_snapshot, list_clickables, click 등)로 별도 처리 없이 동작
 - [x] FlatList/ScrollView — scroll 도구로 수동 스크롤 후 list_clickables/list_text_nodes 조회·클릭 가능 (자동화된 가상화 탐색은 미구현)
-- [ ] 네트워크 모니터링 — CDP 직접 연결로 `Network.*` 이벤트 수집 (`list_network_requests`) (보류 — CDP 연결 기능 일시 비활성화)
-- [ ] 콘솔 모니터링 — `Runtime.consoleAPICalled` 수집 (`list_console_messages`) (보류 — CDP 연결 기능 일시 비활성화)
+- [x] 네트워크 모니터링 — XHR/fetch monkey-patch로 네트워크 요청 캡처 (`list_network_requests`, `clear_network_requests`) ✅
+- [x] 콘솔 모니터링 — `nativeLoggingHook` 체이닝으로 콘솔 로그 캡처 (`list_console_messages`, `clear_console_messages`) ✅
 - [x] 연결 상태 + 디바이스 목록 확인 (`get_debugger_status`) ✅
 - [x] Fiber 트리 기반 라벨 검색 (`click_by_label`, `list_clickables`) ✅
 - [x] 다중 디바이스 지원 — N대 동시 연결, deviceId/platform 기반 라우팅 ✅
@@ -706,7 +712,7 @@ await client.callTool({ name: 'scroll', arguments: { uid: 'main-scroll', y: 300 
 ## 11. 다음 단계
 
 1. **Phase 3 보완**: set_props, Dead code elimination 검증
-2. **Phase 5**: CDP 기반 네트워크/콘솔 모니터링 재활성화
+2. **Phase 5**: 네트워크·콘솔 모니터링 완료 (XHR/fetch monkey-patch + nativeLoggingHook)
 3. **FlatList 가상화 자동 탐색**: 전체 목록 자동 스크롤 + 수집 기능
 4. **프로그래매틱 테스트 러너**: 섹션 10 구현 (YAML 파서 + MCP Client + assertion)
 5. **네이티브 제스처 (drag/swipe/pinch)**: 섹션 12 참조 — 구현 방식 미결정, 케이스별 분석 필요
