@@ -1083,3 +1083,74 @@ describe('getNetworkRequests / clearNetworkRequests (fetch)', () => {
     expect(post!.requestBody).toBe('{"hello":"world"}');
   });
 });
+
+// ─── 제스처 한계 및 RNGH/Reanimated 호환 (스와이프·팬·애니메이션) ─────
+
+describe('제스처 한계 및 RNGH/Reanimated 호환', () => {
+  beforeEach(() => clearMockFiberRoot());
+
+  it('MCP에 triggerSwipe/triggerPan 없음 — 스와이프·팬은 JS로 트리거 불가', () => {
+    expect((MCP as Record<string, unknown>).triggerSwipe).toBeUndefined();
+    expect((MCP as Record<string, unknown>).triggerPan).toBeUndefined();
+  });
+
+  it('triggerPress는 컴포넌트 타입 무관 — onPress+testID만 있으면 동작 (RNGH TouchableOpacity 등)', () => {
+    let called = false;
+    const TouchableOpacityType = function TouchableOpacity() {};
+    const root = makeFiber('View', {}, [
+      makeFiber(TouchableOpacityType, { testID: 'gh-btn', onPress: () => (called = true) }, [
+        makeFiber(MockText, { children: 'RNGH' }),
+      ]),
+    ]);
+    setMockFiberRoot(root);
+    expect(MCP.triggerPress('gh-btn')).toBe(true);
+    expect(called).toBe(true);
+  });
+
+  it('getComponentTree는 type이 객체(Reanimated 래퍼)인 Fiber도 노드로 포함', () => {
+    const AnimatedViewType = function AnimatedView() {};
+    (AnimatedViewType as { displayName?: string }).displayName = 'Animated.View';
+    const root = makeFiber('View', {}, [
+      makeFiber(AnimatedViewType, { testID: 'reanimated-box' }, [
+        makeFiber(MockText, { children: '텍스트' }),
+      ]),
+    ]);
+    setMockFiberRoot(root);
+    const tree = MCP.getComponentTree({ maxDepth: 10 }) as {
+      uid: string;
+      type: string;
+      children?: Array<{ uid?: string; type?: string; children?: unknown[] }>;
+    };
+    expect(tree).toBeDefined();
+    function find(n: {
+      uid?: string;
+      type?: string;
+      children?: unknown[];
+    }): { uid?: string; type?: string } | null {
+      if (n.uid === 'reanimated-box') return n;
+      for (const c of n.children || []) {
+        const child = c as { uid?: string; type?: string; children?: unknown[] };
+        const found = find(child);
+        if (found) return found;
+      }
+      return null;
+    }
+    const node = find(tree);
+    expect(node).toBeDefined();
+    expect(node!.uid).toBe('reanimated-box');
+    expect(node!.type).toBe('Animated.View');
+  });
+
+  it('pressByLabel은 라벨만 맞으면 컴포넌트 타입 무관 onPress 호출 (RNGH 내부 버튼 등)', () => {
+    let called = false;
+    const GesturePressable = function GesturePressable() {};
+    const root = makeFiber('View', {}, [
+      makeFiber(GesturePressable, { onPress: () => (called = true) }, [
+        makeFiber(MockText, { children: '스와이프 아님 탭' }),
+      ]),
+    ]);
+    setMockFiberRoot(root);
+    expect(MCP.pressByLabel('탭')).toBe(true);
+    expect(called).toBe(true);
+  });
+});
