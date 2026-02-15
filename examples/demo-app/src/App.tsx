@@ -1,6 +1,6 @@
 /**
  * React Native MCP 데모 앱
- * 하단 탭: Scroll / Press / Input / FlatList / WebView
+ * 하단 탭: Scroll / Press / Input / FlatList / WebView / Network
  * @format
  */
 
@@ -11,6 +11,7 @@ import { PressScreen } from './screens/PressScreen';
 import { InputScreen } from './screens/InputScreen';
 import { FlatListScreen } from './screens/FlatListScreen';
 import { WebViewScreen } from './screens/WebViewScreen';
+import { NetworkScreen } from './screens/NetworkScreen';
 import { TabBar, type TabId } from './components/TabBar';
 
 function App(): React.JSX.Element {
@@ -26,6 +27,7 @@ function App(): React.JSX.Element {
         {activeTab === 'input' && <InputScreen isDarkMode={isDarkMode} />}
         {activeTab === 'list' && <FlatListScreen isDarkMode={isDarkMode} />}
         {activeTab === 'webview' && <WebViewScreen isDarkMode={isDarkMode} />}
+        {activeTab === 'network' && <NetworkScreen isDarkMode={isDarkMode} />}
       </View>
       <TabBar activeTab={activeTab} onTabChange={setActiveTab} isDarkMode={isDarkMode} />
     </View>
