@@ -1,5 +1,5 @@
 /**
- * WebView 탭 — MCP click_webview / webview_evaluate_script 테스트용
+ * WebView 탭 — MCP webview_evaluate_script 또는 query_selector로 WebView 영역 좌표 획득 후 tap(idb/adb) 테스트용
  * Babel이 testID 있는 WebView에 onMessage를 자동 주입(createWebViewOnMessage 래핑)하므로
  * 앱에서는 사용자 postMessage 처리만 작성하면 됨.
  */
@@ -24,7 +24,7 @@ const HTML = `
 </head>
 <body>
   <h1>WebView 탭 (MCP 테스트)</h1>
-  <p>아래 버튼은 click_webview로 클릭할 수 있습니다.</p>
+  <p>아래 버튼은 webview_evaluate_script 또는 idb/adb tap(좌표)으로 클릭할 수 있습니다.</p>
   <button id="webview-demo-btn" onclick="window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'tap' })); document.getElementById('count').textContent = (parseInt(document.getElementById('count').textContent) + 1);">
     WebView 내부 버튼
   </button>
@@ -55,7 +55,7 @@ export function WebViewScreen({ isDarkMode }: WebViewScreenProps) {
         WebView
       </Text>
       <Text style={[styles.subtitle, isDarkMode && styles.textDark]}>
-        MCP click_webview / webview_evaluate_script 테스트
+        MCP webview_evaluate_script 또는 query_selector → tap(idb/adb) 테스트
       </Text>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>

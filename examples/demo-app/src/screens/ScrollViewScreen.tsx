@@ -1,6 +1,6 @@
 /**
  * Scroll 탭 — ScrollView 3종 스크롤 테스트
- * MCP 도구: scroll, query_selector
+ * MCP: scroll 도구로 스크롤, query_selector로 버튼 찾아 measure 좌표 획득 → tap(idb/adb)로 클릭.
  */
 
 import React from 'react';
