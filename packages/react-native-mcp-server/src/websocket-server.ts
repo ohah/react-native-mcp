@@ -36,6 +36,8 @@ export interface DeviceConnection {
   ws: WebSocket;
   pending: Map<string, PendingResolver>;
   metroBaseUrl: string | null;
+  /** PixelRatio.get() from React Native runtime (dp→px scale). */
+  pixelRatio: number | null;
 }
 
 /**
@@ -113,6 +115,16 @@ export class AppSession {
       }));
   }
 
+  /** 연결된 디바이스의 pixelRatio 반환 (없으면 null) */
+  getPixelRatio(deviceId?: string, platform?: string): number | null {
+    try {
+      const conn = this.resolveDevice(deviceId, platform);
+      return conn.pixelRatio;
+    } catch {
+      return null;
+    }
+  }
+
   /** 디버깅: WebSocket 서버/클라이언트 상태 */
   getConnectionStatus(): { connected: boolean; hasServer: boolean; deviceCount: number } {
     const open = [...this.devices.values()].filter((c) => c.ws.readyState === WebSocket.OPEN);
@@ -176,6 +188,7 @@ export class AppSession {
             const deviceId = this.nextDeviceId(platform);
             const deviceName = typeof msg.deviceName === 'string' ? msg.deviceName : null;
             const metroBaseUrl = typeof msg.metroBaseUrl === 'string' ? msg.metroBaseUrl : null;
+            const pixelRatio = typeof msg.pixelRatio === 'number' ? msg.pixelRatio : null;
 
             const conn: DeviceConnection = {
               deviceId,
@@ -184,6 +197,7 @@ export class AppSession {
               ws,
               pending: new Map(),
               metroBaseUrl,
+              pixelRatio,
             };
             this.devices.set(deviceId, conn);
             this.deviceByWs.set(ws, deviceId);

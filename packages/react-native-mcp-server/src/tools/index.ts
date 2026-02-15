@@ -30,7 +30,7 @@ import { registerListDevices } from './list-devices.js';
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
   registerTakeSnapshot(server, appSession);
-  registerTakeScreenshot(server);
+  registerTakeScreenshot(server, appSession);
   registerWebviewEvaluateScript(server, appSession);
   registerTypeText(server, appSession);
   registerQuerySelector(server, appSession);
@@ -39,8 +39,8 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerListConsoleMessages(server, appSession);
   registerListNetworkRequests(server, appSession);
   // 통합 네이티브 도구 — 좌표 탭/스와이프, 텍스트 입력, 키코드, 버튼, UI 트리, 파일, 미디어
-  registerTap(server);
-  registerSwipe(server);
+  registerTap(server, appSession);
+  registerSwipe(server, appSession);
   registerInputText(server);
   registerInputKey(server);
   registerPressButton(server);

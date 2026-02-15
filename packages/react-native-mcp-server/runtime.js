@@ -504,6 +504,55 @@ function fiberToResult(fiber, TextComp, ImgComp) {
   return result;
 }
 
+// ─── Android 루트 뷰 Y 오프셋 (상태바 등 시스템 UI 보정) ─────────
+// Android에서 measureInWindow는 윈도우 기준 좌표를 반환하지만
+// adb shell input은 스크린 절대 좌표를 사용. 루트 뷰의 pageY(-36dp 등)가
+// 그 차이. iOS는 offset 0이므로 Android만 보정.
+var _screenOffsetX = 0;
+var _screenOffsetY = 0;
+var _screenOffsetResolved = false;
+
+function resolveScreenOffset() {
+  if (_screenOffsetResolved) return;
+  _screenOffsetResolved = true;
+  try {
+    var g = typeof globalThis !== 'undefined' ? globalThis : global;
+    // Android만 보정 필요 (iOS는 offset 0)
+    var Platform = require('react-native').Platform;
+    if (!Platform || Platform.OS !== 'android') return;
+
+    // 루트 Fiber의 host node를 찾아 measureInWindow
+    var root = getFiberRoot();
+    if (!root || !g.nativeFabricUIManager) return;
+    // 루트 fiber → 첫 번째 host fiber (stateNode가 있는)
+    var fiber = root;
+    var hostFiber = null;
+    (function findHost(f) {
+      if (!f || hostFiber) return;
+      if (f.stateNode && (f.tag === 5 || f.tag === 27)) {
+        hostFiber = f;
+        return;
+      }
+      findHost(f.child);
+    })(fiber);
+    if (!hostFiber) return;
+    var node = hostFiber.stateNode;
+    var shadowNode =
+      node.node ||
+      (node._internalInstanceHandle &&
+        node._internalInstanceHandle.stateNode &&
+        node._internalInstanceHandle.stateNode.node);
+    if (!shadowNode) return;
+    g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y) {
+      // 루트가 pageY=-36이면 offset = -(-36) = 36
+      _screenOffsetX = -x;
+      _screenOffsetY = -y;
+    });
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 // ─── MCP 글로벌 객체 ────────────────────────────────────────────
 
 var MCP = {
@@ -1205,8 +1254,16 @@ var MCP = {
             shadowNode = node._viewInfo.shadowNodeWrapper;
           }
           if (shadowNode) {
+            resolveScreenOffset();
             g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y, w, h) {
-              resolve({ x: x, y: y, width: w, height: h, pageX: x, pageY: y });
+              resolve({
+                x: x,
+                y: y,
+                width: w,
+                height: h,
+                pageX: x + _screenOffsetX,
+                pageY: y + _screenOffsetY,
+              });
             });
             return;
           }
@@ -1273,8 +1330,16 @@ var MCP = {
         }
         if (shadowNode) {
           var result = null;
+          resolveScreenOffset();
           g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y, w, h) {
-            result = { x: x, y: y, width: w, height: h, pageX: x, pageY: y };
+            result = {
+              x: x,
+              y: y,
+              width: w,
+              height: h,
+              pageX: x + _screenOffsetX,
+              pageY: y + _screenOffsetY,
+            };
           });
           return result; // Fabric에서는 콜백이 동기 실행
         }
@@ -1564,10 +1629,12 @@ function connect() {
     var platform = null;
     var deviceName = null;
     var origin = null;
+    var pixelRatio = null;
     try {
       var rn = require('react-native');
       platform = rn.Platform && rn.Platform.OS;
       deviceName = (rn.Platform && rn.Platform.constants && rn.Platform.constants.Model) || null;
+      if (rn.PixelRatio) pixelRatio = rn.PixelRatio.get();
     } catch (_e) {
       if (typeof console !== 'undefined' && console.warn) {
         console.warn('[MCP] Failed to read platform info:', _e && _e.message);
@@ -1599,6 +1666,7 @@ function connect() {
           deviceId: platform ? platform + '-1' : undefined,
           deviceName: deviceName,
           metroBaseUrl: origin,
+          pixelRatio: pixelRatio,
         })
       );
     } catch (_e3) {
