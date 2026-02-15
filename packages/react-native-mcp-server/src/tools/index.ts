@@ -30,6 +30,17 @@ import { registerIdbText } from './idb-text.js';
 import { registerIdbKey } from './idb-key.js';
 import { registerIdbDescribe } from './idb-describe.js';
 import { registerIdbButton } from './idb-button.js';
+import { registerIdbFilePush } from './idb-file-push.js';
+import { registerIdbAddMedia } from './idb-add-media.js';
+import { registerAdbListDevices } from './adb-list-devices.js';
+import { registerAdbTap } from './adb-tap.js';
+import { registerAdbSwipe } from './adb-swipe.js';
+import { registerAdbText } from './adb-text.js';
+import { registerAdbKey } from './adb-key.js';
+import { registerAdbButton } from './adb-button.js';
+import { registerAdbDescribe } from './adb-describe.js';
+import { registerAdbFilePush } from './adb-file-push.js';
+import { registerAdbAddMedia } from './adb-add-media.js';
 import { registerSwitchKeyboard } from './switch-keyboard.js';
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
@@ -58,6 +69,19 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerIdbKey(server);
   registerIdbDescribe(server);
   registerIdbButton(server);
-  // 키보드 전환 — idb_text 사용 전 언어 전환
+  // idb 추가 도구 — 파일 전송, 미디어 추가
+  registerIdbFilePush(server);
+  registerIdbAddMedia(server);
+  // adb (Android Debug Bridge) 도구 — 네이티브 터치 주입, 디바이스 제어
+  registerAdbListDevices(server);
+  registerAdbTap(server);
+  registerAdbSwipe(server);
+  registerAdbText(server);
+  registerAdbKey(server);
+  registerAdbButton(server);
+  registerAdbDescribe(server);
+  registerAdbFilePush(server);
+  registerAdbAddMedia(server);
+  // 키보드 전환 — idb_text / adb_text 사용 전 언어 전환
   registerSwitchKeyboard(server);
 }
