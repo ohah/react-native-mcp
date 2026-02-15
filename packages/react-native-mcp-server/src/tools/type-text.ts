@@ -12,7 +12,7 @@ const schema = z.object({
   uid: z
     .string()
     .describe(
-      'testID or path of the TextInput. Get from take_snapshot or query_selector first — uids are not known in advance.'
+      'testID or path of the TextInput. Get from query_selector first — uids are not known in advance.'
     ),
   text: z.string().describe('Text to type into the TextInput'),
   deviceId: deviceParam,
@@ -32,7 +32,7 @@ export function registerTypeText(server: McpServer, appSession: AppSession): voi
     'type_text',
     {
       description:
-        'Type text into a TextInput identified by uid. Get uid from take_snapshot or query_selector first (uids are not known in advance). Calls onChangeText and setNativeProps.',
+        'Type text into a TextInput identified by uid. Get uid from query_selector first (uids are not known in advance). Calls onChangeText and setNativeProps. Supports Unicode/Korean — use this instead of input_text for non-ASCII.',
       inputSchema: schema,
     },
     async (args: unknown) => {

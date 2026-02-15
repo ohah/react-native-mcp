@@ -7,27 +7,7 @@
  *
  * PascalCase 함수 컴포넌트에 displayName을 자동 주입해
  * release 빌드에서도 Fiber 트리에서 컴포넌트 이름을 보존한다.
- *
- * --- Fiber 직접 접근으로 대체 가능한 주입 (비활성화됨) ---
- *
- * 아래 플래그로 제어되는 기능들은 Fiber 트리의 stateNode/memoizedProps로
- * 직접 접근 가능하므로 비활성화됨. 재활성화 시 플래그를 true로 변경.
- *
- * - INJECT_PRESS_HANDLER: onPress를 registerPressHandler로 래핑.
- *   → Fiber memoizedProps.onPress()로 직접 호출 가능 (click_by_label 도구).
- *
- * - INJECT_SCROLL_REF: ScrollView/FlatList에 registerScrollRef ref 주입.
- *   → Fiber stateNode.scrollTo() / scrollToOffset()로 직접 접근 가능.
- *     단, ScrollView/FlatList가 class→function component로 전환되면
- *     stateNode가 null이 되므로 재활성화 필요.
- *
- * WebView registerWebView ref 주입은 Fiber로 대체 불가 (forwardRef, stateNode=null)
- * 하므로 항상 활성화 상태.
  */
-
-/** Fiber 직접 접근으로 대체 가능 — 재활성화 시 true로 변경 */
-const INJECT_PRESS_HANDLER = false;
-const INJECT_SCROLL_REF = false;
 
 // 번들 후 CJS/ESM interop으로 default가 달라질 수 있음
 import traverseModule from '@babel/traverse';
@@ -327,168 +307,6 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
           }
         }
       }
-      if (INJECT_SCROLL_REF && (tagName === 'ScrollView' || tagName === 'FlatList')) {
-        const scrollTidAttr =
-          testIdAttr ??
-          (el.attributes.find(
-            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'testID'
-          ) as t.JSXAttribute | undefined);
-        const scrollTestIdValue = scrollTidAttr ? getTestIdStringLiteral(scrollTidAttr) : null;
-        if (scrollTestIdValue != null) {
-          const refAttr = el.attributes.find(
-            (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'ref'
-          ) as t.JSXAttribute | undefined;
-          const mcpRegister = t.expressionStatement(
-            t.logicalExpression(
-              '&&',
-              t.optionalMemberExpression(
-                t.identifier('__REACT_NATIVE_MCP__'),
-                t.identifier('registerScrollRef'),
-                false,
-                true
-              ),
-              t.callExpression(
-                t.memberExpression(
-                  t.optionalMemberExpression(
-                    t.identifier('__REACT_NATIVE_MCP__'),
-                    t.identifier('registerScrollRef'),
-                    false,
-                    true
-                  ),
-                  t.identifier('call'),
-                  false
-                ),
-                [
-                  t.identifier('__REACT_NATIVE_MCP__'),
-                  t.stringLiteral(scrollTestIdValue),
-                  t.identifier('r'),
-                ]
-              )
-            )
-          );
-          const mcpUnregister = t.expressionStatement(
-            t.logicalExpression(
-              '&&',
-              t.optionalMemberExpression(
-                t.identifier('__REACT_NATIVE_MCP__'),
-                t.identifier('unregisterScrollRef'),
-                false,
-                true
-              ),
-              t.callExpression(
-                t.memberExpression(
-                  t.optionalMemberExpression(
-                    t.identifier('__REACT_NATIVE_MCP__'),
-                    t.identifier('unregisterScrollRef'),
-                    false,
-                    true
-                  ),
-                  t.identifier('call'),
-                  false
-                ),
-                [t.identifier('__REACT_NATIVE_MCP__'), t.stringLiteral(scrollTestIdValue)]
-              )
-            )
-          );
-          const bodyStatements: t.Statement[] = [
-            t.ifStatement(t.identifier('r'), mcpRegister, mcpUnregister),
-          ];
-          const userRefExpr =
-            refAttr?.value && t.isJSXExpressionContainer(refAttr.value)
-              ? refAttr.value.expression
-              : null;
-          const hasUserRef = userRefExpr != null && !t.isJSXEmptyExpression(userRefExpr);
-          if (hasUserRef) {
-            bodyStatements.push(
-              t.ifStatement(
-                t.binaryExpression('!=', t.cloneNode(userRefExpr as t.Expression), t.nullLiteral()),
-                t.blockStatement([
-                  t.ifStatement(
-                    t.binaryExpression(
-                      '===',
-                      t.unaryExpression('typeof', t.cloneNode(userRefExpr as t.Expression)),
-                      t.stringLiteral('function')
-                    ),
-                    t.expressionStatement(
-                      t.callExpression(t.cloneNode(userRefExpr as t.Expression), [
-                        t.identifier('r'),
-                      ])
-                    ),
-                    t.expressionStatement(
-                      t.assignmentExpression(
-                        '=',
-                        t.memberExpression(
-                          t.cloneNode(userRefExpr as t.Expression),
-                          t.identifier('current')
-                        ),
-                        t.identifier('r')
-                      )
-                    )
-                  ),
-                ])
-              )
-            );
-          }
-          const composedRef = t.arrowFunctionExpression(
-            [t.identifier('r')],
-            t.blockStatement(bodyStatements)
-          );
-          if (refAttr) {
-            refAttr.value = t.jsxExpressionContainer(composedRef);
-          } else {
-            el.attributes.push(
-              t.jsxAttribute(t.jsxIdentifier('ref'), t.jsxExpressionContainer(composedRef))
-            );
-          }
-        }
-      }
-      // testID + onPress 있으면 onPress를 등록 래퍼로 감싸서 MCP triggerPress 가능하게 함
-      // → Fiber memoizedProps.onPress()로 직접 호출 가능하므로 비활성화됨
-      if (!INJECT_PRESS_HANDLER) return;
-      const onPressAttr = el.attributes.find(
-        (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'onPress'
-      ) as t.JSXAttribute | undefined;
-      const tidAttr =
-        testIdAttr ??
-        (el.attributes.find(
-          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'testID'
-        ) as t.JSXAttribute | undefined);
-      if (!tidAttr?.value || !onPressAttr?.value) return;
-      const testIdExpr = getTestIdExpression(tidAttr);
-      if (testIdExpr == null) return;
-      const rawExpr = t.isJSXExpressionContainer(onPressAttr.value)
-        ? onPressAttr.value.expression
-        : null;
-      if (!rawExpr || t.isJSXEmptyExpression(rawExpr)) return;
-      const onPressExpr = rawExpr as t.Expression;
-      const wrapper = t.callExpression(
-        t.functionExpression(
-          null,
-          [],
-          t.blockStatement([
-            t.variableDeclaration('var', [t.variableDeclarator(t.identifier('f'), onPressExpr)]),
-            t.expressionStatement(
-              t.logicalExpression(
-                '&&',
-                t.memberExpression(
-                  t.identifier('__REACT_NATIVE_MCP__'),
-                  t.identifier('registerPressHandler')
-                ),
-                t.callExpression(
-                  t.memberExpression(
-                    t.identifier('__REACT_NATIVE_MCP__'),
-                    t.identifier('registerPressHandler')
-                  ),
-                  [t.cloneNode(testIdExpr), t.identifier('f')]
-                )
-              )
-            ),
-            t.returnStatement(t.identifier('f')),
-          ])
-        ),
-        []
-      );
-      onPressAttr.value = t.jsxExpressionContainer(wrapper);
     },
   });
 
@@ -508,17 +326,6 @@ function getTestIdStringLiteral(attr: t.JSXAttribute): string | null {
   if (t.isStringLiteral(attr.value)) return attr.value.value;
   if (t.isJSXExpressionContainer(attr.value) && t.isStringLiteral(attr.value.expression))
     return attr.value.expression.value;
-  return null;
-}
-
-/**
- * testID 속성에서 AST Expression 추출 (StringLiteral, TemplateLiteral 등 모든 표현식)
- */
-function getTestIdExpression(attr: t.JSXAttribute): t.Expression | null {
-  if (!attr.value) return null;
-  if (t.isStringLiteral(attr.value)) return attr.value;
-  if (t.isJSXExpressionContainer(attr.value) && !t.isJSXEmptyExpression(attr.value.expression))
-    return attr.value.expression as t.Expression;
   return null;
 }
 

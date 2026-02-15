@@ -34,7 +34,7 @@ export function registerTakeSnapshot(server: McpServer, appSession: AppSession):
     'take_snapshot',
     {
       description:
-        'Capture component tree to discover uids before click/scroll/measureView. Returns uid, type, testID, accessibilityLabel, text. Babel-injected testIDs follow ComponentName-index-TagName (e.g. LoginForm-0-Button). uid is testID when present, else path like "0.1.2". Call this or list_clickables first — you do not know uids in advance. Then use click(uid), scroll(uid), or evaluate_script(measureView(uid)) for idb/adb.',
+        'Capture component tree to discover uids. Returns uid, type, testID, accessibilityLabel, text. Auto-generated testIDs follow ComponentName-index-TagName (e.g. LoginForm-0-Button). uid is testID when present, else path like "0.1.2". Workflow: take_snapshot or query_selector → evaluate_script(measureView(uid)) → tap/swipe.',
       inputSchema: schema,
     },
     async (args) => {

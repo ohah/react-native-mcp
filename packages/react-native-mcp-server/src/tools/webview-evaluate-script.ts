@@ -14,7 +14,7 @@ const schema = z.object({
   script: z
     .string()
     .describe(
-      'JavaScript expression to execute in the WebView. To get the value back, the expression must evaluate to a value (e.g. "document.title" or "document.querySelector(\'h1\').innerText"). App must forward onMessage to handleWebViewMessage for result feedback.'
+      'JavaScript to execute in the WebView. Any valid JS: DOM query, click, navigation, etc. (e.g. "document.querySelector(\'h1\').innerText", "document.getElementById(\'btn\').click()"). Must evaluate to a value to get result back.'
     ),
   deviceId: deviceParam,
   platform: platformParam,
@@ -33,8 +33,7 @@ export function registerWebviewEvaluateScript(server: McpServer, appSession: App
     'webview_evaluate_script',
     {
       description:
-        'Run JavaScript in the in-app WebView context. App must register the WebView via __REACT_NATIVE_MCP__.registerWebView(ref, id) (react-native-webview). ' +
-        'Execution result: forward onMessage with __REACT_NATIVE_MCP__.createWebViewOnMessage(yourHandler) so MCP gets script result and your own postMessage logic still runs; otherwise only OK/error is returned.',
+        'Run JavaScript in the in-app WebView context. App must register the WebView via __REACT_NATIVE_MCP__.registerWebView(ref, id) (react-native-webview). To get return values, forward onMessage with createWebViewOnMessage(yourHandler); otherwise only OK/error is returned.',
       inputSchema: schema,
     },
     async (args: unknown) => {

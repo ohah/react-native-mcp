@@ -24,9 +24,7 @@ const schema = z.object({
   filePaths: z
     .array(z.string())
     .min(1)
-    .describe(
-      'Absolute paths to media files (images, videos) to add to the device gallery/photo library.'
-    ),
+    .describe('Absolute paths to media files (images, videos) to add to device gallery.'),
   deviceId: z
     .string()
     .optional()

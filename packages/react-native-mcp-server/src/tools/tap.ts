@@ -20,8 +20,12 @@ import {
 
 const schema = z.object({
   platform: z.enum(['ios', 'android']).describe('ios: idb (points). android: adb (pixels).'),
-  x: z.number().describe('X coordinate. iOS: points. Android: pixels (dp × density/160).'),
-  y: z.number().describe('Y coordinate. iOS: points. Android: pixels (dp × density/160).'),
+  x: z.number().describe('X coordinate. iOS: points. Android: pixels.'),
+  y: z.number().describe('Y coordinate. iOS: points. Android: pixels.'),
+  duration: z
+    .number()
+    .optional()
+    .describe('Hold duration in milliseconds for long press. Omit for normal tap.'),
   deviceId: z
     .string()
     .optional()
@@ -43,31 +47,55 @@ export function registerTap(server: McpServer): void {
     'tap',
     {
       description:
-        'Tap at (x, y) coordinates on iOS simulator or Android device. iOS: coordinates in points (idb). Android: coordinates in pixels (adb). Use evaluate_script with measureView(testID) to get element coordinates first. If testID is unknown, use query_selector to find it. After tapping, verify with assert_text instead of take_screenshot to save tokens.',
+        'Tap at (x, y) coordinates on iOS simulator or Android device. Supports long press via duration parameter. iOS: coordinates in points (idb). Android: coordinates in pixels (adb). Workflow: query_selector → evaluate_script(measureView(uid)) → tap. Verify with assert_text.',
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const { platform, x, y, deviceId } = schema.parse(args);
+      const { platform, x, y, duration, deviceId } = schema.parse(args);
+      const isLongPress = duration != null && duration > 0;
+      const action = isLongPress ? 'Long-pressed' : 'Tapped';
 
       try {
         if (platform === 'ios') {
           if (!(await checkIdbAvailable())) return idbNotInstalledError();
           const udid = await resolveUdid(deviceId);
-          await runIdbCommand(['ui', 'tap', String(x), String(y)], udid);
+          const cmd = ['ui', 'tap', String(x), String(y)];
+          if (isLongPress) cmd.push('--duration', String(duration / 1000));
+          await runIdbCommand(cmd, udid);
           return {
             content: [
-              { type: 'text' as const, text: `Tapped at (${x}, ${y}) on iOS simulator ${udid}.` },
+              {
+                type: 'text' as const,
+                text: `${action} at (${x}, ${y})${isLongPress ? ` for ${duration}ms` : ''} on iOS simulator ${udid}.`,
+              },
             ],
           };
         } else {
           if (!(await checkAdbAvailable())) return adbNotInstalledError();
           const serial = await resolveSerial(deviceId);
-          await runAdbCommand(['shell', 'input', 'tap', String(x), String(y)], serial);
+          if (isLongPress) {
+            // Long press = swipe from same point to same point with duration
+            await runAdbCommand(
+              [
+                'shell',
+                'input',
+                'swipe',
+                String(x),
+                String(y),
+                String(x),
+                String(y),
+                String(duration),
+              ],
+              serial
+            );
+          } else {
+            await runAdbCommand(['shell', 'input', 'tap', String(x), String(y)], serial);
+          }
           return {
             content: [
               {
                 type: 'text' as const,
-                text: `Tapped at (${x}, ${y}) on Android device ${serial}.`,
+                text: `${action} at (${x}, ${y})${isLongPress ? ` for ${duration}ms` : ''} on Android device ${serial}.`,
               },
             ],
           };

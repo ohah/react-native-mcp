@@ -21,7 +21,8 @@ const selectorDescription = `Selector syntax for React Native Fiber tree:
 - Hierarchy: View > ScrollView (direct child), View ScrollView (descendant)
 - Index: :nth(0) for nth match (0-based)
 - Capabilities: :has-press (has onPress), :has-scroll (has scrollTo)
-- Union: ScrollView, FlatList (comma = OR)`;
+- Union: ScrollView, FlatList (comma = OR)
+See docs/query-selector.md for full syntax reference.`;
 
 const schema = z.object({
   selector: z.string().describe(selectorDescription),
@@ -30,11 +31,11 @@ const schema = z.object({
 });
 
 export function buildQuerySelectorEvalCode(selector: string): string {
-  return `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.querySelector ? __REACT_NATIVE_MCP__.querySelector(${JSON.stringify(selector)}) : null; })();`;
+  return `(function(){ var M = typeof __REACT_NATIVE_MCP__ !== 'undefined' ? __REACT_NATIVE_MCP__ : null; return M && M.querySelectorWithMeasure ? M.querySelectorWithMeasure(${JSON.stringify(selector)}) : null; })();`;
 }
 
 export function buildQuerySelectorAllEvalCode(selector: string): string {
-  return `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.querySelectorAll ? __REACT_NATIVE_MCP__.querySelectorAll(${JSON.stringify(selector)}) : []; })();`;
+  return `(function(){ var M = typeof __REACT_NATIVE_MCP__ !== 'undefined' ? __REACT_NATIVE_MCP__ : null; return M && M.querySelectorAllWithMeasure ? M.querySelectorAllWithMeasure(${JSON.stringify(selector)}) : []; })();`;
 }
 
 export function registerQuerySelector(server: McpServer, appSession: AppSession): void {
@@ -56,7 +57,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
 
   register(
     'query_selector',
-    'Find the first element matching a selector in the Fiber tree. Returns { uid, type, testID?, text?, ... }. Call this (or take_snapshot, list_clickables) to discover uid before click/scroll/measureView — you do not know uids in advance. Use returned uid with click(), scroll(), or evaluate_script(measureView(uid)).',
+    'Find the first element matching a selector in the Fiber tree. Returns { uid, type, testID?, text?, ... }. Includes measure coordinates ({ x, y, width, height, pageX, pageY }) — no separate measureView call needed. Workflow: query_selector → tap(pageX + width/2, pageY + height/2). You do not know uids in advance — call this first.',
     async (args: unknown) => {
       const { selector, deviceId, platform } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {
@@ -87,7 +88,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
 
   register(
     'query_selector_all',
-    'Find all elements matching a selector in the React Native Fiber tree. Returns array of { uid, type, testID?, text?, accessibilityLabel?, hasOnPress, hasScrollTo }. WARNING: Can return large payloads (parent elements include all child text). Prefer query_selector (single) or evaluate_script with measureView(uid) for coordinates (uid is testID or path). Use this only when you need to enumerate multiple elements.',
+    'Find all elements matching a selector in the Fiber tree. Returns array of { uid, type, testID?, text?, accessibilityLabel?, hasOnPress, hasOnLongPress, hasScrollTo, measure }. Each element includes measure coordinates. WARNING: Can return large payloads. Prefer query_selector for single element. Use this only when you need to enumerate multiple elements.',
     async (args: unknown) => {
       const { selector, deviceId, platform } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {

@@ -19,7 +19,7 @@ const schema = z.object({
     .string()
     .optional()
     .describe(
-      'Required for Android switch. The IME ID to activate (e.g. "com.google.android.inputmethod.latin/.LatinIME"). Use action=list to see available IDs.'
+      'Android switch only. IME ID to activate (e.g. "com.google.android.inputmethod.latin/.LatinIME"). Use action=list to see IDs.'
     ),
 });
 

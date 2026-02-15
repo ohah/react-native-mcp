@@ -11,9 +11,7 @@ import { checkAdbAvailable, listAdbDevices, adbNotInstalledError } from './adb-u
 const schema = z.object({
   platform: z
     .enum(['ios', 'android'])
-    .describe(
-      'ios: list iOS simulators/devices via idb. android: list Android devices/emulators via adb.'
-    ),
+    .describe('ios: list iOS simulators via idb. android: list Android devices/emulators via adb.'),
 });
 
 export function registerListDevices(server: McpServer): void {
