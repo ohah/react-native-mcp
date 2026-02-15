@@ -36,7 +36,7 @@ export function registerIdbTap(server: McpServer): void {
     'idb_tap',
     {
       description:
-        'Tap at (x, y) coordinates on iOS simulator via idb. Coordinates are in points (not pixels). Use evaluate_script with measureView(testID) to get element coordinates first. After tapping, verify with assert_text instead of take_screenshot to save tokens.',
+        'Tap at (x, y) coordinates on iOS simulator via idb. Coordinates are in points (not pixels). Use evaluate_script with measureView(testID) to get element coordinates first. If testID is unknown, use query_selector to find the element first. After tapping, verify with assert_text instead of take_screenshot to save tokens.',
       inputSchema: schema,
     },
     async (args: unknown) => {

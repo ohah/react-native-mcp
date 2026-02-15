@@ -48,7 +48,7 @@ export function registerIdbDescribe(server: McpServer): void {
     'idb_describe',
     {
       description:
-        'Query iOS simulator accessibility tree via idb. "all" mode returns full tree (WebView contents hidden). "point" mode returns element at coordinates (can see inside WebView). WARNING: "all" mode returns large payload (high token cost). For React Native elements, prefer evaluate_script with measureView(testID) for coordinates. Use idb_describe only for native-only elements (system dialogs, keyboard) or WebView internals.',
+        'Query iOS simulator accessibility tree via idb. "all" mode returns full tree (WebView contents hidden). "point" mode returns element at coordinates (can see inside WebView). WARNING: "all" mode returns large payload (high token cost). For React Native elements, prefer evaluate_script with measureView(testID). Use idb_describe only for native-only elements (system dialogs, keyboard) or WebView internals.',
       inputSchema: schema,
     },
     async (args: unknown) => {
