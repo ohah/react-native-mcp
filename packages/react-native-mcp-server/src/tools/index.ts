@@ -8,7 +8,7 @@ import type { AppSession } from '../websocket-server.js';
 import { registerAssert } from './assert.js';
 import { registerClick } from './click.js';
 import { registerClickByLabel } from './click-by-label.js';
-import { registerClickWebView } from './click-webview.js';
+import { registerWebviewEvaluateScript } from './webview-evaluate-script.js';
 import { registerEvaluateScript } from './eval-code.js';
 import { registerGetDebuggerStatus } from './get-debugger-status.js';
 import { registerListClickables } from './list-clickables.js';
@@ -30,7 +30,7 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerScroll(server, appSession);
   registerClick(server, appSession);
   registerClickByLabel(server, appSession);
-  registerClickWebView(server, appSession);
+  registerWebviewEvaluateScript(server, appSession);
   registerLongPress(server, appSession);
   registerLongPressByLabel(server, appSession);
   registerTypeText(server, appSession);

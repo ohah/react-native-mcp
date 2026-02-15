@@ -20,7 +20,7 @@ const schema = z.object({
   platform: platformParam,
 });
 
-export function registerClickWebView(server: McpServer, appSession: AppSession): void {
+export function registerWebviewEvaluateScript(server: McpServer, appSession: AppSession): void {
   (
     server as {
       registerTool(
