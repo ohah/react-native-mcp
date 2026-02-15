@@ -195,6 +195,44 @@ function MyBtn({ tid, onTap }) {
     expect(code).toContain('onPress=');
   });
 
+  it('key prop이 있으면 testID에 key가 포함된 동적 testID가 생성된다', async () => {
+    const src = `
+function Numpad({ onPress }) {
+  return [1,2,3].map((num) => (
+    <Pressable key={num} onPress={() => onPress(num)}>
+      <Text>{num}</Text>
+    </Pressable>
+  ));
+}
+`;
+    const { code } = await injectTestIds(src);
+    // key가 있으면 template literal: `num-0-Pressable-${num}`
+    expect(code).toContain('`num-0-Pressable-${num}`');
+    // 자식 Text에는 key가 없으므로 정적 testID
+    expect(code).toContain('testID="num-1-Text"');
+  });
+
+  it('key prop이 문자열이면 동적 testID에 문자열 key가 포함된다', async () => {
+    const src = `
+function List() {
+  return <View key="header"><Text>hi</Text></View>;
+}
+`;
+    const { code } = await injectTestIds(src);
+    expect(code).toContain('`List-0-View-${"header"}`');
+  });
+
+  it('key prop이 없으면 기존 정적 testID가 유지된다', async () => {
+    const src = `
+function Card() {
+  return <View><Text>hi</Text></View>;
+}
+`;
+    const { code } = await injectTestIds(src);
+    expect(code).toContain('testID="Card-0-View"');
+    expect(code).toContain('testID="Card-1-Text"');
+  });
+
   it('WebView에 testID만 있으면 ref가 주입된다 (합성 아님)', async () => {
     const src = `
 function Screen() {
