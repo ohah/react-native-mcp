@@ -24,7 +24,7 @@
 
 ### 2.2 도구 (eval 사용처)
 
-- **eval-code, click, click-by-label, take-snapshot, list-clickables, list-text-nodes, get-by-label, click-webview** 등에서:
+- **eval-code, click, click-by-label, take-snapshot, list-clickables, list-text-nodes, get-by-label, webview_evaluate_script** 등에서:
   - `appSession.isConnected()` → `cdpClient.isConnected()` 또는 `getDebuggerStatus().connected` 사용.
   - `appSession.sendRequest({ method: 'eval', params: { code } })` → `evaluateInApp(code)` 호출로 교체.
     반환 형태를 기존 `{ result?, error? }`에 맞게 변환하면 나머지 도구 로직은 그대로 둬도 됨.

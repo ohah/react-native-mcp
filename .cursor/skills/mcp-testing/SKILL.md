@@ -232,16 +232,16 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 14. click_webview
+## 14. webview_evaluate_script
 
-**목적**: 앱 내 WebView에서 CSS selector로 요소 클릭. WebView가 `__REACT_NATIVE_MCP__.registerWebView(ref, id)`로 등록되어 있어야 함.
+**목적**: 앱 내 WebView에서 임의 JS 실행 및 결과 수신. WebView가 `__REACT_NATIVE_MCP__.registerWebView(ref, id)`로 등록되어 있어야 함. Babel이 testID 있는 WebView에 ref·onMessage 자동 주입.
 
 **테스트 절차**
 
-1. 데모 앱에는 기본 WebView가 없으므로, WebView를 띄우는 화면이 있을 때만 테스트.
-2. 앱 코드에서 `registerWebView(ref, id)` 호출 후, `click_webview`에 `webViewId`, `selector` 전달.
+1. WebView 탭으로 이동 후, `webview_evaluate_script`에 `webViewId`(예: demo-app-webview), `script`(예: `document.querySelector('h1').innerText`) 전달.
+2. 결과가 도구 응답으로 반환되는지 확인. DOM 클릭은 `document.querySelector(selector).click()` 등으로 실행 가능.
 
-**성공 기준**: 등록된 WebView 내부의 selector 요소가 클릭된다.
+**성공 기준**: 등록된 WebView 내부에서 스크립트가 실행되고, 반환값이 MCP 응답으로 온다.
 
 ---
 
@@ -263,6 +263,6 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 | get_debugger_status         | connected: true                                                                  |
 | list_pages                  | 단일 페이지(React Native App) 반환                                               |
 | get_by_label                | 훅·라벨 목록·match                                                               |
-| click_webview               | WebView 탭에서 등록 WebView 내 selector 클릭                                     |
+| webview_evaluate_script     | WebView 탭에서 등록 WebView 내 JS 실행·결과 반환                                 |
 
 데모 앱 구조: 하단 5탭(Scroll / Interact / WebView / Network / Gesture). Scroll은 세그먼트 ScrollView·FlatList, Interact는 Press·Input. `examples/demo-app/src/` 참고.
