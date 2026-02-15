@@ -2,6 +2,8 @@
 
 React Native Fiber 트리에서 요소를 검색하는 셀렉터 문법. CSS `querySelector`와 유사하지만 DOM이 아닌 **React Fiber 트리** 전용.
 
+**클릭/탭**: RN 요소를 눌릴 때는 반드시 `query_selector`(또는 take_snapshot)로 요소를 찾고, 반환된 `measure`로 좌표를 얻은 뒤 **tap(platform, x, y)**으로 idb(iOS)/adb(Android) 네이티브 터치를 주입한다. JS 쪽 triggerPress가 아닌 실제 터치 파이프라인.
+
 ## 기본 문법
 
 ### 타입 셀렉터

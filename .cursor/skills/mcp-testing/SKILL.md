@@ -1,11 +1,13 @@
 ---
 name: mcp-testing
-description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검증하는 방법. take_snapshot, click, click_by_label, scroll, list_clickable_text_content, 콘솔/네트워크 수집 확인 시 참고.
+description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검증하는 방법. 클릭/탭은 무조건 query_selector로 좌표 획득 → tap(platform, x, y)으로 idb/adb 네이티브 클릭. take_snapshot, scroll, assert_text, 콘솔/네트워크 수집 확인 시 참고.
 ---
 
 # React Native MCP 기능 테스트 가이드
 
 데모 앱(`examples/demo-app`)이 실행 중이고 MCP 서버에 연결된 상태에서, 각 도구별로 어떻게 검증하는지 정리한다.
+
+**클릭/탭 흐름 (필수)**: `query_selector`(또는 take_snapshot)로 요소 찾기 → 반환된 `measure`(pageX, pageY, width, height)로 좌표 계산 → `tap(platform, x, y)`으로 idb(iOS)/adb(Android) 네이티브 클릭. JS 쪽 triggerPress/click이 아닌 실제 터치 주입.
 
 ## 사전 조건
 
@@ -34,53 +36,30 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 2. click
+## 2. tap (query_selector → 좌표 → idb/adb 클릭)
 
-**목적**: testID(uid)로 해당 요소의 onPress 호출.
-
-**테스트 절차**
-
-1. `take_snapshot`으로 uid 확인 (또는 `list_clickables`).
-2. `click` 호출 시 `uid`에 testID 전달. 예: `uid: "demo-app-counter-button"`.
-3. 앱에서 Count 숫자가 증가하면 성공.
-4. **testID 없는 요소**: uid가 경로(예: "0.1.5")인 경우, `click(uid)`는 대부분 실패(triggerPress는 testID만 등록). 대신 `click_by_label` 사용.
-
-**데모 앱 uid 예시**
-
-| uid                        | 동작                                                  |
-| -------------------------- | ----------------------------------------------------- |
-| `demo-app-counter-button`  | Count 증가                                            |
-| `tab-scroll`               | Scroll 탭 선택 (내부 세그먼트: ScrollView / FlatList) |
-| `scroll-list-segment-list` | Scroll 탭 내 FlatList 세그먼트 선택                   |
-| `tab-interact`             | Interact 탭 선택 (내부 세그먼트: Press / Input)       |
-| `demo-app-console-button`  | 콘솔 로그/경고 출력 → list_console_messages로 확인    |
-| `demo-app-network-button`  | httpbin 요청 → list_network_requests로 확인           |
-
-**성공 기준**: 반환에 "pressed"가 오고, 앱에서 해당 버튼이 눌린 것처럼 동작한다.
-
----
-
-## 3. click_by_label
-
-**목적**: 화면 텍스트(라벨)로 onPress 있는 요소를 찾아 클릭. testID 없어도 동작.
+**목적**: RN 요소를 클릭할 때는 반드시 query_selector로 요소를 찾고, measure로 좌표를 얻은 뒤 tap(platform, x, y)으로 idb(iOS)/adb(Android) 네이티브 터치를 주입한다.
 
 **테스트 절차**
 
-1. `list_text_nodes` 또는 스냅샷으로 화면에 보이는 텍스트 확인.
-2. `click_by_label` 호출 시 `label`에 부분 문자열 전달. 예: `label: "testID 없음"`, `label: "ScrollView"`(탭 버튼).
-3. DevTools 훅(`__REACT_DEVTOOLS_GLOBAL_HOOK__`)이 있어야 동작. Metro + **DEV** 환경에서는 보통 존재.
+1. `query_selector`로 요소 찾기. 예: `#press-counter-button`, `Pressable:text("testID 없음")`.
+2. 반환값의 `measure`(pageX, pageY, width, height)로 탭할 좌표 계산. 보통 중앙: `x = pageX + width/2`, `y = pageY + height/2`.
+3. `tap(platform: "ios" | "android", x, y)` 호출. iOS는 idb, Android는 adb로 실제 터치 주입.
+4. 앱에서 해당 버튼이 눌린 것처럼 동작하는지(예: Count 증가) `assert_text`로 확인.
 
-**데모 앱 라벨 예시**
+**데모 앱 셀렉터 예시**
 
-- `"testID 없음"` → testID 없는 버튼 (탭 수 증가)
-- `"TouchableOpacity"` → 해당 버튼
-- `"FlatList"` → Scroll 탭 내 FlatList 세그먼트
+| 셀렉터 / testID                 | 동작                                                           |
+| ------------------------------- | -------------------------------------------------------------- |
+| `#press-counter-button`         | Count 증가                                                     |
+| `Pressable:text("testID 없음")` | testID 없는 버튼 탭                                            |
+| `#scroll-view-no-ref` 등        | ScrollView → scroll 도구로 스크롤 후 버튼 query_selector → tap |
 
-**성공 기준**: 반환에 "pressed (Fiber에서 라벨로 찾아 onPress 호출됨)"가 온다. 실패 시 `get_by_label`로 훅/라벨 목록 디버깅.
+**성공 기준**: tap 호출 후 앱에서 해당 요소가 눌린 것처럼 동작하고, assert_text로 결과 검증 가능.
 
 ---
 
-## 4. list_clickables
+## 3. list_clickables
 
 **목적**: 클릭 가능한 요소 목록(uid + label). 스냅샷 전에 어떤 testID로 클릭할 수 있는지 파악용.
 
@@ -94,7 +73,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 5. scroll
+## 4. scroll
 
 **목적**: testID로 등록된 ScrollView를 scrollTo({ x, y, animated })로 스크롤. 앱에서 `__REACT_NATIVE_MCP__.registerScrollRef(testID, ref)`로 등록 필요(Babel이 ScrollView에 ref 자동 주입).
 
@@ -115,7 +94,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 6. list_clickable_text_content
+## 5. list_clickable_text_content
 
 **목적**: onPress 있는 노드별 전체 텍스트(textContent) 목록. 버튼/클릭 영역 표시 텍스트 검증용. `[{ text, testID? }]` 반환.
 
@@ -129,7 +108,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 7. list_text_nodes
+## 6. list_text_nodes
 
 **목적**: Fiber 트리에서 보이는 텍스트 전부. testID는 조상 중 가장 가까운 testID.
 
@@ -143,7 +122,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 8. take_screenshot
+## 7. take_screenshot
 
 **목적**: 연결된 Android 기기 또는 iOS 시뮬레이터 화면 캡처.
 
@@ -157,7 +136,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 9. evaluate_script
+## 8. evaluate_script
 
 **목적**: 앱 컨텍스트에서 JavaScript 실행. 디버깅·상태 조회·triggerPress 등 내부 호출에 사용.
 
@@ -171,7 +150,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 10. list_console_messages / get_console_message
+## 9. list_console_messages / get_console_message
 
 **목적**: CDP를 통해 수집된 콘솔 로그/경고/에러 목록.
 
@@ -188,7 +167,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 11. list_network_requests / get_network_request
+## 10. list_network_requests / get_network_request
 
 **목적**: CDP로 수집된 네트워크 요청 목록.
 
@@ -205,7 +184,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 12. get_debugger_status
+## 11. get_debugger_status
 
 **목적**: CDP WebSocket 연결 여부. 콘솔/네트워크 수집 가능 여부 판단.
 
@@ -218,7 +197,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 13. get_by_label / get_by_labels
+## 12. get_by_label / get_by_labels
 
 **목적**: 라벨로 클릭 가능한 노드 검색 디버깅. click_by_label이 안 될 때 원인 확인.
 
@@ -232,7 +211,7 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ---
 
-## 14. webview_evaluate_script
+## 13. webview_evaluate_script
 
 **목적**: 앱 내 WebView에서 임의 JS 실행 및 결과 수신. WebView가 `__REACT_NATIVE_MCP__.registerWebView(ref, id)`로 등록되어 있어야 함. Babel이 testID 있는 WebView에 ref·onMessage 자동 주입.
 
@@ -247,22 +226,21 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ## 체크리스트 (요약)
 
-| 도구                        | 확인 항목                                                                        |
-| --------------------------- | -------------------------------------------------------------------------------- |
-| take_snapshot               | Scroll 탭(세그먼트 ScrollView/FlatList)에서 type·uid(testID vs 경로)             |
-| click                       | testID로 버튼 눌림: Count, 탭(tab-scroll/tab-interact), 세그먼트, Drawer 열기 등 |
-| click_by_label              | "testID 없음", "FlatList" 등 라벨로 버튼/세그먼트 눌림                           |
-| list_clickables             | uid·label 목록, click(uid)와 일치                                                |
-| scroll                      | uid(testID)로 ScrollView scrollTo, Babel ref 등록 (Scroll 탭 내)                 |
-| list_clickable_text_content | onPress 노드별 textContent, [{ text, testID? }]                                  |
-| list_text_nodes             | 화면 텍스트 목록                                                                 |
-| take_screenshot             | platform 지정 시 이미지 반환                                                     |
-| evaluate_script             | **REACT_NATIVE_MCP** 존재·getRegisteredPressTestIDs 등                           |
-| list_console_messages       | Interact → Press 세그먼트에서 Console 버튼 후 로그/경고 수집                     |
-| list_network_requests       | Interact → Press 세그먼트에서 Network 버튼 후 httpbin 요청 수집                  |
-| get_debugger_status         | connected: true                                                                  |
-| list_pages                  | 단일 페이지(React Native App) 반환                                               |
-| get_by_label                | 훅·라벨 목록·match                                                               |
-| webview_evaluate_script     | WebView 탭에서 등록 WebView 내 JS 실행·결과 반환                                 |
+| 도구                        | 확인 항목                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------ |
+| take_snapshot               | Scroll 탭(세그먼트 ScrollView/FlatList)에서 type·uid(testID vs 경로)                 |
+| query_selector + tap        | 요소 찾기 → measure 좌표 → tap(platform, x, y)으로 idb/adb 네이티브 클릭 (필수 흐름) |
+| list_clickables             | uid·label 목록 (tap 시 query_selector로 해당 요소 찾아 좌표 획득 후 tap)             |
+| scroll                      | uid(testID)로 ScrollView scrollTo, Babel ref 등록 (Scroll 탭 내)                     |
+| list_clickable_text_content | onPress 노드별 textContent, [{ text, testID? }]                                      |
+| list_text_nodes             | 화면 텍스트 목록                                                                     |
+| take_screenshot             | platform 지정 시 이미지 반환                                                         |
+| evaluate_script             | **REACT_NATIVE_MCP** 존재·getRegisteredPressTestIDs 등                               |
+| list_console_messages       | Interact → Press 세그먼트에서 Console 버튼 후 로그/경고 수집                         |
+| list_network_requests       | Interact → Press 세그먼트에서 Network 버튼 후 httpbin 요청 수집                      |
+| get_debugger_status         | connected: true                                                                      |
+| list_pages                  | 단일 페이지(React Native App) 반환                                                   |
+| get_by_label                | 훅·라벨 목록·match                                                                   |
+| webview_evaluate_script     | WebView 탭에서 등록 WebView 내 JS 실행·결과 반환                                     |
 
 데모 앱 구조: 하단 5탭(Scroll / Interact / WebView / Network / Gesture). Scroll은 세그먼트 ScrollView·FlatList, Interact는 Press·Input. `examples/demo-app/src/` 참고.

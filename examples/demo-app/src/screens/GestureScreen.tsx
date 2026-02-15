@@ -2,10 +2,10 @@
  * Gesture 탭 — react-native-gesture-handler + react-native-reanimated 예제
  *
  * - MCP 호환성 비교: RN TouchableOpacity / RN Pressable / RNGH TouchableOpacity 각각 testID + 카운터.
- *   MCP click(uid) 또는 수동 탭 시 어떤 컴포넌트가 감지하는지 비교 가능 (플랫폼·아키텍처별 차이 있을 수 있음).
+ *   query_selector로 요소 찾아 measure 좌표 획득 → tap(platform, x, y)으로 idb/adb 클릭 시 어떤 컴포넌트가 감지하는지 비교 가능.
  * - Gesture.Tap() 감지 테스트: RNGH Gesture.Tap() + runOnJS 카운터. 네이티브 제스처 인식기 기반이라
- *   MCP/자동화 터치로는 카운터가 증가하지 않을 수 있음.
- * - MCP: testID 있음 → click(uid), testID 없음 → click_by_label. 하단: swipe to delete, pull to refresh 등.
+ *   MCP tap(idb/adb)로는 카운터가 증가하지 않을 수 있음.
+ * - MCP: query_selector로 요소(또는 :text) 찾기 → measure 좌표 → tap / swipe (idb/adb). 하단: swipe to delete, pull to refresh 등.
  */
 
 import React, { useMemo, useRef, useCallback } from 'react';
@@ -303,8 +303,8 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             MCP 호환성 비교 (Touchable / Pressable / GestureHandler)
           </Text>
           <Text style={[styles.hint, isDarkMode && styles.textDark]}>
-            MCP click(uid) 또는 수동 탭 시 카운터 증가 여부로 감지 가능 여부 확인. 플랫폼·아키텍처별
-            차이 있을 수 있음.
+            query_selector → 좌표 → tap(idb/adb) 또는 수동 탭 시 카운터 증가 여부로 감지 가능 여부
+            확인. 플랫폼·아키텍처별 차이 있을 수 있음.
           </Text>
           <View style={styles.compareCol}>
             <TouchableOpacity
@@ -364,7 +364,7 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             </GestureDetector>
           </View>
 
-          {/* testID 있음 — MCP click(uid) */}
+          {/* testID 있음 — query_selector → measure → tap(idb/adb) */}
           <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
             GestureHandler TouchableOpacity (testID 있음)
           </Text>
@@ -377,7 +377,7 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             <Text style={styles.ghButtonText}>RNGH TouchableOpacity: {ghTaps}</Text>
           </GHTouchableOpacity>
 
-          {/* testID 없음 — MCP click_by_label */}
+          {/* testID 없음 — query_selector :text → measure → tap(idb/adb) */}
           <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
             GestureHandler TouchableOpacity (라벨만)
           </Text>
@@ -410,7 +410,7 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             </GHTouchableOpacity>
           </Animated.View>
 
-          {/* Reanimated: testID 없음 — click_by_label "눌러보세요 (라벨만)" */}
+          {/* Reanimated: testID 없음 — query_selector :text("눌러보세요 (라벨만)") → tap(idb/adb) */}
           <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
             Reanimated 스케일 (라벨만)
           </Text>

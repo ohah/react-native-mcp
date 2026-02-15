@@ -14,7 +14,7 @@ export type FlatListScreenProps = {
   isDarkMode: boolean;
 };
 
-/** testID 있음: 스크롤 후 click(uid) 또는 click_by_label로 버튼 클릭, "탭: N" 증가 */
+/** testID 있음: 스크롤 후 query_selector로 버튼 찾아 measure 좌표 획득 → tap(idb/adb)로 클릭, "탭: N" 증가 */
 function ListItemWithButton({
   item,
   isDarkMode,
@@ -40,7 +40,7 @@ function ListItemWithButton({
   );
 }
 
-/** testID 없음: 스냅샷에서는 uid가 경로, 클릭 시 "클릭: N" 텍스트 증가 */
+/** testID 없음: query_selector로 :text("클릭:") 등 찾아 measure 좌표 획득 → tap(idb/adb)로 클릭, "클릭: N" 증가 */
 function ListItemWithButtonNoTestId({
   item,
   isDarkMode,
@@ -90,7 +90,8 @@ export function FlatListScreen({ isDarkMode }: FlatListScreenProps) {
     <View style={styles.container}>
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
-          FlatList (testID 있음) — 스크롤 후 click(uid)로 버튼 클릭, "탭: N" 증가
+          FlatList (testID 있음) — 스크롤 후 query_selector → 좌표 → tap(idb/adb)로 버튼 클릭, "탭:
+          N" 증가
         </Text>
         <FlatList
           style={styles.flatList}
@@ -102,7 +103,8 @@ export function FlatListScreen({ isDarkMode }: FlatListScreenProps) {
       </View>
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
-          FlatList (testID 없음) — click_by_label로 버튼 클릭, "클릭: N" 증가
+          FlatList (testID 없음) — query_selector로 :text 찾아 좌표 → tap(idb/adb)로 버튼 클릭,
+          "클릭: N" 증가
         </Text>
         <FlatList
           style={styles.flatList}

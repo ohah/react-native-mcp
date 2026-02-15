@@ -1,6 +1,6 @@
 /**
  * Press 탭 — 각종 버튼 타입 + long press 테스트
- * MCP 도구: click, click_by_label, long_press, long_press_by_label
+ * MCP: query_selector로 요소 찾기 → measure 좌표 획득 → tap(platform, x, y) 또는 tap(..., duration)으로 idb/adb 네이티브 클릭(롱프레스).
  */
 
 import React from 'react';
@@ -35,7 +35,7 @@ export function PressScreen({ isDarkMode }: PressScreenProps) {
     <View style={styles.container}>
       <Text style={[styles.title, isDarkMode && styles.textDark]}>Press</Text>
       <Text style={[styles.subtitle, isDarkMode && styles.textDark]}>
-        click, click_by_label, long_press, long_press_by_label
+        query_selector → 좌표 → tap / tap(duration) (idb/adb)
       </Text>
 
       <ScrollView
