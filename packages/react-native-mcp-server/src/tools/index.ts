@@ -23,6 +23,14 @@ import { registerScroll } from './scroll.js';
 import { registerTakeScreenshot } from './take-screenshot.js';
 import { registerTakeSnapshot } from './take-snapshot.js';
 import { registerTypeText } from './type-text.js';
+import { registerIdbListTargets } from './idb-list-targets.js';
+import { registerIdbTap } from './idb-tap.js';
+import { registerIdbSwipe } from './idb-swipe.js';
+import { registerIdbText } from './idb-text.js';
+import { registerIdbKey } from './idb-key.js';
+import { registerIdbDescribe } from './idb-describe.js';
+import { registerIdbButton } from './idb-button.js';
+import { registerSwitchKeyboard } from './switch-keyboard.js';
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
   registerTakeSnapshot(server, appSession);
@@ -42,4 +50,14 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerGetDebuggerStatus(server, appSession);
   registerListConsoleMessages(server, appSession);
   registerListNetworkRequests(server, appSession);
+  // idb (iOS Development Bridge) 도구 — 네이티브 터치 주입, 시뮬레이터 제어
+  registerIdbListTargets(server);
+  registerIdbTap(server);
+  registerIdbSwipe(server);
+  registerIdbText(server);
+  registerIdbKey(server);
+  registerIdbDescribe(server);
+  registerIdbButton(server);
+  // 키보드 전환 — idb_text 사용 전 언어 전환
+  registerSwitchKeyboard(server);
 }
