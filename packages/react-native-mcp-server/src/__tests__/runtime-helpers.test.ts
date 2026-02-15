@@ -25,13 +25,36 @@ mock.module('react-native', () => ({
 // __DEV__ false → WebSocket 연결 스킵
 (globalThis as Record<string, unknown>).__DEV__ = false;
 
-// XMLHttpRequest mock은 bunfig.toml preload (setup-globals.ts)에서 설정됨
+// runtime.js의 XHR 패치가 동작하도록 mock XMLHttpRequest 등록
+// happy-dom unregister 후 항상 재등록 (다른 테스트에서 캐시된 runtime.js의 패치 대상이 사라지므로)
+class MockXMLHttpRequest {
+  status = 0;
+  statusText = '';
+  responseText = '';
+  _listeners: Record<string, Array<() => void>> = {};
+  open(_method: string, _url: string) {}
+  send(_body?: unknown) {}
+  setRequestHeader(_name: string, _value: string) {}
+  addEventListener(event: string, cb: () => void) {
+    if (!this._listeners[event]) this._listeners[event] = [];
+    this._listeners[event].push(cb);
+  }
+  getAllResponseHeaders() {
+    return '';
+  }
+  _fireEvent(event: string) {
+    (this._listeners[event] || []).forEach((cb) => cb());
+  }
+}
+(globalThis as Record<string, unknown>).XMLHttpRequest = MockXMLHttpRequest;
 
 // MCP 객체 참조
 let MCP: Record<string, (...args: unknown[]) => unknown>;
 
 beforeAll(async () => {
-  // runtime.js 로드 → globalThis.__REACT_NATIVE_MCP__ 설정
+  // 모듈 캐시 초기화 후 runtime.js 재로드 → XHR IIFE가 MockXMLHttpRequest에 패치 적용
+  const runtimePath = require.resolve('../../runtime.js');
+  delete require.cache[runtimePath];
   await import('../../runtime.js');
   MCP = (globalThis as Record<string, unknown>).__REACT_NATIVE_MCP__ as typeof MCP;
 });
