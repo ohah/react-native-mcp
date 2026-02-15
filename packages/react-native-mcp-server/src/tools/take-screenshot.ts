@@ -1,17 +1,17 @@
 /**
  * MCP 도구: take_screenshot
  * DESIGN.md Phase 4 — 네이티브 모듈 없이 호스트 CLI(ADB / simctl)로 스크린샷 캡처
- * AI vision 친화: 기본 JPEG 80% + 720p (full PNG는 타임아웃 유발)
+ * AI vision 친화: 기본 JPEG 80% + 포인트 해상도 (full PNG는 타임아웃 유발)
  */
 
-import { spawn } from 'node:child_process';
 import { readFile, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { runCommand } from './run-command.js';
 
-/** Chrome DevTools MCP 스펙 정렬 + AI vision: 기본 jpeg/80%/720p */
+/** Chrome DevTools MCP 스펙 정렬 + AI vision: 기본 jpeg/80%/포인트 해상도 */
 const schema = z.object({
   platform: z
     .enum(['android', 'ios'])
@@ -33,51 +33,11 @@ const schema = z.object({
     .number()
     .min(0)
     .optional()
-    .default(720)
+    .default(0)
     .describe(
-      'Max height in pixels (aspect ratio preserved). Default 720 for 720p. Set 0 to keep original size.'
+      'Max height in pixels (aspect ratio preserved). Default 0 auto-detects point resolution from screen scale (e.g. 2x→half pixel height). Set specific value like 720 for 720p.'
     ),
 });
-
-function runCommand(
-  command: string,
-  args: string[],
-  options?: { stdin?: Buffer; timeoutMs?: number }
-): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(command, args, {
-      stdio: options?.stdin ? ['pipe', 'pipe', 'pipe'] : ['ignore', 'pipe', 'pipe'],
-    });
-    const outChunks: Buffer[] = [];
-    const errChunks: Buffer[] = [];
-    proc.stdout?.on('data', (chunk: Buffer) => outChunks.push(chunk));
-    proc.stderr?.on('data', (chunk: Buffer) => errChunks.push(chunk));
-    const timeout =
-      options?.timeoutMs != null
-        ? setTimeout(() => {
-            proc.kill('SIGKILL');
-            reject(new Error('Command timed out'));
-          }, options.timeoutMs)
-        : undefined;
-    proc.on('close', (code) => {
-      clearTimeout(timeout);
-      if (code !== 0) {
-        const stderr = Buffer.concat(errChunks).toString('utf8').slice(0, 300);
-        reject(new Error(`Command failed with code ${code}. ${stderr}`));
-        return;
-      }
-      resolve(Buffer.concat(outChunks));
-    });
-    proc.on('error', (err) => {
-      clearTimeout(timeout);
-      reject(err);
-    });
-    if (options?.stdin && proc.stdin) {
-      proc.stdin.write(options.stdin);
-      proc.stdin.end();
-    }
-  });
-}
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -109,7 +69,7 @@ async function captureIos(): Promise<Buffer> {
 
 type ProcessOptions = { format: 'png' | 'jpeg' | 'webp'; quality: number; maxHeight: number };
 
-/** Resize (720p by default) and encode to format. Reduces payload for AI vision. sharp는 동적 import (번들 시 네이티브 로드 이슈 회피). */
+/** Resize to point resolution (auto) or explicit maxHeight, then encode. sharp는 동적 import (번들 시 네이티브 로드 이슈 회피). */
 async function processImage(
   png: Buffer,
   opts: ProcessOptions
@@ -118,6 +78,17 @@ async function processImage(
   let pipeline = sharp(png);
   if (opts.maxHeight > 0) {
     pipeline = pipeline.resize({ height: opts.maxHeight, fit: 'inside' });
+  } else {
+    // Auto: detect screen scale from PNG DPI metadata and resize to point resolution.
+    // iOS simctl screenshots: 144 DPI (2x) or 216 DPI (3x). Standard is 72 DPI (1x).
+    // This makes screenshot pixel coordinates = device point coordinates (= idb coordinates).
+    const metadata = await sharp(png).metadata();
+    const density = metadata.density || 72;
+    const scale = Math.round(density / 72);
+    if (scale > 1 && metadata.height) {
+      const pointHeight = Math.round(metadata.height / scale);
+      pipeline = pipeline.resize({ height: pointHeight, fit: 'inside' });
+    }
   }
   const q = opts.quality;
   if (opts.format === 'jpeg') {
@@ -134,7 +105,7 @@ async function processImage(
 
 /**
  * take_screenshot 도구 등록: Android(adb) 또는 iOS 시뮬레이터(simctl)로 화면 캡처 후
- * 기본 JPEG 80% + 720p로 변환해 반환 (AI vision 타임아웃 방지)
+ * 기본 JPEG 80% + 포인트 해상도로 변환해 반환 (AI vision 타임아웃 방지)
  */
 export function registerTakeScreenshot(server: McpServer): void {
   (
@@ -149,7 +120,7 @@ export function registerTakeScreenshot(server: McpServer): void {
     'take_screenshot',
     {
       description:
-        'Capture current screen of connected Android device (adb) or booted iOS simulator (xcrun simctl). No in-app native module. Default: JPEG 80% + 720p for AI vision (avoids timeout). Returns image as MCP image content.',
+        'Capture current screen of connected Android device (adb) or booted iOS simulator (xcrun simctl). No in-app native module. Default: JPEG 80% + point resolution (auto-detected from screen scale so pixel coords = device point coords). NOTE: Screenshots use vision tokens (expensive). Prefer assert_text or assert_visible for verification. Use screenshots only for initial exploration or debugging failures.',
       inputSchema: schema,
     },
     async (args: unknown) => {
@@ -172,7 +143,7 @@ export function registerTakeScreenshot(server: McpServer): void {
 
         const textBlock = {
           type: 'text' as const,
-          text: `Screenshot captured (${platform}).${filePath ? ` Saved to ${filePath}.` : ''} Format: ${format}, quality: ${quality}, maxHeight: ${maxHeight}.`,
+          text: `Screenshot captured (${platform}).${filePath ? ` Saved to ${filePath}.` : ''} Format: ${format}, quality: ${quality}, maxHeight: ${maxHeight || 'auto (point resolution)'}.`,
         };
         const imageBlock = {
           type: 'image' as const,
