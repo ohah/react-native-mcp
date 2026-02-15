@@ -133,8 +133,39 @@ export async function injectTestIds(src: string, filename?: string): Promise<{ c
       const hasTestId = !!testIdAttr;
       if (!hasTestId) {
         const tagName = getTagName(el.name);
-        const value = `${scope.componentName}-${scope.jsxIndex}-${tagName}`;
-        el.attributes.push(t.jsxAttribute(t.jsxIdentifier('testID'), t.stringLiteral(value)));
+        const baseValue = `${scope.componentName}-${scope.jsxIndex}-${tagName}`;
+
+        // key prop이 있으면 동적 testID 생성: `Base-${key}`
+        const keyAttr = el.attributes.find(
+          (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === 'key'
+        ) as t.JSXAttribute | undefined;
+
+        let keyExpr: t.Expression | null = null;
+        if (keyAttr?.value) {
+          if (t.isStringLiteral(keyAttr.value)) {
+            keyExpr = keyAttr.value;
+          } else if (
+            t.isJSXExpressionContainer(keyAttr.value) &&
+            !t.isJSXEmptyExpression(keyAttr.value.expression)
+          ) {
+            keyExpr = keyAttr.value.expression as t.Expression;
+          }
+        }
+
+        if (keyExpr) {
+          const tpl = t.templateLiteral(
+            [
+              t.templateElement({ raw: baseValue + '-', cooked: baseValue + '-' }, false),
+              t.templateElement({ raw: '', cooked: '' }, true),
+            ],
+            [t.cloneNode(keyExpr)]
+          );
+          el.attributes.push(
+            t.jsxAttribute(t.jsxIdentifier('testID'), t.jsxExpressionContainer(tpl))
+          );
+        } else {
+          el.attributes.push(t.jsxAttribute(t.jsxIdentifier('testID'), t.stringLiteral(baseValue)));
+        }
         scope.jsxIndex += 1;
       }
       // ScrollView/FlatList는 위에서 testID가 없으면 이미 자동 주입됨 → 모두 ref 주입/합성 (scroll 도구 + 사용자 ref 동시 동작)
