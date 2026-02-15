@@ -440,6 +440,34 @@ function getPathUid(fiber) {
   return parts.join('.');
 }
 
+/** path("0.1.2")로 Fiber 트리에서 노드 찾기. getComponentTree와 동일한 인덱스 규칙. */
+function getFiberByPath(root, pathStr) {
+  if (!root || typeof pathStr !== 'string') return null;
+  var parts = pathStr.trim().split('.');
+  var fiber = root;
+  for (var i = 0; i < parts.length; i++) {
+    if (!fiber) return null;
+    var idx = parseInt(parts[i], 10);
+    if (i === 0) {
+      if (idx !== 0) return null;
+      continue;
+    }
+    var child = fiber.child;
+    var j = 0;
+    while (child && j < idx) {
+      child = child.sibling;
+      j++;
+    }
+    fiber = child;
+  }
+  return fiber;
+}
+
+/** uid가 경로 형식인지 ("0", "0.1", "0.1.2" 등) */
+function isPathUid(uid) {
+  return typeof uid === 'string' && /^\d+(\.\d+)*$/.test(uid.trim());
+}
+
 /** fiber 노드를 결과 객체로 직렬화 */
 function fiberToResult(fiber, TextComp, ImgComp) {
   var props = fiber.memoizedProps || {};
@@ -1073,29 +1101,36 @@ var MCP = {
   },
 
   /**
-   * measureView(testID) → Promise<{ x, y, width, height, pageX, pageY }>
-   * testID로 Fiber에서 native node를 찾아 measureInWindow (Fabric) 또는 measure (Bridge)로 절대 좌표를 반환.
+   * measureView(uid) → Promise<{ x, y, width, height, pageX, pageY }>
+   * uid: testID 또는 경로("0.1.2"). query_selector로 얻은 uid 그대로 사용 가능.
+   * Fiber에서 native node를 찾아 measureInWindow (Fabric) 또는 measure (Bridge)로 절대 좌표 반환.
    * pageX/pageY: 화면 왼쪽 상단 기준 절대 좌표 (points).
    */
-  measureView: function (testID) {
+  measureView: function (uid) {
     return new Promise(function (resolve, reject) {
       try {
         var root = getFiberRoot();
         if (!root) return reject(new Error('no fiber root'));
 
-        // testID로 host fiber 찾기
         var found = null;
-        (function find(fiber) {
-          if (!fiber || found) return;
-          if (fiber.memoizedProps && fiber.memoizedProps.testID === testID && fiber.stateNode) {
-            found = fiber;
-            return;
-          }
-          find(fiber.child);
-          if (!found) find(fiber.sibling);
-        })(root);
+        if (isPathUid(uid)) {
+          found = getFiberByPath(root, uid);
+          if (found && !found.stateNode) found = null;
+        }
+        if (!found) {
+          // testID로 host fiber 찾기
+          (function find(fiber) {
+            if (!fiber || found) return;
+            if (fiber.memoizedProps && fiber.memoizedProps.testID === uid && fiber.stateNode) {
+              found = fiber;
+              return;
+            }
+            find(fiber.child);
+            if (!found) find(fiber.sibling);
+          })(root);
+        }
 
-        if (!found) return reject(new Error('testID "' + testID + '" not found'));
+        if (!found) return reject(new Error('uid "' + uid + '" not found or has no native view'));
 
         var node = found.stateNode;
 
@@ -1139,25 +1174,30 @@ var MCP = {
   },
 
   /**
-   * measureViewSync(testID) → { x, y, width, height, pageX, pageY } | null
-   * Fabric measureInWindow의 콜백은 동기적이므로 Fabric에서는 동기 호출 가능.
-   * Bridge에서는 비동기이므로 null 반환 → measureView() 사용 권장.
+   * measureViewSync(uid) → { x, y, width, height, pageX, pageY } | null
+   * uid: testID 또는 경로("0.1.2"). Fabric에서는 동기 호출 가능. Bridge에서는 null → measureView() 사용 권장.
    */
-  measureViewSync: function (testID) {
+  measureViewSync: function (uid) {
     try {
       var root = getFiberRoot();
       if (!root) return null;
 
       var found = null;
-      (function find(fiber) {
-        if (!fiber || found) return;
-        if (fiber.memoizedProps && fiber.memoizedProps.testID === testID && fiber.stateNode) {
-          found = fiber;
-          return;
-        }
-        find(fiber.child);
-        if (!found) find(fiber.sibling);
-      })(root);
+      if (isPathUid(uid)) {
+        found = getFiberByPath(root, uid);
+        if (found && !found.stateNode) found = null;
+      }
+      if (!found) {
+        (function find(fiber) {
+          if (!fiber || found) return;
+          if (fiber.memoizedProps && fiber.memoizedProps.testID === uid && fiber.stateNode) {
+            found = fiber;
+            return;
+          }
+          find(fiber.child);
+          if (!found) find(fiber.sibling);
+        })(root);
+      }
 
       if (!found) return null;
 

@@ -1,7 +1,7 @@
 /**
  * MCP 도구: switch_keyboard
  * iOS 시뮬레이터 / Android 에뮬레이터 키보드 전환.
- * idb_text는 HID 키코드 기반이라 현재 키보드 언어에 의존 — 이 도구로 영문 전환 후 사용.
+ * input_text는 HID 키코드 기반이라 현재 키보드 언어에 의존 — 이 도구로 영문 전환 후 사용.
  */
 
 import { z } from 'zod';
@@ -83,7 +83,7 @@ export function registerSwitchKeyboard(server: McpServer): void {
     'switch_keyboard',
     {
       description:
-        'Switch keyboard language on iOS simulator or Android emulator. Use before idb_text to ensure correct keyboard layout (e.g. switch to English before typing English text). iOS: toggles via Ctrl+Space. Android: sets IME by ID.',
+        'Switch keyboard language on iOS simulator or Android emulator. Use before input_text to ensure correct keyboard layout (e.g. switch to English before typing English text). iOS: toggles via Ctrl+Space. Android: sets IME by ID.',
       inputSchema: schema,
     },
     async (args: unknown) => {

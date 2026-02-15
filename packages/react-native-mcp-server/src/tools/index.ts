@@ -23,25 +23,18 @@ import { registerScroll } from './scroll.js';
 import { registerTakeScreenshot } from './take-screenshot.js';
 import { registerTakeSnapshot } from './take-snapshot.js';
 import { registerTypeText } from './type-text.js';
-import { registerIdbListTargets } from './idb-list-targets.js';
-import { registerIdbTap } from './idb-tap.js';
-import { registerIdbSwipe } from './idb-swipe.js';
-import { registerIdbText } from './idb-text.js';
-import { registerIdbKey } from './idb-key.js';
-import { registerIdbDescribe } from './idb-describe.js';
-import { registerIdbButton } from './idb-button.js';
-import { registerIdbFilePush } from './idb-file-push.js';
-import { registerIdbAddMedia } from './idb-add-media.js';
-import { registerAdbListDevices } from './adb-list-devices.js';
-import { registerAdbTap } from './adb-tap.js';
-import { registerAdbSwipe } from './adb-swipe.js';
-import { registerAdbText } from './adb-text.js';
-import { registerAdbKey } from './adb-key.js';
-import { registerAdbButton } from './adb-button.js';
-import { registerAdbDescribe } from './adb-describe.js';
-import { registerAdbFilePush } from './adb-file-push.js';
-import { registerAdbAddMedia } from './adb-add-media.js';
 import { registerSwitchKeyboard } from './switch-keyboard.js';
+// 통합 네이티브 도구 (platform 파라미터로 iOS/Android 분기)
+import { registerTap } from './tap.js';
+import { registerSwipe } from './swipe.js';
+import { registerInputText } from './input-text.js';
+import { registerInputKey } from './input-key.js';
+import { registerPressButton } from './press-button.js';
+import { registerDescribeUi } from './describe-ui.js';
+import { registerFilePush } from './file-push.js';
+import { registerAddMedia } from './add-media.js';
+import { registerListDevices } from './list-devices.js';
+
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
   registerTakeSnapshot(server, appSession);
@@ -61,27 +54,16 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerGetDebuggerStatus(server, appSession);
   registerListConsoleMessages(server, appSession);
   registerListNetworkRequests(server, appSession);
-  // idb (iOS Development Bridge) 도구 — 네이티브 터치 주입, 시뮬레이터 제어
-  registerIdbListTargets(server);
-  registerIdbTap(server);
-  registerIdbSwipe(server);
-  registerIdbText(server);
-  registerIdbKey(server);
-  registerIdbDescribe(server);
-  registerIdbButton(server);
-  // idb 추가 도구 — 파일 전송, 미디어 추가
-  registerIdbFilePush(server);
-  registerIdbAddMedia(server);
-  // adb (Android Debug Bridge) 도구 — 네이티브 터치 주입, 디바이스 제어
-  registerAdbListDevices(server);
-  registerAdbTap(server);
-  registerAdbSwipe(server);
-  registerAdbText(server);
-  registerAdbKey(server);
-  registerAdbButton(server);
-  registerAdbDescribe(server);
-  registerAdbFilePush(server);
-  registerAdbAddMedia(server);
-  // 키보드 전환 — idb_text / adb_text 사용 전 언어 전환
+  // 통합 네이티브 도구 — 좌표 탭/스와이프, 텍스트 입력, 키코드, 버튼, UI 트리, 파일, 미디어
+  registerTap(server);
+  registerSwipe(server);
+  registerInputText(server);
+  registerInputKey(server);
+  registerPressButton(server);
+  registerDescribeUi(server);
+  registerFilePush(server);
+  registerAddMedia(server);
+  registerListDevices(server);
+  // 키보드 전환 — input_text 사용 전 언어 전환
   registerSwitchKeyboard(server);
 }
