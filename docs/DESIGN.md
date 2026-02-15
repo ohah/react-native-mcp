@@ -834,3 +834,199 @@ Maestro/Detox처럼 경량 네이티브 모듈을 앱에 설치:
 > Animated.View 내부 터치 컴포넌트 탭은 Fiber props로 정상 동작한다 (testID·라벨 방식 모두).
 > 단, RNGH의 `Gesture.Pan/Pinch/Rotation` 등 **네이티브 제스처 시스템**과
 > Reanimated **worklet 기반 제스처 핸들러**는 네이티브 스레드에서 실행되므로 Fiber props로는 제어 불가.
+
+---
+
+## 13. 확장 제스처 지원 — onPress 이외 인터랙션
+
+현재 MCP는 `onPress`, `onLongPress`, `scrollTo()` 등 **JS 콜백/메서드 호출** 방식으로 동작한다.
+그러나 실제 앱에서는 스와이프, 드래그, 핀치, 드로워, 바텀시트 등 **네이티브 터치 파이프라인**을 거치는 제스처가 필수적이다.
+
+이 섹션에서는 MCP의 제스처 지원을 4단계(Tier)로 확장하는 설계를 정리한다.
+
+### 13.1 현재 지원 범위 (Tier 0)
+
+| 인터랙션               | MCP 도구                            | 방식                            |
+| ---------------------- | ----------------------------------- | ------------------------------- |
+| 탭 (onPress)           | `click`, `click_by_label`           | Fiber props 호출                |
+| 롱프레스 (onLongPress) | `long_press`, `long_press_by_label` | Fiber props 호출                |
+| 스크롤                 | `scroll`                            | `scrollTo()` imperative 호출    |
+| 텍스트 입력            | `type_text`                         | `onChangeText` + setNativeProps |
+| WebView JS 실행        | `webview_evaluate_script`           | injectedJavaScript              |
+
+**한계**: RNGH `Gesture.Pan/Pinch/Rotation`, Reanimated worklet 제스처, 네이티브 터치 이벤트 필요한 UI는 제어 불가.
+
+### 13.2 Tier 1 — JS Prop/Imperative 호출 확장
+
+Fiber props나 imperative handle을 통해 **JS 레벨에서 직접 호출 가능**한 제스처들.
+네이티브 터치 없이 동작하므로 가장 안정적이고 토큰 효율적.
+
+#### 추가 대상
+
+| 컴포넌트                 | 제스처          | 호출 방식                                   |
+| ------------------------ | --------------- | ------------------------------------------- |
+| RefreshControl           | 당겨서 새로고침 | `onRefresh()` props 호출                    |
+| Switch                   | 토글            | `onValueChange(bool)` props 호출            |
+| Slider                   | 값 변경         | `onValueChange(number)` props 호출          |
+| TextInput                | 포커스/블러     | `ref.focus()` / `ref.blur()`                |
+| @gorhom/bottom-sheet     | 시트 이동       | `ref.snapToIndex(i)` / `ref.close()`        |
+| react-navigation Drawer  | 열기/닫기       | `navigation.openDrawer()` / `closeDrawer()` |
+| react-navigation TabView | 탭 전환         | `navigation.navigate(tabName)`              |
+| Swipeable (RNGH)         | 스와이프 메뉴   | `ref.openRight()` / `ref.close()`           |
+| Accordion/Collapsible    | 열기/닫기       | `onPress()` 또는 상태 토글                  |
+
+#### 구현 방법
+
+```javascript
+// runtime.js에 새 MCP 도구 추가
+// 예: trigger_prop — 임의 Fiber props 함수를 호출
+function triggerProp(testID, propName, ...args) {
+  const fiber = findFiberByTestID(testID);
+  const handler = fiber?.memoizedProps?.[propName];
+  if (typeof handler === 'function') {
+    handler(...args);
+    return { success: true };
+  }
+  return { success: false, reason: 'prop not found or not a function' };
+}
+```
+
+**예상 토큰**: 요청 ~50 + 응답 ~50 = **~100 토큰/호출**
+
+### 13.3 Tier 2 — 시스템 터치 주입 (idb/adb) + MCP 좌표
+
+RNGH `Gesture.Pan/Pinch/Rotation`, Reanimated worklet 등 **네이티브 터치 파이프라인이 필수**인 제스처.
+MCP로 요소 좌표를 획득하고, idb(iOS)/adb(Android)로 터치를 주입하는 **하이브리드** 방식.
+
+#### 검증된 시나리오 (iOS iPad 시뮬레이터, idb)
+
+| 제스처                           | idb 명령                           | 검증 결과           |
+| -------------------------------- | ---------------------------------- | ------------------- |
+| 드로워 열기 (좌측 엣지 스와이프) | `idb ui swipe 15 400 250 400 0.3`  | ✅ 성공             |
+| 드로워 닫기 (좌측 스와이프)      | `idb ui swipe 250 400 15 400 0.3`  | ✅ 성공             |
+| 페이저 스와이프 (좌→우)          | `idb ui swipe 600 500 200 500 0.3` | ✅ 성공             |
+| 바텀시트 드래그                  | `idb ui swipe x y1 x y2 0.5`       | ✅ 성공             |
+| 오버레이 탭                      | `idb ui tap x y`                   | ✅ 성공             |
+| WebView 내부 탭                  | `idb ui tap x y`                   | ✅ 성공             |
+| WebView 텍스트 입력              | `idb ui tap` → `idb ui text`       | ✅ 성공 (영문/숫자) |
+
+#### 워크플로우
+
+```
+1. MCP query_selector → 요소 좌표 획득 (~100 토큰)
+2. idb/adb swipe/tap → 터치 주입 (~30 토큰)
+3. MCP assert_text → 결과 검증 (~50 토큰)
+────────────────────────────────
+총 ~180 토큰/제스처 (vs idb-only describe-all: ~2,000-4,000 토큰)
+```
+
+#### idb 주요 커맨드 정리 (iOS)
+
+```bash
+# 탭
+idb ui tap <x> <y>
+
+# 스와이프 (시작→끝, duration 초)
+idb ui swipe <x1> <y1> <x2> <y2> <duration>
+
+# 텍스트 입력 (영문/숫자만 안정적)
+idb ui text "hello"
+
+# 키 입력 (HID keycode)
+idb ui key <keycode>    # 42=Backspace, 40=Return
+
+# 접근성 트리 전체
+idb ui describe-all
+
+# 특정 좌표의 요소 (WebView 내부도 관통)
+idb ui describe-point <x> <y>
+```
+
+#### adb 주요 커맨드 정리 (Android)
+
+```bash
+# 탭
+adb shell input tap <x> <y>
+
+# 스와이프
+adb shell input swipe <x1> <y1> <x2> <y2> <duration_ms>
+
+# 텍스트 입력
+adb shell input text "hello"
+
+# 키 입력
+adb shell input keyevent <KEYCODE>  # 67=DEL, 66=ENTER
+```
+
+### 13.4 Tier 3 — MCP 내장 터치 합성 (향후)
+
+외부 도구(idb/adb) 없이 MCP 런타임에서 직접 터치 이벤트를 합성하는 방식.
+RN의 내부 이벤트 시스템을 활용.
+
+#### 가능성 조사
+
+```javascript
+// RN 내부 이벤트 디스패처
+// - RCTEventDispatcher (iOS)
+// - UIManagerModule.dispatchViewManagerCommand (Android)
+// - ReactNativePrivateInterface.nativeFabricUIManager (Fabric)
+
+// PanResponder 계열은 JS 이벤트이므로 합성 가능:
+// - onStartShouldSetPanResponder
+// - onPanResponderGrant/Move/Release
+
+// 그러나 RNGH Gesture.Pan 등은 네이티브 스레드에서
+// UIGestureRecognizer/GestureDetector가 처리하므로
+// JS에서 합성한 이벤트가 전달되지 않음
+```
+
+**결론**: PanResponder 기반 제스처는 JS 합성 가능하나, RNGH/Reanimated worklet은 불가.
+따라서 Tier 2 (idb/adb)가 네이티브 제스처의 유일한 완전 해법.
+
+### 13.5 토큰 효율성 비교
+
+| 작업                 | idb-only                         | MCP-only                                 | 하이브리드 (MCP+idb)       |
+| -------------------- | -------------------------------- | ---------------------------------------- | -------------------------- |
+| 요소 찾기            | `describe-all` ~2,000-4,000 토큰 | `query_selector` ~100 토큰               | `query_selector` ~100 토큰 |
+| 텍스트 확인          | `describe-all` ~2,000-4,000 토큰 | `assert_text` ~50 토큰                   | `assert_text` ~50 토큰     |
+| 좌표 확인            | `describe-point` ~50 토큰        | `evaluate_script(measureView)` ~150 토큰 | MCP ~150 토큰              |
+| 탭 실행              | `idb ui tap` ~30 토큰            | `click` ~80 토큰                         | 상황에 따라 선택           |
+| 스와이프 실행        | `idb ui swipe` ~30 토큰          | ❌ 불가                                  | `idb ui swipe` ~30 토큰    |
+| **드로워 열기+확인** | ~4,060 토큰                      | ❌ 불가                                  | **~180 토큰**              |
+
+> **결론**: 하이브리드 방식이 idb-only 대비 **~20-50배** 토큰 효율적.
+> MCP를 "눈"(요소 탐색, 결과 검증)으로, idb/adb를 "손"(터치 주입)으로 사용.
+
+### 13.6 WebView 인터랙션
+
+#### 발견 사항
+
+- `idb ui describe-all`: WebView 내부 요소 **미표시** (RCTWebView로만 표시)
+- `idb ui describe-point x y`: WebView 내부 요소 **표시됨** (버튼, 입력필드 등 접근성 정보)
+- `idb ui tap x y`: WebView 내부 클릭 **정상 동작**
+- MCP `webview_evaluate_script`: WebView DOM 직접 조작 가능
+
+#### 권장 접근
+
+1. **MCP 우선**: `webview_evaluate_script`로 DOM 쿼리 + JS 실행 (가장 정확, 토큰 효율적)
+2. **idb 보조**: 네이티브 키보드 입력, 스크롤 등 WebView JS로 어려운 경우 좌표 기반 터치
+
+### 13.7 알려진 제한사항
+
+| 제한            | 설명                                | 우회 방법                                                     |
+| --------------- | ----------------------------------- | ------------------------------------------------------------- |
+| 한글 입력 (idb) | `idb ui text "한글"` → 앱 크래시    | 두벌식 매핑 (예: "네이버"→"spdlqj") + 소프트 키보드 한글 모드 |
+| iOS 실기기      | idb/simctl 터치 주입 미지원         | XCTest 프레임워크 필요 (Tier 3+)                              |
+| HID 키코드 충돌 | Return(40)이 iPad 멀티태스킹 트리거 | 앱별 HID 매핑 확인 필요                                       |
+| 멀티터치        | idb는 단일 터치만 지원              | 핀치/회전은 idb로 불가, 네이티브 모듈 필요                    |
+| 화면 좌표 변환  | 시뮬레이터 스케일, 상태바 오프셋    | `getScreenInfo()` + `measureView()` 활용                      |
+
+### 13.8 구현 로드맵
+
+| 단계        | 내용                                                            | 우선순위 |
+| ----------- | --------------------------------------------------------------- | -------- |
+| **Phase 1** | Tier 1 — `trigger_prop` 도구 추가 (onRefresh, onValueChange 등) | 높음     |
+| **Phase 2** | `measure_view` / `get_screen_info` MCP 도구 노출                | 높음     |
+| **Phase 3** | Tier 2 문서화 — idb/adb 명령어 가이드 + 워크플로우 예시         | 중간     |
+| **Phase 4** | Tier 2 자동화 — MCP 서버에서 idb/adb 프로세스 직접 실행 (옵션)  | 낮음     |
+| **Phase 5** | Tier 3 조사 — RN 내부 이벤트 합성 PoC                           | 낮음     |
