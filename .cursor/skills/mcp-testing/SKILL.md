@@ -1,11 +1,11 @@
 ---
 name: mcp-testing
-description: React Native MCP 서버 전체 기능 검증 절차. 데모 앱 31개 스텝을 모두 순서대로 진행하면 MCP 내부 기능을 전부 검증한다. 클릭/탭은 query_selector → measure → tap(platform, x, y)으로 idb/adb 네이티브 터치 필수.
+description: React Native MCP 서버 전체 기능 검증 절차. 데모 앱 32개 스텝을 모두 순서대로 진행하면 MCP 내부 기능을 전부 검증한다. 클릭/탭은 query_selector → measure → tap(platform, x, y)으로 idb/adb 네이티브 터치 필수.
 ---
 
 # React Native MCP 전체 기능 테스트
 
-데모 앱(`examples/demo-app`)은 **31개 스텝**으로 구성되어 있다. **이 31개 스텝을 모두 순서대로 진행**하고, 각 스텝의 성공 기준을 만족하면 MCP 서버의 내부 기능(tap, swipe, type_text, query_selector, assert_text, evaluate_script, webview_evaluate_script, list_network_requests 등)을 전부 검증한 것이다. **스크롤은 MCP scroll 도구가 없으므로 swipe(platform, x1, y1, x2, y2)로 한다.**
+데모 앱(`examples/demo-app`)은 **32개 스텝**으로 구성되어 있다. **이 32개 스텝을 모두 순서대로 진행**하고, 각 스텝의 성공 기준을 만족하면 MCP 서버의 내부 기능(tap, swipe, type_text, query_selector, assert_text, evaluate_script, webview_evaluate_script, list_network_requests 등)을 전부 검증한 것이다. **스크롤은 MCP scroll 도구가 없으므로 swipe(platform, x1, y1, x2, y2)로 한다.**
 
 **클릭/탭 (필수 흐름)**: `query_selector`(또는 take_snapshot)로 요소 찾기 → 반환된 `measure`(pageX, pageY, width, height)로 좌표 계산 → `tap(platform, x, y)`으로 idb(iOS)/adb(Android) 네이티브 클릭. JS 쪽 triggerPress가 아닌 실제 터치 주입.
 
@@ -22,9 +22,9 @@ description: React Native MCP 서버 전체 기능 검증 절차. 데모 앱 31�
 
 ---
 
-## 전체 테스트: 31개 스텝 순서 (모두 진행 필수)
+## 전체 테스트: 32개 스텝 순서 (모두 진행 필수)
 
-아래 표는 **스텝 1부터 31까지 순서대로** 진행해야 하는 전체 목록이다. 각 스텝을 완료한 뒤 다음 스텝으로 넘어가고, 31까지 모두 통과하면 MCP 내부 기능 전체 검증이 끝난다.
+아래 표는 **스텝 1부터 32까지 순서대로** 진행해야 하는 전체 목록이다. 각 스텝을 완료한 뒤 다음 스텝으로 넘어가고, 32까지 모두 통과하면 MCP 내부 기능 전체 검증이 끝난다.
 
 | Step | 구분       | 검증 요약                                                            | 사용 도구·동작                                                                                                                                               |
 | ---- | ---------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -48,17 +48,18 @@ description: React Native MCP 서버 전체 기능 검증 절차. 데모 앱 31�
 | 18   | Network    | 404 요청 확인                                                        | query_selector `#network-fetch-error` → tap → list_network_requests 404, assert_text "응답: 404"                                                             |
 | 19   | Network    | XHR GET /albums/1 캡처                                               | query_selector `#network-xhr-get` → tap → list_network_requests에서 XHR GET /albums/1 확인                                                                   |
 | 20   | Gesture    | Touchable·Pressable·RNGH 3개 탭                                      | query_selector gesture-compare-touchable, gesture-compare-pressable, gesture-compare-gh-touchable → tap 각각 → 카운트 1씩 증가                               |
-| 21   | Gesture    | gesture-tap-detector-wrapper 탭                                      | query_selector `#gesture-tap-detector-wrapper` → tap (동작 여부만 확인 가능)                                                                                 |
+| 21   | Gesture    | gesture-tap-detector-wrapper 탭                                      | query_selector `#gesture-tap-detector-wrapper` → tap → assert_text로 숫자 1 이상 확인 (Gesture.Tap() idb 터치 수신)                                          |
 | 22   | Gesture    | RNGH Pressable 탭                                                    | query_selector `#gesture-gh-pressable` → tap → "RNGH TouchableOpacity: 1" 이상 확인                                                                          |
 | 23   | Gesture    | testID 없음 RNGH 탭                                                  | query_selector `:text("RNGH 라벨만")` → tap → 숫자 증가 확인                                                                                                 |
 | 24   | Gesture    | Reanimated 트리거 탭                                                 | query_selector `#gesture-reanimated-trigger` 또는 `#gesture-reanimated-box` → tap → "눌러보세요" 아래 숫자 1 이상                                            |
 | 25   | Gesture    | Reanimated 라벨만 탭                                                 | query_selector `:text("눌러보세요 (라벨만)")` → tap → 스케일 박스 숫자 증가                                                                                  |
 | 26   | Gesture    | Reanimated ScrollView 스크롤                                         | **swipe**로 스크롤(해당 영역에서 y1>y2) → "Reanimated 목록 아이템 30" 등 하단 노출·스크롤 가능 확인                                                          |
 | 27   | Gesture    | Swipeable 행 스와이프                                                | query_selector "스와이프 to delete 행 1" 등 → measure → swipe 왼쪽 → "삭제" 영역 노출 확인                                                                   |
-| 28   | Gesture    | Pull to refresh                                                      | 화면 상단 근처에서 swipe 아래 방향 → assert_text "새로고침 횟수: 1" 이상                                                                                     |
-| 29   | Gesture    | Drawer 열기·닫기                                                     | query_selector `#gesture-drawer-open` → tap → assert_text "드로워: 열림" → "닫기" 또는 drawer-overlay tap → "닫힘" 확인                                      |
-| 30   | Gesture    | Pager 스와이프                                                       | 페이저 영역 measure → 가로 swipe → assert_text 또는 query_selector "현재 페이지: 1/2/3" (pager-status)                                                       |
-| 31   | Gesture    | Bottom sheet 스와이프                                                | 하단 시트 영역 measure → swipe 위쪽 → assert_text "상태: 열림" 또는 sheet-status 확인                                                                        |
+| 28   | Gesture    | 드래그(Pan) 완료 카운트                                              | query_selector `#gesture-drag-area` → measure → swipe → assert_text `#gesture-drag-count` "드래그 완료: 1" 이상                                              |
+| 29   | Gesture    | Pull to refresh                                                      | 화면 상단 근처에서 swipe 아래 방향 → assert_text "새로고침 횟수: 1" 이상                                                                                     |
+| 30   | Gesture    | Drawer 열기·닫기                                                     | query_selector `#gesture-drawer-open` → tap → assert_text "드로워: 열림" → "닫기" 또는 drawer-overlay tap → "닫힘" 확인                                      |
+| 31   | Gesture    | Pager 스와이프                                                       | 페이저 영역 measure → 가로 swipe → assert_text 또는 query_selector "현재 페이지: 1/2/3" (pager-status)                                                       |
+| 32   | Gesture    | Bottom sheet 스와이프                                                | 하단 시트 영역 measure → swipe 위쪽 → assert_text "상태: 열림" 또는 sheet-status 확인                                                                        |
 
 ---
 
@@ -105,18 +106,18 @@ MCP 서버에는 **scroll 도구가 없음**. ScrollView/FlatList 스크롤은 �
 
 ---
 
-## 체크리스트 (31 스텝 모두 완료 = 전체 기능 검증)
+## 체크리스트 (32 스텝 모두 완료 = 전체 기능 검증)
 
-| Step  | 통과                                                                                  | 비고                                             |
-| ----- | ------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| 1~4   | ☐ Press (testID·라벨·다양한 버튼·롱프레스)                                            | query_selector + tap / tap(..., duration)        |
-| 5~6   | ☐ Input (testID 있음/없음)                                                            | type_text                                        |
-| 7~9   | ☐ ScrollView (ref 없음/있음/testID 없음)                                              | **swipe**로 스크롤 + query_selector + tap        |
-| 10~11 | ☐ FlatList (testID 있음/없음)                                                         | **swipe**로 스크롤 + tap                         |
-| 12~14 | ☐ WebView (내부 클릭·스크립트·postMessage 수신 확인)                                  | webview_evaluate_script, getRegisteredWebViewIds |
-| 15~19 | ☐ Network (GET·POST·multiple·error·XHR)                                               | tap + list_network_requests                      |
-| 20~31 | ☐ Gesture (비교·탭·RNGH·Reanimated·스크롤·Swipeable·Refresh·Drawer·Pager·BottomSheet) | tap, **swipe**(스크롤 포함), assert_text         |
+| Step  | 통과                                                                                         | 비고                                             |
+| ----- | -------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| 1~4   | ☐ Press (testID·라벨·다양한 버튼·롱프레스)                                                   | query_selector + tap / tap(..., duration)        |
+| 5~6   | ☐ Input (testID 있음/없음)                                                                   | type_text                                        |
+| 7~9   | ☐ ScrollView (ref 없음/있음/testID 없음)                                                     | **swipe**로 스크롤 + query_selector + tap        |
+| 10~11 | ☐ FlatList (testID 있음/없음)                                                                | **swipe**로 스크롤 + tap                         |
+| 12~14 | ☐ WebView (내부 클릭·스크립트·postMessage 수신 확인)                                         | webview_evaluate_script, getRegisteredWebViewIds |
+| 15~19 | ☐ Network (GET·POST·multiple·error·XHR)                                                      | tap + list_network_requests                      |
+| 20~32 | ☐ Gesture (비교·탭·RNGH·Reanimated·스크롤·Swipeable·드래그·Refresh·Drawer·Pager·BottomSheet) | tap, **swipe**(스크롤 포함), assert_text         |
 
-**31개 스텝을 모두 위 순서대로 진행하고 각각 성공 기준을 만족하면, MCP 서버의 내부 기능을 전부 검증한 것이다.**
+**32개 스텝을 모두 위 순서대로 진행하고 각각 성공 기준을 만족하면, MCP 서버의 내부 기능을 전부 검증한 것이다.**
 
-데모 앱 구조: `examples/demo-app/src/stepConfig.tsx`에 STEPS 31개 정의. 한 화면에 한 스텝만 노출되며, 하단 step-nav로 이전/다음 이동.
+데모 앱 구조: `examples/demo-app/src/stepConfig.tsx`에 STEPS 32개 정의. 한 화면에 한 스텝만 노출되며, 하단 step-nav로 이전/다음 이동.

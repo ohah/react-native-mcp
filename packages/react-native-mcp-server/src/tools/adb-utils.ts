@@ -107,6 +107,33 @@ export async function runAdbCommand(
   return buf.toString('utf8').trim();
 }
 
+/* ─── Android density scale (dp → pixel 변환) ─── */
+
+let _cachedScale: number | null = null;
+
+/**
+ * Android screen density scale.
+ * density 160 = 1x, 320 = 2x, 480 = 3x 등.
+ * dp × scale = pixel.
+ */
+export async function getAndroidScale(serial?: string): Promise<number> {
+  if (_cachedScale != null) return _cachedScale;
+  try {
+    const args = serial ? ['-s', serial, 'shell', 'wm', 'density'] : ['shell', 'wm', 'density'];
+    const buf = await runCommand('adb', args, { timeoutMs: 5000 });
+    const match = buf.toString().match(/(\d+)/);
+    _cachedScale = match ? parseInt(match[1]!, 10) / 160 : 1;
+  } catch {
+    _cachedScale = 1;
+  }
+  return _cachedScale;
+}
+
+/** 테스트용 density 캐시 초기화 */
+export function _resetScaleCache(): void {
+  _cachedScale = null;
+}
+
 /* ─── 에러 헬퍼 ─── */
 
 export function adbNotInstalledError(): {

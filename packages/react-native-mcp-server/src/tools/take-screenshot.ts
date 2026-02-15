@@ -9,7 +9,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { AppSession } from '../websocket-server.js';
 import { runCommand } from './run-command.js';
+import { getAndroidScale } from './adb-utils.js';
 
 const MAX_HEIGHT = 720;
 const JPEG_QUALITY = 80;
@@ -47,17 +49,6 @@ async function captureIos(): Promise<Buffer> {
   }
 }
 
-/** Android screen density (dp scale) via adb shell wm density. */
-async function getAndroidScale(): Promise<number> {
-  try {
-    const buf = await runCommand('adb', ['shell', 'wm', 'density'], { timeoutMs: 5000 });
-    const match = buf.toString().match(/(\d+)/);
-    return match ? parseInt(match[1], 10) / 160 : 1;
-  } catch {
-    return 1;
-  }
-}
-
 type ProcessResult = {
   buffer: Buffer;
   /** Original screen size in points (dp). */
@@ -67,7 +58,11 @@ type ProcessResult = {
 };
 
 /** 720p JPEG 80%로 변환. 원본 포인트 해상도와 출력 크기를 함께 반환. */
-async function processImage(png: Buffer, platform: 'android' | 'ios'): Promise<ProcessResult> {
+async function processImage(
+  png: Buffer,
+  platform: 'android' | 'ios',
+  runtimePixelRatio?: number | null
+): Promise<ProcessResult> {
   const sharp = (await import('sharp')).default;
   const metadata = await sharp(png).metadata();
   const rawWidth = metadata.width || 0;
@@ -76,7 +71,7 @@ async function processImage(png: Buffer, platform: 'android' | 'ios'): Promise<P
   // 화면 스케일 계산 (pixel → point 변환용)
   let scale: number;
   if (platform === 'android') {
-    scale = await getAndroidScale();
+    scale = runtimePixelRatio ?? (await getAndroidScale());
   } else {
     // iOS simctl PNG: 144 DPI = 2x, 216 DPI = 3x
     const density = metadata.density || 72;
@@ -100,7 +95,7 @@ async function processImage(png: Buffer, platform: 'android' | 'ios'): Promise<P
   return { buffer, pointSize, outputSize };
 }
 
-export function registerTakeScreenshot(server: McpServer): void {
+export function registerTakeScreenshot(server: McpServer, appSession: AppSession): void {
   (
     server as {
       registerTool(
@@ -124,7 +119,9 @@ export function registerTakeScreenshot(server: McpServer): void {
         if (!isValidPng(png)) {
           throw new Error('Capture produced invalid PNG.');
         }
-        const { buffer, pointSize, outputSize } = await processImage(png, platform);
+        const runtimeRatio =
+          platform === 'android' ? appSession.getPixelRatio(undefined, 'android') : null;
+        const { buffer, pointSize, outputSize } = await processImage(png, platform, runtimeRatio);
         if (filePath) {
           await writeFile(filePath, buffer);
         }

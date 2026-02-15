@@ -6,6 +6,7 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { AppSession } from '../websocket-server.js';
 import {
   checkIdbAvailable,
   resolveUdid,
@@ -17,14 +18,15 @@ import {
   resolveSerial,
   runAdbCommand,
   adbNotInstalledError,
+  getAndroidScale,
 } from './adb-utils.js';
 
 const schema = z.object({
-  platform: z.enum(['ios', 'android']).describe('ios: idb (points). android: adb (pixels).'),
-  x1: z.number().describe('Start X. iOS: points. Android: pixels.'),
-  y1: z.number().describe('Start Y. iOS: points. Android: pixels.'),
-  x2: z.number().describe('End X. iOS: points. Android: pixels.'),
-  y2: z.number().describe('End Y. iOS: points. Android: pixels.'),
+  platform: z.enum(['ios', 'android']).describe('Target platform.'),
+  x1: z.number().describe('Start X in points (dp). Auto-converted to pixels on Android.'),
+  y1: z.number().describe('Start Y in points (dp). Auto-converted to pixels on Android.'),
+  x2: z.number().describe('End X in points (dp). Auto-converted to pixels on Android.'),
+  y2: z.number().describe('End Y in points (dp). Auto-converted to pixels on Android.'),
   duration: z
     .number()
     .optional()
@@ -38,7 +40,7 @@ const schema = z.object({
     ),
 });
 
-export function registerSwipe(server: McpServer): void {
+export function registerSwipe(server: McpServer, appSession: AppSession): void {
   (
     server as {
       registerTool(
@@ -51,7 +53,7 @@ export function registerSwipe(server: McpServer): void {
     'swipe',
     {
       description:
-        'Swipe from (x1,y1) to (x2,y2) on iOS simulator or Android device. iOS: coordinates in points (idb). Android: coordinates in pixels (adb). Duration in ms (default 300). Use for drawer, pager, bottom sheet, scroll. Workflow: query_selector → evaluate_script(measureView(uid)) → swipe. Verify with assert_text.',
+        'Swipe from (x1,y1) to (x2,y2) on iOS simulator or Android device. Coordinates are always in points (dp) — Android pixels are auto-calculated. Duration in ms (default 300). Use for drawer, pager, bottom sheet, scroll. Workflow: query_selector → evaluate_script(measureView(uid)) → swipe. Verify with assert_text.',
       inputSchema: schema,
     },
     async (args: unknown) => {
@@ -77,15 +79,21 @@ export function registerSwipe(server: McpServer): void {
         } else {
           if (!(await checkAdbAvailable())) return adbNotInstalledError();
           const serial = await resolveSerial(deviceId);
+          const scale =
+            appSession.getPixelRatio(undefined, 'android') ?? (await getAndroidScale(serial));
+          const px1 = Math.round(x1 * scale);
+          const py1 = Math.round(y1 * scale);
+          const px2 = Math.round(x2 * scale);
+          const py2 = Math.round(y2 * scale);
           await runAdbCommand(
             [
               'shell',
               'input',
               'swipe',
-              String(x1),
-              String(y1),
-              String(x2),
-              String(y2),
+              String(px1),
+              String(py1),
+              String(px2),
+              String(py2),
               String(duration),
             ],
             serial
@@ -94,7 +102,7 @@ export function registerSwipe(server: McpServer): void {
             content: [
               {
                 type: 'text' as const,
-                text: `Swiped from (${x1}, ${y1}) to (${x2}, ${y2}) in ${duration}ms on Android device ${serial}.`,
+                text: `Swiped from dp(${x1}, ${y1}) → px(${px1}, ${py1}) to dp(${x2}, ${y2}) → px(${px2}, ${py2}) [scale=${scale}] in ${duration}ms on Android device ${serial}.`,
               },
             ],
           };

@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { AppSession } from '../websocket-server.js';
 import {
   checkIdbAvailable,
   resolveUdid,
@@ -16,12 +17,13 @@ import {
   resolveSerial,
   runAdbCommand,
   adbNotInstalledError,
+  getAndroidScale,
 } from './adb-utils.js';
 
 const schema = z.object({
-  platform: z.enum(['ios', 'android']).describe('ios: idb (points). android: adb (pixels).'),
-  x: z.number().describe('X coordinate. iOS: points. Android: pixels.'),
-  y: z.number().describe('Y coordinate. iOS: points. Android: pixels.'),
+  platform: z.enum(['ios', 'android']).describe('Target platform.'),
+  x: z.number().describe('X coordinate in points (dp). Auto-converted to pixels on Android.'),
+  y: z.number().describe('Y coordinate in points (dp). Auto-converted to pixels on Android.'),
   duration: z
     .number()
     .optional()
@@ -34,7 +36,7 @@ const schema = z.object({
     ),
 });
 
-export function registerTap(server: McpServer): void {
+export function registerTap(server: McpServer, appSession: AppSession): void {
   (
     server as {
       registerTool(
@@ -47,7 +49,7 @@ export function registerTap(server: McpServer): void {
     'tap',
     {
       description:
-        'Tap at (x, y) coordinates on iOS simulator or Android device. Supports long press via duration parameter. iOS: coordinates in points (idb). Android: coordinates in pixels (adb). Workflow: query_selector → evaluate_script(measureView(uid)) → tap. Verify with assert_text.',
+        'Tap at (x, y) coordinates on iOS simulator or Android device. Supports long press via duration parameter. Coordinates are always in points (dp) — Android pixels are auto-calculated. Workflow: query_selector → evaluate_script(measureView(uid)) → tap. Verify with assert_text.',
       inputSchema: schema,
     },
     async (args: unknown) => {
@@ -73,6 +75,10 @@ export function registerTap(server: McpServer): void {
         } else {
           if (!(await checkAdbAvailable())) return adbNotInstalledError();
           const serial = await resolveSerial(deviceId);
+          const scale =
+            appSession.getPixelRatio(undefined, 'android') ?? (await getAndroidScale(serial));
+          const px = Math.round(x * scale);
+          const py = Math.round(y * scale);
           if (isLongPress) {
             // Long press = swipe from same point to same point with duration
             await runAdbCommand(
@@ -80,22 +86,22 @@ export function registerTap(server: McpServer): void {
                 'shell',
                 'input',
                 'swipe',
-                String(x),
-                String(y),
-                String(x),
-                String(y),
+                String(px),
+                String(py),
+                String(px),
+                String(py),
                 String(duration),
               ],
               serial
             );
           } else {
-            await runAdbCommand(['shell', 'input', 'tap', String(x), String(y)], serial);
+            await runAdbCommand(['shell', 'input', 'tap', String(px), String(py)], serial);
           }
           return {
             content: [
               {
                 type: 'text' as const,
-                text: `${action} at (${x}, ${y})${isLongPress ? ` for ${duration}ms` : ''} on Android device ${serial}.`,
+                text: `${action} at dp(${x}, ${y}) → px(${px}, ${py}) [scale=${scale}]${isLongPress ? ` for ${duration}ms` : ''} on Android device ${serial}.`,
               },
             ],
           };
