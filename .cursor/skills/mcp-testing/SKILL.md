@@ -247,22 +247,22 @@ description: React Native MCP 서버 각 도구 기능을 데모 앱으로 검�
 
 ## 체크리스트 (요약)
 
-| 도구                        | 확인 항목                                              |
-| --------------------------- | ------------------------------------------------------ |
-| take_snapshot               | ScrollView/FlatList type·uid(testID vs 경로)           |
-| click                       | testID로 버튼 눌림, Count/탭 전환 등                   |
-| click_by_label              | "testID 없음" 등 라벨로 버튼 눌림                      |
-| list_clickables             | uid·label 목록, click과 일치                           |
-| scroll                      | uid(testID)로 ScrollView scrollTo, Babel ref 등록      |
-| list_clickable_text_content | onPress 노드별 textContent, [{ text, testID? }]        |
-| list_text_nodes             | 화면 텍스트 목록                                       |
-| take_screenshot             | platform 지정 시 이미지 반환                           |
-| evaluate_script             | **REACT_NATIVE_MCP** 존재·getRegisteredPressTestIDs 등 |
-| list_console_messages       | Console 버튼 후 로그/경고 수집                         |
-| list_network_requests       | Network 버튼 후 httpbin 요청 수집                      |
-| get_debugger_status         | connected: true                                        |
-| list_pages                  | 단일 페이지(React Native App) 반환                     |
-| get_by_label                | 훅·라벨 목록·match                                     |
-| click_webview               | 등록 WebView 내 selector 클릭                          |
+| 도구                        | 확인 항목                                                                        |
+| --------------------------- | -------------------------------------------------------------------------------- |
+| take_snapshot               | Scroll 탭(세그먼트 ScrollView/FlatList)에서 type·uid(testID vs 경로)             |
+| click                       | testID로 버튼 눌림: Count, 탭(tab-scroll/tab-interact), 세그먼트, Drawer 열기 등 |
+| click_by_label              | "testID 없음", "FlatList" 등 라벨로 버튼/세그먼트 눌림                           |
+| list_clickables             | uid·label 목록, click(uid)와 일치                                                |
+| scroll                      | uid(testID)로 ScrollView scrollTo, Babel ref 등록 (Scroll 탭 내)                 |
+| list_clickable_text_content | onPress 노드별 textContent, [{ text, testID? }]                                  |
+| list_text_nodes             | 화면 텍스트 목록                                                                 |
+| take_screenshot             | platform 지정 시 이미지 반환                                                     |
+| evaluate_script             | **REACT_NATIVE_MCP** 존재·getRegisteredPressTestIDs 등                           |
+| list_console_messages       | Interact → Press 세그먼트에서 Console 버튼 후 로그/경고 수집                     |
+| list_network_requests       | Interact → Press 세그먼트에서 Network 버튼 후 httpbin 요청 수집                  |
+| get_debugger_status         | connected: true                                                                  |
+| list_pages                  | 단일 페이지(React Native App) 반환                                               |
+| get_by_label                | 훅·라벨 목록·match                                                               |
+| click_webview               | WebView 탭에서 등록 WebView 내 selector 클릭                                     |
 
-데모 앱 구조(ScrollView 탭 / FlatList 탭, testID 있음·없음 블록)는 `examples/demo-app/src/` 참고.
+데모 앱 구조: 하단 5탭(Scroll / Interact / WebView / Network / Gesture). Scroll은 세그먼트 ScrollView·FlatList, Interact는 Press·Input. `examples/demo-app/src/` 참고.
