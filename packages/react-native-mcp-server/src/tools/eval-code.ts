@@ -12,7 +12,9 @@ import { deviceParam, platformParam } from './device-param.js';
 const schema = z.object({
   function: z
     .string()
-    .describe('JavaScript function to run in the app (e.g. () => document.title or (x) => x + 1).'),
+    .describe(
+      'JavaScript function to run in the app (e.g. (x) => x + 1). Do not use require() — it is not available in the RN runtime.'
+    ),
   args: z.array(z.unknown()).optional().describe('Array of arguments to pass to the function.'),
   deviceId: deviceParam,
   platform: platformParam,
@@ -44,7 +46,8 @@ export function registerEvaluateScript(server: McpServer, appSession: AppSession
     'evaluate_script',
     {
       description:
-        'Run a JavaScript function in the React Native app context. function (string), args (array). Returns JSON-serializable result.',
+        'Run a JavaScript function in the React Native app context. function (string), args (array). Returns JSON-serializable result. ' +
+        'Note: require() is not available for dynamic module loading or eval in RN — Metro bundles at build time; use only in-app globals and already-loaded code.',
       inputSchema: schema,
     },
     async (args: unknown) => {
