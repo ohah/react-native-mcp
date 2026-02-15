@@ -66,7 +66,7 @@ await app.clickByLabel('로그인'); // click_by_label
 await app.longPress('#item'); // long_press
 await app.longPressByLabel('삭제'); // long_press_by_label
 await app.typeText('#email', 'user@test.com'); // type_text
-await app.scroll('#list', { y: 300 }); // scroll
+await app.scroll('#list', { y: 300 }); // scroll (현재 MCP에 scroll 도구 없음 → SDK에서 swipe 또는 evaluate_script(scrollTo)로 구현)
 
 // --- WebView ---
 await app.webviewEval('main-webview', 'document.title');
@@ -280,25 +280,25 @@ teardown: # 테스트 후 실행
 
 **지원 액션 목록**:
 
-| 액션                | 파라미터                       | 설명               |
-| ------------------- | ------------------------------ | ------------------ |
-| `click`             | `selector`, `label?`, `index?` | 요소 클릭          |
-| `longPress`         | `selector`, `label?`           | 롱프레스           |
-| `typeText`          | `selector`, `text`             | 텍스트 입력        |
-| `scroll`            | `selector`, `x?`, `y`          | 스크롤             |
-| `waitForText`       | `text`, `timeout?`             | 텍스트 대기        |
-| `waitForVisible`    | `selector`, `timeout?`         | 요소 출현 대기     |
-| `waitForNotVisible` | `selector`, `timeout?`         | 요소 사라짐 대기   |
-| `assertText`        | `text`, `selector?`            | 텍스트 확인        |
-| `assertVisible`     | `selector`                     | 요소 존재 확인     |
-| `assertNotVisible`  | `selector`                     | 요소 부재 확인     |
-| `assertCount`       | `selector`, `count`            | 요소 개수 확인     |
-| `screenshot`        | `path?`                        | 스크린샷 저장      |
-| `wait`              | `ms`                           | 고정 대기 (비추천) |
-| `launch`            | `bundleId`                     | 앱 실행            |
-| `terminate`         | `bundleId`                     | 앱 종료            |
-| `openDeepLink`      | `url`                          | 딥링크 열기        |
-| `evaluate`          | `script`                       | 임의 JS 실행       |
+| 액션                | 파라미터                       | 설명                                                              |
+| ------------------- | ------------------------------ | ----------------------------------------------------------------- |
+| `click`             | `selector`, `label?`, `index?` | 요소 클릭                                                         |
+| `longPress`         | `selector`, `label?`           | 롱프레스                                                          |
+| `typeText`          | `selector`, `text`             | 텍스트 입력                                                       |
+| `scroll`            | `selector`, `x?`, `y`          | 스크롤 (MCP scroll 도구 없음 → swipe 또는 evaluate_script로 구현) |
+| `waitForText`       | `text`, `timeout?`             | 텍스트 대기                                                       |
+| `waitForVisible`    | `selector`, `timeout?`         | 요소 출현 대기                                                    |
+| `waitForNotVisible` | `selector`, `timeout?`         | 요소 사라짐 대기                                                  |
+| `assertText`        | `text`, `selector?`            | 텍스트 확인                                                       |
+| `assertVisible`     | `selector`                     | 요소 존재 확인                                                    |
+| `assertNotVisible`  | `selector`                     | 요소 부재 확인                                                    |
+| `assertCount`       | `selector`, `count`            | 요소 개수 확인                                                    |
+| `screenshot`        | `path?`                        | 스크린샷 저장                                                     |
+| `wait`              | `ms`                           | 고정 대기 (비추천)                                                |
+| `launch`            | `bundleId`                     | 앱 실행                                                           |
+| `terminate`         | `bundleId`                     | 앱 종료                                                           |
+| `openDeepLink`      | `url`                          | 딥링크 열기                                                       |
+| `evaluate`          | `script`                       | 임의 JS 실행                                                      |
 
 **CLI**:
 
