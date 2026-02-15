@@ -5,7 +5,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 
-export type TabId = 'scroll' | 'press' | 'input' | 'list' | 'webview' | 'network';
+export type TabId = 'scroll' | 'press' | 'input' | 'list' | 'webview' | 'network' | 'gesture';
 
 const tabs: { id: TabId; label: string; testID: string }[] = [
   { id: 'scroll', label: 'Scroll', testID: 'tab-scroll' },
@@ -14,6 +14,7 @@ const tabs: { id: TabId; label: string; testID: string }[] = [
   { id: 'list', label: 'List', testID: 'tab-list' },
   { id: 'webview', label: 'WebView', testID: 'tab-webview' },
   { id: 'network', label: 'Network', testID: 'tab-network' },
+  { id: 'gesture', label: 'Gesture', testID: 'tab-gesture' },
 ];
 
 export type TabBarProps = {

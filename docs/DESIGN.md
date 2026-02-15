@@ -145,7 +145,7 @@ react-native-mcp/
 │       ├── runtime.js              # 앱 주입 런타임
 │       └── metro-transformer.cjs   # 앱 Metro에서 사용
 ├── examples/
-│   └── demo-app/                   # 테스트용 RN 앱 (5탭: Scroll/Press/Input/List/WebView)
+│   └── demo-app/                   # 테스트용 RN 앱 (7탭: Scroll/Press/Input/List/WebView/Network/Gesture)
 └── docs/
     └── DESIGN.md
 ```
@@ -737,19 +737,23 @@ await client.callTool({ name: 'scroll', arguments: { uid: 'main-scroll', y: 300 
 
 ### 12.2 제스처 유형별 분석
 
-| 제스처                    | 현재 지원 | Fiber props로 가능? | 비고                                                      |
-| ------------------------- | --------- | ------------------- | --------------------------------------------------------- |
-| tap (onPress)             | ✅        | ✅                  | 구현됨                                                    |
-| long press (onLongPress)  | ✅        | ✅                  | 구현됨                                                    |
-| scroll (scrollTo)         | ✅        | ✅                  | 구현됨                                                    |
-| text input (onChangeText) | ✅        | ✅                  | 구현됨                                                    |
-| swipe to delete           | ❌        | ❓                  | 라이브러리 의존 (Swipeable, react-native-gesture-handler) |
-| pull to refresh           | ❌        | ✅ 가능성           | `onRefresh` props 호출로 가능할 수 있음                   |
-| drag & drop               | ❌        | ❓                  | PanResponder 콜백 시뮬레이션 복잡                         |
-| pinch to zoom             | ❌        | ❓                  | react-native-gesture-handler 네이티브 레벨                |
-| drawer swipe              | ❌        | ✅ 가능성           | react-navigation drawer의 `openDrawer()` 메서드           |
-| tab swipe (ViewPager)     | ❌        | ✅ 가능성           | `setPage(index)` 또는 `scrollTo`                          |
-| bottom sheet drag         | ❌        | ❓                  | @gorhom/bottom-sheet 등 라이브러리 의존                   |
+| 제스처                          | 현재 지원 | Fiber props로 가능? | 비고                                                        |
+| ------------------------------- | --------- | ------------------- | ----------------------------------------------------------- |
+| tap (onPress)                   | ✅        | ✅                  | 구현됨                                                      |
+| long press (onLongPress)        | ✅        | ✅                  | 구현됨                                                      |
+| scroll (scrollTo)               | ✅        | ✅                  | 구현됨                                                      |
+| text input (onChangeText)       | ✅        | ✅                  | 구현됨                                                      |
+| RNGH TouchableOpacity tap       | ✅        | ✅                  | 검증됨 — Fiber onPress 직접 호출 (iOS/Android)              |
+| Reanimated Animated.ScrollView  | ✅        | ✅                  | 검증됨 — Fiber stateNode.scrollTo() 정상 동작 (iOS/Android) |
+| Reanimated 래핑 컴포넌트 tap    | ✅        | ✅                  | 검증됨 — Animated.View 내 GHTouchableOpacity onPress 호출   |
+| swipe to delete                 | ❌        | ❓                  | 라이브러리 의존 (Swipeable, react-native-gesture-handler)   |
+| pull to refresh                 | ❌        | ✅ 가능성           | `onRefresh` props 호출로 가능할 수 있음                     |
+| drag & drop                     | ❌        | ❓                  | PanResponder 콜백 시뮬레이션 복잡                           |
+| pinch to zoom                   | ❌        | ❓                  | react-native-gesture-handler 네이티브 레벨                  |
+| RNGH Gesture.Pan/Pinch/Rotation | ❌        | ❌                  | 네이티브 스레드에서 실행, JS 콜백 없음                      |
+| drawer swipe                    | ❌        | ✅ 가능성           | react-navigation drawer의 `openDrawer()` 메서드             |
+| tab swipe (ViewPager)           | ❌        | ✅ 가능성           | `setPage(index)` 또는 `scrollTo`                            |
+| bottom sheet drag               | ❌        | ❓                  | @gorhom/bottom-sheet 등 라이브러리 의존                     |
 
 ### 12.3 접근 방식 후보
 
@@ -803,18 +807,21 @@ Maestro/Detox처럼 경량 네이티브 모듈을 앱에 설치:
 
 ### 12.4 주요 라이브러리별 제어 가능성
 
-| 라이브러리                   | 제스처            | Fiber props로 제어                | 비고                  |
-| ---------------------------- | ----------------- | --------------------------------- | --------------------- |
-| RN ScrollView                | 스크롤            | ✅ `scrollTo()`                   | 구현됨                |
-| RN FlatList                  | 스크롤            | ✅ `scrollToOffset()`             | 구현됨                |
-| RN RefreshControl            | 당겨서 새로고침   | ✅ `onRefresh()`                  | props 호출 가능       |
-| RN Switch                    | 토글              | ✅ `onValueChange(true/false)`    | props 호출 가능       |
-| RN Slider                    | 값 변경           | ✅ `onValueChange(value)`         | props 호출 가능       |
-| react-navigation Drawer      | 열기/닫기         | ✅ `navigation.openDrawer()`      | ref/imperative handle |
-| react-navigation TabView     | 탭 전환           | ✅ `navigation.navigate(tabName)` | JS API                |
-| react-native-gesture-handler | 스와이프/팬       | ❌ 네이티브 레벨                  | JS 콜백 없음          |
-| @gorhom/bottom-sheet         | 시트 이동         | ✅ `ref.snapToIndex(i)`           | imperative handle     |
-| react-native-reanimated      | 애니메이션 제스처 | ❌ 워클릿 네이티브                | JS 스레드 밖에서 실행 |
+| 라이브러리                      | 제스처            | Fiber props로 제어                | 비고                                                 |
+| ------------------------------- | ----------------- | --------------------------------- | ---------------------------------------------------- |
+| RN ScrollView                   | 스크롤            | ✅ `scrollTo()`                   | 구현됨                                               |
+| RN FlatList                     | 스크롤            | ✅ `scrollToOffset()`             | 구현됨                                               |
+| RN RefreshControl               | 당겨서 새로고침   | ✅ `onRefresh()`                  | props 호출 가능                                      |
+| RN Switch                       | 토글              | ✅ `onValueChange(true/false)`    | props 호출 가능                                      |
+| RN Slider                       | 값 변경           | ✅ `onValueChange(value)`         | props 호출 가능                                      |
+| react-navigation Drawer         | 열기/닫기         | ✅ `navigation.openDrawer()`      | ref/imperative handle                                |
+| react-navigation TabView        | 탭 전환           | ✅ `navigation.navigate(tabName)` | JS API                                               |
+| RNGH TouchableOpacity/Pressable | 탭                | ✅ `onPress()` / `onLongPress()`  | **검증됨** — Fiber props 직접 호출 (iOS/Android)     |
+| RNGH Gesture.Pan/Pinch/Rotation | 스와이프/팬/핀치  | ❌ 네이티브 레벨                  | 네이티브 스레드 실행, JS 콜백 없음                   |
+| reanimated Animated.ScrollView  | 스크롤            | ✅ `scrollTo()`                   | **검증됨** — Fiber stateNode 접근 가능 (iOS/Android) |
+| reanimated Animated.View + 터치 | 탭                | ✅ `onPress()`                    | **검증됨** — 내부 Pressable의 Fiber props 호출       |
+| reanimated worklet 제스처       | 애니메이션 제스처 | ❌ 워클릿 네이티브                | JS 스레드 밖에서 실행                                |
+| @gorhom/bottom-sheet            | 시트 이동         | ✅ `ref.snapToIndex(i)`           | imperative handle                                    |
 
 ### 12.5 결론 및 방향
 
@@ -822,5 +829,7 @@ Maestro/Detox처럼 경량 네이티브 모듈을 앱에 설치:
 2. **중기**: 방식 D (하이브리드) — 좌표 기반 fallback 실험, 신뢰도 검증
 3. **장기**: 필요에 따라 방식 C (네이티브 모듈) 검토 — 옵셔널 플러그인 형태
 
-> react-native-gesture-handler / reanimated 기반 제스처는 네이티브 스레드에서 실행되므로
-> Fiber props로는 제어 불가. 이 영역은 네이티브 모듈 없이는 근본적 한계가 있다.
+> **검증 완료 (iOS/Android)**: RNGH의 TouchableOpacity/Pressable 탭, Reanimated의 Animated.ScrollView 스크롤,
+> Animated.View 내부 터치 컴포넌트 탭은 Fiber props로 정상 동작한다 (testID·라벨 방식 모두).
+> 단, RNGH의 `Gesture.Pan/Pinch/Rotation` 등 **네이티브 제스처 시스템**과
+> Reanimated **worklet 기반 제스처 핸들러**는 네이티브 스레드에서 실행되므로 Fiber props로는 제어 불가.
