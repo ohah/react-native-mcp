@@ -172,6 +172,7 @@ pip3 install fb-idb
   - `bun run mcp` - MCP 서버 실행
   - `bun run dev` - Watch 모드
   - `bun run test` - 테스트 실행
+  - `bun run test:e2e -- -p ios` / `bun run test:e2e -- -p android` - E2E YAML 테스트 (데모앱 `examples/demo-app/e2e/`)
 
 ## 아키텍처
 

@@ -80,6 +80,9 @@ jobs:
       - name: MCP 서버 빌드
         run: bun run build:server
 
+      - name: YAML 테스트 러너 빌드
+        run: bun run --filter @ohah/react-native-mcp-test build
+
       - name: Gradle 캐시
         uses: gradle/actions/setup-gradle@v4
 
@@ -135,8 +138,8 @@ jobs:
             # MCP 포트 포워딩 (앱이 localhost:12300 접근 시 호스트로 전달)
             adb reverse tcp:12300 tcp:12300
 
-            # E2E 테스트 실행 (테스트가 MCP 서버 기동 후 앱을 실행함)
-            bun test e2e/smoke.test.ts
+            # E2E YAML 시나리오 실행 (press-counter.yaml 등)
+            npx react-native-mcp-test run examples/demo-app/e2e/ -p android -o e2e-artifacts/yaml-results
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()

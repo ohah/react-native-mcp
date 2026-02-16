@@ -192,6 +192,27 @@ bun run test:mcp
 
 This builds the server, starts it, sends MCP `initialize` → `notifications/initialized` → `tools/call` (`evaluate_script`, e.g. function `() => 1 + 2`), and prints the result. Without a connected React Native app you see "No React Native app connected". With the demo app running and connected to `ws://localhost:12300`, you see the evaluation result (e.g. `3`).
 
+### Running E2E tests (YAML)
+
+E2E tests are defined as YAML files under `examples/demo-app/e2e/` (e.g. `press-counter.yaml`). The runner starts the MCP server, launches the demo app, and runs the steps.
+
+From the repo root (after `bun run build:server`, and with idb/adb available):
+
+```bash
+# iOS (simulator must be booted, app built and installed)
+bun run test:e2e -- -p ios
+
+# Android (emulator/device with app installed, adb reverse tcp:12300 tcp:12300)
+bun run test:e2e -- -p android
+```
+
+To run a single YAML file or another directory:
+
+```bash
+npx react-native-mcp-test run examples/demo-app/e2e/press-counter.yaml -p ios
+npx react-native-mcp-test run path/to/your/e2e/ -p android
+```
+
 ## Architecture
 
 ```

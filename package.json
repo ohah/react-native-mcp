@@ -26,7 +26,7 @@
     "test:unit": "bun test packages/",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test packages/ --coverage",
-    "test:e2e": "bun test e2e/smoke.test.ts",
+    "test:e2e": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/",
     "setup-mcp": "bun run .cursor/scripts/set-mcp-mise-path.ts",
     "test:yaml": "bun run --filter @ohah/react-native-mcp-test run",
     "docs:dev": "bun run --filter document dev",

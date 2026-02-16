@@ -50,15 +50,22 @@ async function main() {
   const targetPath = resolve(target!);
   const suites = parsePath(targetPath);
 
-  if (suites.length === 0) {
-    console.error('No test suites found at:', targetPath);
+  const filtered =
+    platform !== undefined ? suites.filter((s) => s.config.platform === platform) : suites;
+
+  if (filtered.length === 0) {
+    console.error(
+      platform
+        ? `No test suites for platform "${platform}" at: ${targetPath}`
+        : 'No test suites found at: ' + targetPath
+    );
     process.exit(1);
   }
 
-  console.log(`Found ${suites.length} test suite(s)\n`);
+  console.log(`Found ${filtered.length} test suite(s)\n`);
 
   const reporter = createReporter(values.reporter!, values.output!);
-  const result = await runAll(suites, reporter, {
+  const result = await runAll(filtered, reporter, {
     platform,
     output: values.output,
     timeout: values.timeout ? Number(values.timeout) : undefined,
