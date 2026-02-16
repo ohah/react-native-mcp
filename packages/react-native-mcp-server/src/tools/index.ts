@@ -26,6 +26,7 @@ import { registerDescribeUi } from './describe-ui.js';
 import { registerFilePush } from './file-push.js';
 import { registerAddMedia } from './add-media.js';
 import { registerListDevices } from './list-devices.js';
+import { registerOpenDeeplink } from './open-deeplink.js';
 
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
@@ -50,4 +51,6 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerListDevices(server);
   // 키보드 전환 — input_text 사용 전 언어 전환
   registerSwitchKeyboard(server);
+  // 딥링크
+  registerOpenDeeplink(server);
 }
