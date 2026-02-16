@@ -78,6 +78,11 @@ jobs:
       - name: Gradle 캐시
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Debug keystore 생성 (CI용)
+        run: |
+          keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug"
+        working-directory: examples/demo-app/android
+
       - name: 데모앱 Release APK 빌드
         run: ./gradlew assembleRelease
         working-directory: examples/demo-app/android
