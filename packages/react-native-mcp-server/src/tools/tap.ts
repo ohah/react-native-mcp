@@ -21,7 +21,9 @@ import {
 } from './adb-utils.js';
 
 const schema = z.object({
-  platform: z.enum(['ios', 'android']).describe('Target platform.'),
+  platform: z
+    .enum(['ios', 'android'])
+    .describe('ios or android. iOS: portrait and landscape-right only; Android: any orientation.'),
   x: z.number().describe('X coordinate in points (dp). Auto-converted to pixels on Android.'),
   y: z.number().describe('Y coordinate in points (dp). Auto-converted to pixels on Android.'),
   duration: z
@@ -49,7 +51,7 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
     'tap',
     {
       description:
-        'Tap at (x, y) coordinates on iOS simulator or Android device. Supports long press via duration parameter. Coordinates are always in points (dp) — Android pixels are auto-calculated. Workflow: query_selector → evaluate_script(measureView(uid)) → tap. Verify with assert_text.',
+        'Tap at (x, y) in points (dp); Android pixels auto-calculated. Long press via duration (ms). Workflow: query_selector → tap; verify with assert_text.',
       inputSchema: schema,
     },
     async (args: unknown) => {
@@ -59,6 +61,7 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
 
       try {
         if (platform === 'ios') {
+          // iOS tap: 0° and 90° (landscape right) only. 180°/270° not supported.
           if (!(await checkIdbAvailable())) return idbNotInstalledError();
           let ix: number;
           let iy: number;
@@ -91,6 +94,8 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
           const cmd = ['ui', 'tap', String(ix), String(iy)];
           if (isLongPress) cmd.push('--duration', String(duration / 1000));
           await runIdbCommand(cmd, udid);
+          // Allow UI to update before returning so callers (e.g. assert_text) see the result.
+          await new Promise((r) => setTimeout(r, 300));
           return {
             content: [
               {
@@ -124,6 +129,8 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
           } else {
             await runAdbCommand(['shell', 'input', 'tap', String(px), String(py)], serial);
           }
+          // Allow UI to update before returning so callers (e.g. assert_text) see the result.
+          await new Promise((r) => setTimeout(r, 300));
           return {
             content: [
               {
