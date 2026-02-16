@@ -1,0 +1,52 @@
+{
+  "name": "@ohah/react-native-mcp-test",
+  "version": "0.1.0",
+  "description": "YAML-based E2E test runner for React Native MCP",
+  "keywords": [
+    "automation",
+    "e2e",
+    "mcp",
+    "react-native",
+    "testing",
+    "yaml"
+  ],
+  "license": "MIT",
+  "author": "ohah",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ohah/react-native-mcp.git",
+    "directory": "packages/react-native-mcp-test"
+  },
+  "bin": {
+    "react-native-mcp-test": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bunup",
+    "dev": "bunup --watch"
+  },
+  "dependencies": {
+    "@ohah/react-native-mcp-client": "workspace:*",
+    "yaml": "^2.8.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "bunup": "^0.16.22",
+    "typescript": "^5.9.3"
+  }
+}

@@ -26,7 +26,8 @@
     "test:watch": "bun test --watch",
     "test:coverage": "bun test packages/ --coverage",
     "test:e2e": "bun test e2e/smoke.test.ts",
-    "setup-mcp": "bun run .cursor/scripts/set-mcp-mise-path.ts"
+    "setup-mcp": "bun run .cursor/scripts/set-mcp-mise-path.ts",
+    "test:yaml": "bun run --filter @ohah/react-native-mcp-test run"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.0.11",
