@@ -11,11 +11,21 @@ React Native 앱 자동화 및 모니터링을 위한 MCP(Model Context Protocol
 
 ## 설치
 
+**필요 환경:** Node.js 18+ 또는 Bun (예: [mise](https://mise.jdx.dev/) — 이 레포에서 `mise install`, 또는 [Node](https://nodejs.org/) / [Bun](https://bun.sh/) 전역 설치).
+
+전역 설치 없이 **npx**로 실행:
+
+```bash
+npx -y @ohah/react-native-mcp-server
+```
+
+Cursor/Claude/Copilot에서는 MCP 설정에 `"command": "npx"`, `"args": ["-y", "@ohah/react-native-mcp-server"]` 를 넣으면 됩니다 (아래 사용법 참고).
+
+선택: 전역 설치
+
 ```bash
 npm install -g @ohah/react-native-mcp-server
 ```
-
-`npx`를 사용하면 설치 없이 바로 사용할 수 있습니다.
 
 ## 사용법
 
@@ -172,7 +182,7 @@ pip3 install fb-idb
   - `bun run mcp` - MCP 서버 실행
   - `bun run dev` - Watch 모드
   - `bun run test` - 테스트 실행
-  - `bun run test:e2e -- -p ios` / `bun run test:e2e -- -p android` - E2E YAML 테스트 (데모앱 `examples/demo-app/e2e/`)
+  - `bun run test:e2e -- -p ios` / `bun run test:e2e -- -p android` - E2E YAML 테스트 (데모앱 `examples/demo-app/e2e/`). YAML 문법: [E2E YAML 레퍼런스](docs/e2e-yaml-reference.md)
 
 ## 아키텍처
 

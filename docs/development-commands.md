@@ -11,8 +11,8 @@ bun run format              # oxfmt
 # 테스트
 bun run test:unit           # 유닛 테스트
 bun run test:coverage       # 커버리지 포함 테스트
-bun run test:e2e -- -p ios # E2E YAML (데모앱 examples/demo-app/e2e/) — iOS
-bun run test:e2e -- -p android  # E2E YAML — Android
+bun run test:e2e -- -p ios     # E2E YAML (데모앱 examples/demo-app/e2e/) — iOS
+bun run test:e2e -- -p android # E2E YAML — Android. YAML 문법: [e2e-yaml-reference.md](e2e-yaml-reference.md)
 ```
 
 ## 이 레포 PR·push (ohah 전용)
