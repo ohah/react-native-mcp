@@ -13,11 +13,21 @@ MCP(Model Context Protocol) server for React Native app automation and monitorin
 
 ## Installation
 
+**Prerequisites:** Node.js 18+ or Bun (e.g. [mise](https://mise.jdx.dev/): `mise install` in this repo, or install [Node](https://nodejs.org/) / [Bun](https://bun.sh/) globally).
+
+Use with **npx** (no global install):
+
+```bash
+npx -y @ohah/react-native-mcp-server
+```
+
+For Cursor/Claude/Copilot, set `"command": "npx"` and `"args": ["-y", "@ohah/react-native-mcp-server"]` in MCP config (see Usage below).
+
+Optional: global install
+
 ```bash
 npm install -g @ohah/react-native-mcp-server
 ```
-
-Or use with `npx` without installation.
 
 ## Usage
 
@@ -194,7 +204,7 @@ This builds the server, starts it, sends MCP `initialize` → `notifications/ini
 
 ### Running E2E tests (YAML)
 
-E2E tests are defined as YAML files under `examples/demo-app/e2e/` (e.g. `press-counter.yaml`). The runner starts the MCP server, launches the demo app, and runs the steps.
+E2E tests are defined as YAML files under `examples/demo-app/e2e/` (e.g. `press-counter.yaml`). The runner starts the MCP server, launches the demo app, and runs the steps. **YAML syntax reference:** [E2E YAML Reference (API docs)](docs/e2e-yaml-reference.md).
 
 From the repo root (after `bun run build:server`, and with idb/adb available):
 
