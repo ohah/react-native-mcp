@@ -35,7 +35,19 @@ Cursor, Claude Desktop, GitHub Copilot CLI에서 React Native MCP 서버를 연�
 
 ---
 
-## Claude Desktop
+## Claude Desktop / Claude CLI
+
+### 방법 A: Claude CLI `mcp add` (권장)
+
+[Claude Code](https://code.claude.com/) 또는 Claude CLI를 쓰는 경우, 다음 명령으로 서버를 등록할 수 있습니다.
+
+```bash
+claude mcp add --transport stdio react-native-mcp -- npx -y @ohah/react-native-mcp-server
+```
+
+등록 후 앱을 실행하고 대화에서 MCP 도구를 사용하면 됩니다. `claude mcp list`로 서버 등록 여부를 확인할 수 있습니다.
+
+### 방법 B: 설정 파일 직접 편집
 
 1. 설정 파일 편집
    - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -89,7 +101,7 @@ AI에게 "지금 앱 화면 스냅샷 찍어줘", "로그인 버튼 눌러줘"�
 
 ## 연결이 안 될 때
 
-- **앱이 연결되지 않음**: Metro가 실행 중인지, 앱에 Metro 플러그인·Babel 프리셋이 적용되었는지 확인
+- **앱이 연결되지 않음**: Metro가 실행 중인지, 앱에 cdp-interceptor(Metro)와 Babel 프리셋이 적용되었는지 확인
 - **tap/스크린샷이 안 됨**: iOS는 idb, Android는 adb가 설치되어 있고 디바이스가 잡히는지 확인 (`idb list-targets`, `adb devices`)
 - **특정 도구만 실패**: 해당 도구의 인자(selector, timeout 등)가 올바른지, 앱 UI가 로드된 상태인지 확인
 
