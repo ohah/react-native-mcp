@@ -82,6 +82,25 @@ export async function waitForAppConnection(
   );
 }
 
+/** 앱 연결 후 컴포넌트 트리가 채워질 때까지 polling. Android CI에서 연결 직후 스냅샷이 비어 있을 수 있음. */
+export async function waitForAppReady(
+  client: Client,
+  timeoutMs = 30_000,
+  intervalMs = 1_000,
+  minTreeLength = 100
+): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const tree = await callTool(client, 'take_snapshot', {});
+    const str = typeof tree === 'string' ? tree : JSON.stringify(tree);
+    if (str.length > minTreeLength) return;
+    await sleep(intervalMs);
+  }
+  throw new Error(
+    `App tree did not become ready within ${timeoutMs / 1000}s (minTreeLength=${minTreeLength})`
+  );
+}
+
 /**
  * MCP 도구 호출 + 결과 파싱.
  * content[0].text를 JSON.parse 시도, 실패 시 원본 문자열 반환.
