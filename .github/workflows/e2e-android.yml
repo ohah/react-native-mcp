@@ -123,10 +123,9 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
-            # APK 설치
-            APK_PATH="examples/demo-app/android/app/build/outputs/apk/release/app-release.apk"
-            ls -la "$APK_PATH"
-            adb install -r "$APK_PATH"
+            # APK 설치 (runner가 줄마다 별도 sh -c로 실행해 변수 미공유 → 경로 리터럴 사용)
+            ls -la examples/demo-app/android/app/build/outputs/apk/release/app-release.apk
+            adb install -r examples/demo-app/android/app/build/outputs/apk/release/app-release.apk
 
             # MCP 포트 포워딩
             adb reverse tcp:12300 tcp:12300
@@ -134,8 +133,8 @@ jobs:
             # 앱 실행
             adb shell am start -n com.reactnativemcp.demo/.MainActivity
 
-            # 앱 초기화 대기
-            sleep 10
+            # 앱 초기화 대기 (에뮬 지연·앱 부팅·5s 재연결 주기 고려)
+            sleep 25
 
             # E2E 테스트 실행
             bun test e2e/smoke.test.ts
