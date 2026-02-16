@@ -37,13 +37,16 @@ export async function waitForAppConnection(
   intervalMs = 2_000
 ): Promise<void> {
   const start = Date.now();
+  let lastStatus: unknown = null;
   while (Date.now() - start < timeoutMs) {
     const res = await callTool(client, 'get_debugger_status', {});
+    lastStatus = res;
     if (res.appConnected) return;
     await sleep(intervalMs);
   }
+  const statusJson = JSON.stringify(lastStatus, null, 2);
   throw new Error(
-    `App did not connect within ${timeoutMs / 1000}s. Check that the app is running and adb reverse tcp:12300 tcp:12300 is set.`
+    `App did not connect within ${timeoutMs / 1000}s. Check that the app is running and adb reverse tcp:12300 tcp:12300 is set. Last get_debugger_status: ${statusJson}`
   );
 }
 
