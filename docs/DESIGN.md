@@ -277,6 +277,7 @@ packages/react-native-mcp-server/
 - `add_media` - 미디어 파일 추가 (사진첩) ✅
 - `list_devices` - 연결된 시뮬레이터/디바이스 목록 ✅
 - `switch_keyboard` - 키보드 언어 전환 ✅
+- `open_deeplink` - 딥링크 열기 ✅
 
 > **앱 생명주기(launch/terminate/deeplink)**: 별도 MCP 도구 대신 **MCP Resource** (`docs://guides/app-lifecycle`)로 가이드 제공. AI 에이전트가 리소스를 읽고 기존 Bash 도구로 실행. 상세: 섹션 15.
 
