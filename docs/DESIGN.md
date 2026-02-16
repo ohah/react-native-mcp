@@ -253,8 +253,11 @@ packages/react-native-mcp-server/
 - `type_text` - TextInput에 텍스트 입력 (onChangeText + setNativeProps). 유니코드/한글 지원 ✅
 - `query_selector` - Fiber 셀렉터로 첫 번째 매칭 요소 검색 (CSS querySelector 유사) ✅
 - `query_selector_all` - Fiber 셀렉터로 모든 매칭 요소 검색 ✅
-- `assert_text` - 텍스트 존재 여부 확인 ({ pass, message } 반환) ✅
-- `assert_visible` - 셀렉터 매칭 요소 존재 여부 확인 ({ pass, message } 반환) ✅
+- `assert_text` - 텍스트 존재 여부 확인 ({ pass, message } 반환). `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 ✅ (polling: 예정)
+- `assert_visible` - 셀렉터 매칭 요소 존재 여부 확인 ({ pass, message } 반환). `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 ✅ (polling: 예정)
+- `assert_not_visible` - 셀렉터 매칭 요소가 사라졌는지 확인. `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 (예정)
+- `assert_element_count` - 셀렉터 매칭 요소 개수 확인. `expected_count`/`min_count`/`max_count` 지원 (예정)
+- `scroll_until_visible` - 요소가 보일 때까지 자동 스크롤. `direction`/`max_scrolls`/`scrollable_selector` 지원 (예정)
 - `get_debugger_status` - 앱 연결 상태 + 디바이스 목록 ✅
 - `list_console_messages` - nativeLoggingHook 기반 콘솔 로그 조회 (level/since/limit 필터) ✅
 - `clear_console_messages` - 콘솔 로그 버퍼 초기화 ✅
@@ -274,6 +277,8 @@ packages/react-native-mcp-server/
 - `add_media` - 미디어 파일 추가 (사진첩) ✅
 - `list_devices` - 연결된 시뮬레이터/디바이스 목록 ✅
 - `switch_keyboard` - 키보드 언어 전환 ✅
+
+> **앱 생명주기(launch/terminate/deeplink)**: 별도 MCP 도구 대신 **MCP Resource** (`docs://guides/app-lifecycle`)로 가이드 제공. AI 에이전트가 리소스를 읽고 기존 Bash 도구로 실행. 상세: 섹션 15.
 
 **삭제된 Tools**:
 
@@ -729,12 +734,13 @@ await client.callTool({
 
 ## 11. 다음 단계
 
-1. **Phase 3 보완**: Dead code elimination 검증
-2. **Phase 5**: 네트워크·콘솔 모니터링 완료 (XHR/fetch monkey-patch + nativeLoggingHook)
-3. **FlatList 가상화 자동 탐색**: 전체 목록 자동 스크롤 + 수집 기능
-4. **프로그래매틱 테스트 러너**: 섹션 10 구현 (YAML 파서 + MCP Client + assertion)
-5. ~~**네이티브 제스처 (drag/swipe/pinch)**~~: 완료. `tap`/`swipe` 등 통합 네이티브 도구로 구현됨 (멀티터치 제외)
-6. **안정화**: npm 배포, 문서 정비
+1. **CI-ready Assertion 강화** (최우선): assert_text/assert_visible에 polling 추가, assert_not_visible·scroll_until_visible 신규 도구. [상세: 섹션 14]
+2. **Phase 3 보완**: Dead code elimination 검증
+3. ~~**Phase 5**: 네트워크·콘솔 모니터링 완료 (XHR/fetch monkey-patch + nativeLoggingHook)~~ ✅
+4. **FlatList 가상화 자동 탐색**: 전체 목록 자동 스크롤 + 수집 기능 → `scroll_until_visible` 도구로 부분 해결 예정
+5. **프로그래매틱 테스트 러너**: 섹션 10 구현 (YAML 파서 + MCP Client + assertion)
+6. ~~**네이티브 제스처 (drag/swipe/pinch)**~~: 완료. `tap`/`swipe` 등 통합 네이티브 도구로 구현됨 (멀티터치 제외)
+7. **안정화**: npm 배포, 문서 정비
 
 이 설계는 실험적이며, 구현 중 발견되는 제약사항에 따라 수정 가능합니다.
 
@@ -1050,3 +1056,242 @@ RN의 내부 이벤트 시스템을 활용.
 | **Phase 3** | Tier 2 문서화 — idb/adb 명령어 가이드 + 워크플로우 예시                                                            | 중간     |
 | **Phase 4** | ~~Tier 2 자동화~~ — 완료. `tap`/`swipe`/`input_text`/`input_key`/`press_button` 통합 도구로 구현됨.                | ✅ 완료  |
 | **Phase 5** | Tier 3 조사 — RN 내부 이벤트 합성 PoC                                                                              | 낮음     |
+
+---
+
+## 14. CI-ready Assertion & Wait 도구 강화
+
+> flutter-skill 등 유사 프로젝트 비교 분석 결과, GitHub Actions CI에서 안정적 자동화를 위해 MCP 도구 레벨에서 polling/wait 메커니즘이 필수.
+> e2e-test-plan.md의 Phase B (SDK 레벨 waitFor)와는 별개로, **MCP 도구 자체**에 polling을 내장해야 AI 에이전트와 프로그래매틱 테스트 러너 모두 활용 가능.
+
+### 14.1 현재 문제
+
+| 항목                   | 현재 상태                                  | 문제                                              |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------- |
+| `assert_text`          | 단발성(single-shot), 10s 하드코딩 타임아웃 | 요소 미렌더링 시 즉시 FAIL → CI에서 flaky test    |
+| `assert_visible`       | 단발성, 10s 하드코딩 타임아웃              | 동일                                              |
+| `assert_not_visible`   | 미존재                                     | 모달 닫힘, 로딩 완료 검증 불가                    |
+| `scroll_until_visible` | 미존재                                     | 긴 리스트에서 요소 찾기 위해 수동 swipe 반복 필요 |
+| `assert_element_count` | 미존재                                     | 리스트 아이템 개수 검증 불가                      |
+
+CI 환경에서는 AI가 "실패했네, 다시 해볼까" 판단을 못 하므로, 도구 자체에 재시도 메커니즘이 필수.
+
+### 14.2 비교 분석 (flutter-skill 참조)
+
+> 참조: https://github.com/ai-dashboad/flutter-skill/tree/main/sdks/react-native
+
+flutter-skill의 React Native SDK는 polling 기반 wait 메커니즘을 내장:
+
+```javascript
+// flutter-skill의 wait_for_gone 구현 (200ms 간격 polling)
+methods.wait_for_gone = function (params) {
+  const timeout = params.timeout || 5000;
+  const start = Date.now();
+  function check() {
+    const entry = _findElement(params);
+    if (!entry) return Promise.resolve({ success: true });
+    if (Date.now() - start > timeout) return Promise.resolve({ success: false });
+    return new Promise((resolve) => setTimeout(() => resolve(check()), 200));
+  }
+  return check();
+};
+```
+
+flutter-skill에서 참고할 만한 도구와 불필요한 도구:
+
+**참고할 것 (CI 필수)**:
+
+- `assert_visible` / `assert_not_visible`에 `timeout` 파라미터 (기본 5000ms, polling)
+- `wait_for_element` / `wait_for_gone` (polling 기반 대기)
+- `scroll_until_visible` (`max_scrolls`, `direction`, `scrollable_key`)
+- `assert_element_count` (`expected_count`, `min_count`, `max_count`)
+
+**불필요한 것**:
+
+- `wait_for_idle` (UI 안정성 대기) — 판단 기준이 모호하고 오판 가능. Playwright도 deprecated 방향
+- `networkIdle` — WebSocket/SSE/polling API 등으로 오판 빈번. text/element 기반 assertion이 더 안정적
+- `compare_screenshot` (visual regression) — 별도 인프라 필요, 코어 안정화 후
+- `record_start/stop/export` (test codegen) — 좋지만 우선순위 낮음
+- `auth_biometric/otp/deeplink` — 앱별로 다름, 범용 도구로 부적합
+- `diagnose` — AI 에이전트가 이미 컨텍스트 기반 판단 가능
+
+### 14.3 구현 계획
+
+#### Step 1: 기존 도구에 polling 추가 (필수)
+
+`assert_text`, `assert_visible`에 `timeoutMs`/`intervalMs` 파라미터 추가:
+
+```typescript
+// MCP 도구 파라미터 (기존 + 신규)
+{
+  text: string,           // assert_text
+  selector?: string,      // assert_text (범위 한정), assert_visible (대상)
+  timeoutMs?: number,     // 신규: 최대 대기 시간 (기본 0 = 즉시, 하위 호환)
+  intervalMs?: number,    // 신규: polling 간격 (기본 300ms)
+}
+```
+
+**동작 방식**:
+
+1. 조건 체크 → 성공하면 즉시 `{ pass: true }` 반환
+2. `timeoutMs > 0`이면 실패 시 `intervalMs` 후 재시도
+3. `timeoutMs` 초과하면 최종 `{ pass: false }` 반환
+4. `timeoutMs = 0` (기본값)이면 기존처럼 단발성 → **하위 호환 보장**
+
+**구현 위치**: `runtime.js`에 polling 루프 추가. 서버 측 `assert.ts`는 `timeoutMs`를 eval 코드에 전달만.
+
+```javascript
+// runtime.js 내 polling 구현 (예시)
+function waitForCondition(checkFn, timeoutMs, intervalMs) {
+  if (!timeoutMs || timeoutMs <= 0) return checkFn();
+  var start = Date.now();
+  function poll() {
+    var result = checkFn();
+    if (result.pass) return Promise.resolve(result);
+    if (Date.now() - start >= timeoutMs) return Promise.resolve(result);
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        resolve(poll());
+      }, intervalMs || 300);
+    });
+  }
+  return poll();
+}
+```
+
+#### Step 2: assert_not_visible 신규 도구 (필수)
+
+```typescript
+// MCP 도구: assert_not_visible
+{
+  selector: string,       // 사라져야 할 요소
+  timeoutMs?: number,     // 최대 대기 시간 (기본 0)
+  intervalMs?: number,    // polling 간격 (기본 300ms)
+}
+// 반환: { pass: boolean, message: string }
+```
+
+사용 예시: 로딩 스피너 사라짐 확인, 모달 닫힘 확인, 삭제된 아이템 부재 확인.
+
+#### Step 3: scroll_until_visible 신규 도구 (높음)
+
+```typescript
+// MCP 도구: scroll_until_visible
+{
+  selector: string,            // 찾을 요소 셀렉터
+  direction?: 'up' | 'down' | 'left' | 'right',  // 기본 'down'
+  maxScrolls?: number,         // 최대 스크롤 횟수 (기본 10)
+  scrollableSelector?: string, // 스크롤 대상 (미지정 시 화면 중앙 기준 swipe)
+  platform: 'ios' | 'android',
+}
+// 반환: { pass: boolean, element?: { uid, measure }, scrollCount: number }
+```
+
+**내부 동작**:
+
+1. `querySelector(selector)` → 발견 시 즉시 반환
+2. 미발견 시 `swipe`로 한 화면 스크롤
+3. 다시 `querySelector` → 반복
+4. `maxScrolls` 초과 시 `{ pass: false }`
+
+이 도구는 FlatList 가상화 문제를 자연스럽게 해결 — 미렌더링 아이템도 스크롤하면 나타남.
+
+#### Step 4: assert_element_count 신규 도구 (선택)
+
+```typescript
+// MCP 도구: assert_element_count
+{
+  selector: string,
+  expectedCount?: number,    // 정확한 개수
+  minCount?: number,         // 최소 개수
+  maxCount?: number,         // 최대 개수
+  timeoutMs?: number,        // polling 지원
+  intervalMs?: number,
+}
+// 반환: { pass: boolean, actualCount: number, message: string }
+```
+
+### 14.4 구현 우선순위
+
+```
+Step 1: assert_text/assert_visible polling ──┐
+Step 2: assert_not_visible                   ├→ CI 안정적 자동화 가능
+Step 3: scroll_until_visible                 │
+Step 4: assert_element_count (선택)          ┘
+```
+
+| Step | 도구                                 | 구현 범위                                      | 우선순위 |
+| ---- | ------------------------------------ | ---------------------------------------------- | -------- |
+| 1    | assert_text/assert_visible + polling | runtime.js (~30줄) + assert.ts 파라미터 추가   | **필수** |
+| 2    | assert_not_visible                   | runtime.js (~20줄) + 신규 도구 등록            | **필수** |
+| 3    | scroll_until_visible                 | 신규 도구 (~80줄, query_selector + swipe 조합) | **높음** |
+| 4    | assert_element_count                 | runtime.js (~15줄) + 신규 도구 등록            | 선택     |
+
+**Step 1~2 완료 시**: AI 에이전트 + 프로그래매틱 테스트에서 flaky test 문제 해결.
+**Step 3 완료 시**: 긴 리스트 자동 탐색 가능 (FlatList 가상화 문제 부분 해결).
+**전체 완료 시**: e2e-test-plan.md Phase B (SDK 레벨 waitFor)의 기반 인프라 확보.
+
+---
+
+## 15. 앱 생명주기 — MCP Resource 가이드 방식
+
+> 앱 실행/종료/딥링크는 명령어가 단순하므로 **별도 MCP 도구를 만들지 않고**, MCP Resource(가이드)로 제공한다.
+> AI 에이전트가 리소스를 읽고 기존 Bash/shell 도구로 직접 실행하는 방식.
+> query-selector 가이드(`docs://guides/query-selector-syntax`)와 동일한 패턴.
+
+### 15.1 구현
+
+```
+src/guides/app-lifecycle.ts    →  MCP Resource "docs://guides/app-lifecycle"
+src/resources/app-lifecycle.ts →  registerAppLifecycleResource()
+src/resources/index.ts         →  registerAllResources()에 등록
+```
+
+가이드에 포함할 내용 (ADB_REFERENCE.md, IDB_REFERENCE.md에서 발췌):
+
+| 작업          | Android                                     | iOS 시뮬레이터                                     |
+| ------------- | ------------------------------------------- | -------------------------------------------------- |
+| 앱 실행       | `adb shell am start -n {pkg}/.MainActivity` | `xcrun simctl launch booted {bundleId}`            |
+| 앱 종료       | `adb shell am force-stop {pkg}`             | `xcrun simctl terminate booted {bundleId}`         |
+| 딥링크        | `adb shell am start -a VIEW -d "{url}"`     | `xcrun simctl openurl booted "{url}"`              |
+| 데이터 초기화 | `adb shell pm clear {pkg}`                  | `xcrun simctl privacy booted reset all {bundleId}` |
+| 앱 설치       | `adb install {path.apk}`                    | `xcrun simctl install booted {path.app}`           |
+
+### 15.2 MCP 도구가 아닌 이유
+
+1. **명령어가 단순** — 플랫폼별 1줄 명령어. `tap`/`swipe`처럼 좌표 변환이나 복합 로직이 불필요
+2. **AI 에이전트는 Bash 접근 가능** — Cursor, Claude Code 등에서 이미 터미널 실행 가능
+3. **앱마다 다름** — Activity 이름, bundleId, 딥링크 스킴 등이 앱별로 달라서 범용 도구화 어려움
+4. **가이드만으로 충분** — AI가 리소스를 읽고 명령어를 구성하면 됨
+
+### 15.3 AI 에이전트 워크플로우
+
+```
+사용자: "앱을 재시작하고 로그인 화면 확인해줘"
+AI:
+  1. (리소스 "docs://guides/app-lifecycle" 참조)
+  2. Bash: adb shell am force-stop com.example.app
+  3. Bash: adb shell am start -n com.example.app/.MainActivity
+  4. assert_visible({ selector: "#login-screen", timeoutMs: 5000 })
+```
+
+### 15.4 Phase A (SDK)에서의 활용
+
+프로그래매틱 SDK 구현 시에는 `createApp()` 내부에서 위 명령어를 실행 + WebSocket 연결 대기(polling)를 조합:
+
+```typescript
+const app = await createApp({
+  platform: 'android',
+  bundleId: 'com.example.app',
+  timeout: 30000,
+});
+// 내부적으로:
+// 1. adb shell am start 실행
+// 2. get_debugger_status polling → appConnected: true 까지 대기
+// 3. resolve
+
+await app.terminate();
+// 내부적으로: adb shell am force-stop 실행
+```
+
+이때 `waitForConnection` 로직은 SDK 내부에서 처리. MCP 도구 레벨에서는 불필요.
