@@ -58,6 +58,11 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Bun 설정
         uses: oven-sh/setup-bun@v2
         with:
