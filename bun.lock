@@ -90,6 +90,23 @@
         "typescript": "^5.9.3",
       },
     },
+    "packages/react-native-mcp-test": {
+      "name": "@ohah/react-native-mcp-test",
+      "version": "0.1.0",
+      "bin": {
+        "react-native-mcp-test": "dist/cli.js",
+      },
+      "dependencies": {
+        "@ohah/react-native-mcp-client": "workspace:*",
+        "yaml": "^2.8.0",
+        "zod": "^3.25.0",
+      },
+      "devDependencies": {
+        "@types/node": "^20.0.0",
+        "bunup": "^0.16.22",
+        "typescript": "^5.9.3",
+      },
+    },
   },
   "packages": {
     "@babel/code-frame": ["@babel/code-frame@7.29.0", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.28.5", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw=="],
@@ -471,6 +488,8 @@
     "@ohah/react-native-mcp-client": ["@ohah/react-native-mcp-client@workspace:packages/react-native-mcp-client"],
 
     "@ohah/react-native-mcp-server": ["@ohah/react-native-mcp-server@workspace:packages/react-native-mcp-server"],
+
+    "@ohah/react-native-mcp-test": ["@ohah/react-native-mcp-test@workspace:packages/react-native-mcp-test"],
 
     "@oxc-minify/binding-android-arm64": ["@oxc-minify/binding-android-arm64@0.93.0", "", { "os": "android", "cpu": "arm64" }, "sha512-N3j/JoK4hXwQbnyOJoEltM8MEkddWV3XtfYimO6jsMjr5R6QdauKaSVeQHO/lSezB7SFkrMPqr6X7tBfghHiXA=="],
 

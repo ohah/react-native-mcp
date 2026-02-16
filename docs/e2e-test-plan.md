@@ -467,12 +467,17 @@ Phase A 완료:
   ├── 편의 메서드: tap/swipe/typeText(selector), waitFor* ✅
   └── createApp() 팩토리 + 서버 자동 spawn ✅
 
-미구현:
-  ├── Phase B: Wait/Retry (Phase A에서 waitFor* 선구현됨)
-  ├── Phase C: 추가 Assertions
-  ├── Phase D: launch/terminate SDK 래핑
-  ├── Phase E: YAML 러너
-  └── Phase F: CI 리포트
+Phase B~D 완료:
+  ├── Phase B: waitForText/waitForVisible/waitForNotVisible ✅
+  ├── Phase C: assertCount/assertValue/assertEnabled/assertDisabled 등 ✅
+  └── Phase D: launch/terminate/resetApp SDK 래핑 ✅
+
+Phase E+F 완료:
+  ├── @ohah/react-native-mcp-test 패키지 ✅
+  ├── YAML 파싱 + Zod 검증 (parser.ts) ✅
+  ├── 실행 엔진 (runner.ts) — setup/steps/teardown, 실패 시 스크린샷 자동 캡처 ✅
+  ├── CLI (cli.ts) — run <path> --platform --reporter --output ✅
+  └── 리포터: console, junit, json ✅
 ```
 
 ### 의존 관계
@@ -487,21 +492,25 @@ Phase 0: MCP Assertion 강화 ─┐
                               └→ (AI 에이전트가 바로 활용 가능)
 ```
 
-| Phase | 이름                    | 선행 조건 | 상태          | 예상 규모                                                                         |
-| ----- | ----------------------- | --------- | ------------- | --------------------------------------------------------------------------------- |
-| 기초  | Smoke 테스트 + CI       | 없음      | **완료**      | smoke.test.ts + helpers.ts + CI yml                                               |
-| **0** | MCP Assertion 강화      | 없음      | **✅ 완료**   | assert.ts 폴링 + assert_not_visible + assert_element_count + scroll_until_visible |
-| **A** | Programmatic Client SDK | 없음      | **✅ 완료**   | `@ohah/react-native-mcp-client` 패키지, ~280줄                                    |
-| **B** | Wait/Retry              | 0 + A     | **선구현**    | Phase A에서 waitForText/waitForVisible/waitForNotVisible 포함                     |
-| **C** | 추가 Assertions         | 0 + A     | **미구현**    | SDK 메서드 추가, ~100줄 (MCP 도구 래핑)                                           |
-| **D** | 앱 생명주기 관리        | A         | **부분 완료** | open_deeplink ✅, 나머지 SDK 래핑 ~100줄                                          |
-| **E** | YAML 러너 + CLI         | A + B + C | **미구현**    | YAML 파서 + 실행기, ~500줄                                                        |
-| **F** | CI 리포트               | E         | **미구현**    | 리포터, ~300줄                                                                    |
+| Phase | 이름                    | 선행 조건 | 상태        | 예상 규모                                                                         |
+| ----- | ----------------------- | --------- | ----------- | --------------------------------------------------------------------------------- |
+| 기초  | Smoke 테스트 + CI       | 없음      | **완료**    | smoke.test.ts + helpers.ts + CI yml                                               |
+| **0** | MCP Assertion 강화      | 없음      | **✅ 완료** | assert.ts 폴링 + assert_not_visible + assert_element_count + scroll_until_visible |
+| **A** | Programmatic Client SDK | 없음      | **✅ 완료** | `@ohah/react-native-mcp-client` 패키지, ~280줄                                    |
+| **B** | Wait/Retry              | 0 + A     | **✅ 완료** | waitForText/waitForVisible/waitForNotVisible/waitFor                              |
+| **C** | 추가 Assertions         | 0 + A     | **✅ 완료** | assertCount/assertValue/assertEnabled/assertDisabled 등                           |
+| **D** | 앱 생명주기 관리        | A         | **✅ 완료** | launch/terminate/resetApp + openDeepLink                                          |
+| **E** | YAML 러너 + CLI         | A + B + C | **✅ 완료** | `@ohah/react-native-mcp-test` 패키지                                              |
+| **F** | CI 리포트               | E         | **✅ 완료** | console / junit / json 리포터                                                     |
 
-**Phase 0 완료** → AI 에이전트(Cursor/Claude Desktop)가 CI에서 안정적으로 동작.
-**Phase A 완료** → 프로그래밍 방식 E2E 테스트 가능. waitFor\* 메서드도 Phase B에서 선구현됨.
-**다음: Phase C+D 병렬** → 추가 Assertions + 앱 생명주기 SDK 래핑.
-**E까지 완성하면** 비개발자도 YAML로 테스트를 작성할 수 있다.
+**Phase 0~F 전부 완료** → YAML로 E2E 테스트 작성 + CLI 실행 + CI 리포트 가능.
+
+### 알려진 이슈
+
+| 이슈                                | 상태       | 설명                                                                                                                   |
+| ----------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| bun + ws message 미발생             | **우회**   | `bun`으로 MCP 서버 실행 시 `ws` 라이브러리 message 이벤트 미발생. `serverCommand: 'node'`로 변경하여 우회 (Bun v1.3.9) |
+| iPad 시뮬레이터 tap 후 Count 미증가 | **미해결** | `tap(selector)` 호출 성공하지만 실제 터치가 반영되지 않음. 좌표 계산 또는 iPad 해상도 문제 추정                        |
 
 ---
 
