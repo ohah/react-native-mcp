@@ -61,6 +61,9 @@ jobs:
       - name: MCP 서버 빌드
         run: bun run build:server
 
+      - name: MCP 클라이언트 빌드
+        run: bun run --filter @ohah/react-native-mcp-client build
+
       - name: YAML 테스트 러너 빌드
         run: bun run --filter @ohah/react-native-mcp-test build
 
