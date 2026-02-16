@@ -155,14 +155,20 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
         );
 
         if (result.error) {
-          return textContent({ type: 'text', text: `Error: ${result.error}` });
+          return {
+            isError: true,
+            content: [{ type: 'text' as const, text: `Error: ${result.error}` }],
+          };
         }
         const pass = result.pass;
         const message = pass ? `PASS: text "${text}" found` : `FAIL: text "${text}" not found`;
         return jsonContent({ pass, message });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return textContent({ type: 'text', text: `assert_text failed: ${message}` });
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: `assert_text failed: ${message}` }],
+        };
       }
     }
   );
@@ -210,7 +216,10 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
         return jsonContent({ pass, message });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return textContent({ type: 'text', text: `assert_visible failed: ${message}` });
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: `assert_visible failed: ${message}` }],
+        };
       }
     }
   );
@@ -259,10 +268,10 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
         return jsonContent({ pass, message });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return textContent({
-          type: 'text',
-          text: `assert_not_visible failed: ${message}`,
-        });
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: `assert_not_visible failed: ${message}` }],
+        };
       }
     }
   );
@@ -332,10 +341,10 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
         return jsonContent({ pass, actualCount, message });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return textContent({
-          type: 'text',
-          text: `assert_element_count failed: ${message}`,
-        });
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: `assert_element_count failed: ${message}` }],
+        };
       }
     }
   );

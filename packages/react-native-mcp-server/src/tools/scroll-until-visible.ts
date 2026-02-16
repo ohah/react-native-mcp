@@ -278,6 +278,7 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
+          isError: true,
           content: [{ type: 'text' as const, text: `scroll_until_visible failed: ${message}` }],
         };
       }

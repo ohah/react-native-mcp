@@ -124,6 +124,7 @@ export function registerPressButton(server: McpServer): void {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
+          isError: true,
           content: [{ type: 'text' as const, text: `press_button failed: ${message}` }],
         };
       }

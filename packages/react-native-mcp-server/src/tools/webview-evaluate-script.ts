@@ -101,6 +101,7 @@ export function registerWebviewEvaluateScript(server: McpServer, appSession: App
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
+          isError: true,
           content: [{ type: 'text' as const, text: `Request failed: ${message}` }],
         };
       }
