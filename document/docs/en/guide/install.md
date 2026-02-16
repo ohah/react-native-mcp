@@ -1,0 +1,94 @@
+# Install & connect
+
+To use React Native MCP you need the **MCP server**, **client configuration**, **app setup**, and **native tools (idb / adb)**.
+
+## 1. Install the MCP server
+
+Global install:
+
+```bash
+npm install -g @ohah/react-native-mcp-server
+```
+
+Run without installing:
+
+```bash
+npx -y @ohah/react-native-mcp-server
+```
+
+Cursor, Claude, and Copilot configs typically use the `npx` approach.
+
+## 2. Register the server in your client
+
+Register the MCP server in your AI client.
+
+- **Cursor**: See [Using MCP — Cursor](./mcp-usage#cursor)
+- **Claude Desktop**: See [Using MCP — Claude Desktop](./mcp-usage#claude-desktop)
+- **GitHub Copilot CLI**: See [Using MCP — Copilot CLI](./mcp-usage#github-copilot-cli)
+
+## 3. React Native app setup
+
+The app must use the **Metro plugin** and **Babel preset** so the MCP server can communicate with it.
+
+### Metro plugin
+
+Add the plugin in `metro.config.mjs` (or `metro.config.js`):
+
+```js
+import { withReactNativeMCP } from '@ohah/react-native-mcp-server/metro-plugin';
+
+export default withReactNativeMCP({
+  // your existing Metro config
+});
+```
+
+### Babel preset
+
+Add the preset in `babel.config.js` (AppRegistry wrapping, testID injection):
+
+```js
+module.exports = {
+  presets: ['module:@react-native/babel-preset', '@ohah/react-native-mcp-server/babel-preset'],
+};
+```
+
+To apply only in development:
+
+```js
+const isDev = process.env.NODE_ENV !== 'production';
+const mcpPreset = isDev ? ['@ohah/react-native-mcp-server/babel-preset'] : [];
+module.exports = {
+  presets: ['module:@react-native/babel-preset', ...mcpPreset],
+};
+```
+
+## 4. Native tools (idb / adb)
+
+Tap, swipe, screenshots, etc. use **idb** (iOS) and **adb** (Android). You must install them.
+
+### Android — adb
+
+- Included with Android Studio
+- Standalone: `brew install --cask android-platform-tools` (macOS)
+- Verify: `adb devices`
+
+### iOS simulator — idb
+
+Install [idb (iOS Development Bridge)](https://fbidb.io/):
+
+```bash
+brew tap facebook/fb && brew install idb-companion
+pip3 install fb-idb
+```
+
+Verify: `idb list-targets`
+
+> idb is macOS-only and supports simulators. Physical devices need separate setup.
+
+## 5. Verify
+
+1. Start Metro (`bun run start` or `npm start`)
+2. Run the app in the iOS simulator or Android emulator
+3. In Cursor (or your client), confirm MCP is connected and tools like snapshot and tap work
+
+If something fails, see the troubleshooting section in [Using MCP](./mcp-usage) or the repo issues.

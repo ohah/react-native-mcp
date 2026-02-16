@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "examples/*",
+    "document"
   ],
   "scripts": {
     "build": "bun run --filter @ohah/react-native-mcp-server build",
@@ -27,7 +28,10 @@
     "test:coverage": "bun test packages/ --coverage",
     "test:e2e": "bun test e2e/smoke.test.ts",
     "setup-mcp": "bun run .cursor/scripts/set-mcp-mise-path.ts",
-    "test:yaml": "bun run --filter @ohah/react-native-mcp-test run"
+    "test:yaml": "bun run --filter @ohah/react-native-mcp-test run",
+    "docs:dev": "bun run --filter document dev",
+    "docs:build": "bun run --filter document build",
+    "docs:preview": "bun run --filter document preview"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.0.11",
