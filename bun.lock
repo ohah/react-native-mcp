@@ -47,6 +47,19 @@
         "typescript": "^5.8.3",
       },
     },
+    "packages/react-native-mcp-client": {
+      "name": "@ohah/react-native-mcp-client",
+      "version": "0.1.0",
+      "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.25.0",
+        "@ohah/react-native-mcp-server": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "^20.0.0",
+        "bunup": "^0.16.22",
+        "typescript": "^5.9.3",
+      },
+    },
     "packages/react-native-mcp-server": {
       "name": "@ohah/react-native-mcp-server",
       "version": "0.1.1-rc.1",
@@ -454,6 +467,8 @@
     "@nodelib/fs.stat": ["@nodelib/fs.stat@2.0.5", "", {}, "sha512-RkhPPp2zrqDAQA/2jNhnztcPAlv64XdhIp7a7454A5ovI7Bukxgt7MX7udwAu3zg1DcpPU0rz3VV1SeaqvY4+A=="],
 
     "@nodelib/fs.walk": ["@nodelib/fs.walk@1.2.8", "", { "dependencies": { "@nodelib/fs.scandir": "2.1.5", "fastq": "^1.6.0" } }, "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg=="],
+
+    "@ohah/react-native-mcp-client": ["@ohah/react-native-mcp-client@workspace:packages/react-native-mcp-client"],
 
     "@ohah/react-native-mcp-server": ["@ohah/react-native-mcp-server@workspace:packages/react-native-mcp-server"],
 
