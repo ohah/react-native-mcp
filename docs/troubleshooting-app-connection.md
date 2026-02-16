@@ -80,33 +80,26 @@ MCP 도구 호출 시 "No React Native app connected"가 나올 때 가능한 �
 
 ## Metro 쪽에서 정상 동작을 위해 필요한 것
 
-아래가 모두 되어 있어야 앱에 MCP 런타임이 들어가고, 콘솔/네트워크 도구(CDP)가 동작한다.
+아래가 모두 되어 있어야 앱에 MCP 런타임이 들어가고, CDP 기반 도구가 동작한다.
 
-1. **cdp-interceptor 로드**
-   - Metro가 **시작될 때** 한 번 로드되어야 함.
-   - 방법 중 하나:
-     - `metro.config.js` **맨 위**에 `require('@ohah/react-native-mcp-server/cdp-interceptor');`
-     - 또는 `package.json`의 start 스크립트에서 `node -r @ohah/react-native-mcp-server/cdp-interceptor ... react-native start ...`
-   - 이게 없으면 `list_console_messages`, `list_network_requests`, `get_debugger_status` 등 Metro CDP 기반 도구가 동작하지 않음.
-
-2. **MCP transformer 사용**
+1. **MCP transformer 사용**
    - `metro.config.js`의 `transformer.babelTransformerPath`가 **MCP transformer**를 가리켜야 함.
    - 예: `babelTransformerPath: path.resolve(workspaceRoot, 'packages/react-native-mcp-server/metro-transformer.cjs')`
    - 이게 없거나 잘못된 경로면 `AppRegistry.registerComponent` 치환·런타임 주입이 안 되어, 앱이 `ws://localhost:12300`에 접속하지 않음.
 
-3. **앱 진입점에 `AppRegistry.registerComponent` 포함**
+2. **앱 진입점에 `AppRegistry.registerComponent` 포함**
    - MCP transformer는 **`AppRegistry.registerComponent`가 포함된 파일**만 런타임 주입 대상으로 처리함.
    - 진입점(예: `index.js` 또는 루트 컴포넌트를 등록하는 파일)이 이 transformer를 **반드시 타도록** 되어 있어야 함. (`node_modules` 안 파일은 transformer에서 제외됨.)
 
-4. **모노레포인 경우**
+3. **모노레포인 경우**
    - `watchFolders`에 워크스페이스 루트 포함 → MCP 패키지 경로를 Metro가 볼 수 있음.
    - `resolver.nodeModulesPaths`에 앱·워크스페이스의 `node_modules` 포함 → `@ohah/react-native-mcp-server` 등이 resolve됨.
 
-5. **캐시**
+4. **캐시**
    - 설정이나 transformer를 바꾼 뒤에는 **Metro 캐시 리셋** 후 다시 번들링하는 것이 안전함.
      예: `react-native start --reset-cache` 또는 `bun run start:reset`.
 
-정리: **cdp-interceptor** + **babelTransformerPath → MCP transformer** + **진입점이 해당 transformer를 타는지** + (모노레포면 watchFolders·resolver) + **필요 시 캐시 리셋**.
+정리: **babelTransformerPath → MCP transformer** + **진입점이 해당 transformer를 타는지** + (모노레포면 watchFolders·resolver) + **필요 시 캐시 리셋**.
 
 ### Metro에서 연결이 제대로 안 될 때 점검할 원인
 

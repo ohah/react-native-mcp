@@ -63,45 +63,20 @@ class CdpClient {
 
 ---
 
-## 2. 레거시: cdp-interceptor.cjs (Module.\_load 후크)
+## 2. MCP 서버와의 연동
 
-> **더 이상 필요하지 않음.** 직접 CDP 연결 도입 전의 구현으로, 참고용으로 남겨둠.
-
-### 2.1 방식
-
-1. `Module._load` 후크 → `@react-native/dev-middleware` 최초 로드 시 `createDevMiddleware` 래핑
-2. `unstable_customInspectorMessageHandler`로 모든 CDP 메시지를 eventStore에 push
-3. `unstable_extraMiddleware`로 `GET /__mcp_cdp_events__` 엔드포인트 등록 (현재 MCP 서버에서 미사용)
-
-### 2.2 문제점
-
-- **`node -r` 필수**: CLI가 dev-middleware를 require하기 전에 Module.\_load 후크가 걸려야 함
-- **같은 프로세스 제약**: Metro와 같은 프로세스에서만 이벤트 접근 가능
-- **사용자 설정 필요**: `metro.config.js`에 require 1줄 + `package.json`에 `node -r` 추가
-
-### 2.3 파일
-
-```
-packages/react-native-mcp-server/
-└── cdp-interceptor.cjs    # Module._load 후크 + runServer 패치 + dev-middleware 래핑
-```
-
----
-
-## 3. MCP 서버와의 연동
-
-### 3.1 이벤트 조회
+### 2.1 이벤트 조회
 
 CDP 이벤트 HTTP 조회(`fetchCdpEvents`, `GET /__mcp_cdp_events__`)는 제거됨.  
 `list_console_messages`, `list_network_requests`는 stub 상태로 index에 미등록.
 
-### 3.2 도구에서 사용
+### 2.2 도구에서 사용
 
 - `get_debugger_status`: 앱 WebSocket 연결 상태(appSession) 확인
 
 ---
 
-## 4. 테스트
+## 3. 테스트
 
 ```bash
 bun test packages/react-native-mcp-server/src/__tests__/metro-cdp.test.ts
