@@ -1,0 +1,148 @@
+name: E2E iOS
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'packages/**'
+      - 'examples/demo-app/**'
+      - 'e2e/**'
+      - '.github/workflows/e2e-ios.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'packages/**'
+      - 'examples/demo-app/**'
+      - 'e2e/**'
+      - '.github/workflows/e2e-ios.yml'
+
+jobs:
+  check:
+    name: 실행 여부 확인
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.changes.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            e2e:
+              - 'packages/**'
+              - 'examples/demo-app/**'
+              - 'e2e/**'
+              - '.github/workflows/e2e-ios.yml'
+
+  e2e-ios:
+    name: E2E iOS 테스트
+    needs: check
+    if: needs.check.outputs.should-run == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Bun 설정
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 의존성 설치
+        run: bun install
+
+      - name: MCP 서버 빌드
+        run: bun run build:server
+
+      - name: Ruby Bundler 설치
+        run: |
+          gem install bundler:2.5.9
+          bundle install
+        working-directory: examples/demo-app/ios
+
+      - name: CocoaPods 캐시
+        uses: actions/cache@v4
+        with:
+          path: |
+            examples/demo-app/ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-pods-${{ hashFiles('examples/demo-app/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: CocoaPods 설치
+        run: bundle exec pod install
+        working-directory: examples/demo-app/ios
+
+      - name: DerivedData 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/DerivedData
+          key: ${{ runner.os }}-deriveddata-${{ hashFiles('examples/demo-app/ios/**/*.pbxproj', 'examples/demo-app/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-deriveddata-
+
+      - name: iOS 앱 빌드
+        run: |
+          xcodebuild \
+            -workspace ReactNativeMcpDemo.xcworkspace \
+            -scheme ReactNativeMcpDemo \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath "$HOME/DerivedData" \
+            -quiet
+        working-directory: examples/demo-app/ios
+
+      - name: 시뮬레이터 부팅 및 앱 설치
+        run: |
+          # 사용 가능한 iPhone 시뮬레이터 찾기
+          DEVICE_UDID=$(xcrun simctl list devices iPhone available --json | jq -r '.devices | to_entries[] | .value[] | select(.name | contains("iPhone")) | .udid' | head -n 1)
+          if [ -z "$DEVICE_UDID" ]; then
+            echo "Error: No available iPhone simulator found"
+            exit 1
+          fi
+          echo "DEVICE_UDID=$DEVICE_UDID" >> $GITHUB_ENV
+
+          # 시뮬레이터 부팅
+          echo "Booting simulator: $DEVICE_UDID"
+          xcrun simctl boot "$DEVICE_UDID" || true
+
+          # 앱 설치
+          APP_PATH=$(find "$HOME/DerivedData/Build/Products/Release-iphonesimulator" -name "*.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: No .app found in DerivedData"
+            find "$HOME/DerivedData/Build/Products" -maxdepth 3 -print || true
+            exit 1
+          fi
+          echo "Installing app: $APP_PATH"
+          xcrun simctl install booted "$APP_PATH"
+
+      - name: E2E 테스트 실행
+        id: e2e-test
+        run: |
+          # 앱 실행
+          xcrun simctl launch booted org.reactnativemcp.demo
+
+          # 앱 초기화 대기
+          sleep 10
+
+          # E2E 테스트 실행
+          E2E_PLATFORM=ios bun test e2e/smoke.test.ts
+
+      - name: 실패 시 스크린샷 저장
+        if: failure()
+        run: |
+          mkdir -p e2e-artifacts
+          xcrun simctl io booted screenshot e2e-artifacts/failure-screenshot.png 2>/dev/null || true
+          xcrun simctl spawn booted log show --last 5m > e2e-artifacts/simulator-log.txt 2>/dev/null || true
+
+      - name: 아티팩트 업로드
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-ios-failure-artifacts
+          path: e2e-artifacts/
+          retention-days: 14
+          if-no-files-found: ignore

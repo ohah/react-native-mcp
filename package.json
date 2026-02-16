@@ -25,6 +25,7 @@
     "test:unit": "bun test packages/",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test packages/ --coverage",
+    "test:e2e": "bun test e2e/smoke.test.ts",
     "setup-mcp": "bun run .cursor/scripts/set-mcp-mise-path.ts"
   },
   "devDependencies": {
