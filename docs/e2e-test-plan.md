@@ -31,6 +31,37 @@ await app.waitForText('환영합니다', { timeout: 5000 });
 
 ## 2. 구현 단계
 
+### Phase 0: MCP 도구 레벨 Assertion 강화 (선행 조건)
+
+**목표**: CI/GitHub Actions에서 flaky test 없이 안정적 자동화를 위한 MCP 도구 레벨 polling 지원.
+
+**왜 필요한가**: Phase B의 SDK 레벨 waitFor는 SDK를 사용하는 경우에만 동작한다. 그러나 AI 에이전트(Cursor, Claude Desktop)는 MCP 도구를 직접 호출하므로, **도구 자체에 polling이 내장**되어야 AI/SDK 모두 활용 가능하다. 또한 SDK의 `waitFor` 구현이 MCP 도구의 polling을 기반으로 하면 불필요한 라운드트립을 줄일 수 있다.
+
+**비교 분석**: flutter-skill(https://github.com/ai-dashboad/flutter-skill)의 React Native SDK는 `assert_visible`/`assert_not_visible`에 `timeout` 파라미터를 내장하고 200ms 간격 polling을 수행. `wait_for_idle`(UI 안정성 대기)은 판단 기준 모호 → 채택하지 않음.
+
+**구현 항목**:
+
+| 도구                          | 변경 사항                              | 하위 호환                              |
+| ----------------------------- | -------------------------------------- | -------------------------------------- |
+| `assert_text`                 | `timeoutMs`/`intervalMs` 파라미터 추가 | `timeoutMs=0` 기본값 → 기존처럼 단발성 |
+| `assert_visible`              | `timeoutMs`/`intervalMs` 파라미터 추가 | 동일                                   |
+| `assert_not_visible` (신규)   | 요소 사라짐 확인 + polling             | -                                      |
+| `scroll_until_visible` (신규) | swipe + querySelector 반복             | -                                      |
+| `assert_element_count` (신규) | 요소 개수 확인 + polling               | -                                      |
+
+**polling 동작**:
+
+```
+timeoutMs=0 (기본) → 즉시 체크, 즉시 반환 (기존 동작)
+timeoutMs>0        → 체크 → 실패 시 intervalMs 후 재시도 → timeoutMs 초과 시 최종 반환
+```
+
+**구현 위치**: `runtime.js`에 공용 polling 함수 추가 + `assert.ts`에 파라미터 전달.
+
+**상세 설계**: [DESIGN.md 섹션 14](./DESIGN.md#14-ci-ready-assertion--wait-도구-강화) 참조.
+
+---
+
 ### Phase A: Programmatic Client SDK
 
 **목표**: MCP 프로토콜을 감싸서 함수 호출로 바로 쓸 수 있는 라이브러리.
@@ -105,6 +136,8 @@ AppClient
 **목표**: 비동기 UI 변화를 안정적으로 기다리는 유틸리티.
 
 **왜 필요한가**: AI는 실패하면 스크린샷을 보고 판단 후 재시도하지만, 자동화에서는 "이 텍스트가 나올 때까지 기다려" 같은 명시적 대기 조건이 필수다. 이게 없으면 테스트가 타이밍에 따라 성공/실패가 갈린다 (flaky test).
+
+> **Phase 0과의 관계**: Phase 0에서 MCP 도구 레벨에 polling이 추가되므로, SDK의 waitFor는 내부적으로 `assert_text({ timeoutMs })` / `assert_visible({ timeoutMs })`를 호출하는 래퍼가 된다. MCP 라운드트립 1회로 polling이 완료되므로 SDK에서 반복 호출하는 것보다 효율적.
 
 **API**:
 
@@ -373,21 +406,27 @@ Results: 1 passed, 1 failed (8.3s)
 ## 3. 우선순위 및 의존 관계
 
 ```
-Phase A: SDK ──────────┐
-                       ├→ Phase B: Wait/Retry ──┐
-                       ├→ Phase C: Assertions   ├→ Phase E: YAML 러너 → Phase F: CI 리포트
-                       └→ Phase D: 앱 생명주기 ─┘
+Phase 0: MCP Assertion 강화 ─┐
+                              ├→ Phase A: SDK ──────────┐
+                              │                         ├→ Phase B: Wait/Retry ──┐
+                              │                         ├→ Phase C: Assertions   ├→ Phase E: YAML 러너 → Phase F: CI 리포트
+                              │                         └→ Phase D: 앱 생명주기 ─┘
+                              │
+                              └→ (AI 에이전트가 바로 활용 가능)
 ```
 
-| Phase | 이름                    | 선행 조건 | 예상 규모                  |
-| ----- | ----------------------- | --------- | -------------------------- |
-| **A** | Programmatic Client SDK | 없음      | 새 패키지 1개, ~300줄      |
-| **B** | Wait/Retry              | A         | SDK 메서드 추가, ~100줄    |
-| **C** | 추가 Assertions         | A         | SDK 메서드 추가, ~150줄    |
-| **D** | 앱 생명주기 관리        | A         | adb/simctl 래핑, ~200줄    |
-| **E** | YAML 러너 + CLI         | A + B + C | YAML 파서 + 실행기, ~500줄 |
-| **F** | CI 리포트               | E         | 리포터, ~300줄             |
+| Phase | 이름                    | 선행 조건 | 예상 규모                                               |
+| ----- | ----------------------- | --------- | ------------------------------------------------------- |
+| **0** | MCP Assertion 강화      | 없음      | runtime.js ~60줄 + assert.ts 파라미터 + 신규 도구 2~3개 |
+| **A** | Programmatic Client SDK | 없음      | 새 패키지 1개, ~300줄                                   |
+| **B** | Wait/Retry              | 0 + A     | SDK 메서드 추가, ~50줄 (MCP polling 기반으로 간소화)    |
+| **C** | 추가 Assertions         | 0 + A     | SDK 메서드 추가, ~100줄 (MCP 도구 래핑)                 |
+| **D** | 앱 생명주기 관리        | A         | adb/simctl 래핑, ~200줄                                 |
+| **E** | YAML 러너 + CLI         | A + B + C | YAML 파서 + 실행기, ~500줄                              |
+| **F** | CI 리포트               | E         | 리포터, ~300줄                                          |
 
+**Phase 0만 완성하면** AI 에이전트(Cursor/Claude Desktop)가 CI에서 안정적으로 동작한다.
+**Phase 0은 A와 병렬 진행 가능** — MCP 도구 레벨이므로 SDK와 독립적.
 **A~C만 완성하면** 프로그래밍 방식 E2E 테스트가 가능하다.
 **E까지 완성하면** 비개발자도 YAML로 테스트를 작성할 수 있다.
 
