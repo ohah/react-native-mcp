@@ -1,5 +1,5 @@
 import { mkdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { AppClient } from '@ohah/react-native-mcp-client';
 import type { Reporter } from './reporters/index.js';
 import type {
@@ -60,7 +60,9 @@ async function executeStep(app: AppClient, step: TestStep): Promise<void> {
     const result = await app.assertCount(step.assertCount.selector, step.assertCount.count);
     if (!result.pass) throw new Error(result.message);
   } else if ('screenshot' in step) {
-    await app.screenshot({ filePath: step.screenshot.path });
+    await app.screenshot({
+      filePath: step.screenshot.path ? resolve(step.screenshot.path) : undefined,
+    });
   } else if ('wait' in step) {
     await new Promise((resolve) => setTimeout(resolve, step.wait));
   } else if ('launch' in step) {
