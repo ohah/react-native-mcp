@@ -79,6 +79,59 @@ describe('E2E Smoke', () => {
     expect(result.pass).toBe(false);
   });
 
+  // ─── Phase 0: 신규 assertion 도구 ─────────────────────────────
+
+  it('assert_text + polling: timeoutMs 파라미터 동작', async () => {
+    // 존재하는 텍스트를 polling으로 찾기 — 즉시 성공해야 함
+    const result = await callTool(client, 'assert_text', {
+      text: 'Count',
+      timeoutMs: 3000,
+      intervalMs: 300,
+    });
+    expect(result.pass).toBe(true);
+  });
+
+  it('assert_visible + polling: timeoutMs 파라미터 동작', async () => {
+    const result = await callTool(client, 'assert_visible', {
+      selector: '#press-counter-button',
+      timeoutMs: 3000,
+    });
+    expect(result.pass).toBe(true);
+  });
+
+  it('assert_not_visible: 존재하지 않는 요소 → PASS', async () => {
+    const result = await callTool(client, 'assert_not_visible', {
+      selector: '#__nonexistent_element__',
+    });
+    expect(result.pass).toBe(true);
+  });
+
+  it('assert_not_visible: 존재하는 요소 → FAIL', async () => {
+    const result = await callTool(client, 'assert_not_visible', {
+      selector: '#press-counter-button',
+    });
+    expect(result.pass).toBe(false);
+  });
+
+  it('assert_element_count: minCount로 pressable 요소 확인', async () => {
+    const result = await callTool(client, 'assert_element_count', {
+      selector: ':has-press',
+      minCount: 1,
+    });
+    expect(result.pass).toBe(true);
+    expect(result.actualCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('assert_element_count: expectedCount 불일치 → FAIL', async () => {
+    const result = await callTool(client, 'assert_element_count', {
+      selector: '#press-counter-button',
+      expectedCount: 999,
+    });
+    expect(result.pass).toBe(false);
+  });
+
+  // ─── 기존 도구 ──────────────────────────────────────────────────
+
   it('take_screenshot: 이미지 반환', async () => {
     const res = await client.callTool({
       name: 'take_screenshot',

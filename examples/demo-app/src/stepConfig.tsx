@@ -36,6 +36,9 @@ import { StepGestureRefresh } from './steps/StepGestureRefresh';
 import { StepGestureDrawer } from './steps/StepGestureDrawer';
 import { StepGesturePager } from './steps/StepGesturePager';
 import { StepGestureBottomSheet } from './steps/StepGestureBottomSheet';
+import { StepToggleVisibility } from './steps/StepToggleVisibility';
+import { StepLongList } from './steps/StepLongList';
+import { StepElementCount } from './steps/StepElementCount';
 
 export type StepContentProps = { isDarkMode: boolean };
 
@@ -117,7 +120,7 @@ export const STEPS: StepItem[] = [
   },
   {
     question:
-      'AI: testID 없는 이 WebView 안에 "postMessage 보내기" 버튼이 있다. query_selector로 WebView나 버튼 영역을 찾아 measure 좌표를 얻고, tap(platform, x, y)으로 idb/adb 클릭한다. 버튼이 postMessage를 보내면 RN이 수신해 "postMessage 수: N"으로 표시한다. assert_text(selector "#postmessage-count")로 postMessage가 1 이상 수신되었는지 확인하라.',
+      'AI: testID 없는 WebView이지만 Babel 플러그인이 자동 등록한다. evaluate_script로 getRegisteredWebViewIds()를 호출해 WebView ID를 확인한 뒤, webview_evaluate_script(webViewId, "document.querySelector(\'#postmsg-btn\').click()")로 내부 버튼을 클릭하라. WebView 내부 요소는 좌표 tap 대신 항상 webview_evaluate_script(DOM 조작)을 사용할 것. assert_text(selector "#postmessage-count")로 postMessage가 1 이상 수신되었는지 확인하라.',
     Component: StepWebViewNoTestId,
   },
   // Network (5)
@@ -211,5 +214,21 @@ export const STEPS: StepItem[] = [
     question:
       'AI: 하단 Bottom sheet 영역 좌표를 얻고, swipe(platform, x1, y1, x2, y2)로 idb/adb 위쪽 스와이프해 시트를 연 뒤, assert_text로 testID "sheet-status" 또는 "상태: 열림"을 확인하라.',
     Component: StepGestureBottomSheet,
+  },
+  // Assertion (3)
+  {
+    question:
+      'AI: assert_visible(selector "#toggle-target")로 요소가 보이는지 확인한다. 그 다음 query_selector로 "toggle-visibility-btn"을 찾아 tap으로 클릭한 뒤, assert_not_visible(selector "#toggle-target")로 요소가 사라졌는지 확인하라. 다시 tap으로 클릭하면 assert_visible로 다시 보이는지 확인.',
+    Component: StepToggleVisibility,
+  },
+  {
+    question:
+      'AI: scroll_until_visible(selector "#long-list-item-99", direction "down", platform)로 FlatList 하단의 "아이템 99"를 찾아라. 찾은 뒤 tap으로 클릭하고 assert_text("탭: 아이템 99")로 결과를 확인하라.',
+    Component: StepLongList,
+  },
+  {
+    question:
+      'AI: assert_element_count(selector "[testID^=count-item]" 또는 적절한 셀렉터, expectedCount 5)로 아이템이 5개인지 확인한다. query_selector로 "count-item-0"을 찾아 tap으로 삭제한 뒤, assert_element_count(expectedCount 4)로 4개인지 확인하라.',
+    Component: StepElementCount,
   },
 ];

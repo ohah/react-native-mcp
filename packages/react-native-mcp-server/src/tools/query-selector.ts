@@ -38,6 +38,35 @@ export function buildQuerySelectorAllEvalCode(selector: string): string {
   return `(function(){ var M = typeof __REACT_NATIVE_MCP__ !== 'undefined' ? __REACT_NATIVE_MCP__ : null; return M && M.querySelectorAllWithMeasure ? M.querySelectorAllWithMeasure(${JSON.stringify(selector)}) : []; })();`;
 }
 
+/** WebView 감지 시 등록된 webViewId 목록을 조회해 힌트로 반환 */
+async function getWebViewHint(
+  appSession: AppSession,
+  deviceId?: string,
+  platform?: string
+): Promise<string> {
+  try {
+    const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.getRegisteredWebViewIds ? __REACT_NATIVE_MCP__.getRegisteredWebViewIds() : []; })();`;
+    const res = await appSession.sendRequest(
+      { method: 'eval', params: { code } },
+      5000,
+      deviceId,
+      platform
+    );
+    const ids = Array.isArray(res.result) ? (res.result as string[]) : [];
+    if (ids.length === 0) {
+      return '\n\n⚠️ This is a WebView but no WebView IDs are registered. Coordinate-based tap may be needed, or ensure the Babel plugin is configured.';
+    }
+    const idList = ids.map((id) => `"${id}"`).join(', ');
+    return `\n\n💡 WebView detected. Use webview_evaluate_script to interact with its DOM content (click, read text, etc.) — do NOT use coordinate-based tap.\nRegistered WebView IDs: [${idList}]\nExample: webview_evaluate_script(webViewId: ${ids.length === 1 ? `"${ids[0]}"` : `<pick one>`}, script: "document.querySelector('button').click()")`;
+  } catch {
+    return '\n\n💡 This is a WebView. Use webview_evaluate_script instead of tap for DOM interactions.';
+  }
+}
+
+function isWebViewType(typeName: string): boolean {
+  return typeName === 'RNCWebView' || typeName.includes('WebView');
+}
+
 export function registerQuerySelector(server: McpServer, appSession: AppSession): void {
   const register = (
     name: string,
@@ -74,10 +103,16 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
         if (res.error != null) {
           return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }
-        const text =
-          res.result == null
-            ? 'No element matches selector: ' + selector
-            : JSON.stringify(res.result, null, 2);
+        if (res.result == null) {
+          return {
+            content: [{ type: 'text' as const, text: 'No element matches selector: ' + selector }],
+          };
+        }
+        const result = res.result as Record<string, unknown>;
+        let text = JSON.stringify(result, null, 2);
+        if (isWebViewType(String(result.type ?? ''))) {
+          text += await getWebViewHint(appSession, deviceId, platform);
+        }
         return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -105,11 +140,17 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
         if (res.error != null) {
           return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
         }
-        const list = Array.isArray(res.result) ? res.result : [];
-        const text =
-          list.length > 0
-            ? JSON.stringify(list, null, 2)
-            : 'No elements match selector: ' + selector;
+        const list = Array.isArray(res.result) ? (res.result as Record<string, unknown>[]) : [];
+        if (list.length === 0) {
+          return {
+            content: [{ type: 'text' as const, text: 'No elements match selector: ' + selector }],
+          };
+        }
+        let text = JSON.stringify(list, null, 2);
+        const hasWebView = list.some((el) => isWebViewType(String(el.type ?? '')));
+        if (hasWebView) {
+          text += await getWebViewHint(appSession, deviceId, platform);
+        }
         return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

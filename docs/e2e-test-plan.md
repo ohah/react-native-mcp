@@ -9,7 +9,7 @@
 
 ### 1.1 현재 상태
 
-MCP 도구 (`click`, `type_text`, `assert_text` 등)는 완성되어 있으나, 사용하려면 **MCP 프로토콜(JSON-RPC over stdio)** 을 직접 다뤄야 한다:
+MCP 도구 (`tap`, `type_text`, `assert_text` 등)는 완성되어 있으나, 사용하려면 **MCP 프로토콜(JSON-RPC over stdio)** 을 직접 다뤄야 한다:
 
 ```
 [테스트 코드] → JSON-RPC → [MCP Server] → WebSocket → [React Native App]
@@ -17,13 +17,35 @@ MCP 도구 (`click`, `type_text`, `assert_text` 등)는 완성되어 있으나, 
 
 AI 에이전트는 이 프로토콜을 자동으로 처리하지만, 일반 테스트 코드에서 쓰기엔 보일러플레이트가 많다.
 
+**이미 구현된 것:**
+
+- **Smoke 테스트** (`e2e/smoke.test.ts`): 7개 MCP 도구 기본 동작 검증 (bun test 기반)
+- **테스트 헬퍼** (`e2e/helpers.ts`): `createMcpClient()`, `waitForAppConnection()`, `callTool()` 유틸리티
+- **CI 워크플로우**: GitHub Actions에서 iOS/Android 자동 E2E (`.github/workflows/e2e-ios.yml`, `e2e-android.yml`)
+- **데모앱** (`examples/demo-app/`): 테스트용 다양한 화면 (Scroll, Input, WebView, Gesture 등)
+- **딥링크 도구** (`open_deeplink`): MCP 도구로 구현 완료
+- **앱 생명주기 가이드** (`docs://guides/app-lifecycle`): MCP Resource로 제공
+
+**현재 구현된 MCP 도구 (27개):**
+
+| 카테고리      | 도구                                                                                                 |
+| ------------- | ---------------------------------------------------------------------------------------------------- |
+| 조회          | `take_snapshot`, `query_selector`, `query_selector_all`, `take_screenshot`, `describe_ui`            |
+| Assertion     | `assert_text`, `assert_visible`                                                                      |
+| 입력          | `tap`, `swipe`, `input_text`, `type_text`, `input_key`, `press_button`                               |
+| 실행          | `evaluate_script`, `webview_evaluate_script`                                                         |
+| 디바이스      | `get_debugger_status`, `list_devices`, `switch_keyboard`                                             |
+| 딥링크        | `open_deeplink`                                                                                      |
+| 네트워크/콘솔 | `list_console_messages`, `clear_console_messages`, `list_network_requests`, `clear_network_requests` |
+| 파일/미디어   | `file_push`, `add_media`                                                                             |
+
 ### 1.2 목표
 
 ```typescript
 // 이렇게 쓸 수 있어야 함
 const app = await createApp({ platform: 'ios' });
 await app.typeText('#email', 'user@test.com');
-await app.click('Pressable:text("로그인")');
+await app.tap('Pressable:text("로그인")');
 await app.waitForText('환영합니다', { timeout: 5000 });
 ```
 
@@ -31,7 +53,7 @@ await app.waitForText('환영합니다', { timeout: 5000 });
 
 ## 2. 구현 단계
 
-### Phase 0: MCP 도구 레벨 Assertion 강화 (선행 조건)
+### Phase 0: MCP 도구 레벨 Assertion 강화 (선행 조건) — ✅ 구현 완료
 
 **목표**: CI/GitHub Actions에서 flaky test 없이 안정적 자동화를 위한 MCP 도구 레벨 polling 지원.
 
@@ -62,11 +84,13 @@ timeoutMs>0        → 체크 → 실패 시 intervalMs 후 재시도 → timeou
 
 ---
 
-### Phase A: Programmatic Client SDK
+### Phase A: Programmatic Client SDK — ✅ 구현 완료
 
 **목표**: MCP 프로토콜을 감싸서 함수 호출로 바로 쓸 수 있는 라이브러리.
 
-**왜 필요한가**: 현재 도구를 호출하려면 MCP 클라이언트를 직접 생성하고, `client.callTool({ name: '...', arguments: {...} })` 형태로 호출해야 한다. SDK는 이 과정을 `app.click('#btn')` 한 줄로 줄여준다.
+**왜 필요한가**: 현재 도구를 호출하려면 MCP 클라이언트를 직접 생성하고, `client.callTool({ name: '...', arguments: {...} })` 형태로 호출해야 한다. SDK는 이 과정을 `app.tap('#btn')` 한 줄로 줄여준다.
+
+> **참고**: 현재 `e2e/helpers.ts`에 기본적인 `createMcpClient()`, `callTool()` 유틸리티가 구현되어 있으며, 이를 확장하여 SDK로 발전시킬 수 있다.
 
 **패키지**: `packages/react-native-mcp-client` (새 패키지)
 
@@ -87,23 +111,27 @@ const app = await createApp({
 const tree = await app.snapshot(); // take_snapshot
 const el = await app.querySelector('#login-btn'); // query_selector
 const els = await app.querySelectorAll('Text'); // query_selector_all
-const texts = await app.listTextNodes(); // list_text_nodes
-const clickables = await app.listClickables(); // list_clickables
 const screenshot = await app.screenshot(); // take_screenshot → Buffer
 
 // --- 조작 ---
-await app.click('#login-btn'); // click (testID)
-await app.clickByLabel('로그인'); // click_by_label
-await app.longPress('#item'); // long_press
-await app.longPressByLabel('삭제'); // long_press_by_label
-await app.typeText('#email', 'user@test.com'); // type_text
-await app.scroll('#list', { y: 300 }); // scroll (현재 MCP에 scroll 도구 없음 → SDK에서 swipe 또는 evaluate_script(scrollTo)로 구현)
+await app.tap('#login-btn'); // query_selector → measure → tap (좌표 기반)
+await app.typeText('#email', 'user@test.com'); // type_text (uid 기반)
+await app.swipe('#list', { direction: 'up' }); // query_selector → measure → swipe
+await app.inputText('hello'); // input_text (포커스된 입력에 텍스트 전송)
+await app.pressButton('BACK'); // press_button
+
+// --- 딥링크 ---
+await app.openDeepLink('myapp://screen/settings'); // open_deeplink
 
 // --- WebView ---
 await app.webviewEval('main-webview', 'document.title');
 
 // --- 임의 JS 실행 ---
-await app.evaluate(() => console.log('hello'));
+await app.evaluate('() => console.log("hello")');
+
+// --- 디버깅 ---
+const logs = await app.consoleLogs({ level: 'error' }); // list_console_messages
+const requests = await app.networkRequests({ url: '/api' }); // list_network_requests
 
 // --- 정리 ---
 await app.close();
@@ -131,7 +159,7 @@ AppClient
 
 ---
 
-### Phase B: Wait / Retry 메커니즘
+### Phase B: Wait / Retry 메커니즘 — 미구현
 
 **목표**: 비동기 UI 변화를 안정적으로 기다리는 유틸리티.
 
@@ -183,7 +211,7 @@ function waitFor(predicate, { timeout, interval }) {
 
 ---
 
-### Phase C: 추가 Assertion 도구
+### Phase C: 추가 Assertion 도구 — 미구현
 
 **목표**: 테스트 표현력을 높이는 assertion 확장.
 
@@ -206,7 +234,7 @@ await app.assertValue('#email', 'user@test.com');
 
 // 텍스트 부재 확인
 await app.assertNoText('에러');
-// → listTextNodes() 에서 '에러' 포함 여부 확인
+// → snapshot 에서 '에러' 포함 여부 확인
 
 // 활성/비활성 상태 확인
 await app.assertEnabled('#submit-btn');
@@ -219,7 +247,7 @@ await app.assertDisabled('#submit-btn');
 | 메서드                         | 내부 구현                         | 용도        |
 | ------------------------------ | --------------------------------- | ----------- |
 | `assertText(text, selector?)`  | MCP `assert_text`                 | 텍스트 존재 |
-| `assertNoText(text)`           | `listTextNodes` + 검사            | 텍스트 부재 |
+| `assertNoText(text)`           | `take_snapshot` + 검사            | 텍스트 부재 |
 | `assertVisible(selector)`      | MCP `assert_visible`              | 요소 존재   |
 | `assertNotVisible(selector)`   | `querySelectorAll` + 0개 확인     | 요소 부재   |
 | `assertCount(selector, n)`     | `querySelectorAll` + length       | 요소 개수   |
@@ -229,44 +257,50 @@ await app.assertDisabled('#submit-btn');
 
 ---
 
-### Phase D: 앱 생명주기 관리
+### Phase D: 앱 생명주기 관리 — 부분 구현
 
 **목표**: 테스트 간 앱 상태 격리.
 
 **왜 필요한가**: AI는 현재 화면 상태를 보고 적응하지만, 자동화에서는 **매 테스트가 동일한 초기 상태**에서 시작해야 한다. 그렇지 않으면 이전 테스트의 상태가 다음 테스트에 영향을 준다.
 
-**API**:
+**현재 구현 상태:**
+
+| 기능                                 | 상태          | 구현 방식                                    |
+| ------------------------------------ | ------------- | -------------------------------------------- |
+| `open_deeplink`                      | **구현 완료** | MCP 도구 (`open-deeplink.ts`)                |
+| `launch` / `terminate` / `clearData` | 가이드만 제공 | MCP Resource (`docs://guides/app-lifecycle`) |
+
+> **결정 사항**: `launch`/`terminate`/`clearData`는 별도 MCP 도구 대신 **MCP Resource 가이드**로 제공하는 방식을 선택함. AI 에이전트가 가이드를 읽고 Bash 도구로 실행. 프로그래매틱 SDK(Phase A)에서는 `child_process.exec`으로 직접 래핑.
+
+**API (SDK에서 구현 예정)**:
 
 ```typescript
-// 앱 실행
+// 딥링크 (MCP 도구 — 이미 구현됨)
+await app.openDeepLink('myapp://screen/settings');
+// → MCP open_deeplink 도구 호출
+
+// 앱 실행 (SDK에서 adb/simctl 래핑)
 await app.launch('com.example.myapp');
 // Android: adb shell am start -n com.example.myapp/.MainActivity
 // iOS: xcrun simctl launch booted com.example.myapp
 
-// 앱 종료
+// 앱 종료 (SDK에서 adb/simctl 래핑)
 await app.terminate('com.example.myapp');
 // Android: adb shell am force-stop com.example.myapp
 // iOS: xcrun simctl terminate booted com.example.myapp
 
-// 앱 데이터 초기화 (AsyncStorage 등)
+// 앱 데이터 초기화 (SDK에서 adb/simctl 래핑)
 await app.clearData('com.example.myapp');
 // Android: adb shell pm clear com.example.myapp
-// iOS: xcrun simctl privacy booted reset all com.example.myapp
-
-// 딥링크로 특정 화면 이동
-await app.openDeepLink('myapp://screen/settings');
-// Android: adb shell am start -a android.intent.action.VIEW -d "myapp://screen/settings"
-// iOS: xcrun simctl openurl booted "myapp://screen/settings"
+// iOS: xcrun simctl uninstall + reinstall
 
 // 상태 리셋 (종료 → 데이터 초기화 → 재실행)
 await app.resetApp('com.example.myapp');
 ```
 
-**구현**: MCP 서버에 새 도구 추가 또는 SDK에서 직접 `child_process.exec` 호출.
-
 ---
 
-### Phase E: YAML 테스트 러너 + CLI
+### Phase E: YAML 테스트 러너 + CLI — 미구현
 
 **목표**: 코드 작성 없이 YAML로 E2E 테스트 정의 및 실행.
 
@@ -291,7 +325,7 @@ steps:
       selector: '#password'
       text: 'secret123'
 
-  - click:
+  - tap:
       selector: 'Pressable:text("로그인")'
 
   - waitForText:
@@ -313,25 +347,26 @@ teardown: # 테스트 후 실행
 
 **지원 액션 목록**:
 
-| 액션                | 파라미터                       | 설명                                                              |
-| ------------------- | ------------------------------ | ----------------------------------------------------------------- |
-| `click`             | `selector`, `label?`, `index?` | 요소 클릭                                                         |
-| `longPress`         | `selector`, `label?`           | 롱프레스                                                          |
-| `typeText`          | `selector`, `text`             | 텍스트 입력                                                       |
-| `scroll`            | `selector`, `x?`, `y`          | 스크롤 (MCP scroll 도구 없음 → swipe 또는 evaluate_script로 구현) |
-| `waitForText`       | `text`, `timeout?`             | 텍스트 대기                                                       |
-| `waitForVisible`    | `selector`, `timeout?`         | 요소 출현 대기                                                    |
-| `waitForNotVisible` | `selector`, `timeout?`         | 요소 사라짐 대기                                                  |
-| `assertText`        | `text`, `selector?`            | 텍스트 확인                                                       |
-| `assertVisible`     | `selector`                     | 요소 존재 확인                                                    |
-| `assertNotVisible`  | `selector`                     | 요소 부재 확인                                                    |
-| `assertCount`       | `selector`, `count`            | 요소 개수 확인                                                    |
-| `screenshot`        | `path?`                        | 스크린샷 저장                                                     |
-| `wait`              | `ms`                           | 고정 대기 (비추천)                                                |
-| `launch`            | `bundleId`                     | 앱 실행                                                           |
-| `terminate`         | `bundleId`                     | 앱 종료                                                           |
-| `openDeepLink`      | `url`                          | 딥링크 열기                                                       |
-| `evaluate`          | `script`                       | 임의 JS 실행                                                      |
+| 액션                | 파라미터                             | 설명                        |
+| ------------------- | ------------------------------------ | --------------------------- |
+| `tap`               | `selector`                           | 요소 탭 (selector → 좌표)   |
+| `swipe`             | `selector`, `direction`, `distance?` | 스와이프                    |
+| `typeText`          | `selector`, `text`                   | 텍스트 입력 (uid 기반)      |
+| `inputText`         | `text`                               | 포커스된 입력에 텍스트 전송 |
+| `pressButton`       | `button`                             | 물리 버튼 (HOME, BACK 등)   |
+| `waitForText`       | `text`, `timeout?`                   | 텍스트 대기                 |
+| `waitForVisible`    | `selector`, `timeout?`               | 요소 출현 대기              |
+| `waitForNotVisible` | `selector`, `timeout?`               | 요소 사라짐 대기            |
+| `assertText`        | `text`, `selector?`                  | 텍스트 확인                 |
+| `assertVisible`     | `selector`                           | 요소 존재 확인              |
+| `assertNotVisible`  | `selector`                           | 요소 부재 확인              |
+| `assertCount`       | `selector`, `count`                  | 요소 개수 확인              |
+| `screenshot`        | `path?`                              | 스크린샷 저장               |
+| `wait`              | `ms`                                 | 고정 대기 (비추천)          |
+| `launch`            | `bundleId`                           | 앱 실행                     |
+| `terminate`         | `bundleId`                           | 앱 종료                     |
+| `openDeepLink`      | `url`                                | 딥링크 열기                 |
+| `evaluate`          | `script`                             | 임의 JS 실행                |
 
 **CLI**:
 
@@ -351,9 +386,11 @@ npx react-native-mcp-test run tests/ --reporter junit --output results/
 
 ---
 
-### Phase F: 테스트 리포트 & CI 통합
+### Phase F: 테스트 리포트 & CI 통합 — 미구현
 
 **목표**: CI 파이프라인에서 사용 가능한 결과 출력.
+
+> **참고**: 현재 CI에서는 bun test + GitHub Actions artifact 업로드 방식으로 기본적인 리포트가 동작하고 있다. 실패 시 스크린샷과 로그(logcat/simulator log)가 자동 수집됨.
 
 **리포터 종류**:
 
@@ -369,12 +406,12 @@ npx react-native-mcp-test run tests/ --reporter junit --output results/
 ✓ 로그인 플로우 (3.2s)
   ✓ typeText #email
   ✓ typeText #password
-  ✓ click 로그인
+  ✓ tap 로그인
   ✓ waitForText 환영합니다
   ✓ assertVisible #home-screen
 
 ✗ 회원가입 플로우 (5.1s)
-  ✓ click 회원가입
+  ✓ tap 회원가입
   ✗ waitForText 가입 완료 (TimeoutError: 5000ms 초과)
     📸 Screenshot saved: results/회원가입-failure.png
 
@@ -403,47 +440,83 @@ Results: 1 passed, 1 failed (8.3s)
 
 ---
 
-## 3. 우선순위 및 의존 관계
+## 3. 현재 진행 상황 및 우선순위
+
+### 진행 상황 요약
+
+```
+기초 인프라 (완료):
+  ├── Smoke 테스트 (e2e/smoke.test.ts) — 7개 도구 검증
+  ├── CI 워크플로우 (iOS + Android GitHub Actions)
+  ├── 테스트 헬퍼 (e2e/helpers.ts)
+  └── 데모앱 (examples/demo-app/)
+
+Phase D 부분 완료:
+  ├── open_deeplink MCP 도구 ✅
+  └── app-lifecycle MCP Resource 가이드 ✅
+
+Phase 0 완료:
+  ├── assert_text / assert_visible: timeoutMs/intervalMs 폴링 추가 ✅
+  ├── assert_not_visible: 신규 도구 ✅
+  ├── assert_element_count: 신규 도구 ✅
+  └── scroll_until_visible: 신규 도구 ✅
+
+Phase A 완료:
+  ├── @ohah/react-native-mcp-client 패키지 ✅
+  ├── AppClient: 28개 MCP 도구 타입 래퍼 ✅
+  ├── 편의 메서드: tap/swipe/typeText(selector), waitFor* ✅
+  └── createApp() 팩토리 + 서버 자동 spawn ✅
+
+미구현:
+  ├── Phase B: Wait/Retry (Phase A에서 waitFor* 선구현됨)
+  ├── Phase C: 추가 Assertions
+  ├── Phase D: launch/terminate SDK 래핑
+  ├── Phase E: YAML 러너
+  └── Phase F: CI 리포트
+```
+
+### 의존 관계
 
 ```
 Phase 0: MCP Assertion 강화 ─┐
                               ├→ Phase A: SDK ──────────┐
                               │                         ├→ Phase B: Wait/Retry ──┐
                               │                         ├→ Phase C: Assertions   ├→ Phase E: YAML 러너 → Phase F: CI 리포트
-                              │                         └→ Phase D: 앱 생명주기 ─┘
+                              │                         └→ Phase D: SDK 래핑 ────┘
                               │
                               └→ (AI 에이전트가 바로 활용 가능)
 ```
 
-| Phase | 이름                    | 선행 조건 | 예상 규모                                               |
-| ----- | ----------------------- | --------- | ------------------------------------------------------- |
-| **0** | MCP Assertion 강화      | 없음      | runtime.js ~60줄 + assert.ts 파라미터 + 신규 도구 2~3개 |
-| **A** | Programmatic Client SDK | 없음      | 새 패키지 1개, ~300줄                                   |
-| **B** | Wait/Retry              | 0 + A     | SDK 메서드 추가, ~50줄 (MCP polling 기반으로 간소화)    |
-| **C** | 추가 Assertions         | 0 + A     | SDK 메서드 추가, ~100줄 (MCP 도구 래핑)                 |
-| **D** | 앱 생명주기 관리        | A         | adb/simctl 래핑, ~200줄                                 |
-| **E** | YAML 러너 + CLI         | A + B + C | YAML 파서 + 실행기, ~500줄                              |
-| **F** | CI 리포트               | E         | 리포터, ~300줄                                          |
+| Phase | 이름                    | 선행 조건 | 상태          | 예상 규모                                                                         |
+| ----- | ----------------------- | --------- | ------------- | --------------------------------------------------------------------------------- |
+| 기초  | Smoke 테스트 + CI       | 없음      | **완료**      | smoke.test.ts + helpers.ts + CI yml                                               |
+| **0** | MCP Assertion 강화      | 없음      | **✅ 완료**   | assert.ts 폴링 + assert_not_visible + assert_element_count + scroll_until_visible |
+| **A** | Programmatic Client SDK | 없음      | **✅ 완료**   | `@ohah/react-native-mcp-client` 패키지, ~280줄                                    |
+| **B** | Wait/Retry              | 0 + A     | **선구현**    | Phase A에서 waitForText/waitForVisible/waitForNotVisible 포함                     |
+| **C** | 추가 Assertions         | 0 + A     | **미구현**    | SDK 메서드 추가, ~100줄 (MCP 도구 래핑)                                           |
+| **D** | 앱 생명주기 관리        | A         | **부분 완료** | open_deeplink ✅, 나머지 SDK 래핑 ~100줄                                          |
+| **E** | YAML 러너 + CLI         | A + B + C | **미구현**    | YAML 파서 + 실행기, ~500줄                                                        |
+| **F** | CI 리포트               | E         | **미구현**    | 리포터, ~300줄                                                                    |
 
-**Phase 0만 완성하면** AI 에이전트(Cursor/Claude Desktop)가 CI에서 안정적으로 동작한다.
-**Phase 0은 A와 병렬 진행 가능** — MCP 도구 레벨이므로 SDK와 독립적.
-**A~C만 완성하면** 프로그래밍 방식 E2E 테스트가 가능하다.
+**Phase 0 완료** → AI 에이전트(Cursor/Claude Desktop)가 CI에서 안정적으로 동작.
+**Phase A 완료** → 프로그래밍 방식 E2E 테스트 가능. waitFor\* 메서드도 Phase B에서 선구현됨.
+**다음: Phase C+D 병렬** → 추가 Assertions + 앱 생명주기 SDK 래핑.
 **E까지 완성하면** 비개발자도 YAML로 테스트를 작성할 수 있다.
 
 ---
 
 ## 4. 기존 E2E 도구와의 비교
 
-| 항목                 | Detox         | Maestro        | Appium    | **MCP E2E**          |
-| -------------------- | ------------- | -------------- | --------- | -------------------- |
-| 네이티브 모듈 필요   | Yes           | No (별도 서버) | Yes       | **No**               |
-| iOS/Android 통합 API | Yes           | Yes            | Yes       | **Yes** (Fiber)      |
-| 셀렉터               | testID, label | label, id      | XPath, id | **Fiber 셀렉터**     |
-| 설치 복잡도          | 높음          | 중간           | 높음      | **낮음** (Babel만)   |
-| AI 에이전트 연동     | 없음          | 없음           | 없음      | **네이티브 지원**    |
-| 네이티브 제스처      | 완전 지원     | 완전 지원      | 완전 지원 | **제한적** (섹션 12) |
-| WebView 제어         | 제한적        | 제한적         | 지원      | **JS 실행 가능**     |
-| 테스트 작성 방식     | JS/TS         | YAML           | 다양      | **JS/TS + YAML**     |
+| 항목                 | Detox         | Maestro        | Appium    | **MCP E2E**             |
+| -------------------- | ------------- | -------------- | --------- | ----------------------- |
+| 네이티브 모듈 필요   | Yes           | No (별도 서버) | Yes       | **No**                  |
+| iOS/Android 통합 API | Yes           | Yes            | Yes       | **Yes** (Fiber)         |
+| 셀렉터               | testID, label | label, id      | XPath, id | **Fiber 셀렉터**        |
+| 설치 복잡도          | 높음          | 중간           | 높음      | **낮음** (Babel만)      |
+| AI 에이전트 연동     | 없음          | 없음           | 없음      | **네이티브 지원**       |
+| 네이티브 제스처      | 완전 지원     | 완전 지원      | 완전 지원 | **tap/swipe** (섹션 12) |
+| WebView 제어         | 제한적        | 제한적         | 지원      | **JS 실행 가능**        |
+| 테스트 작성 방식     | JS/TS         | YAML           | 다양      | **JS/TS + YAML**        |
 
 **MCP E2E의 차별점**: 동일한 도구를 AI 에이전트와 자동화 테스트가 공유한다. AI가 탐색적 테스트를 하고, 안정화된 시나리오를 YAML/스크립트로 전환하는 워크플로우가 가능하다.
 
@@ -451,10 +524,9 @@ Phase 0: MCP Assertion 강화 ─┐
 
 ## 5. 미결정 사항
 
-| 항목                  | 선택지                                         | 결정 시점       |
-| --------------------- | ---------------------------------------------- | --------------- |
-| SDK 패키지 위치       | 모노레포 내 새 패키지 vs 서버 패키지 내 export | Phase A 시작 시 |
-| YAML 스키마 표준      | 자체 정의 vs Maestro 호환                      | Phase E 시작 시 |
-| 앱 생명주기 구현 위치 | MCP 도구로 추가 vs SDK에서 직접 exec           | Phase D 시작 시 |
-| bun test 통합         | bun test matcher 제공 여부                     | Phase C 이후    |
-| 병렬 테스트 실행      | 다중 디바이스 활용 병렬 실행 지원 여부         | Phase F 이후    |
+| 항목             | 선택지                                         | 결정 시점       |
+| ---------------- | ---------------------------------------------- | --------------- |
+| SDK 패키지 위치  | 모노레포 내 새 패키지 vs 서버 패키지 내 export | Phase A 시작 시 |
+| YAML 스키마 표준 | 자체 정의 vs Maestro 호환                      | Phase E 시작 시 |
+| bun test 통합    | bun test matcher 제공 여부                     | Phase C 이후    |
+| 병렬 테스트 실행 | 다중 디바이스 활용 병렬 실행 지원 여부         | Phase F 이후    |

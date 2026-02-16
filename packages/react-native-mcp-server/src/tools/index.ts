@@ -27,6 +27,7 @@ import { registerFilePush } from './file-push.js';
 import { registerAddMedia } from './add-media.js';
 import { registerListDevices } from './list-devices.js';
 import { registerOpenDeeplink } from './open-deeplink.js';
+import { registerScrollUntilVisible } from './scroll-until-visible.js';
 
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
@@ -53,4 +54,6 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerSwitchKeyboard(server);
   // 딥링크
   registerOpenDeeplink(server);
+  // scroll_until_visible — 요소가 보일 때까지 자동 스크롤
+  registerScrollUntilVisible(server, appSession);
 }
