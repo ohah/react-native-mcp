@@ -119,7 +119,10 @@ const ui = await app.describeUi(); // 네이티브 UI 트리
   type: 'Pressable',
   testID: 'login-btn',
   text: '로그인',
-  measure: { x: 0, y: 0, width: 100, height: 44, pageX: 20, pageY: 200 }
+  measure: { x: 0, y: 0, width: 100, height: 44, pageX: 20, pageY: 200 },
+  value: 'input text',     // TextInput인 경우
+  disabled: false,          // 비활성 상태인 경우
+  editable: true,           // TextInput 편집 가능 여부
 }
 ```
 
@@ -144,6 +147,37 @@ console.log(r5.actualCount); // number
 
 ```typescript
 const r = await app.assertText('Loaded', { timeoutMs: 5000, intervalMs: 300 });
+```
+
+#### 추가 Assertion
+
+```typescript
+// 텍스트가 화면에 없는지 확인
+const r6 = await app.assertNoText('에러 발생');
+
+// 요소 개수 (간편 버전)
+const r7 = await app.assertCount('.card', 3);
+
+// TextInput 값 확인
+const r8 = await app.assertValue('#email', 'user@test.com');
+
+// 활성/비활성 상태 확인
+const r9 = await app.assertEnabled('#submit-btn');
+const r10 = await app.assertDisabled('#loading-btn');
+```
+
+#### `waitFor(predicate, opts?)`
+
+커스텀 조건이 충족될 때까지 폴링. 조건 미충족 시 `McpToolError` throw.
+
+```typescript
+await app.waitFor(
+  async () => {
+    const el = await app.querySelector('#counter');
+    return el?.text === '10';
+  },
+  { timeout: 5000, interval: 500 }
+);
 ```
 
 ### 좌표 기반 인터랙션 (raw)
@@ -214,6 +248,19 @@ const devices = await app.listDevices();
 await app.filePush('/local/file.json', '/data/file.json', { bundleId: 'com.example.app' });
 await app.addMedia(['/path/to/photo.jpg']);
 await app.switchKeyboard('switch', { keyboard_id: 'com.google.android.inputmethod.korean' });
+```
+
+### 앱 생명주기
+
+```typescript
+// 앱 실행
+await app.launch('com.example.myapp');
+
+// 앱 종료
+await app.terminate('com.example.myapp');
+
+// 앱 재시작 (종료 → 실행)
+await app.resetApp('com.example.myapp');
 ```
 
 ### 정리

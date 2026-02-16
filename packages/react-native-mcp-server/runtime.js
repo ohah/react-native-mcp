@@ -495,6 +495,9 @@ function fiberToResult(fiber, TextComp, ImgComp) {
   result.hasOnPress = hasOnPress;
   result.hasOnLongPress = hasOnLongPress;
   result.hasScrollTo = hasScrollTo;
+  if (props.value !== undefined) result.value = props.value;
+  if (props.disabled != null) result.disabled = !!props.disabled;
+  if (props.editable !== undefined) result.editable = props.editable;
   // Fabric: measureViewSync → 동기 좌표, Bridge: null
   var measure = null;
   try {
