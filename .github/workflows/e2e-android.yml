@@ -139,7 +139,7 @@ jobs:
             adb reverse tcp:12300 tcp:12300
 
             # E2E YAML 시나리오 실행 (press-counter.yaml 등)
-            npx react-native-mcp-test run examples/demo-app/e2e/ -p android -o e2e-artifacts/yaml-results
+            node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p android -o e2e-artifacts/yaml-results
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
