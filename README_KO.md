@@ -36,18 +36,27 @@ npm install -g @ohah/react-native-mcp-server
 ```
 
 3. Cursor 재시작 (또는 MCP 새로고침)
-4. React Native 앱에 Metro 플러그인 추가:
+4. React Native 앱에서 Metro에 CDP 인터셉터 로드 + Babel 프리셋 추가.
+
+**Metro** — `metro.config.js` **맨 위**에서 인터셉터를 require한 뒤 기존 설정:
 
 ```js
-// metro.config.mjs (ESM 구성 파일)
-import { withReactNativeMCP } from '@ohah/react-native-mcp-server/metro-plugin';
+// metro.config.js
+require('@ohah/react-native-mcp-server/cdp-interceptor');
 
-export default withReactNativeMCP({
-  // 기존 Metro 설정
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
+module.exports = mergeConfig(getDefaultConfig(__dirname), {
+  // 필요한 오버라이드
 });
 ```
 
-5. 앱에 Babel 프리셋 추가 (AppRegistry 래핑, testID 자동 주입):
+또는 Metro를 인터셉터와 함께 실행:
+
+```bash
+node -r @ohah/react-native-mcp-server/cdp-interceptor node_modules/react-native/cli.js start
+```
+
+**Babel** — 앱에 프리셋 추가 (AppRegistry 래핑, testID 자동 주입):
 
 ```js
 // babel.config.js

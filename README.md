@@ -38,18 +38,27 @@ Or use with `npx` without installation.
 ```
 
 3. Restart Cursor (or refresh MCP)
-4. Add Metro plugin to your React Native app:
+4. In your React Native app, load the CDP interceptor in Metro (required for console/network tools) and add the Babel preset.
+
+**Metro** — at the **very top** of `metro.config.js`, require the interceptor, then your usual config:
 
 ```js
-// metro.config.mjs
-import { withReactNativeMCP } from '@ohah/react-native-mcp-server/metro-plugin';
+// metro.config.js
+require('@ohah/react-native-mcp-server/cdp-interceptor');
 
-export default withReactNativeMCP({
-  // your existing Metro config
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
+module.exports = mergeConfig(getDefaultConfig(__dirname), {
+  // your overrides
 });
 ```
 
-5. Add the Babel preset to your app (AppRegistry wrapping, auto testID injection):
+Alternatively, run Metro with the interceptor preloaded:
+
+```bash
+node -r @ohah/react-native-mcp-server/cdp-interceptor node_modules/react-native/cli.js start
+```
+
+**Babel** — add the preset (AppRegistry wrapping, auto testID injection):
 
 ```js
 // babel.config.js

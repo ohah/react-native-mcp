@@ -28,18 +28,26 @@ Cursor·Claude·Copilot 설정에서는 보통 `npx`로 실행하는 방식을 �
 
 ## 3. React Native 앱 설정
 
-MCP 서버가 앱과 통신하려면 앱에 **Metro 플러그인**과 **Babel 프리셋**을 적용해야 합니다.
+MCP 서버가 앱과 통신하려면 Metro에서 **cdp-interceptor**를 로드하고, **Babel 프리셋**을 적용해야 합니다.
 
-### Metro 플러그인
+### Metro — cdp-interceptor
 
-`metro.config.mjs`(또는 `metro.config.js`)에 플러그인 추가:
+`metro.config.js` **맨 위**에서 인터셉터를 require한 뒤 기존 설정을 이어갑니다.
 
 ```js
-import { withReactNativeMCP } from '@ohah/react-native-mcp-server/metro-plugin';
+// metro.config.js
+require('@ohah/react-native-mcp-server/cdp-interceptor');
 
-export default withReactNativeMCP({
-  // 기존 Metro 설정
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
+module.exports = mergeConfig(getDefaultConfig(__dirname), {
+  // 필요한 오버라이드
 });
+```
+
+또는 Metro를 인터셉터와 함께 실행:
+
+```bash
+node -r @ohah/react-native-mcp-server/cdp-interceptor node_modules/react-native/cli.js start
 ```
 
 ### Babel 프리셋

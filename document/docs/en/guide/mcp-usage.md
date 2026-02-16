@@ -35,7 +35,19 @@ The server talks over stdio using the MCP protocol; the app connects to it via W
 
 ---
 
-## Claude Desktop
+## Claude Desktop / Claude CLI
+
+### Option A: Claude CLI `mcp add` (recommended)
+
+If you use [Claude Code](https://code.claude.com/) or the Claude CLI, add the server with:
+
+```bash
+claude mcp add --transport stdio react-native-mcp -- npx -y @ohah/react-native-mcp-server
+```
+
+Then run your app and use MCP tools in the conversation. Use `claude mcp list` to confirm the server is registered.
+
+### Option B: Edit config file
 
 1. Edit the config file:
    - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -89,7 +101,7 @@ Ask the AI to “take a snapshot of the app” or “tap the login button” and
 
 ## When connection fails
 
-- **App not connected**: Check that Metro is running and the app has the Metro plugin and Babel preset
+- **App not connected**: Check that Metro is running and the app has cdp-interceptor (in Metro) and the Babel preset
 - **Tap/screenshot not working**: Ensure idb (iOS) or adb (Android) is installed and the device is listed (`idb list-targets`, `adb devices`)
 - **Single tool failing**: Check arguments (selector, timeout, etc.) and that the app UI is loaded
 
