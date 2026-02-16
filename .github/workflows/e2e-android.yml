@@ -124,8 +124,8 @@ jobs:
           disable-animations: true
           script: |
             # APK 설치
-            APK_PATH=$(find examples/demo-app/android -name "*.apk" -path "*/outputs/apk/release/*" | head -n 1)
-            echo "Installing APK: $APK_PATH"
+            APK_PATH="examples/demo-app/android/app/build/outputs/apk/release/app-release.apk"
+            ls -la "$APK_PATH"
             adb install -r "$APK_PATH"
 
             # MCP 포트 포워딩
