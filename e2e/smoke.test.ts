@@ -67,9 +67,9 @@ describe('E2E Smoke', () => {
     expect(els.length).toBeGreaterThan(0);
   });
 
-  it('assert_text: 데모앱 탭 이름 확인', async () => {
-    // 데모앱의 탭 중 하나인 "Scroll" 텍스트 확인
-    const result = await callTool(client, 'assert_text', { text: 'Scroll' });
+  it('assert_text: 데모앱 네비게이션 텍스트 확인', async () => {
+    // 스텝 네비게이션의 "다음" 버튼 텍스트 확인
+    const result = await callTool(client, 'assert_text', { text: '다음' });
     expect(result.pass).toBe(true);
   });
 
