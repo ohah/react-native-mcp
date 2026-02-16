@@ -85,6 +85,8 @@ jobs:
             ${{ runner.os }}-deriveddata-
 
       - name: iOS 앱 빌드
+        env:
+          REACT_NATIVE_MCP_ENABLED: 'true'
         run: |
           xcodebuild \
             -workspace ReactNativeMcpDemo.xcworkspace \

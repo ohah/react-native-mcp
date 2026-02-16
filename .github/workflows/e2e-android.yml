@@ -84,6 +84,8 @@ jobs:
         working-directory: examples/demo-app/android
 
       - name: 데모앱 Release APK 빌드
+        env:
+          REACT_NATIVE_MCP_ENABLED: 'true'
         run: ./gradlew assembleRelease
         working-directory: examples/demo-app/android
 
