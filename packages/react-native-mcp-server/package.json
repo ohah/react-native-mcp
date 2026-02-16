@@ -26,7 +26,6 @@
   "files": [
     "dist",
     "runtime.js",
-    "cdp-interceptor.cjs",
     "babel-preset.cjs",
     "babel-plugin-app-registry.cjs",
     "babel-plugin-inject-testid.cjs"
@@ -40,7 +39,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
-    "./cdp-interceptor": "./cdp-interceptor.cjs",
     "./runtime": "./runtime.js",
     "./runtime.js": "./runtime.js",
     "./babel-preset": "./babel-preset.cjs",
