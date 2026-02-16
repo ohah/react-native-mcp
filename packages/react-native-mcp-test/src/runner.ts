@@ -1,5 +1,5 @@
 import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { resolve } from 'node:path';
 import { AppClient } from '@ohah/react-native-mcp-client';
 import type { Reporter } from './reporters/index.js';
 import type {
@@ -92,7 +92,7 @@ async function captureFailure(
   mkdirSync(outputDir, { recursive: true });
 
   try {
-    const screenshotPath = join(outputDir, `${suiteName}-step${stepIndex}-failure.png`);
+    const screenshotPath = resolve(outputDir, `${suiteName}-step${stepIndex}-failure.png`);
     await app.screenshot({ filePath: screenshotPath });
     result.screenshotPath = screenshotPath;
   } catch {
