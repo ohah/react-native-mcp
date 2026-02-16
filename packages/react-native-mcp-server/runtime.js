@@ -1588,7 +1588,11 @@ function _truncateBody(body) {
   };
 })();
 
-var _isDevMode = typeof __DEV__ !== 'undefined' && __DEV__;
+var _isDevMode =
+  (typeof __DEV__ !== 'undefined' && __DEV__) ||
+  (typeof process !== 'undefined' &&
+    process.env &&
+    process.env.REACT_NATIVE_MCP_ENABLED === 'true');
 
 if (_isDevMode && typeof console !== 'undefined' && console.warn) {
   console.warn('[MCP] runtime loaded, __REACT_NATIVE_MCP__ available');
