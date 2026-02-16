@@ -8,17 +8,8 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
 import { buildQuerySelectorEvalCode } from './query-selector.js';
-import {
-  checkIdbAvailable,
-  resolveUdid,
-  runIdbCommand,
-} from './idb-utils.js';
-import {
-  checkAdbAvailable,
-  resolveSerial,
-  runAdbCommand,
-  getAndroidScale,
-} from './adb-utils.js';
+import { checkIdbAvailable, resolveUdid, runIdbCommand } from './idb-utils.js';
+import { checkAdbAvailable, resolveSerial, runAdbCommand, getAndroidScale } from './adb-utils.js';
 
 const schema = z.object({
   selector: z.string().describe('Selector of the element to find.'),
