@@ -133,18 +133,18 @@ jobs:
             # E2E 테스트 실행
             bun test e2e/smoke.test.ts
 
-      - name: 실패 시 스크린샷 저장
+      - name: 실패 시 스크린샷·로그 저장
         if: failure()
         run: |
           mkdir -p e2e-artifacts
           adb exec-out screencap -p > e2e-artifacts/failure-screenshot.png 2>/dev/null || true
-          adb logcat -d > e2e-artifacts/logcat.txt 2>/dev/null || true
+          adb logcat -d 2>/dev/null | tail -n 3000 > e2e-artifacts/logcat.txt || true
 
       - name: 아티팩트 업로드
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-failure-artifacts
+          name: e2e-android-failure-artifacts
           path: e2e-artifacts/
           retention-days: 14
           if-no-files-found: ignore

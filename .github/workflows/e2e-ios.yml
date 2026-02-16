@@ -131,12 +131,12 @@ jobs:
           # E2E 테스트 실행
           E2E_PLATFORM=ios bun test e2e/smoke.test.ts
 
-      - name: 실패 시 스크린샷 저장
+      - name: 실패 시 스크린샷·로그 저장
         if: failure()
         run: |
           mkdir -p e2e-artifacts
           xcrun simctl io booted screenshot e2e-artifacts/failure-screenshot.png 2>/dev/null || true
-          xcrun simctl spawn booted log show --last 5m > e2e-artifacts/simulator-log.txt 2>/dev/null || true
+          xcrun simctl spawn booted log show --last 1m 2>/dev/null | tail -n 3000 > e2e-artifacts/simulator-log.txt || true
 
       - name: 아티팩트 업로드
         if: failure()
