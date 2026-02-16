@@ -14,7 +14,7 @@ export async function createMcpClient(): Promise<{
   transport: StdioClientTransport;
 }> {
   const transport = new StdioClientTransport({
-    command: 'bun',
+    command: 'node',
     args: ['dist/index.js'],
     cwd: SERVER_CWD,
   });
