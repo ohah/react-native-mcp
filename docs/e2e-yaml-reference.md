@@ -30,6 +30,9 @@ teardown?: Step[] # 종료 시 실행 (선택)
 
 요소를 한 번 탭한다.
 
+- **iOS**: 화면 방향 **0°(세로)·90°(가로 오른쪽)** 만 지원. 180°·270°는 지원하지 않음. ([issue/e2e-landscape-tap-analysis.md](issue/e2e-landscape-tap-analysis.md) 참고)
+- **Android**: orientation 보정 없이 동작. 실측에서 정상 동작 확인.
+
 | 필드     | 타입   | 필수 | 설명             |
 | -------- | ------ | ---- | ---------------- |
 | selector | string | ✓    | 탭할 요소 셀렉터 |
