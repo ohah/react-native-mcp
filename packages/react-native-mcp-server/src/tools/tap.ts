@@ -60,15 +60,42 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
       try {
         if (platform === 'ios') {
           if (!(await checkIdbAvailable())) return idbNotInstalledError();
+          let ix: number;
+          let iy: number;
+          let isLandscape = false;
+          try {
+            const res = await appSession.sendRequest(
+              {
+                method: 'eval',
+                params: {
+                  code: '(function(){ var M = typeof __REACT_NATIVE_MCP__ !== "undefined" ? __REACT_NATIVE_MCP__ : null; return M && M.getScreenInfo ? M.getScreenInfo() : null; })();',
+                },
+              },
+              3000,
+              deviceId,
+              platform
+            );
+            const info = res.result as { orientation?: string } | null;
+            isLandscape = !!(info && typeof info === 'object' && info.orientation === 'landscape');
+          } catch {
+            // orientation unknown, use (x, y) as-is
+          }
+          if (isLandscape) {
+            ix = Math.round(y);
+            iy = Math.round(x);
+          } else {
+            ix = Math.round(x);
+            iy = Math.round(y);
+          }
           const udid = await resolveUdid(deviceId);
-          const cmd = ['ui', 'tap', String(x), String(y)];
+          const cmd = ['ui', 'tap', String(ix), String(iy)];
           if (isLongPress) cmd.push('--duration', String(duration / 1000));
           await runIdbCommand(cmd, udid);
           return {
             content: [
               {
                 type: 'text' as const,
-                text: `${action} at (${x}, ${y})${isLongPress ? ` for ${duration}ms` : ''} on iOS simulator ${udid}.`,
+                text: `${action} at (${ix}, ${iy})${isLongPress ? ` for ${duration}ms` : ''} on iOS simulator ${udid}.`,
               },
             ],
           };
