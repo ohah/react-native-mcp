@@ -11,7 +11,6 @@ import {
   runAdbCommand,
   adbNotInstalledError,
 } from './adb-utils.js';
-import { checkIdbAvailable, resolveUdid, idbNotInstalledError } from './idb-utils.js';
 import { runCommand } from './run-command.js';
 
 const schema = z.object({
@@ -46,14 +45,13 @@ export function registerOpenDeeplink(server: McpServer): void {
 
       try {
         if (platform === 'ios') {
-          if (!(await checkIdbAvailable())) return idbNotInstalledError();
-          const udid = await resolveUdid(deviceId);
-          await runCommand('xcrun', ['simctl', 'openurl', udid, url]);
+          const target = deviceId ?? 'booted';
+          await runCommand('xcrun', ['simctl', 'openurl', target, url]);
           return {
             content: [
               {
                 type: 'text' as const,
-                text: `Opened deep link "${url}" on iOS simulator ${udid}.`,
+                text: `Opened deep link "${url}" on iOS simulator ${target}.`,
               },
             ],
           };
