@@ -3,6 +3,8 @@ export type Platform = 'ios' | 'android';
 export interface CreateAppOptions {
   platform: Platform;
   deviceId?: string;
+  /** 앱 번들 ID — 지정 시 서버 시작 후 자동 launch */
+  bundleId?: string;
   /** MCP 서버 실행 명령 (default: 'bun') */
   serverCommand?: string;
   /** MCP 서버 인자 (default: ['dist/index.js']) */

@@ -60,7 +60,7 @@ export class AppClient {
     const serverCwd = opts.serverCwd ?? resolveServerCwd();
 
     const transport = new StdioClientTransport({
-      command: opts.serverCommand ?? 'bun',
+      command: opts.serverCommand ?? 'node',
       args: opts.serverArgs ?? ['dist/index.js'],
       cwd: serverCwd,
     });
@@ -69,7 +69,40 @@ export class AppClient {
     await client.connect(transport);
 
     const app = new AppClient(client, transport, opts.platform, opts.deviceId);
-    await app.waitForConnection(opts.connectionTimeout ?? 90_000, opts.connectionInterval ?? 2_000);
+
+    // bundleId가 있으면 서버 시작 후 앱 자동 launch
+    if (opts.bundleId) {
+      const deviceArg = opts.deviceId ?? 'booted';
+      try {
+        if (opts.platform === 'ios') {
+          await execFileAsync('xcrun', ['simctl', 'launch', deviceArg, opts.bundleId]);
+        } else {
+          const adbArgs = opts.deviceId ? ['-s', opts.deviceId] : [];
+          await execFileAsync('adb', [
+            ...adbArgs,
+            'shell',
+            'monkey',
+            '-p',
+            opts.bundleId,
+            '-c',
+            'android.intent.category.LAUNCHER',
+            '1',
+          ]);
+        }
+      } catch (launchErr) {
+        console.error('[mcp-client] Failed to launch app:', (launchErr as Error).message);
+      }
+    }
+
+    try {
+      await app.waitForConnection(
+        opts.connectionTimeout ?? 90_000,
+        opts.connectionInterval ?? 2_000
+      );
+    } catch (err) {
+      await transport.close().catch(() => {});
+      throw err;
+    }
     return app;
   }
 
