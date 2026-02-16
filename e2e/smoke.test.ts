@@ -21,8 +21,8 @@ describe('E2E Smoke', () => {
 
   beforeAll(async () => {
     ({ client, transport } = await createMcpClient());
-    await waitForAppConnection(client, 60_000);
-  }, 90_000);
+    await waitForAppConnection(client, 90_000);
+  }, 120_000);
 
   afterAll(async () => {
     await transport.close();

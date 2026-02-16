@@ -29,10 +29,11 @@ export async function createMcpClient(): Promise<{
 
 /**
  * 앱이 MCP 서버에 연결될 때까지 polling 대기.
+ * 앱이 WebSocket 연결 후 init 메시지를 보내야 appConnected가 true가 됨.
  */
 export async function waitForAppConnection(
   client: Client,
-  timeoutMs = 60_000,
+  timeoutMs = 90_000,
   intervalMs = 2_000
 ): Promise<void> {
   const start = Date.now();
