@@ -30,6 +30,3 @@ steps:
       selector: '#press-counter-button'
   - screenshot:
       path: './results/press-counter-success.png'
-
-teardown:
-  - terminate: com.reactnativemcp.demo
