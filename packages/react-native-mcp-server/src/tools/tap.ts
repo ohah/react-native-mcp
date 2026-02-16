@@ -109,6 +109,7 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
+          isError: true,
           content: [{ type: 'text' as const, text: `tap failed: ${message}` }],
         };
       }

@@ -110,6 +110,7 @@ export function registerListNetworkRequests(server: McpServer, appSession: AppSe
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
+          isError: true,
           content: [{ type: 'text' as const, text: `list_network_requests failed: ${message}` }],
         };
       }
@@ -154,6 +155,7 @@ export function registerListNetworkRequests(server: McpServer, appSession: AppSe
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
+          isError: true,
           content: [{ type: 'text' as const, text: `clear_network_requests failed: ${message}` }],
         };
       }

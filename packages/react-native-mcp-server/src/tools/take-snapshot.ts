@@ -74,7 +74,10 @@ export function registerTakeSnapshot(server: McpServer, appSession: AppSession):
         };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return { content: [{ type: 'text' as const, text: `take_snapshot failed: ${message}` }] };
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: `take_snapshot failed: ${message}` }],
+        };
       }
     }
   );

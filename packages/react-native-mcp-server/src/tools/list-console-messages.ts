@@ -98,6 +98,7 @@ export function registerListConsoleMessages(server: McpServer, appSession: AppSe
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
+          isError: true,
           content: [{ type: 'text' as const, text: `list_console_messages failed: ${message}` }],
         };
       }
@@ -142,6 +143,7 @@ export function registerListConsoleMessages(server: McpServer, appSession: AppSe
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
+          isError: true,
           content: [{ type: 'text' as const, text: `clear_console_messages failed: ${message}` }],
         };
       }

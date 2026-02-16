@@ -116,7 +116,10 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
         return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return { content: [{ type: 'text' as const, text: `query_selector failed: ${message}` }] };
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: `query_selector failed: ${message}` }],
+        };
       }
     }
   );
@@ -155,6 +158,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return {
+          isError: true,
           content: [{ type: 'text' as const, text: `query_selector_all failed: ${message}` }],
         };
       }

@@ -79,7 +79,10 @@ export function registerEvaluateScript(server: McpServer, appSession: AppSession
         return { content: [{ type: 'text' as const, text: formatResult(res.result) }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return { content: [{ type: 'text' as const, text: `evaluate_script failed: ${message}` }] };
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: `evaluate_script failed: ${message}` }],
+        };
       }
     }
   );

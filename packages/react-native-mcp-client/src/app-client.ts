@@ -124,6 +124,11 @@ export class AppClient {
     const res = await this.client.callTool({ name, arguments: mergedArgs });
     const text = (res.content as Array<{ type: string; text: string }>)[0]?.text;
     if (!text) return res.content;
+
+    if (res.isError) {
+      throw new McpToolError(name, text);
+    }
+
     try {
       return JSON.parse(text);
     } catch {

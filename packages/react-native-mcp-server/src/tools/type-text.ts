@@ -70,7 +70,10 @@ export function registerTypeText(server: McpServer, appSession: AppSession): voi
         return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return { content: [{ type: 'text' as const, text: `type_text failed: ${message}` }] };
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: `type_text failed: ${message}` }],
+        };
       }
     }
   );
