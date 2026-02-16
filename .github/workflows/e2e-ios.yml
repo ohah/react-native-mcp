@@ -61,6 +61,9 @@ jobs:
       - name: MCP 서버 빌드
         run: bun run build:server
 
+      - name: YAML 테스트 러너 빌드
+        run: bun run --filter @ohah/react-native-mcp-test build
+
       - name: Ruby Bundler 설치
         run: |
           gem install bundler:2.5.9
@@ -126,9 +129,8 @@ jobs:
           echo "Installing app: $APP_PATH"
           xcrun simctl install booted "$APP_PATH"
 
-      - name: E2E 테스트 실행
-        id: e2e-test
-        run: E2E_PLATFORM=ios bun test e2e/smoke.test.ts
+      - name: E2E YAML 테스트 실행
+        run: npx react-native-mcp-test run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
