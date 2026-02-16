@@ -123,15 +123,7 @@ jobs:
 
       - name: E2E 테스트 실행
         id: e2e-test
-        run: |
-          # 앱 실행
-          xcrun simctl launch booted org.reactnativemcp.demo
-
-          # 앱·JS 번들 로드 및 MCP WebSocket 연결 대기 (Release 번들 로드가 느릴 수 있음)
-          sleep 25
-
-          # E2E 테스트 실행
-          E2E_PLATFORM=ios bun test e2e/smoke.test.ts
+        run: E2E_PLATFORM=ios bun test e2e/smoke.test.ts
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()

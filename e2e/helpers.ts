@@ -1,3 +1,4 @@
+import { spawn } from 'child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import path from 'path';
@@ -27,6 +28,33 @@ export async function createMcpClient(): Promise<{
   return { client, transport };
 }
 
+const E2E_ROOT = path.resolve(import.meta.dirname, '..');
+
+/**
+ * E2E 플랫폼에 맞게 데모앱을 실행한다.
+ * MCP 서버가 먼저 떠 있어야 앱이 ws://localhost:12300에 연결 가능하므로,
+ * createMcpClient() 호출 후에 호출할 것.
+ */
+export function launchApp(platform: 'ios' | 'android'): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const cmd =
+      platform === 'ios'
+        ? { file: 'xcrun', args: ['simctl', 'launch', 'booted', 'org.reactnativemcp.demo'] }
+        : {
+            file: 'adb',
+            args: ['shell', 'am', 'start', '-n', 'com.reactnativemcp.demo/.MainActivity'],
+          };
+    const child = spawn(cmd.file, cmd.args, {
+      cwd: E2E_ROOT,
+      stdio: 'inherit',
+    });
+    child.on('error', reject);
+    child.on('exit', (code) =>
+      code === 0 ? resolve() : reject(new Error(`${cmd.file} exit ${code}`))
+    );
+  });
+}
+
 /**
  * 앱이 MCP 서버에 연결될 때까지 polling 대기.
  * 앱이 WebSocket 연결 후 init 메시지를 보내야 appConnected가 true가 됨.
@@ -45,8 +73,12 @@ export async function waitForAppConnection(
     await sleep(intervalMs);
   }
   const statusJson = JSON.stringify(lastStatus, null, 2);
+  const hint =
+    process.env.E2E_PLATFORM === 'ios'
+      ? 'App must start after MCP server. iOS Simulator: ensure app is launched by the test (server first).'
+      : 'App must start after MCP server. Android: adb reverse tcp:12300 tcp:12300 and launch app after server is up.';
   throw new Error(
-    `App did not connect within ${timeoutMs / 1000}s. Check that the app is running and adb reverse tcp:12300 tcp:12300 is set. Last get_debugger_status: ${statusJson}`
+    `App did not connect within ${timeoutMs / 1000}s. ${hint} Last get_debugger_status: ${statusJson}`
   );
 }
 

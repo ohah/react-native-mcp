@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { createMcpClient, waitForAppConnection, callTool } from './helpers';
+import { createMcpClient, launchApp, waitForAppConnection, callTool } from './helpers';
 
 // 환경변수로 플랫폼 지정 (기본: android)
 const TEST_PLATFORM = (process.env.E2E_PLATFORM ?? 'android') as 'android' | 'ios';
@@ -21,6 +21,7 @@ describe('E2E Smoke', () => {
 
   beforeAll(async () => {
     ({ client, transport } = await createMcpClient());
+    await launchApp(TEST_PLATFORM);
     await waitForAppConnection(client, 90_000);
   }, 120_000);
 
