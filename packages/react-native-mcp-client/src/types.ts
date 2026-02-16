@@ -50,6 +50,9 @@ export interface ElementInfo {
   text?: string;
   accessibilityLabel?: string;
   measure?: ElementMeasure;
+  value?: string;
+  disabled?: boolean;
+  editable?: boolean;
   [key: string]: unknown;
 }
 

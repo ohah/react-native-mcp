@@ -1,6 +1,10 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import path from 'path';
+
+const execFileAsync = promisify(execFile);
 import type {
   CreateAppOptions,
   Platform,
@@ -372,6 +376,115 @@ export class AppClient {
       deviceId: opts?.deviceId,
       platform: opts?.platform,
     });
+  }
+
+  // ─── Phase C: 추가 Assertions ──────────────────────────
+
+  async assertNoText(
+    text: string,
+    opts?: { selector?: string } & DeviceOpts
+  ): Promise<AssertResult> {
+    const result = await this.assertText(text, { ...opts, timeoutMs: 0 });
+    return {
+      pass: !result.pass,
+      message: result.pass
+        ? `Text "${text}" should not be present but was found`
+        : `Text "${text}" correctly not found`,
+    };
+  }
+
+  async assertCount(
+    selector: string,
+    count: number,
+    opts?: AssertOpts
+  ): Promise<AssertCountResult> {
+    return this.assertElementCount(selector, { expectedCount: count, ...opts });
+  }
+
+  async assertValue(selector: string, expected: string, opts?: DeviceOpts): Promise<AssertResult> {
+    const el = await this.querySelector(selector, opts);
+    if (!el) return { pass: false, message: `Element not found: ${selector}` };
+    const pass = el.value === expected;
+    return {
+      pass,
+      message: pass
+        ? `Value matches: "${expected}"`
+        : `Expected value "${expected}" but got "${el.value}"`,
+    };
+  }
+
+  async assertEnabled(selector: string, opts?: DeviceOpts): Promise<AssertResult> {
+    const el = await this.querySelector(selector, opts);
+    if (!el) return { pass: false, message: `Element not found: ${selector}` };
+    const pass = !el.disabled;
+    return { pass, message: pass ? `Element is enabled` : `Element is disabled` };
+  }
+
+  async assertDisabled(selector: string, opts?: DeviceOpts): Promise<AssertResult> {
+    const el = await this.querySelector(selector, opts);
+    if (!el) return { pass: false, message: `Element not found: ${selector}` };
+    const pass = !!el.disabled;
+    return { pass, message: pass ? `Element is disabled` : `Element is enabled` };
+  }
+
+  async waitFor(predicate: () => Promise<boolean>, opts?: WaitOpts): Promise<void> {
+    const timeout = opts?.timeout ?? 5000;
+    const interval = opts?.interval ?? 300;
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+      if (await predicate()) return;
+      await sleep(interval);
+    }
+    throw new McpToolError('waitFor', `Condition not met within ${timeout}ms`);
+  }
+
+  // ─── Phase D: 앱 생명주기 ─────────────────────────────
+
+  async launch(bundleId: string, opts?: DeviceOpts): Promise<string> {
+    const platform = opts?.platform ?? this.platform;
+    if (platform === 'ios') {
+      return this.exec('xcrun', ['simctl', 'launch', this.simctlDevice(opts), bundleId]);
+    }
+    return this.exec('adb', [
+      ...this.adbArgs(opts),
+      'shell',
+      'monkey',
+      '-p',
+      bundleId,
+      '-c',
+      'android.intent.category.LAUNCHER',
+      '1',
+    ]);
+  }
+
+  async terminate(bundleId: string, opts?: DeviceOpts): Promise<string> {
+    const platform = opts?.platform ?? this.platform;
+    if (platform === 'ios') {
+      return this.exec('xcrun', ['simctl', 'terminate', this.simctlDevice(opts), bundleId]);
+    }
+    return this.exec('adb', [...this.adbArgs(opts), 'shell', 'am', 'force-stop', bundleId]);
+  }
+
+  async resetApp(bundleId: string, opts?: DeviceOpts): Promise<void> {
+    await this.terminate(bundleId, opts);
+    await sleep(500);
+    await this.launch(bundleId, opts);
+  }
+
+  // ─── Phase D: private helpers ─────────────────────────
+
+  private async exec(command: string, args: string[]): Promise<string> {
+    const { stdout } = await execFileAsync(command, args);
+    return stdout.trim();
+  }
+
+  private adbArgs(opts?: DeviceOpts): string[] {
+    const id = opts?.deviceId ?? this.deviceId;
+    return id ? ['-s', id] : [];
+  }
+
+  private simctlDevice(opts?: DeviceOpts): string {
+    return opts?.deviceId ?? this.deviceId ?? 'booted';
   }
 
   // ─── Lifecycle ──────────────────────────────────────────
