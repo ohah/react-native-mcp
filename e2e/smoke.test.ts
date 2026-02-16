@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { createMcpClient, launchApp, waitForAppConnection, callTool } from './helpers';
+import {
+  createMcpClient,
+  launchApp,
+  waitForAppConnection,
+  waitForAppReady,
+  callTool,
+} from './helpers';
 
 // 환경변수로 플랫폼 지정 (기본: android)
 const TEST_PLATFORM = (process.env.E2E_PLATFORM ?? 'android') as 'android' | 'ios';
@@ -23,6 +29,7 @@ describe('E2E Smoke', () => {
     ({ client, transport } = await createMcpClient());
     await launchApp(TEST_PLATFORM);
     await waitForAppConnection(client, 90_000);
+    await waitForAppReady(client, 30_000);
   }, 120_000);
 
   afterAll(async () => {
@@ -133,6 +140,7 @@ describe('E2E Smoke', () => {
 
   // ─── 기존 도구 ──────────────────────────────────────────────────
 
+  // CI에서 idb/adb 스크린샷이 5초를 넘길 수 있으므로 타임아웃 확대
   it('take_screenshot: 이미지 반환', async () => {
     const res = await client.callTool({
       name: 'take_screenshot',
@@ -148,5 +156,5 @@ describe('E2E Smoke', () => {
     const hasImage = content.some((c) => c.type === 'image' || (c.data && c.data.length > 100));
     const hasBase64Text = content.some((c) => c.type === 'text' && c.text && c.text.length > 1000);
     expect(hasImage || hasBase64Text).toBe(true);
-  });
+  }, 30_000);
 });
