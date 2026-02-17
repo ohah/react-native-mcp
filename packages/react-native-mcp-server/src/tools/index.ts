@@ -14,6 +14,7 @@ import { registerListNetworkRequests } from './list-network-requests.js';
 import { registerQuerySelector } from './query-selector.js';
 import { registerTakeScreenshot } from './take-screenshot.js';
 import { registerTakeSnapshot } from './take-snapshot.js';
+import { registerAccessibilityAudit } from './accessibility-audit.js';
 import { registerTypeText } from './type-text.js';
 import { registerSwitchKeyboard } from './switch-keyboard.js';
 // 통합 네이티브 도구 (platform 파라미터로 iOS/Android 분기)
@@ -33,6 +34,7 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerEvaluateScript(server, appSession);
   registerTakeSnapshot(server, appSession);
   registerTakeScreenshot(server, appSession);
+  registerAccessibilityAudit(server, appSession);
   registerWebviewEvaluateScript(server, appSession);
   registerTypeText(server, appSession);
   registerQuerySelector(server, appSession);
