@@ -24,7 +24,9 @@ import { getIOSOrientationInfo, transformForIdb } from './ios-landscape.js';
 const schema = z.object({
   platform: z
     .enum(['ios', 'android'])
-    .describe('ios or android. iOS: portrait and landscape-right only; Android: any orientation.'),
+    .describe(
+      'ios or android. iOS: all 4 orientations supported (Portrait, Portrait180, LandscapeA, LandscapeB); auto-detected or override via iosOrientation. Android: any orientation.'
+    ),
   x: z.number().describe('X coordinate in points (dp). Auto-converted to pixels on Android.'),
   y: z.number().describe('Y coordinate in points (dp). Auto-converted to pixels on Android.'),
   duration: z
