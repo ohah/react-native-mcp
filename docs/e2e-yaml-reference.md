@@ -405,3 +405,18 @@ teardown:
 - 결과 경로 지정: `npx react-native-mcp-test run e2e/ -o e2e-artifacts/yaml-results`
 - 실패해도 계속 실행: `npx react-native-mcp-test run e2e/ --no-bail`
 - CI(빌드 산출물) 실행: `node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch`
+
+### 실행 결과 (RunResult)
+
+실행이 끝나면 러너는 `RunResult`를 산출한다. 콘솔 리포터는 마지막에 다음 형태로 요약한다.
+
+- `Results: N passed, N failed (duration)` — 실패가 없을 때
+- `Results: N passed, N failed, N skipped (duration)` — 한 스텝 실패 후 뒤 스텝이 건너뛰어졌을 때
+
+**집계 규칙**:
+
+- **passed**: 실제로 성공한 스텝만 (`status === 'passed'`). 한 스텝이 실패하면 이후 스텝은 실행하지 않고 **skipped**로 기록되며, skipped는 passed에 포함되지 않는다.
+- **failed**: 실패한 스텝 수.
+- **skipped**: 실패 이후 실행되지 않은 스텝 수 (같은 스위트 내).
+
+`-r json` 사용 시 `output` 디렉터리의 `results.json`에 `{ total, passed, failed, skipped, duration, suites }`가 저장된다. CLI 종료 코드는 `failed > 0`이면 1, 아니면 0이다.
