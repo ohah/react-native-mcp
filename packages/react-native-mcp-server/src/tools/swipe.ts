@@ -85,7 +85,7 @@ export function registerSwipe(server: McpServer, appSession: AppSession): void {
           const ix2 = Math.round(s2.x);
           const iy2 = Math.round(s2.y);
           const cmd = ['ui', 'swipe', String(ix1), String(iy1), String(ix2), String(iy2)];
-          if (durationSec !== 0.3) cmd.push('--duration', String(durationSec));
+          cmd.push('--duration', String(durationSec));
           cmd.push('--delta', '10');
           await runIdbCommand(cmd, udid);
           return {
