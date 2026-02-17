@@ -29,6 +29,8 @@ import { registerAddMedia } from './add-media.js';
 import { registerListDevices } from './list-devices.js';
 import { registerOpenDeeplink } from './open-deeplink.js';
 import { registerScrollUntilVisible } from './scroll-until-visible.js';
+import { registerInspectState } from './inspect-state.js';
+import { registerGetStateChanges } from './get-state-changes.js';
 
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
@@ -58,4 +60,7 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerOpenDeeplink(server);
   // scroll_until_visible — 요소가 보일 때까지 자동 스크롤
   registerScrollUntilVisible(server, appSession);
+  // React 상태 인스펙션 — state Hook 조회 및 변경 이력
+  registerInspectState(server, appSession);
+  registerGetStateChanges(server, appSession);
 }

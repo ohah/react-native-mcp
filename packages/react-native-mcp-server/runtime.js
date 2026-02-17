@@ -40,6 +40,23 @@
   };
 })();
 
+// ─── onCommitFiberRoot 래핑 — 상태 변경 추적 ─────────────────────
+// DevTools hook의 onCommitFiberRoot를 래핑해 커밋마다 state 변경 수집.
+// MCP가 hook을 설치했든 DevTools가 이미 설치했든 동일하게 동작.
+(function () {
+  var g =
+    typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : null;
+  if (!g || !g.__REACT_DEVTOOLS_GLOBAL_HOOK__) return;
+  var hook = g.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+  var orig = hook.onCommitFiberRoot;
+  hook.onCommitFiberRoot = function (rendererID, root) {
+    if (typeof orig === 'function') orig.call(hook, rendererID, root);
+    try {
+      if (root && root.current) collectStateChanges(root.current);
+    } catch (_e) {}
+  };
+})();
+
 var _pressHandlers = {};
 var _webViews = {};
 /** ref → id 역조회 (selector로 찾은 WebView의 webViewId 반환용) */
@@ -56,6 +73,10 @@ var _networkRequests = [];
 var _networkRequestId = 0;
 var _NETWORK_BUFFER_SIZE = 200;
 var _NETWORK_BODY_LIMIT = 10000;
+
+var _stateChanges = [];
+var _stateChangeId = 0;
+var _STATE_CHANGE_BUFFER = 300;
 
 // ─── Fiber 트리 헬퍼 ────────────────────────────────────────────
 
@@ -193,6 +214,110 @@ function getFiberTypeName(fiber) {
   if (t.displayName && typeof t.displayName === 'string') return t.displayName;
   if (t.name && typeof t.name === 'string') return t.name;
   return 'Component';
+}
+
+// ─── State Hook 파싱 & 변경 추적 ──────────────────────────────────
+
+/** fiber의 memoizedState 체인에서 state Hook(queue 존재)만 추출 */
+function parseHooks(fiber) {
+  var hooks = [];
+  var hook = fiber ? fiber.memoizedState : null;
+  var i = 0;
+  while (hook && typeof hook === 'object') {
+    if (hook.queue) {
+      hooks.push({ index: i, type: 'state', value: hook.memoizedState });
+    }
+    hook = hook.next;
+    i++;
+  }
+  return hooks;
+}
+
+/** 얕은 비교. 참조 동일 → true, 타입 불일치/키 다름 → false */
+function shallowEqual(a, b) {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (typeof a !== typeof b) return false;
+  if (typeof a !== 'object') return false;
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+  var ka = Object.keys(a);
+  var kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  for (var j = 0; j < ka.length; j++) {
+    if (a[ka[j]] !== b[ka[j]]) return false;
+  }
+  return true;
+}
+
+/** JSON.stringify 안전 래퍼 (depth 제한 + 순환 참조 방지) */
+function safeClone(val, maxDepth) {
+  if (maxDepth === undefined) maxDepth = 4;
+  var seen = [];
+  function clone(v, depth) {
+    if (v === null || v === undefined) return v;
+    if (typeof v !== 'object' && typeof v !== 'function') return v;
+    if (typeof v === 'function') return '[Function]';
+    if (depth > maxDepth) return '[depth limit]';
+    if (seen.indexOf(v) !== -1) return '[Circular]';
+    seen.push(v);
+    if (Array.isArray(v)) {
+      var arr = [];
+      for (var i = 0; i < Math.min(v.length, 100); i++) {
+        arr.push(clone(v[i], depth + 1));
+      }
+      if (v.length > 100) arr.push('...' + (v.length - 100) + ' more');
+      return arr;
+    }
+    var obj = {};
+    var keys = Object.keys(v);
+    for (var j = 0; j < Math.min(keys.length, 50); j++) {
+      obj[keys[j]] = clone(v[keys[j]], depth + 1);
+    }
+    if (keys.length > 50) obj['...'] = keys.length - 50 + ' more keys';
+    return obj;
+  }
+  return clone(val, 0);
+}
+
+/**
+ * onCommitFiberRoot에서 호출: 변경된 state Hook을 _stateChanges에 수집.
+ * fiber.alternate(이전 버전)와 비교해 memoizedState가 달라진 Hook만 기록.
+ */
+function collectStateChanges(fiber) {
+  if (!fiber) return;
+  if (fiber.tag === 0 || fiber.tag === 1) {
+    var prev = fiber.alternate;
+    if (prev) {
+      var prevHook = prev.memoizedState;
+      var nextHook = fiber.memoizedState;
+      var hookIdx = 0;
+      while (prevHook && nextHook && typeof prevHook === 'object' && typeof nextHook === 'object') {
+        if (nextHook.queue && !shallowEqual(prevHook.memoizedState, nextHook.memoizedState)) {
+          var name = getFiberTypeName(fiber);
+          _stateChanges.push({
+            id: ++_stateChangeId,
+            timestamp: Date.now(),
+            component: name,
+            hookIndex: hookIdx,
+            prev: safeClone(prevHook.memoizedState),
+            next: safeClone(nextHook.memoizedState),
+          });
+          if (_stateChanges.length > _STATE_CHANGE_BUFFER) _stateChanges.shift();
+        }
+        prevHook = prevHook.next;
+        nextHook = nextHook.next;
+        hookIdx++;
+      }
+    }
+  }
+  collectStateChanges(fiber.child);
+  collectStateChanges(fiber.sibling);
 }
 
 // ─── querySelector 셀렉터 파서 & 매칭 엔진 ──────────────────────
@@ -1122,6 +1247,90 @@ var MCP = {
   clearNetworkRequests: function () {
     _networkRequests = [];
     _networkRequestId = 0;
+  },
+  /**
+   * inspectState(selector) → 셀렉터로 찾은 컴포넌트의 state Hook 목록.
+   * 반환: { component, hooks: [{ index, type, value }] } 또는 null.
+   * FunctionComponent가 아닌 host fiber가 매칭되면 가장 가까운 조상 FunctionComponent로 이동.
+   */
+  inspectState: function (selector) {
+    if (typeof selector !== 'string' || !selector.trim()) return null;
+    try {
+      var root = getFiberRoot();
+      if (!root) return null;
+      var c = getRNComponents();
+      var parsed;
+      try {
+        parsed = parseSelector(selector.trim());
+      } catch (_parseErr) {
+        return null;
+      }
+      // 첫 번째 매칭 fiber 찾기 (querySelectorAll 로직 재사용)
+      var foundFiber = null;
+      for (var si = 0; si < parsed.selectors.length && !foundFiber; si++) {
+        var complex = parsed.selectors[si];
+        (function visit(fiber) {
+          if (!fiber || foundFiber) return;
+          if (matchesComplexSelector(fiber, complex, c.Text, c.Image)) {
+            foundFiber = fiber;
+            return;
+          }
+          visit(fiber.child);
+          visit(fiber.sibling);
+        })(root);
+      }
+      if (!foundFiber) return null;
+      // host fiber면 조상 FunctionComponent로 이동
+      var target = foundFiber;
+      if (target.tag !== 0 && target.tag !== 1) {
+        var p = target.return;
+        while (p) {
+          if (p.tag === 0 || p.tag === 1) {
+            target = p;
+            break;
+          }
+          p = p.return;
+        }
+        if (target.tag !== 0 && target.tag !== 1) return null;
+      }
+      var hooks = parseHooks(target);
+      return {
+        component: getFiberTypeName(target),
+        hooks: hooks.map(function (h) {
+          return { index: h.index, type: h.type, value: safeClone(h.value) };
+        }),
+      };
+    } catch (e) {
+      return null;
+    }
+  },
+  /**
+   * getStateChanges(options) → 상태 변경 이력 조회.
+   * options: { component?, since?, limit? }
+   */
+  getStateChanges: function (options) {
+    var opts = typeof options === 'object' && options !== null ? options : {};
+    var out = _stateChanges;
+    if (typeof opts.component === 'string' && opts.component) {
+      var componentFilter = opts.component;
+      out = out.filter(function (entry) {
+        return entry.component === componentFilter;
+      });
+    }
+    if (typeof opts.since === 'number') {
+      var since = opts.since;
+      out = out.filter(function (entry) {
+        return entry.timestamp > since;
+      });
+    }
+    var limit = typeof opts.limit === 'number' && opts.limit > 0 ? opts.limit : 100;
+    if (out.length > limit) out = out.slice(out.length - limit);
+    return out;
+  },
+  /** 상태 변경 버퍼 초기화 */
+  clearStateChanges: function () {
+    _stateChanges = [];
+    _stateChangeId = 0;
   },
   /**
    * querySelector(selector) → 첫 번째 매칭 fiber 정보 또는 null.
