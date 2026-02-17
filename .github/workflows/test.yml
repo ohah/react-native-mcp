@@ -41,5 +41,8 @@ jobs:
       - name: 의존성 설치
         run: bun install
 
+      - name: 워크스페이스 패키지 빌드
+        run: bun run build
+
       - name: 테스트 실행
         run: bun run test:unit
