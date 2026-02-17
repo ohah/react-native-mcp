@@ -418,6 +418,8 @@ npx react-native-mcp-test run tests/ --reporter junit --output results/
 Results: 1 passed, 1 failed (8.3s)
 ```
 
+실패 후 뒤 스텝이 건너뛰어지면 `N skipped`도 출력된다. 예: `Results: 2 passed, 1 failed, 3 skipped (8.3s)`. 자세한 집계 규칙은 [e2e-yaml-reference.md](e2e-yaml-reference.md)의 "실행 결과 (RunResult)" 참고.
+
 **실패 시 자동 동작**:
 
 1. 스크린샷 자동 캡처 → `results/{테스트명}-failure.png`

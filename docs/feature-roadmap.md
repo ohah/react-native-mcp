@@ -78,29 +78,16 @@ Expo Go: △ (localhost 연결 제한 가능, 확인 필요)
 
 ---
 
-### 3. 연결 안정성 (Heartbeat)
+### 3. 연결 안정성 (Heartbeat) — 구현 완료 ✓
 
-**현황**:
+**구현 내용**:
 
-- 클라이언트: 지수 백오프 재연결 있음 (1s → 1.5x → 30s max)
-- 서버: close/error 이벤트 감지
-- **없는 것**: heartbeat, stale 연결 감지, 연결 상태 머신
+- **클라이언트 (runtime.js)**: 30초 간격으로 앱→서버 `ping` 전송. `pong` 미수신 시 10초 타임아웃 후 연결 종료 → 기존 재연결 로직으로 재접속. 앱이 백그라운드로 가면 heartbeat 중단, 포그라운드 복귀 시 재개 (AppState 연동).
+- **서버 (websocket-server.ts)**: `ping` 수신 시 `pong` 응답. 60초 이상 메시지 없는 연결은 15초 주기로 검사해 stale로 판단 후 `close()` 호출 (기존 `close` 핸들러가 디바이스 정리).
 
-**해야 할 것**:
+**사용법**: 별도 설정 없이 동작한다. 앱과 서버가 연결된 상태에서 자동으로 ping/pong이 오가며, 끊긴 연결은 클라이언트가 재연결하고 서버는 오래된 연결을 정리한다.
 
-```
-runtime.js (클라이언트):
-├─ 30초 간격 ping 메시지 전송
-├─ pong 응답 없으면 연결 종료 → 재연결
-└─ 앱 백그라운드 진입 시 연결 상태 관리
-
-websocket-server.ts (서버):
-├─ ping 수신 → pong 응답
-├─ 60초 이상 메시지 없는 연결 → stale로 표시 → 정리
-└─ 연결 상태 머신 (connecting → connected → stale → disconnected)
-```
-
-**난이도**: ★★☆
+**난이도**: ★★☆ (완료)
 
 ---
 
@@ -703,7 +690,7 @@ npx react-native-mcp init --expo
 ```
 즉시 (안정화) ───────────────────────────────────────────────
  ├─ 1. Expo 검증 + 가이드          ★☆☆  — 코드 변경 없이 문서/검증
- ├─ 2. 연결 heartbeat              ★★☆  — 안정성
+ ├─ ✓ 연결 heartbeat (구현 완료)   ★★☆  — 안정성
  └─ ✓  New Architecture            ★☆☆  — 이미 동작 중 (RN 0.83.1 Fabric 확인)
 
 단기 (고유 강점) ────────────────────────────────────────────
@@ -747,26 +734,26 @@ npx react-native-mcp init --expo
 
 #### ★★☆ 보통 (1~2h, 새 로직 필요하지만 패턴 있음)
 
-| 기능                      | 구현 범위                        | 비고                              |
-| ------------------------- | -------------------------------- | --------------------------------- |
-| 연결 heartbeat            | runtime.js + websocket-server.ts | ping/pong + stale 정리            |
-| E2E: `clearText`          | types + parser + runner + client | evaluate 활용                     |
-| E2E: `doubleTap`          | types + parser + runner + client | tap 2회, 서버 딜레이 조정 필요    |
-| E2E: `${VAR}` 환경 변수   | parser.ts + cli.ts               | 재귀 문자열 치환                  |
-| E2E: `assertValue`        | types + parser + runner + client | querySelector value prop          |
-| E2E: `repeat`             | types + parser + runner          | z.lazy() 재귀 + 루프              |
-| E2E: `runFlow`            | parser + runner + types          | YAML include + 순환참조 방지      |
-| E2E: `retry`              | types + parser + runner          | try-catch 루프                    |
-| E2E: `clearState`         | 서버 도구 신규 + 전체            | iOS simctl / Android pm clear     |
-| E2E: `setLocation`        | 서버 도구 신규 + 전체            | simctl location / adb emu geo fix |
-| E2E: `copyText/pasteText` | client + types + parser + runner | 내부 클립보드 변수                |
-| React 상태 인스펙션       | runtime.js + 서버 도구           | memoizedState 순회                |
-| 네트워크 모킹             | runtime.js + 서버 도구           | 기존 인터셉터에 룰 매칭 추가      |
-| 접근성 자동 감사          | runtime.js + 서버 도구           | fiber 순회 + 규칙 체크            |
-| 비주얼 리그레션           | 서버 도구 + runner               | 이미지 크롭 + pixelmatch          |
-| 원커맨드 셋업             | 새 CLI 패키지                    | AST 파싱으로 import 삽입          |
-| 문서 + 예제               | docs/ + examples/                | 기술 난이도 낮음, 시간 소요       |
-| waitForIdle (네트워크)    | runtime.js                       | XHR/fetch 펜딩 카운터             |
+| 기능                       | 구현 범위                        | 비고                              |
+| -------------------------- | -------------------------------- | --------------------------------- |
+| 연결 heartbeat (구현 완료) | runtime.js + websocket-server.ts | ping/pong + stale 정리            |
+| E2E: `clearText`           | types + parser + runner + client | evaluate 활용                     |
+| E2E: `doubleTap`           | types + parser + runner + client | tap 2회, 서버 딜레이 조정 필요    |
+| E2E: `${VAR}` 환경 변수    | parser.ts + cli.ts               | 재귀 문자열 치환                  |
+| E2E: `assertValue`         | types + parser + runner + client | querySelector value prop          |
+| E2E: `repeat`              | types + parser + runner          | z.lazy() 재귀 + 루프              |
+| E2E: `runFlow`             | parser + runner + types          | YAML include + 순환참조 방지      |
+| E2E: `retry`               | types + parser + runner          | try-catch 루프                    |
+| E2E: `clearState`          | 서버 도구 신규 + 전체            | iOS simctl / Android pm clear     |
+| E2E: `setLocation`         | 서버 도구 신규 + 전체            | simctl location / adb emu geo fix |
+| E2E: `copyText/pasteText`  | client + types + parser + runner | 내부 클립보드 변수                |
+| React 상태 인스펙션        | runtime.js + 서버 도구           | memoizedState 순회                |
+| 네트워크 모킹              | runtime.js + 서버 도구           | 기존 인터셉터에 룰 매칭 추가      |
+| 접근성 자동 감사           | runtime.js + 서버 도구           | fiber 순회 + 규칙 체크            |
+| 비주얼 리그레션            | 서버 도구 + runner               | 이미지 크롭 + pixelmatch          |
+| 원커맨드 셋업              | 새 CLI 패키지                    | AST 파싱으로 import 삽입          |
+| 문서 + 예제                | docs/ + examples/                | 기술 난이도 낮음, 시간 소요       |
+| waitForIdle (네트워크)     | runtime.js                       | XHR/fetch 펜딩 카운터             |
 
 #### ★★★ 어려움 (2h+, 새 아키텍처 또는 외부 의존성)
 
@@ -786,7 +773,7 @@ Week 1: E2E Phase 1 쉬운 것 (back, home, hideKeyboard, longPress, addMedia, a
          → 6개 스텝 추가 + Expo 공식 지원 선언
 
 Week 2: E2E Phase 1 나머지 (clearText, doubleTap, assertValue)
-         + 연결 heartbeat
+         + ✓ 연결 heartbeat (완료)
          → 기본기 완성 + 안정성 향상
 
 Week 3: 환경 변수 (${VAR}) + repeat + runFlow
