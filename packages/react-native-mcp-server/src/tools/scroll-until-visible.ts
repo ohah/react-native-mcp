@@ -216,7 +216,7 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
         coords: { x1: number; y1: number; x2: number; y2: number },
         orientationInfo: IOSOrientationInfo
       ): Promise<void> {
-        const duration = 300;
+        const duration = 500;
         if (platform === 'ios') {
           if (!(await checkIdbAvailable())) throw new Error('idb not available');
           const udid = await resolveUdid(deviceId);
@@ -229,6 +229,8 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
             String(Math.round(s1.y)),
             String(Math.round(s2.x)),
             String(Math.round(s2.y)),
+            '--duration',
+            String(duration / 1000),
             '--delta',
             '10',
           ];
