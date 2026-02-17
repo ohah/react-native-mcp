@@ -5,12 +5,18 @@ import { z } from 'zod';
 import type { TestSuite } from './types.js';
 
 const stepSchema = z.union([
-  z.object({ tap: z.object({ selector: z.string() }) }),
+  z.object({
+    tap: z.object({
+      selector: z.string(),
+      duration: z.number().optional(),
+    }),
+  }),
   z.object({
     swipe: z.object({
       selector: z.string(),
       direction: z.string(),
       distance: z.number().optional(),
+      duration: z.number().optional(),
     }),
   }),
   z.object({ typeText: z.object({ selector: z.string(), text: z.string() }) }),
@@ -37,6 +43,12 @@ const stepSchema = z.union([
   z.object({ terminate: z.string() }),
   z.object({ openDeepLink: z.object({ url: z.string() }) }),
   z.object({ evaluate: z.object({ script: z.string() }) }),
+  z.object({
+    webviewEval: z.object({
+      webViewId: z.string(),
+      script: z.string(),
+    }),
+  }),
   z.object({
     scrollUntilVisible: z.object({
       selector: z.string(),

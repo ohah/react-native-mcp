@@ -1,5 +1,5 @@
 import { mkdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { AppClient } from '@ohah/react-native-mcp-client';
 import type { Reporter } from './reporters/index.js';
 import type {
@@ -15,13 +15,14 @@ function stepKey(step: TestStep): string {
   return Object.keys(step)[0]!;
 }
 
-async function executeStep(app: AppClient, step: TestStep): Promise<void> {
+async function executeStep(app: AppClient, step: TestStep, outputDir: string): Promise<void> {
   if ('tap' in step) {
-    await app.tap(step.tap.selector);
+    await app.tap(step.tap.selector, { duration: step.tap.duration });
   } else if ('swipe' in step) {
     await app.swipe(step.swipe.selector, {
       direction: step.swipe.direction as 'up' | 'down' | 'left' | 'right',
       distance: step.swipe.distance,
+      duration: step.swipe.duration,
     });
   } else if ('typeText' in step) {
     await app.typeText(step.typeText.selector, step.typeText.text);
@@ -60,9 +61,13 @@ async function executeStep(app: AppClient, step: TestStep): Promise<void> {
     const result = await app.assertCount(step.assertCount.selector, step.assertCount.count);
     if (!result.pass) throw new Error(result.message);
   } else if ('screenshot' in step) {
-    await app.screenshot({
-      filePath: step.screenshot.path ? resolve(step.screenshot.path) : undefined,
-    });
+    const filePath = step.screenshot.path
+      ? step.screenshot.path.startsWith('/')
+        ? resolve(step.screenshot.path)
+        : resolve(outputDir, step.screenshot.path.replace(/^\.\//, ''))
+      : undefined;
+    if (filePath) mkdirSync(dirname(filePath), { recursive: true });
+    await app.screenshot({ filePath });
   } else if ('wait' in step) {
     await new Promise((resolve) => setTimeout(resolve, step.wait));
   } else if ('launch' in step) {
@@ -73,6 +78,8 @@ async function executeStep(app: AppClient, step: TestStep): Promise<void> {
     await app.openDeepLink(step.openDeepLink.url);
   } else if ('evaluate' in step) {
     await app.evaluate(step.evaluate.script);
+  } else if ('webviewEval' in step) {
+    await app.webviewEval(step.webviewEval.webViewId, step.webviewEval.script);
   } else if ('scrollUntilVisible' in step) {
     const result = await app.scrollUntilVisible(step.scrollUntilVisible.selector, {
       direction: step.scrollUntilVisible.direction as 'up' | 'down' | 'left' | 'right' | undefined,
@@ -125,7 +132,7 @@ async function runSteps(
     }
 
     try {
-      await executeStep(app, step);
+      await executeStep(app, step, outputDir);
       const result: StepResult = { step, status: 'passed', duration: Date.now() - start };
       results.push(result);
       reporter.onStepResult(result);
@@ -234,9 +241,11 @@ export async function runAll(
   const start = Date.now();
   const suiteResults: SuiteResult[] = [];
 
+  const bail = opts.bail !== false; // default: true
   for (const suite of suites) {
     const result = await runSuite(suite, reporter, opts);
     suiteResults.push(result);
+    if (bail && result.status === 'failed') break;
   }
 
   const totalSteps = suiteResults.reduce((sum, s) => sum + s.steps.length, 0);
