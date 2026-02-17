@@ -70,8 +70,8 @@ export class AppClient {
 
     const app = new AppClient(client, transport, opts.platform, opts.deviceId);
 
-    // bundleId가 있으면 서버 시작 후 앱 자동 launch
-    if (opts.bundleId) {
+    // bundleId가 있고 launchApp !== false 이면 서버 시작 후 앱 자동 launch
+    if (opts.bundleId && opts.launchApp !== false) {
       const deviceArg = opts.deviceId ?? 'booted';
       try {
         if (opts.platform === 'ios') {
@@ -94,16 +94,23 @@ export class AppClient {
       }
     }
 
-    try {
-      await app.waitForConnection(
-        opts.connectionTimeout ?? 90_000,
-        opts.connectionInterval ?? 2_000
-      );
-    } catch (err) {
-      await transport.close().catch(() => {});
-      throw err;
+    if (opts.launchApp !== false) {
+      try {
+        await app._waitForConnection(
+          opts.connectionTimeout ?? 90_000,
+          opts.connectionInterval ?? 2_000
+        );
+      } catch (err) {
+        await transport.close().catch(() => {});
+        throw err;
+      }
     }
     return app;
+  }
+
+  /** 앱 WebSocket 연결 대기 (launchApp: false 로 create() 한 뒤 setup의 launch 스텝 실행 후 호출) */
+  async waitForConnection(timeoutMs?: number, intervalMs?: number): Promise<void> {
+    await this._waitForConnection(timeoutMs ?? 90_000, intervalMs ?? 2_000);
   }
 
   // ─── Private helpers ────────────────────────────────────
@@ -136,7 +143,7 @@ export class AppClient {
     }
   }
 
-  private async waitForConnection(timeoutMs: number, intervalMs: number): Promise<void> {
+  private async _waitForConnection(timeoutMs: number, intervalMs: number): Promise<void> {
     const start = Date.now();
     let lastStatus: unknown = null;
     while (Date.now() - start < timeoutMs) {

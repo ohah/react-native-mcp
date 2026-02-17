@@ -22,7 +22,7 @@ teardown?: Step[] # Run on exit (optional)
 
 ---
 
-## Step types (API)
+## Step types
 
 Use **exactly one** of the keys below. `selector` follows MCP selector syntax (e.g. `#testID`, `Text:text("label")`).
 

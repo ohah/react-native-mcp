@@ -15,6 +15,7 @@ const { values, positionals } = parseArgs({
     timeout: { type: 'string', short: 't' },
     device: { type: 'string', short: 'd' },
     'no-bail': { type: 'boolean' },
+    'no-auto-launch': { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -32,6 +33,7 @@ Options:
   -t, --timeout <ms>             Global timeout override
   -d, --device <id>              Device ID
   --no-bail                      Continue running after suite failure
+  --no-auto-launch               Do not launch app in create(); use setup launch step (e.g. CI install-only)
   -h, --help                     Show help`);
   process.exit(values.help ? 0 : 1);
 }
@@ -52,27 +54,21 @@ async function main() {
   const targetPath = resolve(target!);
   const suites = parsePath(targetPath);
 
-  const filtered =
-    platform !== undefined ? suites.filter((s) => s.config.platform === platform) : suites;
-
-  if (filtered.length === 0) {
-    console.error(
-      platform
-        ? `No test suites for platform "${platform}" at: ${targetPath}`
-        : 'No test suites found at: ' + targetPath
-    );
+  if (suites.length === 0) {
+    console.error('No test suites found at: ' + targetPath);
     process.exit(1);
   }
 
-  console.log(`Found ${filtered.length} test suite(s)\n`);
+  console.log(`Found ${suites.length} test suite(s)\n`);
 
   const reporter = createReporter(values.reporter!, values.output!);
-  const result = await runAll(filtered, reporter, {
+  const result = await runAll(suites, reporter, {
     platform,
     output: values.output,
     timeout: values.timeout ? Number(values.timeout) : undefined,
     deviceId: values.device,
     bail: !values['no-bail'],
+    autoLaunch: !values['no-auto-launch'],
   });
 
   process.exit(result.failed > 0 ? 1 : 0);

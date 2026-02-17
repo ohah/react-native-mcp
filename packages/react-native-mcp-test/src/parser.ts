@@ -63,7 +63,7 @@ const suiteSchema = z.object({
   config: z.object({
     platform: z.enum(['ios', 'android']),
     timeout: z.number().optional(),
-    bundleId: z.string().optional(),
+    bundleId: z.union([z.string(), z.object({ ios: z.string(), android: z.string() })]).optional(),
     deviceId: z.string().optional(),
   }),
   setup: z.array(stepSchema).optional(),

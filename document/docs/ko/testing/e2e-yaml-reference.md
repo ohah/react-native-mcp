@@ -22,7 +22,7 @@ teardown?: Step[] # 종료 시 실행 (선택)
 
 ---
 
-## Step 타입 (API)
+## Step 타입
 
 아래 키 중 **정확히 하나**만 사용한다. `selector`는 MCP 셀렉터 문법(예: `#testID`, `Text:text("라벨")`)을 따른다.
 

@@ -134,25 +134,14 @@ export function registerTakeScreenshot(server: McpServer, appSession: AppSession
           text: `Screenshot captured (${platform}).${filePath ? ` Saved to ${filePath}.` : ''} Device point size: ${pointSize.width}x${pointSize.height}. Screenshot size: ${outputSize.width}x${outputSize.height}. Coordinate scale: point_x = screenshot_x × ${scaleX}, point_y = screenshot_y × ${scaleY}.`,
         };
 
-        // Android: 일부 클라이언트에서 image content 처리 이슈 → data URL로 전송
-        const dataUrl = `data:image/jpeg;base64,${base64}`;
-        const content =
-          platform === 'android'
-            ? [
-                textBlock,
-                {
-                  type: 'text' as const,
-                  text: `Screenshot (image/jpeg, base64 data URL):\n${dataUrl}`,
-                },
-              ]
-            : [
-                textBlock,
-                {
-                  type: 'image' as const,
-                  data: base64,
-                  mimeType: 'image/jpeg' as const,
-                },
-              ];
+        const content = [
+          textBlock,
+          {
+            type: 'image' as const,
+            data: base64,
+            mimeType: 'image/jpeg' as const,
+          },
+        ];
 
         return { content };
       } catch (err) {
