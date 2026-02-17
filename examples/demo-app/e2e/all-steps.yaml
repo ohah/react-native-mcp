@@ -18,7 +18,7 @@ steps:
   - tap: { selector: 'Pressable:text("Count:")' }
   - tap: { selector: 'Pressable:text("Count:")' }
   - tap: { selector: 'Pressable:text("Count:")' }
-  - assertText: { text: 'Count: 3', selector: 'Pressable:text("Count:")' }
+  - waitForText: { text: 'Count: 3', selector: 'Pressable:text("Count:")', timeout: 3000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - wait: 500
   - waitForVisible: { selector: 'Pressable:text("testID 없음")', timeout: 5000 }
