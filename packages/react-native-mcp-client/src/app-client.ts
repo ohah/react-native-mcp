@@ -173,6 +173,7 @@ export class AppClient {
       return this._screenBounds;
     }
     // fallback: common screen size
+    console.warn('[react-native-mcp] getScreenBounds: evaluate failed, using fallback 390×844');
     return { width: 390, height: 844 };
   }
 
@@ -375,10 +376,11 @@ export class AppClient {
     let dist: number;
     if (typeof opts.distance === 'string' && opts.distance.endsWith('%')) {
       const pct = parseFloat(opts.distance) / 100;
+      const safePct = Number.isFinite(pct) ? pct : 0.6;
       dist =
         opts.direction === 'up' || opts.direction === 'down'
-          ? el.measure.height * pct
-          : el.measure.width * pct;
+          ? el.measure.height * safePct
+          : el.measure.width * safePct;
     } else {
       dist =
         (opts.distance as number | undefined) ??
