@@ -43,17 +43,20 @@ export class AppClient {
   private transport: StdioClientTransport;
   private platform: Platform;
   private deviceId?: string;
+  private iosOrientation?: number;
 
   private constructor(
     client: Client,
     transport: StdioClientTransport,
     platform: Platform,
-    deviceId?: string
+    deviceId?: string,
+    iosOrientation?: number
   ) {
     this.client = client;
     this.transport = transport;
     this.platform = platform;
     this.deviceId = deviceId;
+    this.iosOrientation = iosOrientation;
   }
 
   static async create(opts: CreateAppOptions): Promise<AppClient> {
@@ -68,7 +71,7 @@ export class AppClient {
     const client = new Client({ name: 'mcp-client-sdk', version: '1.0.0' });
     await client.connect(transport);
 
-    const app = new AppClient(client, transport, opts.platform, opts.deviceId);
+    const app = new AppClient(client, transport, opts.platform, opts.deviceId, opts.iosOrientation);
 
     // bundleId가 있고 launchApp !== false 이면 서버 시작 후 앱 자동 launch
     if (opts.bundleId && opts.launchApp !== false) {
@@ -119,6 +122,7 @@ export class AppClient {
     const opts: Record<string, unknown> = {};
     if (this.platform) opts.platform = this.platform;
     if (this.deviceId) opts.deviceId = this.deviceId;
+    if (this.iosOrientation) opts.iosOrientation = this.iosOrientation;
     return opts;
   }
 

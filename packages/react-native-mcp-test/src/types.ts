@@ -6,6 +6,8 @@ export interface TestConfig {
   /** 단일 문자열이면 공통, 객체면 플랫폼별. CLI -p로 덮을 때 사용 */
   bundleId?: string | { ios: string; android: string };
   deviceId?: string;
+  /** iOS GraphicsOrientation 강제값 (1-4). 1=Portrait, 2=Portrait180, 3=LandscapeA, 4=LandscapeB. 지정 시 xcrun 자동감지 건너뜀. */
+  orientation?: number;
 }
 
 export interface TestSuite {

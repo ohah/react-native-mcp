@@ -17,6 +17,8 @@ export interface CreateAppOptions {
   connectionInterval?: number;
   /** bundleId가 있어도 create()에서 앱 자동 실행 안 함. YAML setup의 launch 스텝으로 실행할 때 true (default: true = 자동 실행) */
   launchApp?: boolean;
+  /** iOS GraphicsOrientation 강제값 (1-4). 지정 시 xcrun 자동감지를 건너뛰고 이 값으로 좌표 변환. e2e.yaml config.orientation에서 전달됨. */
+  iosOrientation?: number;
 }
 
 export interface DeviceOpts {

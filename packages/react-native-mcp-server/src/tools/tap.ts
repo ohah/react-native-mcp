@@ -19,6 +19,7 @@ import {
   adbNotInstalledError,
   getAndroidScale,
 } from './adb-utils.js';
+import { getIOSOrientationInfo, transformForIdb } from './ios-landscape.js';
 
 const schema = z.object({
   platform: z
@@ -35,6 +36,12 @@ const schema = z.object({
     .optional()
     .describe(
       'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected. Use list_devices to find IDs.'
+    ),
+  iosOrientation: z
+    .number()
+    .optional()
+    .describe(
+      'iOS GraphicsOrientation override (1-4). 1=Portrait, 2=Portrait180, 3=LandscapeA, 4=LandscapeB. Skips auto-detection when set.'
     ),
 });
 
@@ -55,42 +62,24 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const { platform, x, y, duration, deviceId } = schema.parse(args);
+      const { platform, x, y, duration, deviceId, iosOrientation } = schema.parse(args);
       const isLongPress = duration != null && duration > 0;
       const action = isLongPress ? 'Long-pressed' : 'Tapped';
 
       try {
         if (platform === 'ios') {
-          // iOS tap: 0° and 90° (landscape right) only. 180°/270° not supported.
           if (!(await checkIdbAvailable())) return idbNotInstalledError();
-          let ix: number;
-          let iy: number;
-          let isLandscape = false;
-          try {
-            const res = await appSession.sendRequest(
-              {
-                method: 'eval',
-                params: {
-                  code: '(function(){ var M = typeof __REACT_NATIVE_MCP__ !== "undefined" ? __REACT_NATIVE_MCP__ : null; return M && M.getScreenInfo ? M.getScreenInfo() : null; })();',
-                },
-              },
-              3000,
-              deviceId,
-              platform
-            );
-            const info = res.result as { orientation?: string } | null;
-            isLandscape = !!(info && typeof info === 'object' && info.orientation === 'landscape');
-          } catch {
-            // orientation unknown, use (x, y) as-is
-          }
-          if (isLandscape) {
-            ix = Math.round(y);
-            iy = Math.round(x);
-          } else {
-            ix = Math.round(x);
-            iy = Math.round(y);
-          }
           const udid = await resolveUdid(deviceId);
+          const info = await getIOSOrientationInfo(
+            appSession,
+            deviceId,
+            platform,
+            udid,
+            iosOrientation
+          );
+          const t = transformForIdb(x, y, info);
+          const ix = Math.round(t.x);
+          const iy = Math.round(t.y);
           const cmd = ['ui', 'tap', String(ix), String(iy)];
           if (isLongPress) cmd.push('--duration', String(duration / 1000));
           await runIdbCommand(cmd, udid);

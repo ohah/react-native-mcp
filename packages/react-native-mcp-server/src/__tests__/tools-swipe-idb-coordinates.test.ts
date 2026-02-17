@@ -29,6 +29,12 @@ mock.module('../tools/adb-utils.js', () => ({
   getAndroidScale: async () => 3,
 }));
 
+// portrait (변환 없음) 으로 mock — 이 테스트는 좌표 정수 반올림 검증이 목적
+mock.module('../tools/ios-landscape.js', () => ({
+  getIOSOrientationInfo: async () => ({ graphicsOrientation: 1, width: 0, height: 0 }),
+  transformForIdb: (x: number, y: number) => ({ x, y }),
+}));
+
 describe('swipe 도구 — iOS idb 좌표 정수 반올림', () => {
   it('float 좌표 전달 시 idb에는 정수 문자열로 전달됨', async () => {
     const { registerSwipe } = await import('../tools/swipe.js');
@@ -38,7 +44,10 @@ describe('swipe 도구 — iOS idb 좌표 정수 반올림', () => {
         handler = h;
       },
     };
-    const appSession = { getPixelRatio: () => undefined };
+    const appSession = {
+      getPixelRatio: () => undefined,
+      sendRequest: async () => ({ result: null }),
+    };
     registerSwipe(mockServer as never, appSession as never);
 
     await handler!({
@@ -77,7 +86,10 @@ describe('swipe 도구 — iOS duration/delta 인자', () => {
         handler = h;
       },
     };
-    const appSession = { getPixelRatio: () => undefined };
+    const appSession = {
+      getPixelRatio: () => undefined,
+      sendRequest: async () => ({ result: null }),
+    };
     registerSwipe(mockServer as never, appSession as never);
 
     await handler!({

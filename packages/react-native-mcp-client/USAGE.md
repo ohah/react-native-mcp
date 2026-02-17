@@ -37,6 +37,7 @@ const app = await createApp({
   serverCwd: '/path/to/server', // 서버 CWD (기본: 자동 감지)
   connectionTimeout: 90_000, // 앱 연결 대기 ms (기본: 90초)
   connectionInterval: 2_000, // 폴링 간격 ms (기본: 2초)
+  iosOrientation: 3, // iOS GraphicsOrientation 강제값 (1-4, 선택). 생략 시 자동 감지.
 });
 ```
 
