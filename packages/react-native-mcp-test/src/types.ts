@@ -3,7 +3,8 @@ import type { Platform } from '@ohah/react-native-mcp-client';
 export interface TestConfig {
   platform: Platform;
   timeout?: number;
-  bundleId?: string;
+  /** 단일 문자열이면 공통, 객체면 플랫폼별. CLI -p로 덮을 때 사용 */
+  bundleId?: string | { ios: string; android: string };
   deviceId?: string;
 }
 
@@ -68,4 +69,6 @@ export interface RunOptions {
   timeout?: number;
   deviceId?: string;
   bail?: boolean;
+  /** false면 create()에서 앱 자동 실행 안 함. 워크플로에서 설치만 하고 setup의 launch로 실행할 때 사용 (default: true) */
+  autoLaunch?: boolean;
 }

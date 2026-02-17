@@ -70,6 +70,38 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
 
       const queryCode = buildQuerySelectorEvalCode(selector);
 
+      /** 요소가 뷰포트(화면) 안에 있는지. measure가 없으면 true(기존 동작 유지). */
+      function isInViewport(
+        measure: { pageX: number; pageY: number; width: number; height: number } | undefined,
+        screenWidth: number,
+        screenHeight: number
+      ): boolean {
+        if (!measure) return true;
+        const { pageX, pageY, width, height } = measure;
+        const margin = 20;
+        return (
+          pageX + width >= -margin &&
+          pageX <= screenWidth + margin &&
+          pageY + height >= -margin &&
+          pageY <= screenHeight + margin
+        );
+      }
+
+      async function getScreenBounds(): Promise<{ width: number; height: number }> {
+        const screenCode = `(function(){ var M = typeof __REACT_NATIVE_MCP__ !== 'undefined' ? __REACT_NATIVE_MCP__ : null; return M && M.getScreenInfo ? M.getScreenInfo() : null; })();`;
+        const screenRes = await appSession.sendRequest(
+          { method: 'eval', params: { code: screenCode } },
+          10000,
+          deviceId,
+          platform
+        );
+        if (screenRes.result?.window) {
+          const w = screenRes.result.window as { width: number; height: number };
+          return { width: w.width, height: w.height };
+        }
+        return { width: 360, height: 800 };
+      }
+
       // 스크롤 영역 좌표 계산 함수
       async function getScrollArea(): Promise<{
         centerX: number;
@@ -210,7 +242,9 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
       }
 
       try {
-        // 첫 번째 체크 (스크롤 없이)
+        const bounds = await getScreenBounds();
+
+        // 첫 번째 체크 (스크롤 없이) — 매칭되더라도 뷰포트 안에 있을 때만 성공
         const initialRes = await appSession.sendRequest(
           { method: 'eval', params: { code: queryCode } },
           10000,
@@ -218,19 +252,24 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
           platform
         );
         if (initialRes.result != null) {
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: JSON.stringify({
-                  pass: true,
-                  scrollCount: 0,
-                  element: initialRes.result,
-                  message: `Element found without scrolling.`,
-                }),
-              },
-            ],
+          const el = initialRes.result as {
+            measure?: { pageX: number; pageY: number; width: number; height: number };
           };
+          if (isInViewport(el.measure, bounds.width, bounds.height)) {
+            return {
+              content: [
+                {
+                  type: 'text' as const,
+                  text: JSON.stringify({
+                    pass: true,
+                    scrollCount: 0,
+                    element: initialRes.result,
+                    message: `Element found without scrolling.`,
+                  }),
+                },
+              ],
+            };
+          }
         }
 
         // 스크롤 루프
@@ -248,19 +287,24 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
             platform
           );
           if (res.result != null) {
-            return {
-              content: [
-                {
-                  type: 'text' as const,
-                  text: JSON.stringify({
-                    pass: true,
-                    scrollCount: i + 1,
-                    element: res.result,
-                    message: `Element found after ${i + 1} scroll(s).`,
-                  }),
-                },
-              ],
+            const el = res.result as {
+              measure?: { pageX: number; pageY: number; width: number; height: number };
             };
+            if (isInViewport(el.measure, bounds.width, bounds.height)) {
+              return {
+                content: [
+                  {
+                    type: 'text' as const,
+                    text: JSON.stringify({
+                      pass: true,
+                      scrollCount: i + 1,
+                      element: res.result,
+                      message: `Element found after ${i + 1} scroll(s).`,
+                    }),
+                  },
+                ],
+              };
+            }
           }
         }
 

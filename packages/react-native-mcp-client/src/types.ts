@@ -15,6 +15,8 @@ export interface CreateAppOptions {
   connectionTimeout?: number;
   /** 앱 연결 대기 폴링 간격 ms (default: 2_000) */
   connectionInterval?: number;
+  /** bundleId가 있어도 create()에서 앱 자동 실행 안 함. YAML setup의 launch 스텝으로 실행할 때 true (default: true = 자동 실행) */
+  launchApp?: boolean;
 }
 
 export interface DeviceOpts {

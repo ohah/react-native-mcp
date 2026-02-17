@@ -10,15 +10,29 @@ import type {
   RunResult,
   RunOptions,
 } from './types.js';
+import type { Platform } from '@ohah/react-native-mcp-client';
 
 function stepKey(step: TestStep): string {
   return Object.keys(step)[0]!;
+}
+
+function resolveBundleId(
+  bundleId: TestSuite['config']['bundleId'],
+  platform: Platform
+): string | undefined {
+  if (bundleId == null) return undefined;
+  if (typeof bundleId === 'string') return bundleId;
+  return bundleId[platform];
 }
 
 interface StepContext {
   outputDir: string;
   /** create()에서 이미 실행한 bundleId와 같으면 launch 스텝을 건너뜀 (재시작으로 WebSocket 끊김 방지) */
   alreadyLaunchedBundleId?: string;
+  /** create()에서 앱을 실행했으면 true (--no-auto-launch면 false) */
+  didLaunchInCreate: boolean;
+  /** config.bundleId를 플랫폼으로 해석한 값. launch: __bundleId__ 치환용 */
+  resolvedBundleId?: string;
 }
 
 async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Promise<void> {
@@ -78,10 +92,16 @@ async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Pr
   } else if ('wait' in step) {
     await new Promise((resolve) => setTimeout(resolve, step.wait));
   } else if ('launch' in step) {
-    if (alreadyLaunchedBundleId !== undefined && step.launch === alreadyLaunchedBundleId) {
+    const toLaunch =
+      step.launch === '__bundleId__' ? (ctx.resolvedBundleId ?? step.launch) : step.launch;
+    if (
+      ctx.didLaunchInCreate &&
+      alreadyLaunchedBundleId !== undefined &&
+      toLaunch === alreadyLaunchedBundleId
+    ) {
       return; // 이미 create()에서 실행됨. 재실행 시 앱 재시작 → WebSocket 끊김 → 이후 스텝 실패 방지
     }
-    await app.launch(step.launch);
+    await app.launch(toLaunch);
   } else if ('terminate' in step) {
     await app.terminate(step.terminate);
   } else if ('openDeepLink' in step) {
@@ -174,17 +194,21 @@ export async function runSuite(
   const outputDir = opts.output ?? './results';
   const platform = opts.platform ?? suite.config.platform;
   const deviceId = opts.deviceId ?? suite.config.deviceId;
+  const resolvedBundleId = resolveBundleId(suite.config.bundleId, platform);
   const start = Date.now();
 
   reporter.onSuiteStart(suite.name);
+
+  const autoLaunch = opts.autoLaunch !== false;
 
   let app: AppClient;
   try {
     app = await AppClient.create({
       platform,
       deviceId,
-      bundleId: suite.config.bundleId,
+      bundleId: resolvedBundleId,
       connectionTimeout: opts.timeout ?? suite.config.timeout,
+      launchApp: autoLaunch,
     });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -211,7 +235,9 @@ export async function runSuite(
 
   const stepCtx: StepContext = {
     outputDir,
-    alreadyLaunchedBundleId: suite.config.bundleId,
+    alreadyLaunchedBundleId: resolvedBundleId,
+    didLaunchInCreate: autoLaunch,
+    resolvedBundleId,
   };
 
   try {
@@ -220,6 +246,11 @@ export async function runSuite(
       const { results, failed } = await runSteps(app, suite.setup, reporter, suite.name, stepCtx);
       allStepResults.push(...results);
       if (failed) suiteFailed = true;
+    }
+
+    // autoLaunch false면 create()에서 앱을 실행하지 않음. setup의 launch 스텝 후 연결 대기.
+    if (!autoLaunch && !suiteFailed) {
+      await app.waitForConnection(opts.timeout ?? suite.config.timeout ?? 90_000, 2_000);
     }
 
     // steps (skip if setup failed)
