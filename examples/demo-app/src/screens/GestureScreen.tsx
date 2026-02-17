@@ -3,7 +3,7 @@
  *
  * - MCP 호환성 비교: RN TouchableOpacity / RN Pressable / RNGH TouchableOpacity 각각 testID + 카운터.
  *   query_selector로 요소 찾아 measure 좌표 획득 → tap(platform, x, y)으로 idb/adb 클릭 시 어떤 컴포넌트가 감지하는지 비교 가능.
- * - Gesture.Tap() 감지 테스트: RNGH Gesture.Tap() + runOnJS 카운터. 네이티브 제스처 인식기 기반이라
+ * - Gesture.Tap() 감지 테스트: RNGH Gesture.Tap() + scheduleOnRN 카운터. 네이티브 제스처 인식기 기반이라
  *   MCP tap(idb/adb)로는 카운터가 증가하지 않을 수 있음.
  * - MCP: query_selector로 요소(또는 :text) 찾기 → measure 좌표 → tap / swipe (idb/adb). 하단: swipe to delete, pull to refresh 등.
  */
@@ -21,17 +21,13 @@ import {
   Pressable,
 } from 'react-native';
 import {
-  TouchableOpacity as GHTouchableOpacity,
+  Pressable as GHPressable,
   GestureDetector,
   Gesture,
   Swipeable,
 } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 const DRAWER_WIDTH = 220;
 const BOTTOM_SHEET_HEIGHT = 180;
@@ -120,10 +116,10 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
         .onEnd((e) => {
           if (e.velocityX > 100 || drawerOffset.value > -DRAWER_WIDTH / 2) {
             drawerOffset.value = withSpring(0, { damping: 20, stiffness: 150 });
-            runOnJS(setDrawerIsOpen)(true);
+            scheduleOnRN(setDrawerIsOpen, true);
           } else {
             drawerOffset.value = withSpring(-DRAWER_WIDTH, { damping: 20, stiffness: 150 });
-            runOnJS(setDrawerIsOpen)(false);
+            scheduleOnRN(setDrawerIsOpen, false);
           }
         }),
     []
@@ -140,10 +136,10 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
         .onEnd((e) => {
           if (e.velocityX < -100 || drawerOffset.value < -DRAWER_WIDTH / 2) {
             drawerOffset.value = withSpring(-DRAWER_WIDTH, { damping: 20, stiffness: 150 });
-            runOnJS(setDrawerIsOpen)(false);
+            scheduleOnRN(setDrawerIsOpen, false);
           } else {
             drawerOffset.value = withSpring(0, { damping: 20, stiffness: 150 });
-            runOnJS(setDrawerIsOpen)(true);
+            scheduleOnRN(setDrawerIsOpen, true);
           }
         }),
     []
@@ -167,10 +163,10 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
         .onEnd((e) => {
           if (e.velocityY < -100 || sheetOffset.value < BOTTOM_SHEET_HEIGHT / 2) {
             sheetOffset.value = withSpring(0, { damping: 20, stiffness: 150 });
-            runOnJS(setSheetOpen)(true);
+            scheduleOnRN(setSheetOpen, true);
           } else {
             sheetOffset.value = withSpring(BOTTOM_SHEET_HEIGHT, { damping: 20, stiffness: 150 });
-            runOnJS(setSheetOpen)(false);
+            scheduleOnRN(setSheetOpen, false);
           }
         }),
     []
@@ -216,7 +212,7 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
         .onEnd(() => {
           workletSavedX.value = workletTranslateX.value;
           workletSavedY.value = workletTranslateY.value;
-          runOnJS(incrementWorkletDrag)();
+          scheduleOnRN(incrementWorkletDrag);
         }),
     [incrementWorkletDrag]
   );
@@ -272,7 +268,7 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
   const tapGesture = useMemo(
     () =>
       Gesture.Tap().onEnd(() => {
-        runOnJS(incrementTapGestureCount)();
+        scheduleOnRN(incrementTapGestureCount);
       }),
     [incrementTapGestureCount]
   );
@@ -328,15 +324,14 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
               <Text style={styles.compareBtnLabel}>RN Pressable</Text>
               <Text style={styles.compareBtnCount}>{comparePressableTaps}</Text>
             </Pressable>
-            <GHTouchableOpacity
+            <GHPressable
               style={[styles.compareBtn, styles.compareBtnGh]}
               onPress={() => setCompareGhTaps((n) => n + 1)}
               testID="gesture-compare-gh-touchable"
-              activeOpacity={0.8}
             >
               <Text style={styles.compareBtnLabel}>RNGH TouchableOpacity</Text>
               <Text style={styles.compareBtnCount}>{compareGhTaps}</Text>
-            </GHTouchableOpacity>
+            </GHPressable>
           </View>
 
           {/* Gesture.Tap() 감지 테스트 — 제스처 API는 네이티브 레벨이라 MCP 터치 시 미동작 가능 */}
@@ -368,26 +363,24 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
           <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
             GestureHandler TouchableOpacity (testID 있음)
           </Text>
-          <GHTouchableOpacity
+          <GHPressable
             style={styles.ghButton}
             onPress={() => setGhTaps((n) => n + 1)}
             testID="gesture-gh-pressable"
-            activeOpacity={0.8}
           >
             <Text style={styles.ghButtonText}>RNGH TouchableOpacity: {ghTaps}</Text>
-          </GHTouchableOpacity>
+          </GHPressable>
 
           {/* testID 없음 — query_selector :text → measure → tap(idb/adb) */}
           <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
             GestureHandler TouchableOpacity (라벨만)
           </Text>
-          <GHTouchableOpacity
+          <GHPressable
             style={[styles.ghButton, styles.ghButtonSecondary]}
             onPress={() => setGhTapsNoId((n) => n + 1)}
-            activeOpacity={0.8}
           >
             <Text style={styles.ghButtonTextSecondary}>RNGH 라벨만: {ghTapsNoId}</Text>
-          </GHTouchableOpacity>
+          </GHPressable>
 
           {/* Reanimated: testID 있음 */}
           <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
@@ -397,17 +390,16 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             style={[styles.animatedBox, animatedBoxStyle]}
             testID="gesture-reanimated-box"
           >
-            <GHTouchableOpacity
+            <GHPressable
               style={styles.animatedBoxInner}
               onPressIn={onReanimatedPressIn}
               onPressOut={onReanimatedPressOut}
               onPress={() => setReanimatedTaps((n) => n + 1)}
               testID="gesture-reanimated-trigger"
-              activeOpacity={1}
             >
               <Text style={styles.animatedBoxText}>눌러보세요</Text>
               <Text style={styles.animatedBoxText}>{reanimatedTaps}</Text>
-            </GHTouchableOpacity>
+            </GHPressable>
           </Animated.View>
 
           {/* Reanimated: testID 없음 — query_selector :text("눌러보세요 (라벨만)") → tap(idb/adb) */}
@@ -415,16 +407,15 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             Reanimated 스케일 (라벨만)
           </Text>
           <Animated.View style={[styles.animatedBox, animatedBoxStyleNoId]}>
-            <GHTouchableOpacity
+            <GHPressable
               style={[styles.animatedBoxInner, styles.animatedBoxInnerSecondary]}
               onPressIn={onReanimatedPressInNoId}
               onPressOut={onReanimatedPressOutNoId}
               onPress={() => setReanimatedTapsNoId((n) => n + 1)}
-              activeOpacity={1}
             >
               <Text style={styles.animatedBoxText}>눌러보세요 (라벨만)</Text>
               <Text style={styles.animatedBoxText}>{reanimatedTapsNoId}</Text>
-            </GHTouchableOpacity>
+            </GHPressable>
           </Animated.View>
 
           {/* Reanimated ScrollView */}
@@ -542,13 +533,13 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             왼쪽 가장자리 스와이프 또는 아래 버튼으로 열기. react-navigation이면 openDrawer()로 제어
             가능.
           </Text>
-          <GHTouchableOpacity
+          <GHPressable
             style={styles.drawerOpenBtn}
             onPress={openDrawer}
             testID="gesture-drawer-open"
           >
             <Text style={styles.drawerOpenBtnText}>Drawer 열기</Text>
-          </GHTouchableOpacity>
+          </GHPressable>
 
           <Text style={[styles.sectionTitle, isDarkMode && styles.textDark]}>
             Tab swipe / ViewPager (scrollTo 제어 가능성 ✅)
@@ -639,9 +630,9 @@ export function GestureScreen({ isDarkMode }: GestureScreenProps) {
             >
               드로워: {drawerIsOpen ? '열림 ✅' : '닫힘'}
             </Text>
-            <GHTouchableOpacity style={styles.drawerCloseBtn} onPress={closeDrawer}>
+            <GHPressable style={styles.drawerCloseBtn} onPress={closeDrawer}>
               <Text style={styles.drawerCloseText}>닫기</Text>
-            </GHTouchableOpacity>
+            </GHPressable>
           </View>
         </Animated.View>
       </GestureDetector>
