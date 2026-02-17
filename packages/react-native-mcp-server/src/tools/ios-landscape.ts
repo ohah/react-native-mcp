@@ -34,10 +34,7 @@ export interface IOSOrientationInfo {
 /**
  * 앱 런타임 + 시뮬레이터에서 orientation 정보를 수집한다.
  * orientation이 0° (portrait)가 아닐 때만 GraphicsOrientation을 조회.
- */
-/**
- * @param orientationOverride  e2e.yaml config.orientation 등에서 사용자가 강제 지정한 GraphicsOrientation 값 (1~4).
- *                              지정 시 xcrun 자동감지를 건너뛰고 이 값을 사용한다.
+ * @param orientationOverride e2e.yaml config.orientation 등에서 사용자가 강제 지정한 GraphicsOrientation 값 (1~4). 지정 시 xcrun 자동감지를 건너뛰고 이 값을 사용한다.
  */
 export async function getIOSOrientationInfo(
   appSession: AppSession,
