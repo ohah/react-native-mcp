@@ -1,24 +1,32 @@
-# React Native MCP Documentation
+---
+pageType: home
+title: React Native MCP
 
-Documentation for the MCP (Model Context Protocol) server that automates and monitors React Native apps **with AI**. This site focuses on **how to use** the tools, not internal design for developers.
+hero:
+  name: React Native MCP
+  text: MCP server for React Native app automation and monitoring
+  tagline: Use with Cursor, Claude Desktop, and GitHub Actions — or run E2E tests with YAML scenarios.
+  actions:
+    - theme: brand
+      text: Getting started
+      link: /en/mcp/
+    - theme: alt
+      text: testing
+      link: /en/testing/
+    - theme: alt
+      text: mcp
+      link: /en/mcp/
 
-## What this documentation covers
-
-- **Using MCP**: How to connect the React Native MCP server in Cursor, Claude Desktop, and GitHub Copilot CLI
-- **Required tools**: Installing and verifying iOS (idb) and Android (adb)
-- **E2E testing**: Writing YAML scenarios and running them automatically in GitHub Actions
-
-## Quick start
-
-1. Install the MCP server: `npm install -g @ohah/react-native-mcp-server` or `npx -y @ohah/react-native-mcp-server`
-2. Add the server to your client (Cursor / Claude / Copilot)
-3. Add cdp-interceptor (in Metro) and Babel preset to your React Native app
-4. Install idb (iOS) and adb (Android), then run and connect your app
-
-See [Install & connect](./guide/install) for step-by-step instructions.
-
-## Next steps
-
-- [Using MCP (Cursor / Claude / Copilot)](./guide/mcp-usage) — Client setup and app connection
-- [E2E YAML scenarios](./guide/yaml-e2e) — Automate tap, input, and assertions with scenario files
-- [Running E2E in GitHub Actions](./guide/e2e-github-actions) — How to run E2E in CI
+features:
+  - title: MCP with AI
+    details: Connect the server to Cursor, Claude Desktop, or Copilot CLI. Control and inspect your app with natural language and tools (snapshot, tap, assert).
+    icon: 🤖
+    link: /en/mcp/
+  - title: Testing (YAML)
+    details: Write scenarios in YAML — tap, assert, wait — and run them locally or in GitHub Actions without AI.
+    icon: 📋
+    link: /en/testing/
+  - title: iOS & Android
+    details: Uses idb for iOS simulator and adb for Android. Tap, swipe, screenshots, and more.
+    icon: 📱
+---

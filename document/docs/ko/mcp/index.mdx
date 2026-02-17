@@ -1,22 +1,22 @@
+import { PackageManagerTabs } from '@rspress/core/theme';
+
 # 설치 및 연결
 
 React Native MCP를 사용하려면 **MCP 서버**, **클라이언트 설정**, **앱 쪽 설정**, **네이티브 도구(idb/adb)** 가 필요합니다.
 
 ## 1. MCP 서버 설치
 
-전역 설치:
+전역 설치 (npm, pnpm, bun, yarn, deno):
 
-```bash
-npm install -g @ohah/react-native-mcp-server
-```
+<PackageManagerTabs command="install -g @ohah/react-native-mcp-server" />
 
-설치 없이 실행만 하려면:
+설치 없이 실행만 (npx, pnpx, bunx 등):
 
 ```bash
 npx -y @ohah/react-native-mcp-server
 ```
 
-Cursor·Claude·Copilot 설정에서는 보통 `npx`로 실행하는 방식을 사용합니다.
+Cursor·Claude·Copilot 설정에서는 보통 설치 없이 실행하는 방식을 사용합니다.
 
 ## 2. 클라이언트에 서버 등록
 

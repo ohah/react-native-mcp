@@ -1,0 +1,4 @@
+[
+  { "text": "testing", "link": "/testing/", "activeMatch": "^/en/testing/" },
+  { "text": "mcp", "link": "/mcp/", "activeMatch": "^/en/mcp/" }
+]

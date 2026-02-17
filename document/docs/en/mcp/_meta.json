@@ -1,0 +1,5 @@
+[
+  { "type": "file", "name": "index", "label": "Install & connect" },
+  "getting-started",
+  { "type": "file", "name": "mcp-usage", "label": "Cursor / Claude / Copilot" }
+]

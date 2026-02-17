@@ -95,7 +95,7 @@ Once connected, you can use tools such as:
 | Deep link | `open_deeplink`                                      |
 | Debug     | `list_console_messages`, `list_network_requests`     |
 
-Ask the AI to “take a snapshot of the app” or “tap the login button” and it will call these tools.
+Ask the AI to "take a snapshot of the app" or "tap the login button" and it will call these tools.
 
 ---
 
