@@ -1,11 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, Dimensions } from 'react-native';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { StyleSheet, Text, View, ScrollView, useWindowDimensions } from 'react-native';
 
 export type StepProps = { isDarkMode: boolean };
 
 export function StepGesturePager({ isDarkMode }: StepProps) {
+  const { width: screenWidth } = useWindowDimensions();
   const [currentPage, setCurrentPage] = React.useState(1);
   return (
     <View style={styles.container}>
@@ -16,17 +15,23 @@ export function StepGesturePager({ isDarkMode }: StepProps) {
         contentContainerStyle={styles.pagerContent}
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={(e) => {
-          const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH) + 1;
+          const page = Math.round(e.nativeEvent.contentOffset.x / screenWidth) + 1;
           setCurrentPage(page);
         }}
       >
-        <View style={[styles.pagerPage, isDarkMode && styles.pagerPageDark]}>
+        <View
+          style={[styles.pagerPage, { width: screenWidth }, isDarkMode && styles.pagerPageDark]}
+        >
           <Text style={[styles.pagerText, isDarkMode && styles.textDark]}>페이지 1</Text>
         </View>
-        <View style={[styles.pagerPage, isDarkMode && styles.pagerPageDark]}>
+        <View
+          style={[styles.pagerPage, { width: screenWidth }, isDarkMode && styles.pagerPageDark]}
+        >
           <Text style={[styles.pagerText, isDarkMode && styles.textDark]}>페이지 2</Text>
         </View>
-        <View style={[styles.pagerPage, isDarkMode && styles.pagerPageDark]}>
+        <View
+          style={[styles.pagerPage, { width: screenWidth }, isDarkMode && styles.pagerPageDark]}
+        >
           <Text style={[styles.pagerText, isDarkMode && styles.textDark]}>페이지 3</Text>
         </View>
       </ScrollView>
@@ -42,7 +47,6 @@ const styles = StyleSheet.create({
   pager: { marginHorizontal: -24 },
   pagerContent: {},
   pagerPage: {
-    width: SCREEN_WIDTH,
     height: 120,
     backgroundColor: '#e8e8e8',
     justifyContent: 'center',
