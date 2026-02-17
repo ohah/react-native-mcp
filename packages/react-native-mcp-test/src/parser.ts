@@ -15,7 +15,7 @@ const stepSchema = z.union([
     swipe: z.object({
       selector: z.string(),
       direction: z.string(),
-      distance: z.number().optional(),
+      distance: z.union([z.number(), z.string()]).optional(),
       duration: z.number().optional(),
     }),
   }),

@@ -75,6 +75,8 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('Fatal error:', err);
+  const msg = err instanceof Error ? err.message : String(err);
+  console.error('Fatal error:', msg);
+  if (err instanceof Error && err.stack) console.error(err.stack);
   process.exit(1);
 });

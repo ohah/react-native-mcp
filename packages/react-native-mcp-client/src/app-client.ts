@@ -361,7 +361,7 @@ export class AppClient {
     selector: string,
     opts: {
       direction: 'up' | 'down' | 'left' | 'right';
-      distance?: number;
+      distance?: number | string;
       duration?: number;
     } & DeviceOpts
   ): Promise<unknown> {
@@ -372,7 +372,18 @@ export class AppClient {
     const rawCy = el.measure.pageY + el.measure.height / 2;
     const screen = await this.getScreenBounds();
     const { cx, cy } = clampToViewport(rawCx, rawCy, el.measure, screen);
-    const dist = opts.distance ?? Math.min(el.measure.width, el.measure.height) * 0.6;
+    let dist: number;
+    if (typeof opts.distance === 'string' && opts.distance.endsWith('%')) {
+      const pct = parseFloat(opts.distance) / 100;
+      dist =
+        opts.direction === 'up' || opts.direction === 'down'
+          ? el.measure.height * pct
+          : el.measure.width * pct;
+    } else {
+      dist =
+        (opts.distance as number | undefined) ??
+        Math.min(el.measure.width, el.measure.height) * 0.6;
+    }
     let x1: number, y1: number, x2: number, y2: number;
     switch (opts.direction) {
       case 'up':

@@ -50,17 +50,21 @@ teardown?: Step[] # 종료 시 실행 (선택)
 
 요소 위에서 스와이프한다.
 
-| 필드      | 타입   | 필수 | 설명                                   |
-| --------- | ------ | ---- | -------------------------------------- |
-| selector  | string | ✓    | 대상 요소 셀렉터                       |
-| direction | string | ✓    | `up` \| `down` \| `left` \| `right`    |
-| distance  | number |      | 스와이프 거리(px). 생략 시 기본값 사용 |
+| 필드      | 타입             | 필수 | 설명                                                                                      |
+| --------- | ---------------- | ---- | ----------------------------------------------------------------------------------------- |
+| selector  | string           | ✓    | 대상 요소 셀렉터                                                                          |
+| direction | string           | ✓    | `up` \| `down` \| `left` \| `right`                                                       |
+| distance  | number \| string |      | 스와이프 거리. 숫자면 dp, `'50%'`처럼 문자열이면 요소 크기 대비 비율. 생략 시 기본값 사용 |
 
 ```yaml
 - swipe:
     selector: '#list'
     direction: up
-    distance: 200
+    distance: 200 # 절대값 200dp
+- swipe:
+    selector: '#carousel'
+    direction: left
+    distance: '80%' # 요소 너비의 80%
 ```
 
 ---

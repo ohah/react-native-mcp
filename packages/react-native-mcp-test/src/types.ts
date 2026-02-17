@@ -20,7 +20,9 @@ export interface TestSuite {
 
 export type TestStep =
   | { tap: { selector: string; duration?: number } }
-  | { swipe: { selector: string; direction: string; distance?: number; duration?: number } }
+  | {
+      swipe: { selector: string; direction: string; distance?: number | string; duration?: number };
+    }
   | { typeText: { selector: string; text: string } }
   | { inputText: { text: string } }
   | { pressButton: { button: string } }

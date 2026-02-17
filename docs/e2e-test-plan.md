@@ -347,26 +347,26 @@ teardown: # 테스트 후 실행
 
 **지원 액션 목록**:
 
-| 액션                | 파라미터                             | 설명                        |
-| ------------------- | ------------------------------------ | --------------------------- |
-| `tap`               | `selector`                           | 요소 탭 (selector → 좌표)   |
-| `swipe`             | `selector`, `direction`, `distance?` | 스와이프                    |
-| `typeText`          | `selector`, `text`                   | 텍스트 입력 (uid 기반)      |
-| `inputText`         | `text`                               | 포커스된 입력에 텍스트 전송 |
-| `pressButton`       | `button`                             | 물리 버튼 (HOME, BACK 등)   |
-| `waitForText`       | `text`, `timeout?`                   | 텍스트 대기                 |
-| `waitForVisible`    | `selector`, `timeout?`               | 요소 출현 대기              |
-| `waitForNotVisible` | `selector`, `timeout?`               | 요소 사라짐 대기            |
-| `assertText`        | `text`, `selector?`                  | 텍스트 확인                 |
-| `assertVisible`     | `selector`                           | 요소 존재 확인              |
-| `assertNotVisible`  | `selector`                           | 요소 부재 확인              |
-| `assertCount`       | `selector`, `count`                  | 요소 개수 확인              |
-| `screenshot`        | `path?`                              | 스크린샷 저장               |
-| `wait`              | `ms`                                 | 고정 대기 (비추천)          |
-| `launch`            | `bundleId`                           | 앱 실행                     |
-| `terminate`         | `bundleId`                           | 앱 종료                     |
-| `openDeepLink`      | `url`                                | 딥링크 열기                 |
-| `evaluate`          | `script`                             | 임의 JS 실행                |
+| 액션                | 파라미터                             | 설명                                            |
+| ------------------- | ------------------------------------ | ----------------------------------------------- |
+| `tap`               | `selector`                           | 요소 탭 (selector → 좌표)                       |
+| `swipe`             | `selector`, `direction`, `distance?` | 스와이프 (distance: 숫자=dp, `'50%'`=요소 비율) |
+| `typeText`          | `selector`, `text`                   | 텍스트 입력 (uid 기반)                          |
+| `inputText`         | `text`                               | 포커스된 입력에 텍스트 전송                     |
+| `pressButton`       | `button`                             | 물리 버튼 (HOME, BACK 등)                       |
+| `waitForText`       | `text`, `timeout?`                   | 텍스트 대기                                     |
+| `waitForVisible`    | `selector`, `timeout?`               | 요소 출현 대기                                  |
+| `waitForNotVisible` | `selector`, `timeout?`               | 요소 사라짐 대기                                |
+| `assertText`        | `text`, `selector?`                  | 텍스트 확인                                     |
+| `assertVisible`     | `selector`                           | 요소 존재 확인                                  |
+| `assertNotVisible`  | `selector`                           | 요소 부재 확인                                  |
+| `assertCount`       | `selector`, `count`                  | 요소 개수 확인                                  |
+| `screenshot`        | `path?`                              | 스크린샷 저장                                   |
+| `wait`              | `ms`                                 | 고정 대기 (비추천)                              |
+| `launch`            | `bundleId`                           | 앱 실행                                         |
+| `terminate`         | `bundleId`                           | 앱 종료                                         |
+| `openDeepLink`      | `url`                                | 딥링크 열기                                     |
+| `evaluate`          | `script`                             | 임의 JS 실행                                    |
 
 **CLI**:
 

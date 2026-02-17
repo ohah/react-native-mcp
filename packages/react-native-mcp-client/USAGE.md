@@ -70,6 +70,7 @@ selector로 요소를 찾아 방향으로 스와이프.
 ```typescript
 await app.swipe('#list', { direction: 'up' });
 await app.swipe('#carousel', { direction: 'left', distance: 200 });
+await app.swipe('#carousel', { direction: 'left', distance: '80%' }); // 요소 너비의 80%
 ```
 
 #### `typeText(selectorOrUid, text, opts?)`
