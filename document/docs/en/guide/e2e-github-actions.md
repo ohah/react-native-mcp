@@ -9,6 +9,16 @@ Use the existing iOS/Android E2E workflows in the repo as reference.
 - **App build**: Xcode/simulator for iOS, emulator or device for Android
 - **Test run**: `bun test e2e/...` (smoke tests) or the YAML scenario runner
 
+## E2E CLI (`react-native-mcp-test`)
+
+- **Usage**: `npx react-native-mcp-test run <path> [options]`
+- **Recommended in CI (built artifact)**: `node packages/react-native-mcp-test/dist/cli.js run <path> [options]`
+- **Common options**
+  - `-p, --platform <ios|android>`: Platform override
+  - `-o, --output <dir>`: Output directory
+  - `--no-auto-launch`: Use when you pre-install the app and launch via the scenario `setup`
+- For the full option list and reporters, see the CLI section in [E2E YAML Reference](../testing/e2e-yaml-reference.md).
+
 ## iOS E2E (simulator)
 
 Same flow as `.github/workflows/e2e-ios.yml` in the repo.

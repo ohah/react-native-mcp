@@ -367,8 +367,34 @@ teardown:
   - terminate: org.example.app
 ```
 
-## 실행
+## E2E CLI (`react-native-mcp-test`)
 
-- 디렉터리: `npx react-native-mcp-test run path/to/e2e/ -p ios`
-- 단일 파일: `npx react-native-mcp-test run path/to/suite.yaml -p android`
-- `-p`를 주면 해당 플랫폼의 스위트만 실행된다.
+### 사용법
+
+`npx react-native-mcp-test run <path> [options]`
+
+- `<path>`: YAML 파일 또는 디렉터리
+  - 디렉터리는 **해당 디렉터리 바로 아래의** `.yml`/`.yaml` 파일만 실행한다(하위 폴더 재귀 실행 없음).
+
+### Commands
+
+- `run <path>`: YAML 테스트 파일 또는 디렉터리 실행
+
+### Options
+
+- `-p, --platform <ios|android>`: YAML의 `config.platform`을 덮어쓴다.
+- `-r, --reporter <type>`: 리포터 타입. `console` | `junit` | `json` (기본값: `console`)
+- `-o, --output <dir>`: 결과 출력 디렉터리 (기본값: `./results`)
+- `-t, --timeout <ms>`: 글로벌 타임아웃(연결 대기 등) 덮어쓰기
+- `-d, --device <id>`: 디바이스 ID(idb/adb)
+- `--no-bail`: 스위트 실패 후에도 다음 스위트를 계속 실행한다 (기본값: 실패 시 중단)
+- `--no-auto-launch`: `create()`에서 앱을 자동 실행하지 않는다. CI에서 **설치만** 해두고 `setup`에서 `launch`(또는 워크플로 단계에서 앱 실행)를 사용하는 경우에 쓴다.
+- `-h, --help`: 도움말 출력
+
+### 예시
+
+- 디렉터리 실행: `npx react-native-mcp-test run path/to/e2e/ -p ios`
+- 단일 파일 실행: `npx react-native-mcp-test run path/to/suite.yaml -p android`
+- 결과 경로 지정: `npx react-native-mcp-test run e2e/ -o e2e-artifacts/yaml-results`
+- 실패해도 계속 실행: `npx react-native-mcp-test run e2e/ --no-bail`
+- CI(빌드 산출물) 실행: `node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch`
