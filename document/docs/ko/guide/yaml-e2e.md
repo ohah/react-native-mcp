@@ -15,6 +15,7 @@ config:
   platform: ios # ios | android
   timeout: 10000 # 단계별 타임아웃(ms)
   bundleId: org.example.app
+  # orientation: 3 # iOS GraphicsOrientation 강제 (1-4, 선택)
 
 setup:
   - launch: org.example.app
@@ -35,7 +36,7 @@ teardown:
   - terminate: org.example.app
 ```
 
-- **config**: 플랫폼, 타임아웃, bundleId
+- **config**: 플랫폼, 타임아웃, bundleId, orientation(iOS landscape용, 선택)
 - **setup**: 앱 실행(launch), 특정 요소가 보일 때까지 대기 등
 - **steps**: 탭, 텍스트 입력, 텍스트/가시성 검증, 스크린샷 등
 - **teardown**: 앱 종료 등 정리

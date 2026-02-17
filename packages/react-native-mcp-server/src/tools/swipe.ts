@@ -20,6 +20,7 @@ import {
   adbNotInstalledError,
   getAndroidScale,
 } from './adb-utils.js';
+import { getIOSOrientationInfo, transformForIdb } from './ios-landscape.js';
 
 const schema = z.object({
   platform: z.enum(['ios', 'android']).describe('Target platform.'),
@@ -37,6 +38,12 @@ const schema = z.object({
     .optional()
     .describe(
       'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected. Use list_devices to find IDs.'
+    ),
+  iosOrientation: z
+    .number()
+    .optional()
+    .describe(
+      'iOS GraphicsOrientation override (1-4). 1=Portrait, 2=Portrait180, 3=LandscapeA, 4=LandscapeB. Skips auto-detection when set.'
     ),
 });
 
@@ -57,18 +64,26 @@ export function registerSwipe(server: McpServer, appSession: AppSession): void {
       inputSchema: schema,
     },
     async (args: unknown) => {
-      const { platform, x1, y1, x2, y2, duration, deviceId } = schema.parse(args);
+      const { platform, x1, y1, x2, y2, duration, deviceId, iosOrientation } = schema.parse(args);
 
       try {
         if (platform === 'ios') {
           if (!(await checkIdbAvailable())) return idbNotInstalledError();
           const udid = await resolveUdid(deviceId);
           const durationSec = duration / 1000;
-          // idb expects integer arguments; measure can yield floats (e.g. 742.75)
-          const ix1 = Math.round(x1);
-          const iy1 = Math.round(y1);
-          const ix2 = Math.round(x2);
-          const iy2 = Math.round(y2);
+          const info = await getIOSOrientationInfo(
+            appSession,
+            deviceId,
+            platform,
+            udid,
+            iosOrientation
+          );
+          const s1 = transformForIdb(x1, y1, info);
+          const s2 = transformForIdb(x2, y2, info);
+          const ix1 = Math.round(s1.x);
+          const iy1 = Math.round(s1.y);
+          const ix2 = Math.round(s2.x);
+          const iy2 = Math.round(s2.y);
           const cmd = ['ui', 'swipe', String(ix1), String(iy1), String(ix2), String(iy2)];
           if (durationSec !== 0.3) cmd.push('--duration', String(durationSec));
           cmd.push('--delta', '10');

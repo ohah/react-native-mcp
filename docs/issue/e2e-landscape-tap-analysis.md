@@ -1,131 +1,78 @@
-# 가로 모드(landscape)에서 tap이 실패하는 원인과 좌표 보정 가능성
+# iOS 시뮬레이터 landscape 좌표 변환 — 분석 및 해결
 
-## 동작 요약 (iOS idb 기준)
+## 결론 (해결됨)
 
-| 각도                   | 현재 tap 동작 | 비고                                                                                    |
-| ---------------------- | ------------- | --------------------------------------------------------------------------------------- |
-| **0°** (세로)          | ✅ 됨         | (x, y) 그대로 전달                                                                      |
-| **90°** (가로 오른쪽)  | ✅ 됨         | landscape일 때 (y, x) 보정 적용 중                                                      |
-| **180°** (세로 거꾸로) | ❌ 안 됨      | portrait로 인식해 (x,y)만 쓰는데, idb 좌표계가 다를 가능성. 미실측.                     |
-| **270°** (가로 왼쪽)   | ❌ 안 됨      | landscape로 인식해 (y,x) 적용하는데, 270°는 (H−y, x)가 맞음. RN에서 90°/270° 구분 불가. |
+iOS 시뮬레이터에서 **4가지 orientation 모두 지원**.
 
-즉 **0°·90°는 되고, 180°·270°는 현재 구조에서는 안 되는 상태**임.
+| GraphicsOrientation | 각도          | 변환 공식 (RN → idb) | 상태         |
+| ------------------- | ------------- | -------------------- | ------------ |
+| 1                   | Portrait 0°   | `(x, y)`             | ✅ 실측 확인 |
+| 2                   | Portrait 180° | `(W - x, H - y)`     | ✅ 실측 확인 |
+| 3                   | Landscape A   | `(y, W - x)`         | ✅ 실측 확인 |
+| 4                   | Landscape B   | `(H - y, x)`         | ✅ 실측 확인 |
 
-**정책: iOS tap은 0°·90°만 지원하는 것으로 하고, 현재 코드를 그대로 쓴다.** 180°·270°는 지원하지 않음.
-
-### Android (adb)는?
-
-- **현재 코드**: orientation 보정 없이 앱 (x, y)를 dp→px 변환만 해서 `adb shell input tap px py` 로 보냄. iOS처럼 90°/270°에 따른 (y,x)나 (H−y,x) 변환은 적용하지 않음.
-- **실측**: MCP로 query_selector → tap → Count 확인. **세로(0°) 및 가로로 돌렸다 세로로 복귀한 뒤** 등에서 tap이 정상 동작함. adb `input tap`이 앱 창 좌표계와 맞는 것으로 보임.
-- **각도별 체계적 실측**: 90°·180°·270°만 따로 고정해서 tap만 검증한 실험은 아직 안 함. 필요하면 가로/거꾸로에서 각각 tap → Count 확인하는 실험으로 검증하면 됨.
-- **정리**: Android는 현재 코드 그대로 **잘 동작하는 것으로 확인됨.** 180°·270°만 따로 문제 있는지는 미검증.
+- **W** = 현재 orientation의 window width (`getScreenInfo().window.width`)
+- **H** = 현재 orientation의 window height (`getScreenInfo().window.height`)
+- Android는 orientation 보정 없이 `(x, y) → px` 변환만으로 정상 동작.
 
 ---
 
-## 1. 관찰된 현상
+## 1. 원래 문제
 
-| 모드 | 앱 measure (버튼 중앙) | idb tap 전달 좌표 | 결과                                 |
-| ---- | ---------------------- | ----------------- | ------------------------------------ |
-| 세로 | (410, 177)             | (410, 177)        | ✅ 성공                              |
-| 가로 | (590, 155)             | (590, 155)        | ❌ 실패 (탭은 되지만 버튼 반응 없음) |
+iPad landscape (90°)에서 E2E 테스트 시 "Count" 버튼은 눌리는데 "다음" 버튼이 안 눌리는 현상.
 
-- 앱의 `measureInWindow`(또는 query_selector의 measure)와 **idb describe-all**은 같은 좌표계로 보임 (가로일 때도 버튼 프레임이 533.5, 133으로 일치).
-- 그런데 **idb describe-point (590, 155)** 를 호출하면 빈 요소가 나옴 → "이 좌표에 뭔가 있다"고 idb가 인식하지 못함.
-- 따라서 **idb ui tap**이 기대하는 좌표계가 **describe-all / 앱 measure와 다를 가능성**이 있음.
+- **원인**: 기존 코드가 landscape일 때 `(y, x)` swap을 적용했는데, 이 공식이 **틀렸음**.
+- **Count 버튼이 된 이유**: 화면 가로 중앙(`x = W/2 = 590`)에 있어서 `W - x = x`가 되어 우연히 동작.
+- **다음 버튼이 안 된 이유**: `x = 1128`이라 `W - x = 52 ≠ 1128`. swap으로 `(793, 1128)`을 보냈는데 정답은 `(793, 52)`.
 
-## 2. 원인 가설
+## 2. 핵심 발견: idb는 항상 portrait 좌표 기대
 
-- **가설 A**: idb `ui tap`은 **항상 세로(portrait) 기준 좌표**를 받고, 내부에서 물리 터치로 변환한다.  
-  → 가로일 때는 앱이 주는 (x, y)가 "가로 창 기준"이므로, 그대로 넘기면 idb 쪽 "세로 기준" 해석과 어긋난다.
-- **가설 B**: idb `describe-point`와 `ui tap`은 같은 좌표계를 쓰는데, **describe-all만 다른 좌표계**(또는 다른 레이어)를 쓴다.  
-  → describe-point가 (590,155)에서 빈 요소를 반환하는 것과 tap이 먹지 않는 것이 같은 원인(좌표계 불일치)일 수 있다.
-- **가설 C**: 터치 전달/히트테스트 이슈로, 같은 좌표여도 가로일 때만 RN/시뮬레이터가 버튼에 전달하지 못한다.  
-  → 이 경우엔 좌표 보정만으로는 해결되지 않을 수 있음.
+`idb ui tap/swipe`는 **GraphicsOrientation=1 (portrait 0°) 기준 좌표**를 항상 기대한다. 현재 display orientation과 무관하게 portrait 좌표계로 변환해서 보내야 한다.
 
-문서/검색만으로는 "idb tap이 정확히 어떤 좌표계(세로 고정인지, 현재 orientation인지)"가 명시돼 있지 않아, **실험으로 확인하는 수밖에 없음**.
+### GraphicsOrientation 감지 방법
 
-## 3. 좌표 보정 아이디어 (가설 A 기준)
+```bash
+xcrun simctl spawn <UDID> defaults read com.apple.backboardd
+# → GraphicsOrientation = 3 (예시)
+```
 
-idb tap이 **항상 portrait 좌표**를 기대한다고 가정하면:
+- `com.apple.backboardd`의 `GraphicsOrientation` 값을 실시간으로 읽음
+- plist 파일(`~/Library/Developer/CoreSimulator/Devices/<UDID>/data/Library/Preferences/com.apple.backboardd.plist`)은 **실시간 반영 안 됨**. 반드시 `xcrun simctl spawn ... defaults read` 사용.
 
-- 앱에서는 **현재 창 크기**를 알 수 있음: `getScreenInfo().window` → 가로일 때 `width > height` (예: 844×390).
-- **Landscape Right** (시뮬레이터를 오른쪽으로 돌린 경우):
-  - 가로 창 기준 (x_l, y_l) → 세로 기준 (x_p, y_p) 변환:  
-    `x_p = window_height_land - y_l`, `y_p = x_l`
-  - 즉 `(x_l, y_l)` → `(H_land - y_l, x_l)` (portrait에서의 좌표로 해석).
-- **Landscape Left**라면 변환 공식이 다름:  
-  `x_p = y_l`, `y_p = W_land - x_l` 등 (회전 방향에 따라 한 가지로 정해줘야 함).
+### 검증 과정
 
-우리가 가진 정보:
+각 orientation에서 `idb ui describe-point`로 후보 좌표를 넣어 버튼이 반환되는 좌표를 찾고, `idb ui tap`으로 Count 증가를 확인.
 
-- `getScreenInfo()`로 **orientation** (`portrait` | `landscape`)과 **window** `{ width, height }` 확보 가능.
-- "지금이 landscape right인지 left인지"는 RN `Dimensions`만으로는 구분이 안 될 수 있음 (width/height만 있음).  
-  → 우선 **Landscape Right** 한 가지만 가정하고 보정을 적용한 뒤, tap이 성공하는지 시험해 보는 방식이 현실적.
+## 3. 구현
 
-정리하면:
+### 파일
 
-- **보정 시도**:
-  - orientation이 `landscape`일 때,  
-    `(x_send, y_send) = (window.height - y, x)`
-  - 이 (x_send, y_send)를 idb tap에 넘긴다.
-- **검증**:
-  - 가로 모드에서 위 보정으로 tap을 보내고,  
-    버튼이 반응하는지(예: Count 증가), describe-point에 (x_send, y_send)를 넣었을 때 버튼이 잡히는지 확인.
+- `packages/react-native-mcp-server/src/tools/ios-landscape.ts` — `getIOSOrientationInfo()` + `transformForIdb()`
+- `tap.ts`, `swipe.ts`, `scroll-until-visible.ts` — 모두 orientation 변환 적용
 
-## 4. 작업 전 요약
+### 자동 감지 + 수동 override
 
-| 항목                | 내용                                                                                                                                                                                |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **무엇이 문제인가** | 가로 모드에서 (앱 measure와 describe-all에선 맞는) 좌표로 idb tap을 해도 버튼이 반응하지 않음. describe-point도 같은 좌표에서 빈 요소를 반환함.                                     |
-| **가능 원인**       | idb tap(및 describe-point)이 사용하는 좌표계가 "세로 고정"이거나, 앱/describe-all과 다를 가능성.                                                                                    |
-| **보정 가능 여부**  | **가능성 있음.** idb가 portrait 좌표를 기대한다는 가정 하에, landscape일 때 `(x,y) → (H-y, x)` 형태로 변환해 보내는 방식으로 시도할 수 있음.                                        |
-| **불확실 요소**     | (1) idb가 정말 portrait 좌표를 쓰는지, (2) landscape left/right 구분 필요 여부, (3) 기기/OS 버전별 차이. → **구현 후 가로 모드에서 한 번 돌려서 성공 여부로 검증**하는 수밖에 없음. |
+1. **자동 감지** (기본): `xcrun simctl spawn` → GraphicsOrientation 읽기 → 변환 공식 적용
+2. **수동 override**: e2e.yaml `config.orientation` 또는 MCP tool의 `iosOrientation` 파라미터로 강제 지정 가능. xcrun 감지를 건너뜀.
 
-## 5. 제안하는 다음 단계
+```yaml
+config:
+  platform: ios
+  orientation: 3 # LandscapeA 강제
+```
 
-1. **서버(tap 도구)에서**
-   - orientation이 `landscape`일 때
-   - `getScreenInfo().window`로 `width`, `height` 수집
-   - `(x_send, y_send) = (height - y, x)` 로 보정
-   - idb에는 보정된 좌표만 전달 (정수로 반올림 유지).
-2. **가로 모드에서 YAML E2E 한 번 더 실행**
-   - tap 후 Count가 올라가면 보정이 맞는 것.
-   - 안 되면 landscape left 공식 시도하거나, idb 이슈/다른 원인을 추가로 조사.
+### 실기기 한계
 
-이렇게 "실패 시 에러로 막기" 대신 "가로일 때만 좌표 보정 시도"로 바꾸면, 가로 모드에서도 동작할 가능성을 열어둘 수 있음.
+- `xcrun simctl spawn`은 **시뮬레이터 전용**. 실기기에서는 실패 → 기본값 1 (portrait) 사용.
+- 실기기 landscape 지원이 필요하면 `config.orientation`으로 수동 지정하거나, RN 네이티브 모듈(`UIDevice.current.orientation`)을 추가해야 함.
 
 ---
 
-## 6. 검증 결과 (실측)
+## 4. 이전 분석 (폐기됨)
 
-### 90° (가로 오른쪽, Landscape Right)
+이전 분석에서는 90°를 `(y, x)`, 270°를 `(H-y, x)`로 기록했으나, 이는 **GraphicsOrientation 값과의 매핑이 잘못된 것**이었다. 실제로는:
 
-| idb tap (ix, iy) | 변환 가설        | 결과           |
-| ---------------- | ---------------- | -------------- |
-| (590, 155)       | 앱 (x, y) 그대로 | 반응 없음      |
-| (665, 590)       | (H−y, x)         | 반응 없음      |
-| **(155, 590)**   | **(y, x)**       | **Count 증가** |
+- GraphicsOrientation=3: `(y, W-x)` (이전에 90°로 착각했으나 실제 공식이 다름)
+- GraphicsOrientation=4: `(H-y, x)`
 
-- **결론: 90°에서 idb 좌표 = (y, x).**
-- 보정: `(ix, iy) = (Math.round(y), Math.round(x))`.
-
-### 270° (가로 왼쪽, Landscape Left)
-
-- **React Native( query_selector / measure )에서 버튼 중앙**: **(590, 155)** (describe-all 프레임과 동일 좌표계).
-- **보정에 쓰는 값**: 가로 모드 창 크기 **W=1180, H=820** (`getScreenInfo().window` 또는 idb describe-all 앱 프레임 기준). 즉 820은 **landscape일 때 창 높이(height)**.
-- **idb ui describe-point**로 후보 (ix, iy)를 넣어 본 결과:
-  - (590, 155) 앱 그대로 → 빈 요소
-  - (155, 590) (y, x) → 빈 요소
-  - **(665, 590) = (H−y, x) = (820−155, 590)** → **press-counter-button 반환**
-- **idb ui tap (665, 590)** → Count 2 → 3 증가 확인.
-- **결론: 270° 보정 공식** — RN (x, y) → idb **(ix, iy) = (H−y, x)**. (H는 현재 창 높이.)
-
-현재 서버는 landscape일 때 90°만 가정해 (y, x)를 쓰므로, 270°에서는 tap이 버튼에 잡히지 않음. RN에서 90°/270°를 구분하지 못하므로, 270° 전용 보정을 자동 적용하려면 추가 수단(orientation 이벤트·라이브러리 등)이 필요함.
-
----
-
-**요약 (3줄)**
-
-- iOS tap: **0°·90°만 지원**, 180°·270°는 미지원(현재 코드 유지).
-- Android: orientation 보정 없이 (x,y)→px 전달, **실측에서 정상 동작 확인.**
-- 270° 보정 공식 (H−y, x)는 실측으로 확인했으나, RN에서 90°/270° 구분 불가해 자동 적용하지 않음.
+Count 버튼이 `x = W/2`에 있어서 `(y, x)` = `(y, W-x)`가 우연히 성립해 기존 코드가 동작하는 것처럼 보였다.

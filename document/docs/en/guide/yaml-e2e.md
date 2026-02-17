@@ -15,6 +15,7 @@ config:
   platform: ios # ios | android
   timeout: 10000 # per-step timeout (ms)
   bundleId: org.example.app
+  # orientation: 3 # iOS GraphicsOrientation override (1-4, optional)
 
 setup:
   - launch: org.example.app
@@ -35,7 +36,7 @@ teardown:
   - terminate: org.example.app
 ```
 
-- **config**: platform, timeout, bundleId
+- **config**: platform, timeout, bundleId, orientation (for iOS landscape, optional)
 - **setup**: launch app, wait for elements, etc.
 - **steps**: tap, input, assertions, screenshots
 - **teardown**: e.g. terminate app

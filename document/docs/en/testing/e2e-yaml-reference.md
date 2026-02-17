@@ -11,6 +11,7 @@ config: # Config (required)
   timeout?: number # ms, connection wait, etc.
   bundleId?: string # App bundle/package ID
   deviceId?: string # idb/adb device ID (optional)
+  orientation?: number # iOS GraphicsOrientation override (1-4, optional)
 setup?: Step[] # Run before main steps (optional)
 steps: Step[] # Main test steps (required, 1+)
 teardown?: Step[] # Run on exit (optional)
@@ -18,6 +19,7 @@ teardown?: Step[] # Run on exit (optional)
 
 - `config.platform`: `ios` | `android`. Can be overridden by CLI `-p`.
 - `config.bundleId`: e.g. `org.example.app` (iOS), `com.example.app` (Android). Runner starts the app after the server is up.
+- `config.orientation`: iOS only. Force a GraphicsOrientation value (1=Portrait, 2=Portrait180, 3=LandscapeA, 4=LandscapeB). Omit for auto-detection via `xcrun simctl spawn`.
 - `setup` / `teardown`: Each is `Step[]`. `teardown` runs even when a step fails.
 
 ---
@@ -30,8 +32,8 @@ Use **exactly one** of the keys below. `selector` follows MCP selector syntax (e
 
 Tap the element once.
 
-- **iOS**: Only **0° (portrait) and 90° (landscape right)**. 180° and 270° are not supported.
-- **Android**: No orientation correction; verified working.
+- **iOS**: All 4 orientations supported (Portrait, Portrait180, LandscapeA, LandscapeB). Auto-detected via `xcrun simctl spawn` or forced with `config.orientation`.
+- **Android**: No orientation correction needed; verified working.
 
 | Field    | Type   | Required | Description      |
 | -------- | ------ | -------- | ---------------- |
@@ -341,6 +343,7 @@ config:
   platform: ios
   timeout: 10000
   bundleId: org.example.app
+  # orientation: 3  # Force iOS landscape (optional)
 
 setup:
   - launch: org.example.app

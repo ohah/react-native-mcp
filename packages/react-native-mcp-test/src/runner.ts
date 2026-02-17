@@ -209,6 +209,7 @@ export async function runSuite(
       bundleId: resolvedBundleId,
       connectionTimeout: opts.timeout ?? suite.config.timeout,
       launchApp: autoLaunch,
+      iosOrientation: suite.config.orientation,
     });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);

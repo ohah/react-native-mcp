@@ -11,6 +11,7 @@ config: # 설정 (필수)
   timeout?: number # ms, 연결 대기 등
   bundleId?: string # 앱 번들/패키지 ID
   deviceId?: string # idb/adb 디바이스 ID (선택)
+  orientation?: number # iOS GraphicsOrientation 강제값 (1-4, 선택)
 setup?: Step[] # 본 단계 전에 실행 (선택)
 steps: Step[] # 본 테스트 단계 (필수, 1개 이상)
 teardown?: Step[] # 종료 시 실행 (선택)
@@ -18,6 +19,7 @@ teardown?: Step[] # 종료 시 실행 (선택)
 
 - `config.platform`: `ios` | `android`. CLI `-p` 옵션으로 덮을 수 있음.
 - `config.bundleId`: iOS는 `org.example.app`, Android는 `com.example.app` 형태. 지정 시 러너가 서버 기동 후 앱을 자동 실행한다.
+- `config.orientation`: iOS 전용. GraphicsOrientation 값(1=Portrait, 2=Portrait180, 3=LandscapeA, 4=LandscapeB)을 강제 지정. 생략 시 `xcrun simctl spawn`으로 자동 감지.
 - `setup` / `teardown`: 각각 `Step[]`. 실패 시에도 `teardown`은 실행된다.
 
 ---
@@ -30,7 +32,7 @@ teardown?: Step[] # 종료 시 실행 (선택)
 
 요소를 한 번 탭한다.
 
-- **iOS**: 화면 방향 **0°(세로)·90°(가로 오른쪽)** 만 지원. 180°·270°는 지원하지 않음. ([issue/e2e-landscape-tap-analysis.md](issue/e2e-landscape-tap-analysis.md) 참고)
+- **iOS**: 4가지 orientation 모두 지원 (Portrait, Portrait180, LandscapeA, LandscapeB). `xcrun simctl spawn`으로 자동 감지하거나 `config.orientation`으로 강제 지정. ([issue/e2e-landscape-tap-analysis.md](issue/e2e-landscape-tap-analysis.md) 참고)
 - **Android**: orientation 보정 없이 동작. 실측에서 정상 동작 확인.
 
 | 필드     | 타입   | 필수 | 설명             |
@@ -341,6 +343,7 @@ config:
   platform: ios
   timeout: 10000
   bundleId: org.example.app
+  # orientation: 3  # iOS landscape 강제 (선택)
 
 setup:
   - launch: org.example.app
