@@ -321,7 +321,29 @@ MCP tool: get_state_changes
 
 > 콘솔·네트워크·상태변경·리렌더 4가지 로그를 통합 조회하는 `get_timeline` 도구도 가능. 타임스탬프 기준 merge하면 "이 탭 → 이 API 호출 → 이 상태 변경 → 이 리렌더" 흐름을 AI가 자동 분석할 수 있다.
 
-**난이도**: ★★☆ — `onCommitFiberRoot` + `alternate` diff 패턴은 React DevTools Profiler와 동일한 방식. 버퍼 관리는 콘솔/네트워크와 같은 패턴 재사용.
+**난이도**: ★★☆ (완료) — `onCommitFiberRoot` + `alternate` diff 패턴은 React DevTools Profiler와 동일한 방식. 버퍼 관리는 콘솔/네트워크와 같은 패턴 재사용.
+
+#### 구현 완료 요약
+
+**MCP 도구 3개 추가**:
+
+| 도구                  | 설명                                          | 파일                   |
+| --------------------- | --------------------------------------------- | ---------------------- |
+| `inspect_state`       | 셀렉터로 찾은 컴포넌트의 state Hook 목록 반환 | `inspect-state.ts`     |
+| `get_state_changes`   | 상태 변경 이력 조회 (component/since/limit)   | `get-state-changes.ts` |
+| `clear_state_changes` | 상태 변경 버퍼 초기화                         | `get-state-changes.ts` |
+
+**runtime.js 변경**:
+
+- `_stateChanges` 순환 버퍼 (300개)
+- `parseHooks(fiber)` — memoizedState 체인에서 state Hook 추출
+- `shallowEqual(a, b)` — 배열/객체 얕은 비교
+- `safeClone(val)` — 순환 참조 방지 + depth 4 제한
+- `collectStateChanges(fiber)` — fiber.alternate 비교로 변경된 Hook 수집
+- `onCommitFiberRoot` 래핑 — 커밋마다 자동 수집 (DevTools 유무 무관)
+- MCP 객체에 `inspectState`, `getStateChanges`, `clearStateChanges` 메서드 추가
+
+**테스트**: `inspect-state.test.ts` — 35개 테스트 (런타임 함수 + 도구 핸들러)
 
 ---
 

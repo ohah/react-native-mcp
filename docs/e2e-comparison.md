@@ -181,12 +181,14 @@ react-native-mcp
 
 이 도구들은 경쟁이 아니라 보완 관계로 사용할 수 있다:
 
-| 용도                                       | 도구                             |
-| ------------------------------------------ | -------------------------------- |
-| **개발 중 디버깅 + AI 보조**               | react-native-mcp                 |
-| **컴포넌트 단위 동작 검증**                | react-native-mcp (fiber 접근)    |
-| **WebView 내부 테스트**                    | react-native-mcp (유일하게 가능) |
-| **CI/CD 회귀 테스트 (안정성 중심)**        | Detox (자동 동기화)              |
-| **빠른 스모크 테스트 / 비개발자 시나리오** | Maestro (간편함)                 |
-| **대기업 QA / 클라우드 디바이스 팜**       | Appium (범용)                    |
-| **AI 자율 테스트 시나리오**                | react-native-mcp (MCP)           |
+| 용도                                             | 도구                             |
+| ------------------------------------------------ | -------------------------------- |
+| **개발 중 디버깅 + AI 보조**                     | react-native-mcp                 |
+| **컴포넌트 단위 동작 검증**                      | react-native-mcp (fiber 접근)    |
+| **React 상태 인스펙션 (useState/Zustand/Redux)** | react-native-mcp (유일하게 가능) |
+| **상태 변경 이력 추적**                          | react-native-mcp (유일하게 가능) |
+| **WebView 내부 테스트**                          | react-native-mcp (유일하게 가능) |
+| **CI/CD 회귀 테스트 (안정성 중심)**              | Detox (자동 동기화)              |
+| **빠른 스모크 테스트 / 비개발자 시나리오**       | Maestro (간편함)                 |
+| **대기업 QA / 클라우드 디바이스 팜**             | Appium (범용)                    |
+| **AI 자율 테스트 시나리오**                      | react-native-mcp (MCP)           |
