@@ -85,15 +85,16 @@ claude mcp add --transport stdio react-native-mcp -- npx -y @ohah/react-native-m
 
 연결이 되면 대략 다음 종류의 도구를 사용할 수 있습니다.
 
-| 용도      | 도구 예시                                            |
-| --------- | ---------------------------------------------------- |
-| 화면 조회 | `take_snapshot`, `take_screenshot`, `query_selector` |
-| 검증      | `assert_text`, `assert_visible`                      |
-| 조작      | `tap`, `swipe`, `input_text`, `type_text`            |
-| 실행      | `evaluate_script`, `webview_evaluate_script`         |
-| 디바이스  | `get_debugger_status`, `list_devices`                |
-| 딥링크    | `open_deeplink`                                      |
-| 디버깅    | `list_console_messages`, `list_network_requests`     |
+| 용도        | 도구 예시                                            |
+| ----------- | ---------------------------------------------------- |
+| 화면 조회   | `take_snapshot`, `take_screenshot`, `query_selector` |
+| 검증        | `assert_text`, `assert_visible`                      |
+| 조작        | `tap`, `swipe`, `input_text`, `type_text`            |
+| 실행        | `evaluate_script`, `webview_evaluate_script`         |
+| 접근성 감사 | `accessibility_audit`                                |
+| 디바이스    | `get_debugger_status`, `list_devices`                |
+| 딥링크      | `open_deeplink`                                      |
+| 디버깅      | `list_console_messages`, `list_network_requests`     |
 
 AI에게 "지금 앱 화면 스냅샷 찍어줘", "로그인 버튼 눌러줘"처럼 요청하면 해당 도구를 호출해 동작합니다.
 

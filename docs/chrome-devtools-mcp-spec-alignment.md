@@ -57,6 +57,12 @@ React Native MCP 서버는 [Chrome DevTools MCP](https://github.com/ChromeDevToo
 | `emulate`, `resize_page` | ❌   | RN 환경에 없음.    |
 | `performance_*`          | ❌   | 별도 설계 시 고려. |
 
+### 2.6 Accessibility (RN 전용)
+
+| 도구                  | 지원 | 비고                                                                                                                                                                                                              |
+| --------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `accessibility_audit` | ✅   | Fiber 트리 순회로 접근성 규칙 위반 검출. 반환: `[{ rule, selector, severity, message }]`. 규칙: pressable-needs-label, image-needs-alt, touch-target-size, missing-role. `maxDepth`, `deviceId`, `platform` 옵션. |
+
 ---
 
 ## 3. 공통 규칙

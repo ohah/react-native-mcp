@@ -253,6 +253,7 @@ packages/react-native-mcp-server/
 - `type_text` - TextInput에 텍스트 입력 (onChangeText + setNativeProps). 유니코드/한글 지원 ✅
 - `query_selector` - Fiber 셀렉터로 첫 번째 매칭 요소 검색 (CSS querySelector 유사) ✅
 - `query_selector_all` - Fiber 셀렉터로 모든 매칭 요소 검색 ✅
+- `accessibility_audit` - Fiber 트리 순회로 접근성 규칙 위반 검출 (pressable-needs-label, image-needs-alt, touch-target-size, missing-role) ✅
 - `assert_text` - 텍스트 존재 여부 확인 ({ pass, message } 반환). `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 ✅ (polling: 예정)
 - `assert_visible` - 셀렉터 매칭 요소 존재 여부 확인 ({ pass, message } 반환). `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 ✅ (polling: 예정)
 - `assert_not_visible` - 셀렉터 매칭 요소가 사라졌는지 확인. `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 (예정)
