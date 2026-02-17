@@ -3,7 +3,7 @@
  * Fiber 트리에서 셀렉터로 요소 검색. CSS querySelector와 유사하지만 React Native Fiber 트리 전용.
  *
  * 셀렉터 문법:
- *   Type#testID[attr="val"]:text("..."):nth(N):has-press:has-scroll
+ *   Type#testID[attr="val"]:text("..."):nth-of-type(N):has-press:has-scroll
  *   A > B (직접 자식), A B (후손), A, B (OR)
  */
 
@@ -20,7 +20,7 @@ const selectorDescription = `Selector syntax for React Native Fiber tree:
 - By displayName: :display-name("Animated.View") (fiber.type.displayName; Reanimated type name is AnimatedComponent)
 - Combined: Pressable:text("Submit"), ScrollView#main
 - Hierarchy: View > ScrollView (direct child), View ScrollView (descendant)
-- Index: :first (same as :nth(0)), :nth(N) (0-based), :last for last match
+- Index: :first-of-type (same as :nth-of-type(1)), :nth-of-type(N) (1-based), :last-of-type for last match
 - Capabilities: :has-press (has onPress), :has-scroll (has scrollTo)
 - Union: ScrollView, FlatList (comma = OR)
 See docs/query-selector.md for full syntax reference.`;

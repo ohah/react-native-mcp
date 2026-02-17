@@ -62,12 +62,12 @@ View[accessibilityRole="button"]
 
 ### 인덱스 셀렉터
 
-`:nth(N)` — N번째 매칭 요소 (0-based):
+`:nth-of-type(N)` — N번째 매칭 요소 (1-based):
 
 ```
-Text:nth(0)          # 첫 번째 Text
-Pressable:nth(2)     # 세 번째 Pressable
-:text("항목"):nth(1) # "항목" 텍스트가 포함된 두 번째 요소
+Text:nth-of-type(1)          # 첫 번째 Text
+Pressable:nth-of-type(3)     # 세 번째 Pressable
+:text("항목"):nth-of-type(2) # "항목" 텍스트가 포함된 두 번째 요소
 ```
 
 ### 기능 셀렉터
@@ -132,7 +132,7 @@ TextInput#email-input
 [accessibilityLabel="닫기"]:has-press
 
 # ScrollView 안의 세 번째 클릭 가능 요소
-ScrollView :has-press:nth(2)
+ScrollView :has-press:nth-of-type(3)
 
 # FlatList 또는 ScrollView 찾기
 FlatList, ScrollView
@@ -199,15 +199,15 @@ query_selector_all('Text')
 
 ## 문법 요약
 
-| 문법           | 설명                 | 예시                          |
-| -------------- | -------------------- | ----------------------------- |
-| `Type`         | 컴포넌트 타입        | `View`, `Text`, `Pressable`   |
-| `#id`          | testID               | `#login-btn`                  |
-| `[attr="val"]` | props 속성           | `[accessibilityLabel="닫기"]` |
-| `:text("...")` | 텍스트 부분 매칭     | `:text("로그인")`             |
-| `:nth(N)`      | N번째 매칭 (0-based) | `:nth(0)`                     |
-| `:has-press`   | onPress 존재         | `:has-press`                  |
-| `:has-scroll`  | scrollTo 존재        | `:has-scroll`                 |
-| `A > B`        | 직접 자식            | `View > Text`                 |
-| `A B`          | 후손                 | `View Text`                   |
-| `A, B`         | OR                   | `ScrollView, FlatList`        |
+| 문법              | 설명                 | 예시                          |
+| ----------------- | -------------------- | ----------------------------- |
+| `Type`            | 컴포넌트 타입        | `View`, `Text`, `Pressable`   |
+| `#id`             | testID               | `#login-btn`                  |
+| `[attr="val"]`    | props 속성           | `[accessibilityLabel="닫기"]` |
+| `:text("...")`    | 텍스트 부분 매칭     | `:text("로그인")`             |
+| `:nth-of-type(N)` | N번째 매칭 (1-based) | `:nth-of-type(1)`             |
+| `:has-press`      | onPress 존재         | `:has-press`                  |
+| `:has-scroll`     | scrollTo 존재        | `:has-scroll`                 |
+| `A > B`           | 직접 자식            | `View > Text`                 |
+| `A B`             | 후손                 | `View Text`                   |
+| `A, B`            | OR                   | `ScrollView, FlatList`        |

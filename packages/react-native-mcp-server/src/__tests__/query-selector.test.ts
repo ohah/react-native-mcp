@@ -217,45 +217,53 @@ describe('querySelectorAll — 다중 결과', () => {
     expect(results.length).toBe(2);
   });
 
-  it(':nth(N)은 N번째 매칭만 반환', () => {
+  it(':nth-of-type(N)은 N번째 매칭만 반환 (1-based)', () => {
     const root = makeFiber('View', {}, [
       makeFiber('Pressable', { testID: 'btn-0' }),
       makeFiber('Pressable', { testID: 'btn-1' }),
       makeFiber('Pressable', { testID: 'btn-2' }),
     ]);
     setMockFiberRoot(root);
-    const results = MCP.querySelectorAll('Pressable:nth(1)') as Array<Record<string, unknown>>;
+    const results = MCP.querySelectorAll('Pressable:nth-of-type(2)') as Array<
+      Record<string, unknown>
+    >;
     expect(results.length).toBe(1);
     expect(results[0].testID).toBe('btn-1');
   });
 
-  it(':nth 범위 초과 시 빈 배열', () => {
+  it(':nth-of-type 범위 초과 시 빈 배열', () => {
     const root = makeFiber('View', {}, [makeFiber('Pressable', {})]);
     setMockFiberRoot(root);
-    const results = MCP.querySelectorAll('Pressable:nth(5)') as Array<Record<string, unknown>>;
+    const results = MCP.querySelectorAll('Pressable:nth-of-type(6)') as Array<
+      Record<string, unknown>
+    >;
     expect(results).toEqual([]);
   });
 
-  it(':first는 첫 번째 매칭만 반환', () => {
+  it(':first-of-type은 첫 번째 매칭만 반환', () => {
     const root = makeFiber('View', {}, [
       makeFiber('Pressable', { testID: 'btn-0' }),
       makeFiber('Pressable', { testID: 'btn-1' }),
       makeFiber('Pressable', { testID: 'btn-2' }),
     ]);
     setMockFiberRoot(root);
-    const results = MCP.querySelectorAll('Pressable:first') as Array<Record<string, unknown>>;
+    const results = MCP.querySelectorAll('Pressable:first-of-type') as Array<
+      Record<string, unknown>
+    >;
     expect(results.length).toBe(1);
     expect(results[0].testID).toBe('btn-0');
   });
 
-  it(':last는 마지막 매칭만 반환', () => {
+  it(':last-of-type은 마지막 매칭만 반환', () => {
     const root = makeFiber('View', {}, [
       makeFiber('Pressable', { testID: 'btn-0' }),
       makeFiber('Pressable', { testID: 'btn-1' }),
       makeFiber('Pressable', { testID: 'btn-2' }),
     ]);
     setMockFiberRoot(root);
-    const results = MCP.querySelectorAll('Pressable:last') as Array<Record<string, unknown>>;
+    const results = MCP.querySelectorAll('Pressable:last-of-type') as Array<
+      Record<string, unknown>
+    >;
     expect(results.length).toBe(1);
     expect(results[0].testID).toBe('btn-2');
   });

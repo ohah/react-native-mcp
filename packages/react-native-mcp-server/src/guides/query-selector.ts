@@ -73,20 +73,20 @@ View:display-name("CustomBox")
 
 ### 인덱스 셀렉터
 
-\`:first\` — 첫 번째 매칭 (\`:nth(0)\`와 동일). \`:last\` — 마지막 매칭:
+\`:first-of-type\` — 첫 번째 매칭 (\`:nth-of-type(1)\`와 동일). \`:last-of-type\` — 마지막 매칭:
 
 \`\`\`
-Pressable:first      # 첫 번째 Pressable
-Pressable:last       # 마지막 Pressable
-View:text("Bottom sheet"):last   # "Bottom sheet" 포함 View 중 마지막 (예: 하단 시트 패널)
+Pressable:first-of-type      # 첫 번째 Pressable
+Pressable:last-of-type       # 마지막 Pressable
+View:text("Bottom sheet"):last-of-type   # "Bottom sheet" 포함 View 중 마지막 (예: 하단 시트 패널)
 \`\`\`
 
-\`:nth(N)\` — N번째 매칭 (0-based):
+\`:nth-of-type(N)\` — N번째 매칭 (1-based):
 
 \`\`\`
-Text:nth(0)          # 첫 번째 Text (= :first)
-Pressable:nth(2)     # 세 번째 Pressable
-:text("항목"):nth(1) # "항목" 텍스트가 포함된 두 번째 요소
+Text:nth-of-type(1)          # 첫 번째 Text (= :first-of-type)
+Pressable:nth-of-type(3)     # 세 번째 Pressable
+:text("항목"):nth-of-type(2) # "항목" 텍스트가 포함된 두 번째 요소
 \`\`\`
 
 ### 기능 셀렉터
@@ -151,7 +151,7 @@ TextInput#email-input
 [accessibilityLabel="닫기"]:has-press
 
 # ScrollView 안의 세 번째 클릭 가능 요소
-ScrollView :has-press:nth(2)
+ScrollView :has-press:nth-of-type(3)
 
 # FlatList 또는 ScrollView 찾기
 FlatList, ScrollView
@@ -233,9 +233,9 @@ query_selector_all('Text')
 | \`[attr="val"]\` | props 속성 | \`[accessibilityLabel="닫기"]\` |
 | \`:text("...")\` | 텍스트 부분 매칭 | \`:text("로그인")\` |
 | \`:display-name("...")\` | fiber.type.displayName 매칭 | \`:display-name("Animated.View")\` |
-| \`:first\` | 첫 번째 매칭 | \`Pressable:first\` |
-| \`:last\` | 마지막 매칭 | \`View:text("Bottom sheet"):last\` |
-| \`:nth(N)\` | N번째 매칭 (0-based) | \`:nth(0)\` |
+| \`:first-of-type\` | 첫 번째 매칭 | \`Pressable:first-of-type\` |
+| \`:last-of-type\` | 마지막 매칭 | \`View:text("Bottom sheet"):last-of-type\` |
+| \`:nth-of-type(N)\` | N번째 매칭 (1-based) | \`:nth-of-type(1)\` |
 | \`:has-press\` | onPress 존재 | \`:has-press\` |
 | \`:has-scroll\` | scrollTo 존재 | \`:has-scroll\` |
 | \`A > B\` | 직접 자식 | \`View > Text\` |
