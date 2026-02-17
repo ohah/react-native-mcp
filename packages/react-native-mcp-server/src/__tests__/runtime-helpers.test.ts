@@ -48,15 +48,53 @@ class MockXMLHttpRequest {
 }
 (globalThis as Record<string, unknown>).XMLHttpRequest = MockXMLHttpRequest;
 
-// MCP 객체 참조
-let MCP: Record<string, (...args: unknown[]) => unknown>;
+// MCP 객체 참조 — 테스트에서 호출하는 메서드를 모두 포함한 타입으로 정의해 타입 오류 방지
+const REQUIRED_MCP_METHODS = [
+  'registerComponent',
+  'registerPressHandler',
+  'triggerPress',
+  'getRegisteredPressTestIDs',
+  'getClickables',
+  'getTextNodes',
+  'getComponentTree',
+  'pressByLabel',
+  'registerWebView',
+  'unregisterWebView',
+  'getWebViewIdForRef',
+  'clickInWebView',
+  'evaluateInWebView',
+  'handleWebViewMessage',
+  'createWebViewOnMessage',
+  'getRegisteredWebViewIds',
+  'registerScrollRef',
+  'unregisterScrollRef',
+  'scrollTo',
+  'getRegisteredScrollTestIDs',
+  'getConsoleLogs',
+  'clearConsoleLogs',
+  'getNetworkRequests',
+  'clearNetworkRequests',
+  'inspectState',
+  'getStateChanges',
+  'clearStateChanges',
+  'enable',
+  'triggerLongPress',
+  'longPressByLabel',
+  'typeText',
+] as const;
+
+type MCPApi = {
+  [K in (typeof REQUIRED_MCP_METHODS)[number]]: (...args: unknown[]) => unknown;
+};
+
+let MCP!: MCPApi;
 
 beforeAll(async () => {
   // 모듈 캐시 초기화 후 runtime.js 재로드 → XHR IIFE가 MockXMLHttpRequest에 패치 적용
   const runtimePath = require.resolve('../../runtime.js');
   delete require.cache[runtimePath];
   await import('../../runtime.js');
-  MCP = (globalThis as Record<string, unknown>).__REACT_NATIVE_MCP__ as typeof MCP;
+  MCP = (globalThis as Record<string, unknown>).__REACT_NATIVE_MCP__ as MCPApi;
 });
 
 // ─── Mock Fiber 트리 헬퍼 ────────────────────────────────────────
@@ -67,6 +105,7 @@ interface MockFiber {
   child: MockFiber | null;
   sibling: MockFiber | null;
   return: MockFiber | null;
+  stateNode?: Record<string, unknown>;
 }
 
 function makeFiber(
@@ -76,9 +115,10 @@ function makeFiber(
 ): MockFiber {
   const fiber: MockFiber = { type, memoizedProps: props, child: null, sibling: null, return: null };
   for (let i = 0; i < children.length; i++) {
-    children[i].return = fiber;
-    if (i === 0) fiber.child = children[i];
-    else children[i - 1].sibling = children[i];
+    const curr = children[i]!;
+    curr.return = fiber;
+    if (i === 0) fiber.child = curr;
+    else children[i - 1]!.sibling = curr;
   }
   return fiber;
 }
@@ -105,41 +145,7 @@ describe('runtime.js MCP 객체', () => {
   });
 
   it('모든 필수 함수가 존재', () => {
-    const requiredFunctions = [
-      // 기본
-      'registerComponent',
-      'registerPressHandler',
-      'triggerPress',
-      'getRegisteredPressTestIDs',
-      // Fiber 기반
-      'getClickables',
-      'getTextNodes',
-      'getComponentTree',
-      'pressByLabel',
-      // WebView
-      'registerWebView',
-      'unregisterWebView',
-      'getWebViewIdForRef',
-      'clickInWebView',
-      'evaluateInWebView',
-      'handleWebViewMessage',
-      'createWebViewOnMessage',
-      'getRegisteredWebViewIds',
-      // Scroll
-      'registerScrollRef',
-      'unregisterScrollRef',
-      'scrollTo',
-      'getRegisteredScrollTestIDs',
-      // Console
-      'getConsoleLogs',
-      'clearConsoleLogs',
-      // Network
-      'getNetworkRequests',
-      'clearNetworkRequests',
-      // 기타
-      'enable',
-    ];
-    for (const fn of requiredFunctions) {
+    for (const fn of REQUIRED_MCP_METHODS) {
       expect(typeof MCP[fn]).toBe('function');
     }
   });
@@ -185,8 +191,8 @@ describe('getTextNodes — Text 노드 내용 수집', () => {
     setMockFiberRoot(root);
     const result = MCP.getTextNodes() as Array<{ text: string; testID?: string }>;
     expect(result.length).toBe(2);
-    expect(result[0].text).toBe('Hello');
-    expect(result[1].text).toBe('World');
+    expect(result[0]!.text).toBe('Hello');
+    expect(result[1]!.text).toBe('World');
   });
 
   it('조상 testID 있으면 testID 포함', () => {
@@ -196,8 +202,8 @@ describe('getTextNodes — Text 노드 내용 수집', () => {
     setMockFiberRoot(root);
     const result = MCP.getTextNodes() as Array<{ text: string; testID?: string }>;
     expect(result.length).toBe(1);
-    expect(result[0].text).toBe('Title');
-    expect(result[0].testID).toBe('screen');
+    expect(result[0]!.text).toBe('Title');
+    expect(result[0]!.testID).toBe('screen');
   });
 });
 
@@ -206,7 +212,7 @@ describe('getComponentTree — 컴포넌트 트리 스냅샷', () => {
 
   it('hook 없으면 null', () => {
     clearMockFiberRoot();
-    expect(MCP!.getComponentTree!({})).toBeNull();
+    expect(MCP.getComponentTree({})).toBeNull();
   });
 
   it('루트·자식 타입·testID·text 포함', () => {
@@ -224,11 +230,12 @@ describe('getComponentTree — 컴포넌트 트리 스냅샷', () => {
     expect(tree.uid).toBe('screen');
     expect(tree.type).toBe('View');
     expect(tree.testID).toBe('screen');
-    expect(tree.children).toHaveLength(1);
-    expect(tree.children![0].type).toBe('ScrollView');
-    expect(tree.children![0].children).toHaveLength(1);
-    expect(tree.children![0].children![0].type).toBe('Text');
-    expect((tree.children![0].children![0] as { text?: string }).text).toBe('Hello');
+    expect(tree.children!).toHaveLength(1);
+    expect(tree.children![0]!.type).toBe('ScrollView');
+    expect(tree.children![0]!.children).toHaveLength(1);
+    const textNode = tree.children![0]!.children![0]! as { type?: string; text?: string };
+    expect(textNode.type).toBe('Text');
+    expect(textNode.text).toBe('Hello');
   });
 
   it('testID 없으면 uid가 경로', () => {
@@ -236,8 +243,8 @@ describe('getComponentTree — 컴포넌트 트리 스냅샷', () => {
     setMockFiberRoot(root);
     const tree = MCP.getComponentTree({}) as { uid: string; children?: Array<{ uid: string }> };
     expect(tree.uid).toBe('0');
-    expect(tree.children).toHaveLength(1);
-    expect(tree.children![0].uid).toBe('0.0');
+    expect(tree.children!).toHaveLength(1);
+    expect(tree.children![0]!.uid).toBe('0.0');
   });
 
   it('maxDepth 초과 시 하위 생략', () => {
@@ -246,9 +253,9 @@ describe('getComponentTree — 컴포넌트 트리 스냅샷', () => {
     ]);
     setMockFiberRoot(root);
     const tree = MCP.getComponentTree({ maxDepth: 2 }) as { children?: unknown[] };
-    expect(tree.children).toHaveLength(1);
+    expect(tree.children!).toHaveLength(1);
     const level1 = tree.children![0] as { children?: unknown[] };
-    expect(level1.children).toHaveLength(1);
+    expect(level1.children!).toHaveLength(1);
     const level2 = level1.children![0] as { children?: unknown[] };
     expect(level2.children).toBeUndefined();
   });
@@ -732,12 +739,12 @@ describe('getConsoleLogs / clearConsoleLogs', () => {
       timestamp: number;
     }>;
     expect(logs).toHaveLength(2);
-    expect(logs[0].message).toBe('hello world');
-    expect(logs[0].level).toBe(0);
-    expect(typeof logs[0].id).toBe('number');
-    expect(typeof logs[0].timestamp).toBe('number');
-    expect(logs[1].message).toBe('warn message');
-    expect(logs[1].level).toBe(2);
+    expect(logs[0]!.message).toBe('hello world');
+    expect(logs[0]!.level).toBe(0);
+    expect(typeof logs[0]!.id).toBe('number');
+    expect(typeof logs[0]!.timestamp).toBe('number');
+    expect(logs[1]!.message).toBe('warn message');
+    expect(logs[1]!.level).toBe(2);
   });
 
   it('level 문자열 필터링', () => {
@@ -756,15 +763,15 @@ describe('getConsoleLogs / clearConsoleLogs', () => {
       level: number;
     }>;
     expect(warnOnly).toHaveLength(1);
-    expect(warnOnly[0].message).toBe('warn msg');
-    expect(warnOnly[0].level).toBe(2);
+    expect(warnOnly[0]!.message).toBe('warn msg');
+    expect(warnOnly[0]!.level).toBe(2);
 
     const errorOnly = MCP.getConsoleLogs({ level: 'error' }) as Array<{
       message: string;
       level: number;
     }>;
     expect(errorOnly).toHaveLength(1);
-    expect(errorOnly[0].message).toBe('error msg');
+    expect(errorOnly[0]!.message).toBe('error msg');
   });
 
   it('since 타임스탬프 필터', async () => {
@@ -781,7 +788,7 @@ describe('getConsoleLogs / clearConsoleLogs', () => {
 
     const filtered = MCP.getConsoleLogs({ since: midpoint }) as Array<{ message: string }>;
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].message).toBe('new msg');
+    expect(filtered[0]!.message).toBe('new msg');
   });
 
   it('limit 옵션으로 최대 반환 수 제한', () => {
@@ -795,8 +802,8 @@ describe('getConsoleLogs / clearConsoleLogs', () => {
     const limited = MCP.getConsoleLogs({ limit: 3 }) as Array<{ message: string }>;
     expect(limited).toHaveLength(3);
     // 최근 3개 반환 (slice from end)
-    expect(limited[0].message).toBe('msg-7');
-    expect(limited[2].message).toBe('msg-9');
+    expect(limited[0]!.message).toBe('msg-7');
+    expect(limited[2]!.message).toBe('msg-9');
   });
 
   it('clearConsoleLogs 후 빈 배열', () => {
@@ -823,8 +830,8 @@ describe('getConsoleLogs / clearConsoleLogs', () => {
     const all = MCP.getConsoleLogs({ limit: 600 }) as Array<{ message: string }>;
     expect(all).toHaveLength(500);
     // 첫 10개가 제거되었으므로 msg-10이 첫 번째
-    expect(all[0].message).toBe('msg-10');
-    expect(all[499].message).toBe('msg-509');
+    expect(all[0]!.message).toBe('msg-10');
+    expect(all[499]!.message).toBe('msg-509');
   });
 });
 
@@ -882,12 +889,12 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
       duration: number;
     }>;
     expect(requests).toHaveLength(1);
-    expect(requests[0].method).toBe('GET');
-    expect(requests[0].url).toBe('https://api.example.com/users');
-    expect(requests[0].status).toBe(200);
-    expect(requests[0].state).toBe('done');
-    expect(typeof requests[0].duration).toBe('number');
-    expect(typeof requests[0].id).toBe('number');
+    expect(requests[0]!.method).toBe('GET');
+    expect(requests[0]!.url).toBe('https://api.example.com/users');
+    expect(requests[0]!.status).toBe(200);
+    expect(requests[0]!.state).toBe('done');
+    expect(typeof requests[0]!.duration).toBe('number');
+    expect(typeof requests[0]!.id).toBe('number');
   });
 
   it('XHR error 이벤트 시 error 마킹', () => {
@@ -902,9 +909,9 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
       method: string;
     }>;
     expect(requests).toHaveLength(1);
-    expect(requests[0].error).toBe('Network error');
-    expect(requests[0].state).toBe('error');
-    expect(requests[0].method).toBe('POST');
+    expect(requests[0]!.error).toBe('Network error');
+    expect(requests[0]!.state).toBe('error');
+    expect(requests[0]!.method).toBe('POST');
   });
 
   it('XHR timeout 이벤트 시 timeout 마킹', () => {
@@ -915,8 +922,8 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
 
     const requests = MCP.getNetworkRequests() as Array<{ error: string; state: string }>;
     expect(requests).toHaveLength(1);
-    expect(requests[0].error).toBe('Timeout');
-    expect(requests[0].state).toBe('error');
+    expect(requests[0]!.error).toBe('Timeout');
+    expect(requests[0]!.state).toBe('error');
   });
 
   it('setRequestHeader로 요청 헤더 수집', () => {
@@ -932,9 +939,9 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
       requestBody: string;
     }>;
     expect(requests).toHaveLength(1);
-    expect(requests[0].requestHeaders['Content-Type']).toBe('application/json');
-    expect(requests[0].requestHeaders['Authorization']).toBe('Bearer token123');
-    expect(requests[0].requestBody).toBe('{"key":"value"}');
+    expect(requests[0]!.requestHeaders['Content-Type']).toBe('application/json');
+    expect(requests[0]!.requestHeaders['Authorization']).toBe('Bearer token123');
+    expect(requests[0]!.requestBody).toBe('{"key":"value"}');
   });
 
   it('url substring 필터', () => {
@@ -950,7 +957,7 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
 
     const filtered = MCP.getNetworkRequests({ url: 'users' }) as Array<{ url: string }>;
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].url).toContain('users');
+    expect(filtered[0]!.url).toContain('users');
   });
 
   it('method 필터', () => {
@@ -966,7 +973,7 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
 
     const filtered = MCP.getNetworkRequests({ method: 'POST' }) as Array<{ method: string }>;
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].method).toBe('POST');
+    expect(filtered[0]!.method).toBe('POST');
   });
 
   it('since 타임스탬프 필터', async () => {
@@ -985,7 +992,7 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
 
     const filtered = MCP.getNetworkRequests({ since: midpoint }) as Array<{ url: string }>;
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].url).toContain('new');
+    expect(filtered[0]!.url).toContain('new');
   });
 
   it('clearNetworkRequests 후 빈 배열', () => {
@@ -1009,8 +1016,8 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
 
     const all = MCP.getNetworkRequests({ limit: 300 }) as Array<{ url: string }>;
     expect(all).toHaveLength(200);
-    expect(all[0].url).toContain('item-10');
-    expect(all[199].url).toContain('item-209');
+    expect(all[0]!.url).toContain('item-10');
+    expect(all[199]!.url).toContain('item-209');
   });
 
   it('requestBody 크기 제한 (10000자 초과 시 잘림)', () => {
@@ -1022,7 +1029,7 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
 
     const requests = MCP.getNetworkRequests() as Array<{ requestBody: string }>;
     expect(requests).toHaveLength(1);
-    expect(requests[0].requestBody).toHaveLength(10000);
+    expect(requests[0]!.requestBody).toHaveLength(10000);
   });
 
   it('responseBody 크기 제한 (10000자 초과 시 잘림)', () => {
@@ -1034,7 +1041,7 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
 
     const requests = MCP.getNetworkRequests() as Array<{ responseBody: string }>;
     expect(requests).toHaveLength(1);
-    expect(requests[0].responseBody).toHaveLength(10000);
+    expect(requests[0]!.responseBody).toHaveLength(10000);
   });
 
   it('status 필터', () => {
@@ -1053,8 +1060,8 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
       url: string;
     }>;
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].status).toBe(404);
-    expect(filtered[0].url).toContain('missing');
+    expect(filtered[0]!.status).toBe(404);
+    expect(filtered[0]!.url).toContain('missing');
   });
 
   it('limit 옵션으로 최대 반환 수 제한', () => {
@@ -1068,8 +1075,8 @@ describe('getNetworkRequests / clearNetworkRequests (XHR)', () => {
     const limited = MCP.getNetworkRequests({ limit: 3 }) as Array<{ url: string }>;
     expect(limited).toHaveLength(3);
     // 최근 3개 반환 (slice from end)
-    expect(limited[0].url).toContain('item-7');
-    expect(limited[2].url).toContain('item-9');
+    expect(limited[0]!.url).toContain('item-7');
+    expect(limited[2]!.url).toContain('item-9');
   });
 });
 
@@ -1101,8 +1108,8 @@ describe('getNetworkRequests / clearNetworkRequests (fetch)', () => {
       state: string;
     }>;
     expect(requests.length).toBeGreaterThanOrEqual(1);
-    expect(requests[0].url).toBe('https://api.example.com/fetch-test');
-    expect(requests[0].method).toBe('GET');
+    expect(requests[0]!.url).toBe('https://api.example.com/fetch-test');
+    expect(requests[0]!.method).toBe('GET');
   });
 
   it('fetch POST 요청 캡처', async () => {
