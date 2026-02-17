@@ -7,7 +7,9 @@
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.0.11",
         "@modelcontextprotocol/sdk": "^1.25.0",
+        "@ohah/react-native-mcp-client": "workspace:*",
         "@ohah/react-native-mcp-server": "workspace:*",
+        "@ohah/react-native-mcp-test": "workspace:*",
         "@types/bun": "latest",
         "@types/node": "^20.0.0",
         "oxfmt": "latest",
