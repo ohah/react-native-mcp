@@ -1858,12 +1858,49 @@ var ws = null;
 var _reconnectTimer = null;
 var reconnectDelay = 1000;
 var _mcpEnabled = _isDevMode;
+var _heartbeatTimer = null;
+var _pongTimer = null;
+var HEARTBEAT_INTERVAL_MS = 30000;
+var PONG_TIMEOUT_MS = 10000;
 
 function _shouldConnect() {
   if (_mcpEnabled) return true;
   if (typeof global !== 'undefined' && global.__REACT_NATIVE_MCP_ENABLED__) return true;
   if (typeof globalThis !== 'undefined' && globalThis.__REACT_NATIVE_MCP_ENABLED__) return true;
   return false;
+}
+
+function _stopHeartbeat() {
+  if (_heartbeatTimer != null) {
+    clearInterval(_heartbeatTimer);
+    _heartbeatTimer = null;
+  }
+  if (_pongTimer != null) {
+    clearTimeout(_pongTimer);
+    _pongTimer = null;
+  }
+}
+
+function _startHeartbeat() {
+  _stopHeartbeat();
+  _heartbeatTimer = setInterval(function () {
+    if (!ws || ws.readyState !== 1) {
+      _stopHeartbeat();
+      return;
+    }
+    try {
+      ws.send(JSON.stringify({ type: 'ping' }));
+    } catch (_e) {
+      return;
+    }
+    _pongTimer = setTimeout(function () {
+      // pong not received — close connection (onclose will trigger reconnect)
+      if (ws)
+        try {
+          ws.close();
+        } catch (_e) {}
+    }, PONG_TIMEOUT_MS);
+  }, HEARTBEAT_INTERVAL_MS);
 }
 
 function connect() {
@@ -1930,10 +1967,18 @@ function connect() {
         console.warn('[MCP] Failed to send init:', _e3 && _e3.message);
       }
     }
+    _startHeartbeat();
   };
   ws.onmessage = function (ev) {
     try {
       var msg = JSON.parse(ev.data);
+      if (msg.type === 'pong') {
+        if (_pongTimer != null) {
+          clearTimeout(_pongTimer);
+          _pongTimer = null;
+        }
+        return;
+      }
       if (msg.method === 'eval' && msg.id != null) {
         var result;
         var errMsg = null;
@@ -1968,6 +2013,7 @@ function connect() {
     } catch {}
   };
   ws.onclose = function () {
+    _stopHeartbeat();
     ws = null;
     _reconnectTimer = setTimeout(function () {
       connect();
@@ -1996,6 +2042,22 @@ _AppRegistry.runApplication = function () {
   if (_shouldConnect() && (!ws || ws.readyState !== 1)) connect();
   return _originalRun.apply(this, arguments);
 };
+
+// ─── AppState 연동: 백그라운드 시 heartbeat 중단, 포그라운드 복귀 시 재개 ─
+(function () {
+  try {
+    var rn = require('react-native');
+    if (rn && rn.AppState && typeof rn.AppState.addEventListener === 'function') {
+      rn.AppState.addEventListener('change', function (nextState) {
+        if (nextState === 'active') {
+          if (ws && ws.readyState === 1) _startHeartbeat();
+        } else {
+          _stopHeartbeat();
+        }
+      });
+    }
+  } catch (_e) {}
+})();
 
 // 주기적 재시도: 앱이 먼저 떠 있고 나중에 MCP를 켜도 자동 연결 (순서 무관)
 var PERIODIC_INTERVAL_MS = 5000;
