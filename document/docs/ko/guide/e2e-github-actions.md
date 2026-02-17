@@ -9,6 +9,16 @@ React Native MCP 기반 E2E 테스트를 **GitHub Actions**에서 자동으로 �
 - **앱 빌드**: iOS는 Xcode/시뮬레이터, Android는 에뮬레이터 또는 실제 기기
 - **테스트 실행**: `bun test e2e/...` (스모크 테스트) 또는 YAML 시나리오 러너
 
+## E2E CLI (`react-native-mcp-test`)
+
+- **사용법**: `npx react-native-mcp-test run <path> [options]`
+- **CI 권장(빌드 산출물 실행)**: `node packages/react-native-mcp-test/dist/cli.js run <path> [options]`
+- **자주 쓰는 옵션**
+  - `-p, --platform <ios|android>`: 플랫폼 덮어쓰기
+  - `-o, --output <dir>`: 결과 디렉터리
+  - `--no-auto-launch`: 설치만 하고 시나리오의 `setup`에서 `launch`로 실행할 때 사용
+- 전체 옵션/리포터는 [E2E YAML 레퍼런스](../testing/e2e-yaml-reference.md)의 CLI 섹션을 참고하세요.
+
 ## iOS E2E (시뮬레이터)
 
 저장소의 `.github/workflows/e2e-ios.yml` 과 같은 흐름입니다.

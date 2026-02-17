@@ -367,8 +367,34 @@ teardown:
   - terminate: org.example.app
 ```
 
-## Running
+## E2E CLI (`react-native-mcp-test`)
 
-- Directory: `npx react-native-mcp-test run path/to/e2e/ -p ios`
-- Single file: `npx react-native-mcp-test run path/to/suite.yaml -p android`
-- `-p` runs only the selected platform’s suites.
+### Usage
+
+`npx react-native-mcp-test run <path> [options]`
+
+- `<path>`: A YAML file or a directory
+  - Directory runs only `.yml`/`.yaml` files **directly under** the directory (no recursive traversal).
+
+### Commands
+
+- `run <path>`: Run a YAML test file or a directory
+
+### Options
+
+- `-p, --platform <ios|android>`: Override `config.platform` from YAML.
+- `-r, --reporter <type>`: Reporter type. `console` | `junit` | `json` (default: `console`)
+- `-o, --output <dir>`: Output directory (default: `./results`)
+- `-t, --timeout <ms>`: Global timeout override (connection wait, etc.)
+- `-d, --device <id>`: Device ID (idb/adb)
+- `--no-bail`: Continue running next suites after a failure (default: bail on first suite failure)
+- `--no-auto-launch`: Do not auto-launch the app in `create()`. Use this in CI when you pre-install the app and launch in `setup` (or via workflow steps).
+- `-h, --help`: Show help
+
+### Examples
+
+- Run a directory: `npx react-native-mcp-test run path/to/e2e/ -p ios`
+- Run a single file: `npx react-native-mcp-test run path/to/suite.yaml -p android`
+- Custom output dir: `npx react-native-mcp-test run e2e/ -o e2e-artifacts/yaml-results`
+- Keep going after failure: `npx react-native-mcp-test run e2e/ --no-bail`
+- CI (built artifact): `node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch`
