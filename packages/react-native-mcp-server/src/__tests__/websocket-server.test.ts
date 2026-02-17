@@ -21,6 +21,8 @@ function makeDevice(
     ws: createMockWs(opts?.readyState ?? WebSocket.OPEN),
     pending: new Map(),
     metroBaseUrl: null,
+    pixelRatio: null,
+    lastMessageTime: Date.now(),
   };
 }
 

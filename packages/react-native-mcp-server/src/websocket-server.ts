@@ -38,6 +38,8 @@ export interface DeviceConnection {
   metroBaseUrl: string | null;
   /** PixelRatio.get() from React Native runtime (dp→px scale). */
   pixelRatio: number | null;
+  /** Date.now() of last message received from this device (for stale detection). */
+  lastMessageTime: number;
 }
 
 /**
@@ -48,6 +50,7 @@ export class AppSession {
   private deviceByWs = new Map<WebSocket, string>();
   private awaitingInit = new Set<WebSocket>();
   private server: WebSocketServer | null = null;
+  private staleCheckTimer: ReturnType<typeof setInterval> | null = null;
 
   /** 연결된 디바이스 중 열린 것 하나로 해석 (deviceId/platform 미지정 시) */
   resolveDevice(deviceId?: string, platform?: string): DeviceConnection {
@@ -182,6 +185,21 @@ export class AppSession {
         try {
           const msg = JSON.parse(data.toString()) as Record<string, unknown>;
 
+          // Update lastMessageTime for stale detection
+          const existingDeviceId = this.deviceByWs.get(ws);
+          if (existingDeviceId) {
+            const existingConn = this.devices.get(existingDeviceId);
+            if (existingConn) existingConn.lastMessageTime = Date.now();
+          }
+
+          // Application-level ping/pong (RN WebSocket doesn't support protocol-level ping)
+          if (msg?.type === 'ping') {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'pong' }));
+            }
+            return;
+          }
+
           if (this.awaitingInit.has(ws) && msg?.type === 'init') {
             this.awaitingInit.delete(ws);
             const platform = typeof msg.platform === 'string' ? msg.platform : 'unknown';
@@ -198,6 +216,7 @@ export class AppSession {
               pending: new Map(),
               metroBaseUrl,
               pixelRatio,
+              lastMessageTime: Date.now(),
             };
             this.devices.set(deviceId, conn);
             this.deviceByWs.set(ws, deviceId);
@@ -233,6 +252,19 @@ export class AppSession {
         `[react-native-mcp-server] WebSocket server listening on ws://localhost:${port}`
       );
     });
+    // Stale connection detection: close connections with no messages for 60s
+    this.staleCheckTimer = setInterval(() => {
+      const now = Date.now();
+      for (const conn of this.devices.values()) {
+        if (now - conn.lastMessageTime > 60_000) {
+          console.error(
+            `[react-native-mcp-server] Closing stale connection: ${conn.deviceId} (no message for 60s)`
+          );
+          conn.ws.close();
+        }
+      }
+    }, 15_000);
+
     this.server.on('error', (err: Error) => {
       if (err.message?.includes('EADDRINUSE')) {
         console.error(
@@ -288,6 +320,10 @@ export class AppSession {
 
   /** 서버 종료 */
   stop(): void {
+    if (this.staleCheckTimer) {
+      clearInterval(this.staleCheckTimer);
+      this.staleCheckTimer = null;
+    }
     if (this.server) {
       this.server.close();
       this.server = null;
