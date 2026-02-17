@@ -90,9 +90,9 @@ steps:
   # ─── Step 10: FlatList (타입+텍스트:nth로 아이템 찾기) ──────────────
   # 두 번째 "탭: 0"이 보일 때까지 스크롤 후, 그 버튼만 탭 (viewport 검사로 화면 안에 있을 때만 성공)
   - scrollUntilVisible:
-      { selector: 'Pressable:text("탭: 0"):nth(1)', direction: 'down', maxScrolls: 5 }
+      { selector: 'Pressable:text("탭: 0"):nth-of-type(2)', direction: 'down', maxScrolls: 5 }
   - wait: 300
-  - tap: { selector: 'Pressable:text("탭: 0"):nth(1)' }
+  - tap: { selector: 'Pressable:text("탭: 0"):nth-of-type(2)' }
   - waitForText: { text: '탭: 1', timeout: 5000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'Pressable:text("클릭: 0")', timeout: 5000 }
@@ -218,7 +218,12 @@ steps:
   # ─── Step 32: Bottom sheet ─────────────────────────────────────────
   # 시트 패널 = "Bottom sheet" 텍스트를 가진 View 중 마지막(실제 드래그 영역)
   - swipe:
-      { selector: 'View:text("Bottom sheet"):last', direction: 'up', distance: 150, duration: 400 }
+      {
+        selector: 'View:text("Bottom sheet"):last-of-type',
+        direction: 'up',
+        distance: 150,
+        duration: 400,
+      }
   - waitForText: { text: '상태: 열림', selector: '#sheet-status', timeout: 5000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#toggle-target', timeout: 5000 }

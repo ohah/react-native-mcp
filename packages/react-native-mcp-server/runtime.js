@@ -200,7 +200,7 @@ function getFiberTypeName(fiber) {
 /**
  * 셀렉터 문자열을 AST로 파싱한다 (재귀 하강 파서).
  * 지원 문법:
- *   Type#testID[attr="val"]:text("..."):display-name("..."):nth(N):has-press:has-scroll
+ *   Type#testID[attr="val"]:text("..."):display-name("..."):nth-of-type(N):has-press:has-scroll
  *   A > B (직접 자식), A B (후손), A, B (OR)
  */
 function parseSelector(input) {
@@ -297,17 +297,17 @@ function parseSelector(input) {
           skipSpaces();
           if (pos < len && input.charAt(pos) === ')') pos++; // skip )
         }
-      } else if (pseudo === 'nth') {
+      } else if (pseudo === 'nth-of-type') {
         if (pos < len && input.charAt(pos) === '(') {
           pos++; // skip (
           skipSpaces();
-          sel.nth = readNumber();
+          sel.nth = readNumber() - 1; // 1-based input → 0-based internal
           skipSpaces();
           if (pos < len && input.charAt(pos) === ')') pos++; // skip )
         }
-      } else if (pseudo === 'first') {
-        sel.nth = 0; // first matching element (same as :nth(0))
-      } else if (pseudo === 'last') {
+      } else if (pseudo === 'first-of-type') {
+        sel.nth = 0; // first matching element (same as :nth-of-type(1))
+      } else if (pseudo === 'last-of-type') {
         sel.nth = -2; // -2 = last matching element
       } else if (pseudo === 'display-name') {
         if (pos < len && input.charAt(pos) === '(') {
@@ -1125,7 +1125,7 @@ var MCP = {
   },
   /**
    * querySelector(selector) → 첫 번째 매칭 fiber 정보 또는 null.
-   * 셀렉터 문법: Type#testID[attr="val"]:text("..."):nth(N):has-press:has-scroll
+   * 셀렉터 문법: Type#testID[attr="val"]:text("..."):nth-of-type(N):has-press:has-scroll
    * 콤비네이터: ">" (직접 자식), " " (후손), "," (OR)
    * 반환: { uid, type, testID?, text?, accessibilityLabel?, hasOnPress, hasScrollTo }
    */
@@ -1177,7 +1177,7 @@ var MCP = {
         })(root);
       }
 
-      // :last → keep only the last match
+      // :last-of-type → keep only the last match
       if (lastSeg.selector.nth === -2 && results.length > 1) {
         results = [results[results.length - 1]];
       }
