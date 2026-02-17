@@ -164,6 +164,61 @@ describe('AppClient.swipe() viewport clamping', () => {
     expect(swipe!.y2).toBe(350);
   });
 
+  it('distance 퍼센트(up/down) → 요소 height 기준 비율 계산', async () => {
+    const measure = { pageX: 50, pageY: 200, width: 300, height: 500 };
+    setupMocks(measure);
+    const app = await createTestClient();
+    await app.swipe('#scroll', { direction: 'up', distance: '40%' });
+    const swipe = getLastSwipeArgs();
+    expect(swipe).not.toBeNull();
+    // dist = 500 * 0.4 = 200, cx = 50+150=200, cy = 200+250=450
+    // up: y1=450+100=550, y2=450-100=350
+    expect(swipe!.x1).toBe(200);
+    expect(swipe!.y1).toBe(550);
+    expect(swipe!.x2).toBe(200);
+    expect(swipe!.y2).toBe(350);
+  });
+
+  it('distance 퍼센트(left/right) → 요소 width 기준 비율 계산', async () => {
+    const measure = { pageX: 20, pageY: 100, width: 350, height: 200 };
+    setupMocks(measure);
+    const app = await createTestClient();
+    await app.swipe('#carousel', { direction: 'left', distance: '80%' });
+    const swipe = getLastSwipeArgs();
+    expect(swipe).not.toBeNull();
+    // dist = 350 * 0.8 = 280, cx = 20+175=195, cy = 100+100=200
+    // left: x1=195+140=335, x2=195-140=55
+    expect(swipe!.x1).toBe(335);
+    expect(swipe!.y1).toBe(200);
+    expect(swipe!.x2).toBe(55);
+    expect(swipe!.y2).toBe(200);
+  });
+
+  it('distance 숫자 → 기존 동작 유지 (하위호환)', async () => {
+    const measure = { pageX: 50, pageY: 300, width: 200, height: 200 };
+    setupMocks(measure);
+    const app = await createTestClient();
+    await app.swipe('#my-element', { direction: 'up', distance: 100 });
+    const swipe = getLastSwipeArgs();
+    expect(swipe).not.toBeNull();
+    // cx=150, cy=400, dist=100
+    expect(swipe!.y1).toBe(450); // 400+50
+    expect(swipe!.y2).toBe(350); // 400-50
+  });
+
+  it('distance 미지정 → 기본값 min(w,h)*0.6', async () => {
+    const measure = { pageX: 50, pageY: 300, width: 200, height: 400 };
+    setupMocks(measure);
+    const app = await createTestClient();
+    await app.swipe('#default', { direction: 'down' });
+    const swipe = getLastSwipeArgs();
+    expect(swipe).not.toBeNull();
+    // dist = min(200,400)*0.6 = 120, cx=150, cy=500
+    // down: y1=500-60=440, y2=500+60=560
+    expect(swipe!.y1).toBe(440);
+    expect(swipe!.y2).toBe(560);
+  });
+
   it('최종 swipe 좌표가 screen bounds로 clamp됨', async () => {
     // element near bottom: center at y=830 (in screen)
     // swipe down distance=200 → y2 = 830+100 = 930 → clamped to 844

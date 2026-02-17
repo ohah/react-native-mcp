@@ -61,7 +61,7 @@ steps:
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'ScrollView', timeout: 5000 }
   # ─── Step 7: ScrollView no ref (타입+텍스트로 찾기) ─────────────────
-  - swipe: { selector: 'ScrollView', direction: 'up', distance: 200 }
+  - swipe: { selector: 'ScrollView', direction: 'up', distance: '30%' }
   - wait: 1500
   - scrollUntilVisible:
       { selector: 'Pressable:text("버튼 15 (0)")', direction: 'down', maxScrolls: 5 }
@@ -70,7 +70,7 @@ steps:
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'ScrollView', timeout: 5000 }
   # ─── Step 8: ScrollView with ref (타입+텍스트로 버튼 찾기) ──────────
-  - swipe: { selector: 'ScrollView', direction: 'up', distance: 200 }
+  - swipe: { selector: 'ScrollView', direction: 'up', distance: '30%' }
   - wait: 1500
   - scrollUntilVisible:
       { selector: 'Pressable:text("버튼 20 (0)")', direction: 'down', maxScrolls: 5 }
@@ -79,7 +79,7 @@ steps:
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'Pressable:text("버튼 0 (0)")', timeout: 5000 }
   # ─── Step 9: ScrollView no testID ──────────────────────────────────
-  - swipe: { selector: 'ScrollView', direction: 'up', distance: 250 }
+  - swipe: { selector: 'ScrollView', direction: 'up', distance: '40%' }
   - wait: 1500
   - scrollUntilVisible:
       { selector: 'Pressable:text("버튼 20 (0)")', direction: 'down', maxScrolls: 5 }
@@ -184,22 +184,22 @@ steps:
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#gesture-reanimated-scroll', timeout: 5000 }
   # ─── Step 26: Reanimated Scroll ───────────────────────────────────
-  - swipe: { selector: '#gesture-reanimated-scroll', direction: 'up', distance: 200 }
+  - swipe: { selector: '#gesture-reanimated-scroll', direction: 'up', distance: '40%' }
   - waitForText: { text: 'Reanimated 목록 아이템', timeout: 5000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'View:text("스와이프 to delete 행 1")', timeout: 5000 }
   # ─── Step 27: Swipeable ────────────────────────────────────────────
-  - swipe: { selector: 'View:text("스와이프 to delete 행 1")', direction: 'left', distance: 150 }
+  - swipe: { selector: 'View:text("스와이프 to delete 행 1")', direction: 'left', distance: '70%' }
   - waitForVisible: { selector: 'View:text("삭제")', timeout: 3000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#gesture-drag-area', timeout: 5000 }
   # ─── Step 28: Drag (Pan) ───────────────────────────────────────────
-  - swipe: { selector: '#gesture-drag-area', direction: 'right', distance: 80 }
+  - swipe: { selector: '#gesture-drag-area', direction: 'right', distance: '5%' }
   - waitForText: { text: '드래그 완료: 1', selector: '#gesture-drag-count', timeout: 5000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'ScrollView', timeout: 5000 }
   # ─── Step 29: Pull to refresh ──────────────────────────────────────
-  - swipe: { selector: 'ScrollView', direction: 'down', distance: 200 }
+  - swipe: { selector: 'ScrollView', direction: 'down', distance: '30%' }
   - waitForText: { text: '새로고침 횟수: 1', timeout: 5000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#gesture-drawer-open', timeout: 5000 }
@@ -211,7 +211,7 @@ steps:
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#pager-status', timeout: 5000 }
   # ─── Step 31: Pager ────────────────────────────────────────────────
-  - swipe: { selector: 'ScrollView:has-scroll', direction: 'left', distance: 400, duration: 400 }
+  - swipe: { selector: 'ScrollView:has-scroll', direction: 'left', distance: '80%', duration: 400 }
   - waitForText: { text: '현재 페이지: 2', selector: '#pager-status', timeout: 3000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#sheet-status', timeout: 5000 }
@@ -222,10 +222,11 @@ steps:
       {
         selector: 'GestureDetector View:text("Bottom sheet")',
         direction: 'up',
-        distance: 350,
+        distance: '30%',
         duration: 400,
       }
   - waitForText: { text: '상태: 열림', selector: '#sheet-status', timeout: 5000 }
+  - wait: 10000
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#toggle-target', timeout: 5000 }
   # ─── Step 33: Toggle visibility ───────────────────────────────────

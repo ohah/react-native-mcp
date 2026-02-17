@@ -50,17 +50,21 @@ Tap the element once.
 
 Swipe on the element.
 
-| Field     | Type   | Required | Description                             |
-| --------- | ------ | -------- | --------------------------------------- |
-| selector  | string | ✓        | Target element selector                 |
-| direction | string | ✓        | `up` \| `down` \| `left` \| `right`     |
-| distance  | number |          | Swipe distance (px). Default if omitted |
+| Field     | Type             | Required | Description                                                                                           |
+| --------- | ---------------- | -------- | ----------------------------------------------------------------------------------------------------- |
+| selector  | string           | ✓        | Target element selector                                                                               |
+| direction | string           | ✓        | `up` \| `down` \| `left` \| `right`                                                                   |
+| distance  | number \| string |          | Swipe distance. Number for dp, string like `'50%'` for percentage of element size. Default if omitted |
 
 ```yaml
 - swipe:
     selector: '#list'
     direction: up
-    distance: 200
+    distance: 200 # absolute 200dp
+- swipe:
+    selector: '#carousel'
+    direction: left
+    distance: '80%' # 80% of element width
 ```
 
 ---
