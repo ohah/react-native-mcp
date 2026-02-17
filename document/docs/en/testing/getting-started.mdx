@@ -1,0 +1,103 @@
+# Getting started
+
+Define scenarios in **YAML files** and run E2E tests locally or in GitHub Actions without AI.
+
+## What is a YAML scenario
+
+A format supported by `@ohah/react-native-mcp-test`: one file with **platform**, **config**, and **setup / steps / teardown**.
+MCP tools (tap, assertText, waitForText, etc.) are run as scenario steps.
+
+## Basic structure
+
+```yaml
+name: Scenario name
+config:
+  platform: ios # ios | android
+  timeout: 10000 # per-step timeout (ms)
+  bundleId: org.example.app
+
+setup:
+  - launch: org.example.app
+  - waitForVisible:
+      selector: '#main-screen'
+
+steps:
+  - assertText:
+      text: 'Count: 0'
+      selector: '#counter'
+  - tap:
+      selector: '#increment-btn'
+  - waitForText:
+      text: 'Count: 1'
+      timeout: 3000
+
+teardown:
+  - terminate: org.example.app
+```
+
+- **config**: platform, timeout, bundleId
+- **setup**: launch app, wait for elements, etc.
+- **steps**: tap, input, assertions, screenshots
+- **teardown**: e.g. terminate app
+
+## Common steps
+
+| Step             | Purpose                        |
+| ---------------- | ------------------------------ |
+| `launch`         | Launch app (bundleId)          |
+| `terminate`      | Terminate app                  |
+| `tap`            | Tap element matching selector  |
+| `assertText`     | Assert text at selector        |
+| `waitForText`    | Wait until text appears        |
+| `waitForVisible` | Wait until selector is visible |
+| `screenshot`     | Save screenshot (path)         |
+
+Use the app's **testID** as `#testID` for the selector.
+
+## Example: tap button and assert count
+
+```yaml
+name: Press Counter tap
+config:
+  platform: ios
+  timeout: 10000
+  bundleId: org.reactnativemcp.demo
+
+setup:
+  - launch: org.reactnativemcp.demo
+  - waitForVisible:
+      selector: '#press-counter-button'
+
+steps:
+  - assertText:
+      text: 'Count: 0'
+      selector: '#press-counter-button'
+  - tap:
+      selector: '#press-counter-button'
+  - waitForText:
+      text: 'Count: 1'
+      timeout: 3000
+  - tap:
+      selector: '#press-counter-button'
+  - assertText:
+      text: 'Count: 2'
+      selector: '#press-counter-button'
+  - screenshot:
+      path: './results/counter.png'
+
+teardown:
+  - terminate: org.reactnativemcp.demo
+```
+
+## How to run
+
+1. Build the MCP server: `bun run build`
+2. Have the app running or use `launch` in the scenario `setup`
+3. Run the test runner, e.g.:
+
+```bash
+bun run test:yaml
+```
+
+Or use the `run` script of `@ohah/react-native-mcp-test` with your YAML file.
+See [E2E YAML Reference](./e2e-yaml-reference) for full syntax and [E2E on GitHub Actions](./e2e-github-actions) for CI.

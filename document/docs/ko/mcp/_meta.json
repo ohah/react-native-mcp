@@ -1,0 +1,5 @@
+[
+  { "type": "file", "name": "index", "label": "설치 및 연결" },
+  "getting-started",
+  { "type": "file", "name": "mcp-usage", "label": "Cursor / Claude / Copilot" }
+]

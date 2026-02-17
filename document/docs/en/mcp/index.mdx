@@ -1,22 +1,22 @@
+import { PackageManagerTabs } from '@rspress/core/theme';
+
 # Install & connect
 
 To use React Native MCP you need the **MCP server**, **client configuration**, **app setup**, and **native tools (idb / adb)**.
 
 ## 1. Install the MCP server
 
-Global install:
+Global install (npm, pnpm, bun, yarn, deno):
 
-```bash
-npm install -g @ohah/react-native-mcp-server
-```
+<PackageManagerTabs command="install -g @ohah/react-native-mcp-server" />
 
-Run without installing:
+Run without installing (npx, pnpx, bunx, etc.):
 
 ```bash
 npx -y @ohah/react-native-mcp-server
 ```
 
-Cursor, Claude, and Copilot configs typically use the `npx` approach.
+Cursor, Claude, and Copilot configs typically use the run-without-install approach.
 
 ## 2. Register the server in your client
 

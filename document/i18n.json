@@ -1,18 +1,7 @@
 {
-  "guide": {
-    "ko": "가이드",
-    "en": "Guide"
-  },
-  "outlineTitle": {
-    "ko": "목차",
-    "en": "Contents"
-  },
-  "prevPageText": {
-    "ko": "이전",
-    "en": "Previous"
-  },
-  "nextPageText": {
-    "ko": "다음",
-    "en": "Next"
-  }
+  "guide": { "ko": "가이드", "en": "Guide" },
+  "docs": { "ko": "문서", "en": "Docs" },
+  "outlineTitle": { "ko": "목차", "en": "Contents" },
+  "prevPageText": { "ko": "이전", "en": "Previous" },
+  "nextPageText": { "ko": "다음", "en": "Next" }
 }

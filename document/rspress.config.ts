@@ -7,6 +7,7 @@ const base = '/react-native-mcp/';
 const config: UserConfig = {
   root: path.join(__dirname, 'docs'),
   base,
+  logo: `${base}logo.svg`,
   lang: 'en',
   locales: [
     {

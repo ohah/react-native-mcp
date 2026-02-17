@@ -1,24 +1,32 @@
-# React Native MCP 문서
+---
+pageType: home
+title: React Native MCP
 
-React Native 앱을 **AI와 함께** 자동화하고 모니터링하기 위한 MCP(Model Context Protocol) 서버 문서입니다. 개발자용 내부 설계가 아니라 **사용 방법**을 중심으로 안내합니다.
+hero:
+  name: React Native MCP
+  text: React Native 앱 자동화·모니터링을 위한 MCP 서버
+  tagline: Cursor, Claude Desktop, GitHub Actions에서 사용하거나, YAML 시나리오로 E2E 테스트를 실행하세요.
+  actions:
+    - theme: brand
+      text: 시작하기
+      link: /ko/mcp/
+    - theme: alt
+      text: testing
+      link: /ko/testing/
+    - theme: alt
+      text: mcp
+      link: /ko/mcp/
 
-## 이 문서에서 다루는 내용
-
-- **MCP 사용법**: Cursor, Claude Desktop, GitHub Copilot CLI에서 React Native MCP 서버를 연결하는 방법
-- **필수 도구**: iOS(idb) / Android(adb) 설치 및 확인
-- **E2E 테스트**: YAML 시나리오 작성과 GitHub Actions에서 자동 실행하는 방법
-
-## 빠른 시작
-
-1. MCP 서버 설치: `npm install -g @ohah/react-native-mcp-server` 또는 `npx -y @ohah/react-native-mcp-server`
-2. 사용 중인 클라이언트(Cursor / Claude / Copilot)에 서버 설정 추가
-3. React Native 앱에 Metro(cdp-interceptor)와 Babel 프리셋 적용
-4. iOS는 idb, Android는 adb 설치 후 앱 실행·연결
-
-자세한 단계는 [설치 및 연결](./guide/install)에서 확인하세요.
-
-## 다음 단계
-
-- [MCP 사용법 (Cursor / Claude / Copilot)](./guide/mcp-usage) — 클라이언트별 설정과 앱 연결
-- [E2E 테스트 YAML 작성](./guide/yaml-e2e) — 시나리오 파일로 탭·입력·검증 자동화
-- [GitHub Actions에서 E2E 실행](./guide/e2e-github-actions) — CI에서 E2E 돌리는 방법
+features:
+  - title: AI와 MCP
+    details: Cursor, Claude Desktop, Copilot CLI에 서버를 연결하고, 자연어와 도구(snapshot, tap, assert)로 앱을 제어·검사합니다.
+    icon: 🤖
+    link: /ko/mcp/
+  - title: Testing (YAML)
+    details: YAML로 시나리오(tap, assert, wait)를 작성해 로컬 또는 GitHub Actions에서 AI 없이 실행합니다.
+    icon: 📋
+    link: /ko/testing/
+  - title: iOS & Android
+    details: iOS 시뮬레이터는 idb, Android는 adb. 탭, 스와이프, 스크린샷 등을 지원합니다.
+    icon: 📱
+---

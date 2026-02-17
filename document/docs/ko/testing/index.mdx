@@ -1,0 +1,11 @@
+# 설치
+
+E2E YAML 시나리오를 실행하려면:
+
+1. **MCP 서버 및 앱** — MCP 사용과 동일. [MCP — 설치 및 연결](../mcp/) 참고 (서버, Metro, Babel 프리셋, idb/adb).
+2. **테스트 러너** — `@ohah/react-native-mcp-test`. 이 저장소에서는 모노레포 루트에서:
+   - 의존성 설치: `bun install`
+   - 서버 빌드: `bun run build`
+   - YAML 실행: `bun run test:yaml` (또는 YAML 경로를 지정해 러너 CLI 사용)
+
+**idb(iOS)** 와 **adb(Android)** 는 tap, swipe, 스크린샷에 필요합니다. [MCP — 설치 및 연결 — 네이티브 도구](../mcp/#4-네이티브-도구-idb--adb)에 따라 설치·확인하세요.
