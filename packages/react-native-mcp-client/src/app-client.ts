@@ -18,6 +18,7 @@ import type {
   WaitOpts,
 } from './types.js';
 import { McpToolError, ConnectionError } from './errors.js';
+import { clampToViewport, clampCoord, type ScreenBounds } from './viewport-clamp.js';
 
 function resolveServerCwd(): string {
   try {
@@ -44,6 +45,7 @@ export class AppClient {
   private platform: Platform;
   private deviceId?: string;
   private iosOrientation?: number;
+  private _screenBounds: ScreenBounds | null = null;
 
   private constructor(
     client: Client,
@@ -159,6 +161,19 @@ export class AppClient {
     throw new ConnectionError(
       `App did not connect within ${timeoutMs / 1000}s. Last status: ${JSON.stringify(lastStatus, null, 2)}`
     );
+  }
+
+  private async getScreenBounds(): Promise<ScreenBounds> {
+    if (this._screenBounds) return this._screenBounds;
+    const result = (await this.evaluate('() => __REACT_NATIVE_MCP__.getScreenInfo()')) as {
+      window?: { width: number; height: number };
+    };
+    if (result?.window) {
+      this._screenBounds = { width: result.window.width, height: result.window.height };
+      return this._screenBounds;
+    }
+    // fallback: common screen size
+    return { width: 390, height: 844 };
   }
 
   // ─── Query ──────────────────────────────────────────────
@@ -333,8 +348,10 @@ export class AppClient {
     const el = await this.querySelector(selector, opts);
     if (!el) throw new McpToolError('tap', `No element found for selector: ${selector}`);
     if (!el.measure) throw new McpToolError('tap', `Element "${selector}" has no measure data`);
-    const x = el.measure.pageX + el.measure.width / 2;
-    const y = el.measure.pageY + el.measure.height / 2;
+    const rawX = el.measure.pageX + el.measure.width / 2;
+    const rawY = el.measure.pageY + el.measure.height / 2;
+    const screen = await this.getScreenBounds();
+    const { cx: x, cy: y } = clampToViewport(rawX, rawY, el.measure, screen);
     return this.tapXY(x, y, opts);
   }
 
@@ -351,8 +368,10 @@ export class AppClient {
     const el = await this.querySelector(selector, opts);
     if (!el) throw new McpToolError('swipe', `No element found for selector: ${selector}`);
     if (!el.measure) throw new McpToolError('swipe', `Element "${selector}" has no measure data`);
-    const cx = el.measure.pageX + el.measure.width / 2;
-    const cy = el.measure.pageY + el.measure.height / 2;
+    const rawCx = el.measure.pageX + el.measure.width / 2;
+    const rawCy = el.measure.pageY + el.measure.height / 2;
+    const screen = await this.getScreenBounds();
+    const { cx, cy } = clampToViewport(rawCx, rawCy, el.measure, screen);
     const dist = opts.distance ?? Math.min(el.measure.width, el.measure.height) * 0.6;
     let x1: number, y1: number, x2: number, y2: number;
     switch (opts.direction) {
@@ -381,7 +400,10 @@ export class AppClient {
         y2 = cy;
         break;
     }
-    return this.swipeXY(x1!, y1!, x2!, y2!, { duration: opts.duration, ...opts });
+    // clamp final swipe endpoints to screen bounds
+    const p1 = clampCoord(x1!, y1!, screen);
+    const p2 = clampCoord(x2!, y2!, screen);
+    return this.swipeXY(p1.x, p1.y, p2.x, p2.y, { duration: opts.duration, ...opts });
   }
 
   // ─── Convenience: typeText by selector or uid ───────────
