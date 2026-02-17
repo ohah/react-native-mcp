@@ -63,6 +63,7 @@ export interface RunResult {
   total: number;
   passed: number;
   failed: number;
+  skipped: number;
   duration: number;
 }
 

@@ -281,6 +281,33 @@ export async function runSuite(
   return result;
 }
 
+/**
+ * SuiteResult[]에서 스텝별 passed/failed/skipped 개수를 집계한다.
+ * passed는 status === 'passed'만, skipped는 'skipped'만 카운트해
+ * 한 스텝 실패 후 건너뛴 스텝이 passed로 잡히지 않도록 한다.
+ */
+export function aggregateStepCounts(suiteResults: SuiteResult[]): {
+  total: number;
+  passed: number;
+  failed: number;
+  skipped: number;
+} {
+  const total = suiteResults.reduce((sum, s) => sum + s.steps.length, 0);
+  const passed = suiteResults.reduce(
+    (sum, s) => sum + s.steps.filter((st) => st.status === 'passed').length,
+    0
+  );
+  const failed = suiteResults.reduce(
+    (sum, s) => sum + s.steps.filter((st) => st.status === 'failed').length,
+    0
+  );
+  const skipped = suiteResults.reduce(
+    (sum, s) => sum + s.steps.filter((st) => st.status === 'skipped').length,
+    0
+  );
+  return { total, passed, failed, skipped };
+}
+
 export async function runAll(
   suites: TestSuite[],
   reporter: Reporter,
@@ -296,17 +323,13 @@ export async function runAll(
     if (bail && result.status === 'failed') break;
   }
 
-  const totalSteps = suiteResults.reduce((sum, s) => sum + s.steps.length, 0);
-  const failedSteps = suiteResults.reduce(
-    (sum, s) => sum + s.steps.filter((st) => st.status === 'failed').length,
-    0
-  );
-
+  const counts = aggregateStepCounts(suiteResults);
   const result: RunResult = {
     suites: suiteResults,
-    total: totalSteps,
-    passed: totalSteps - failedSteps,
-    failed: failedSteps,
+    total: counts.total,
+    passed: counts.passed,
+    failed: counts.failed,
+    skipped: counts.skipped,
     duration: Date.now() - start,
   };
 

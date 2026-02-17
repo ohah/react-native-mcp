@@ -53,8 +53,11 @@ export class ConsoleReporter implements Reporter {
     console.log('');
     const passedStr = result.passed > 0 ? `${GREEN}${result.passed} passed${RESET}` : '0 passed';
     const failedStr = result.failed > 0 ? `${RED}${result.failed} failed${RESET}` : '0 failed';
+    const skippedStr = result.skipped > 0 ? `${DIM}${result.skipped} skipped${RESET}` : '';
+    const parts = [passedStr, failedStr];
+    if (skippedStr) parts.push(skippedStr);
     console.log(
-      `  Results: ${passedStr}, ${failedStr} ${DIM}(${formatDuration(result.duration)})${RESET}`
+      `  Results: ${parts.join(', ')} ${DIM}(${formatDuration(result.duration)})${RESET}`
     );
     console.log('');
   }
