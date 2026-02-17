@@ -8,8 +8,9 @@
     "document"
   ],
   "scripts": {
-    "build": "bun run build:mcp && bun run build:test",
+    "build": "bun run build:mcp && bun run build:client && bun run build:test",
     "build:mcp": "bun run --filter @ohah/react-native-mcp-server build",
+    "build:client": "bun run --filter @ohah/react-native-mcp-client build",
     "build:test": "bun run --filter @ohah/react-native-mcp-test build",
     "postinstall": "bun run build && node scripts/link-mcp-bin.mjs",
     "dev": "bun scripts/dev.ts",
