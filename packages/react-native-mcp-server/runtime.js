@@ -1462,7 +1462,6 @@ var MCP = {
         var testID =
           typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : undefined;
         var pathUid = getPathUid(fiber);
-        var uid = testID || pathUid;
         var hasOnPress = typeof props.onPress === 'function';
         var hasOnLongPress = typeof props.onLongPress === 'function';
         var accessibilityLabel =
