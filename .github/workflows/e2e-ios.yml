@@ -55,6 +55,14 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Bun 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: 의존성 설치
         run: bun install
 
@@ -64,16 +72,30 @@ jobs:
       - name: MCP 클라이언트 빌드
         run: bun run --filter @ohah/react-native-mcp-client build
 
-      - name: YAML 테스트 러너 빌드
-        run: bun run --filter @ohah/react-native-mcp-test build
+      - name: Bundler 캐시
+        uses: actions/cache@v4
+        with:
+          path: examples/demo-app/ios/vendor/bundle
+          key: ${{ runner.os }}-rubygems-${{ hashFiles('examples/demo-app/ios/Gemfile') }}
+          restore-keys: |
+            ${{ runner.os }}-rubygems-
 
       - name: Ruby Bundler 설치
         run: |
           gem install bundler:2.5.9
-          bundle install
-        working-directory: examples/demo-app/ios
+          cd examples/demo-app/ios && bundle config set --local path 'vendor/bundle' && bundle install
+
+      - name: iOS 앱 번들 캐시
+        id: app-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/e2e-app-cache/ios
+          key: ${{ runner.os }}-ios-app-${{ hashFiles('examples/demo-app/ios/Podfile.lock', 'examples/demo-app/ios/**/*.pbxproj', 'examples/demo-app/ios/ReactNativeMcpDemo/**', 'examples/demo-app/package.json', 'examples/demo-app/index.js', 'examples/demo-app/metro.config.js', 'examples/demo-app/babel.config.js', 'examples/demo-app/app.json', 'examples/demo-app/tsconfig.json', 'examples/demo-app/src/**', 'examples/demo-app/react-native.config.js', 'packages/react-native-mcp-client/package.json', 'packages/react-native-mcp-client/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-ios-app-
 
       - name: CocoaPods 캐시
+        if: steps.app-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -84,10 +106,12 @@ jobs:
             ${{ runner.os }}-pods-
 
       - name: CocoaPods 설치
+        if: steps.app-cache.outputs.cache-hit != 'true'
         run: bundle exec pod install
         working-directory: examples/demo-app/ios
 
       - name: DerivedData 캐시
+        if: steps.app-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/DerivedData
@@ -96,6 +120,7 @@ jobs:
             ${{ runner.os }}-deriveddata-
 
       - name: iOS 앱 빌드
+        if: steps.app-cache.outputs.cache-hit != 'true'
         env:
           REACT_NATIVE_MCP_ENABLED: 'true'
         run: |
@@ -107,6 +132,12 @@ jobs:
             -derivedDataPath "$HOME/DerivedData" \
             -quiet
         working-directory: examples/demo-app/ios
+
+      - name: iOS 앱 번들 캐시 저장
+        if: steps.app-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "${{ runner.temp }}/e2e-app-cache/ios"
+          cp -R "$HOME/DerivedData/Build/Products/Release-iphonesimulator/"*.app "${{ runner.temp }}/e2e-app-cache/ios/"
 
       - name: 시뮬레이터 부팅 및 앱 설치
         run: |
@@ -122,11 +153,10 @@ jobs:
           echo "Booting simulator: $DEVICE_UDID"
           xcrun simctl boot "$DEVICE_UDID" || true
 
-          # 앱 설치
-          APP_PATH=$(find "$HOME/DerivedData/Build/Products/Release-iphonesimulator" -name "*.app" | head -n 1)
+          # 앱 경로: 캐시 히트 시 캐시 디렉터리, 미스 시 빌드 후 복사해 둔 캐시 디렉터리
+          APP_PATH=$(find "${{ runner.temp }}/e2e-app-cache/ios" -maxdepth 2 -name "*.app" 2>/dev/null | head -n 1)
           if [ -z "$APP_PATH" ]; then
-            echo "Error: No .app found in DerivedData"
-            find "$HOME/DerivedData/Build/Products" -maxdepth 3 -print || true
+            echo "Error: No .app found in app cache"
             exit 1
           fi
           echo "Installing app: $APP_PATH"

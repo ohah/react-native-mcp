@@ -68,6 +68,14 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Bun 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Java 17 설정
         uses: actions/setup-java@v4
         with:
@@ -83,22 +91,49 @@ jobs:
       - name: MCP 클라이언트 빌드
         run: bun run --filter @ohah/react-native-mcp-client build
 
-      - name: YAML 테스트 러너 빌드
-        run: bun run --filter @ohah/react-native-mcp-test build
-
       - name: Gradle 캐시
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Debug keystore 캐시
+        uses: actions/cache@v4
+        id: keystore-cache
+        with:
+          path: examples/demo-app/android/app/debug.keystore
+          key: android-debug-keystore
+
       - name: Debug keystore 생성 (CI용)
+        if: steps.keystore-cache.outputs.cache-hit != 'true'
         run: |
           keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug"
         working-directory: examples/demo-app/android
 
+      - name: Android APK 캐시
+        id: app-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/e2e-app-cache/android
+          key: ${{ runner.os }}-android-apk-${{ hashFiles('examples/demo-app/android/build.gradle', 'examples/demo-app/android/settings.gradle', 'examples/demo-app/android/app/build.gradle', 'examples/demo-app/android/app/src/**', 'examples/demo-app/package.json', 'examples/demo-app/index.js', 'examples/demo-app/metro.config.js', 'examples/demo-app/babel.config.js', 'examples/demo-app/app.json', 'examples/demo-app/tsconfig.json', 'examples/demo-app/src/**', 'examples/demo-app/react-native.config.js', 'packages/react-native-mcp-client/package.json', 'packages/react-native-mcp-client/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-android-apk-
+
       - name: 데모앱 Release APK 빌드
+        if: steps.app-cache.outputs.cache-hit != 'true'
         env:
           REACT_NATIVE_MCP_ENABLED: 'true'
         run: ./gradlew assembleRelease
         working-directory: examples/demo-app/android
+
+      - name: Android APK 캐시 저장
+        if: steps.app-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "${{ runner.temp }}/e2e-app-cache/android"
+          cp examples/demo-app/android/app/build/outputs/apk/release/app-release.apk "${{ runner.temp }}/e2e-app-cache/android/"
+
+      - name: APK를 빌드 출력 경로에 복사 (캐시 히트 시 E2E 스크립트가 사용)
+        if: steps.app-cache.outputs.cache-hit == 'true'
+        run: |
+          mkdir -p examples/demo-app/android/app/build/outputs/apk/release
+          cp "${{ runner.temp }}/e2e-app-cache/android/app-release.apk" examples/demo-app/android/app/build/outputs/apk/release/
 
       - name: AVD 캐시
         uses: actions/cache@v4
