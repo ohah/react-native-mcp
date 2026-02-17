@@ -93,7 +93,7 @@ teardown:
 
 프로젝트에서 YAML 시나리오를 실행하려면:
 
-1. MCP 서버 빌드: `bun run build` (또는 `build:server`)
+1. MCP 서버 빌드: `bun run build`
 2. 앱이 이미 실행 중이거나, 시나리오의 `setup`에서 `launch`로 실행되도록 구성
 3. 테스트 러너 실행 (저장소 스크립트에 따라 다름). 예:
 

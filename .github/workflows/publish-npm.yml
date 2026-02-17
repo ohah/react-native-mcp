@@ -103,7 +103,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: 서버 패키지 빌드
-        run: bun run build:mcp
+        run: bun run build
 
       - name: 빌드 결과 검증
         working-directory: packages/react-native-mcp-server

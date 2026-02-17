@@ -119,6 +119,7 @@ describe('runtime.js MCP 객체', () => {
       // WebView
       'registerWebView',
       'unregisterWebView',
+      'getWebViewIdForRef',
       'clickInWebView',
       'evaluateInWebView',
       'handleWebViewMessage',
@@ -376,6 +377,33 @@ describe('WebView 함수', () => {
     MCP.unregisterWebView('wv-to-remove');
     const ids = MCP.getRegisteredWebViewIds() as string[];
     expect(ids).not.toContain('wv-to-remove');
+  });
+
+  describe('getWebViewIdForRef — ref→id 역조회', () => {
+    it('registerWebView 된 ref에 대해 해당 id 반환', () => {
+      const mockRef = { injectJavaScript: mock(() => {}) };
+      MCP.registerWebView(mockRef, 'wv-ref-lookup');
+      const id = MCP.getWebViewIdForRef(mockRef) as string | null;
+      expect(id).toBe('wv-ref-lookup');
+    });
+
+    it('unregisterWebView 후 같은 ref는 null 반환', () => {
+      const mockRef = { injectJavaScript: mock(() => {}) };
+      MCP.registerWebView(mockRef, 'wv-temp');
+      expect(MCP.getWebViewIdForRef(mockRef)).toBe('wv-temp');
+      MCP.unregisterWebView('wv-temp');
+      expect(MCP.getWebViewIdForRef(mockRef)).toBeNull();
+    });
+
+    it('한 번도 등록하지 않은 ref는 null 반환', () => {
+      const unknownRef = { injectJavaScript: () => {} };
+      expect(MCP.getWebViewIdForRef(unknownRef)).toBeNull();
+    });
+
+    it('null/undefined ref는 null 반환', () => {
+      expect(MCP.getWebViewIdForRef(null)).toBeNull();
+      expect(MCP.getWebViewIdForRef(undefined)).toBeNull();
+    });
   });
 
   it('clickInWebView — 등록된 WebView에 script 주입', () => {

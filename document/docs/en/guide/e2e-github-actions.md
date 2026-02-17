@@ -5,7 +5,7 @@ Use the existing iOS/Android E2E workflows in the repo as reference.
 
 ## What you need
 
-- **MCP server build**: Run `bun run build` (or `build:server`) in CI
+- **MCP server build**: Run `bun run build` in CI
 - **App build**: Xcode/simulator for iOS, emulator or device for Android
 - **Test run**: `bun test e2e/...` (smoke tests) or the YAML scenario runner
 
@@ -16,7 +16,7 @@ Same flow as `.github/workflows/e2e-ios.yml` in the repo.
 1. **Runner**: `macos-latest` (for iOS simulator)
 2. **Steps**:
    - Checkout → setup Bun → install deps
-   - Build MCP server (`bun run build:server`)
+   - Build MCP server (`bun run build`)
    - Ruby/Bundler → CocoaPods (if needed)
    - Build app with Xcode (Release, iphonesimulator)
    - Boot simulator → install app → launch app

@@ -5,7 +5,7 @@ React Native MCP 기반 E2E 테스트를 **GitHub Actions**에서 자동으로 �
 
 ## 필요한 것
 
-- **MCP 서버 빌드**: CI에서 `bun run build`(또는 `build:server`)로 서버 빌드
+- **MCP 서버 빌드**: CI에서 `bun run build`로 서버 빌드
 - **앱 빌드**: iOS는 Xcode/시뮬레이터, Android는 에뮬레이터 또는 실제 기기
 - **테스트 실행**: `bun test e2e/...` (스모크 테스트) 또는 YAML 시나리오 러너
 
@@ -16,7 +16,7 @@ React Native MCP 기반 E2E 테스트를 **GitHub Actions**에서 자동으로 �
 1. **Runner**: `macos-latest` (iOS 시뮬레이터 사용 가능)
 2. **순서**:
    - 체크아웃 → Bun 설치 → 의존성 설치
-   - MCP 서버 빌드 (`bun run build:server`)
+   - MCP 서버 빌드 (`bun run build`)
    - Ruby/Bundler → CocoaPods 설치 (필요 시)
    - Xcode로 앱 빌드 (Release, iphonesimulator)
    - 시뮬레이터 부팅 → 앱 설치 → 앱 실행
