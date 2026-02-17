@@ -235,6 +235,30 @@ describe('querySelectorAll — 다중 결과', () => {
     const results = MCP.querySelectorAll('Pressable:nth(5)') as Array<Record<string, unknown>>;
     expect(results).toEqual([]);
   });
+
+  it(':first는 첫 번째 매칭만 반환', () => {
+    const root = makeFiber('View', {}, [
+      makeFiber('Pressable', { testID: 'btn-0' }),
+      makeFiber('Pressable', { testID: 'btn-1' }),
+      makeFiber('Pressable', { testID: 'btn-2' }),
+    ]);
+    setMockFiberRoot(root);
+    const results = MCP.querySelectorAll('Pressable:first') as Array<Record<string, unknown>>;
+    expect(results.length).toBe(1);
+    expect(results[0].testID).toBe('btn-0');
+  });
+
+  it(':last는 마지막 매칭만 반환', () => {
+    const root = makeFiber('View', {}, [
+      makeFiber('Pressable', { testID: 'btn-0' }),
+      makeFiber('Pressable', { testID: 'btn-1' }),
+      makeFiber('Pressable', { testID: 'btn-2' }),
+    ]);
+    setMockFiberRoot(root);
+    const results = MCP.querySelectorAll('Pressable:last') as Array<Record<string, unknown>>;
+    expect(results.length).toBe(1);
+    expect(results[0].testID).toBe('btn-2');
+  });
 });
 
 describe('querySelector — 계층 셀렉터', () => {
@@ -368,5 +392,54 @@ describe('querySelector — 복합 셀렉터', () => {
     const result = MCP.querySelector('Animated.View') as Record<string, unknown>;
     expect(result).not.toBeNull();
     expect(result.type).toBe('Animated.View');
+  });
+
+  it(':display-name("...")으로 fiber.type.displayName 매칭', () => {
+    const AnimatedComponent = function () {};
+    (AnimatedComponent as { displayName?: string }).displayName = 'Animated.View';
+    const root = makeFiber(AnimatedComponent, { testID: 'sheet-panel' });
+    setMockFiberRoot(root);
+    const result = MCP.querySelector(':display-name("Animated.View")') as Record<string, unknown>;
+    expect(result).not.toBeNull();
+    expect(result.testID).toBe('sheet-panel');
+  });
+});
+
+describe('querySelector — WebView webViewId (ref→id 역조회)', () => {
+  const WebViewType = function WebView() {};
+  (WebViewType as { displayName?: string }).displayName = 'WebView';
+
+  beforeEach(() => clearMockFiberRoot());
+
+  it('등록된 WebView ref면 결과에 webViewId 포함', () => {
+    const mockRef = { injectJavaScript: () => {} };
+    const webViewFiber = makeFiber(WebViewType, { testID: 'my-webview' });
+    webViewFiber.stateNode = mockRef;
+
+    const root = makeFiber('View', {}, [webViewFiber]);
+    setMockFiberRoot(root);
+    MCP.registerWebView(mockRef, 'registered-wv-id');
+
+    const result = MCP.querySelector('WebView') as Record<string, unknown>;
+    expect(result).not.toBeNull();
+    expect(result.type).toBe('WebView');
+    expect(result.webViewId).toBe('registered-wv-id');
+
+    MCP.unregisterWebView('registered-wv-id');
+  });
+
+  it('미등록 WebView ref면 webViewId 없음', () => {
+    const mockRef = { injectJavaScript: () => {} };
+    const webViewFiber = makeFiber(WebViewType, {});
+    webViewFiber.stateNode = mockRef;
+    // registerWebView 호출 안 함
+
+    const root = makeFiber('View', {}, [webViewFiber]);
+    setMockFiberRoot(root);
+
+    const result = MCP.querySelector('WebView') as Record<string, unknown>;
+    expect(result).not.toBeNull();
+    expect(result.type).toBe('WebView');
+    expect(result.webViewId).toBeUndefined();
   });
 });

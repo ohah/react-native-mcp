@@ -17,9 +17,10 @@ const selectorDescription = `Selector syntax for React Native Fiber tree:
 - By testID: #product-list
 - By text: :text("Login") (substring match on subtree text)
 - By attribute: [accessibilityLabel="Close"]
+- By displayName: :display-name("Animated.View") (fiber.type.displayName; Reanimated type name is AnimatedComponent)
 - Combined: Pressable:text("Submit"), ScrollView#main
 - Hierarchy: View > ScrollView (direct child), View ScrollView (descendant)
-- Index: :nth(0) for nth match (0-based)
+- Index: :first (same as :nth(0)), :nth(N) (0-based), :last for last match
 - Capabilities: :has-press (has onPress), :has-scroll (has scrollTo)
 - Union: ScrollView, FlatList (comma = OR)
 See docs/query-selector.md for full syntax reference.`;
