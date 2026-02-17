@@ -16,8 +16,8 @@ export interface TestSuite {
 }
 
 export type TestStep =
-  | { tap: { selector: string } }
-  | { swipe: { selector: string; direction: string; distance?: number } }
+  | { tap: { selector: string; duration?: number } }
+  | { swipe: { selector: string; direction: string; distance?: number; duration?: number } }
   | { typeText: { selector: string; text: string } }
   | { inputText: { text: string } }
   | { pressButton: { button: string } }
@@ -34,6 +34,7 @@ export type TestStep =
   | { terminate: string }
   | { openDeepLink: { url: string } }
   | { evaluate: { script: string } }
+  | { webviewEval: { webViewId: string; script: string } }
   | { scrollUntilVisible: { selector: string; direction?: string; maxScrolls?: number } };
 
 export interface StepResult {
@@ -66,4 +67,5 @@ export interface RunOptions {
   output?: string;
   timeout?: number;
   deviceId?: string;
+  bail?: boolean;
 }
