@@ -114,27 +114,46 @@ describe('scroll_until_visible — iOS swipe 시 좌표 정수 반올림', () =>
       isConnected: () => true,
       sendRequest: async (_req: unknown) => {
         sendRequestCallCount++;
-        if (sendRequestCallCount === 1) return { result: null };
-        if (sendRequestCallCount === 2) {
+        // 1) getScreenBounds() (getScreenInfo) — return window size
+        if (sendRequestCallCount === 1) {
+          return { result: { window: { width: 390, height: 844 } } };
+        }
+        // 2) initial querySelector check — element not found
+        if (sendRequestCallCount === 2) return { result: null };
+        // 3) getScrollArea() for scrollableSelector — returns measure with floats
+        if (sendRequestCallCount === 3) {
           return {
             result: {
               measure: { pageX: 0.5, pageY: 500.3, width: 200.8, height: 600.5 },
             },
           };
         }
+        // 4) query after swipe — still not found (not important for this test)
         return { result: null };
       },
       getPixelRatio: () => undefined,
     };
     registerScrollUntilVisible(mockServer as never, appSession as never);
 
-    await handler!({
-      platform: 'ios',
-      selector: 'Pressable:text("버튼 99")',
-      direction: 'down',
-      maxScrolls: 1,
-      scrollableSelector: 'ScrollView',
-    });
+    // scroll_until_visible 내부에서 swipe 후 500ms sleep이 있어 테스트가 느려질 수 있음.
+    // 이 테스트는 "idb로 전달되는 좌표가 정수"인지가 핵심이므로, 타이머는 즉시 실행으로 대체한다.
+    const originalSetTimeout = globalThis.setTimeout;
+    // @ts-expect-error - test-only timer override
+    globalThis.setTimeout = ((cb: (...args: any[]) => void) => {
+      cb();
+      return 0 as any;
+    }) as any;
+    try {
+      await handler!({
+        platform: 'ios',
+        selector: 'Pressable:text("버튼 99")',
+        direction: 'down',
+        maxScrolls: 1,
+        scrollableSelector: 'ScrollView',
+      });
+    } finally {
+      globalThis.setTimeout = originalSetTimeout;
+    }
 
     const swipeCalls = runIdbCommandCalls.filter(
       (c) => c.subcommand[0] === 'ui' && c.subcommand[1] === 'swipe'
