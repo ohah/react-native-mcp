@@ -42,6 +42,8 @@
 
 var _pressHandlers = {};
 var _webViews = {};
+/** ref → id 역조회 (selector로 찾은 WebView의 webViewId 반환용) */
+var _webViewRefToId = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
 /** requestId -> { resolve, reject } for webview_evaluate_script result feedback via postMessage */
 var _webViewEvalPending = {};
 var _webViewEvalRequestId = 0;
@@ -198,7 +200,7 @@ function getFiberTypeName(fiber) {
 /**
  * 셀렉터 문자열을 AST로 파싱한다 (재귀 하강 파서).
  * 지원 문법:
- *   Type#testID[attr="val"]:text("..."):nth(N):has-press:has-scroll
+ *   Type#testID[attr="val"]:text("..."):display-name("..."):nth(N):has-press:has-scroll
  *   A > B (직접 자식), A B (후손), A, B (OR)
  */
 function parseSelector(input) {
@@ -246,6 +248,7 @@ function parseSelector(input) {
       testID: null,
       attrs: [],
       text: null,
+      displayName: null,
       nth: -1,
       hasPress: false,
       hasScroll: false,
@@ -301,6 +304,20 @@ function parseSelector(input) {
           sel.nth = readNumber();
           skipSpaces();
           if (pos < len && input.charAt(pos) === ')') pos++; // skip )
+        }
+      } else if (pseudo === 'first') {
+        sel.nth = 0; // first matching element (same as :nth(0))
+      } else if (pseudo === 'last') {
+        sel.nth = -2; // -2 = last matching element
+      } else if (pseudo === 'display-name') {
+        if (pos < len && input.charAt(pos) === '(') {
+          pos++; // skip (
+          skipSpaces();
+          var dn = readQuotedString();
+          if (dn === null) throw new Error('Unclosed quote in selector :display-name("...")');
+          skipSpaces();
+          if (pos < len && input.charAt(pos) === ')') pos++;
+          sel.displayName = dn;
         }
       } else if (pseudo === 'has-press') {
         sel.hasPress = true;
@@ -359,8 +376,17 @@ function matchesCompound(fiber, compound, TextComp, ImgComp) {
   if (!fiber) return false;
   var props = fiber.memoizedProps || {};
 
-  // 타입 검사
-  if (compound.type !== null && getFiberTypeName(fiber) !== compound.type) return false;
+  // 타입 검사 (getFiberTypeName: displayName > name)
+  if (compound.type !== null) {
+    if (getFiberTypeName(fiber) !== compound.type) return false;
+  }
+
+  // displayName 검사 (fiber.type.displayName으로 매칭. Reanimated는 타입명 AnimatedComponent, displayName "Animated.View")
+  if (compound.displayName !== null) {
+    var t = fiber.type;
+    if (!t || typeof t.displayName !== 'string' || t.displayName !== compound.displayName)
+      return false;
+  }
 
   // testID 검사
   if (compound.testID !== null && props.testID !== compound.testID) return false;
@@ -503,7 +529,36 @@ function fiberToResult(fiber, TextComp, ImgComp) {
   try {
     measure = MCP.measureViewSync(uid);
   } catch (e) {}
+  // composite fiber(AnimatedComponent 등)면 measure가 null일 수 있음.
+  // 하위 첫 번째 host child의 uid로 재시도.
+  if (!measure && typeof fiber.type !== 'string') {
+    var hostChild = (function findHost(f) {
+      if (!f) return null;
+      if (typeof f.type === 'string' && f.stateNode) return f;
+      var c = f.child;
+      while (c) {
+        var h = findHost(c);
+        if (h) return h;
+        c = c.sibling;
+      }
+      return null;
+    })(fiber.child);
+    if (hostChild) {
+      var hostUid =
+        (hostChild.memoizedProps && hostChild.memoizedProps.testID) || getPathUid(hostChild);
+      try {
+        measure = MCP.measureViewSync(hostUid);
+      } catch (e) {}
+      // Bridge fallback용: host child uid 저장
+      if (!measure) result._measureUid = hostUid;
+    }
+  }
   result.measure = measure;
+  // WebView: 등록된 ref→id가 있으면 webViewId 포함 (selector로 찾은 WebView에 스크립트 실행 시 사용)
+  if (typeName === 'WebView' && sn && typeof sn.injectJavaScript === 'function') {
+    var wvId = MCP.getWebViewIdForRef(sn);
+    if (wvId) result.webViewId = wvId;
+  }
   return result;
 }
 
@@ -845,10 +900,24 @@ var MCP = {
     }
   },
   registerWebView: function (ref, id) {
-    if (ref && typeof id === 'string') _webViews[id] = ref;
+    if (ref && typeof id === 'string') {
+      _webViews[id] = ref;
+      if (_webViewRefToId)
+        try {
+          _webViewRefToId.set(ref, id);
+        } catch (e) {}
+    }
   },
   unregisterWebView: function (id) {
-    if (typeof id === 'string') delete _webViews[id];
+    if (typeof id === 'string') {
+      var ref = _webViews[id];
+      if (ref && _webViewRefToId) _webViewRefToId.delete(ref);
+      delete _webViews[id];
+    }
+  },
+  /** ref에 해당하는 등록된 webViewId 반환 (query_selector로 찾은 WebView → webViewId용) */
+  getWebViewIdForRef: function (ref) {
+    return _webViewRefToId && ref ? _webViewRefToId.get(ref) || null : null;
   },
   clickInWebView: function (id, selector) {
     var ref = _webViews[id];
@@ -1096,7 +1165,7 @@ var MCP = {
         (function visit(fiber) {
           if (!fiber) return;
           if (matchesComplexSelector(fiber, complex, c.Text, c.Image)) {
-            if (nth === -1) {
+            if (nth === -1 || nth === -2) {
               results.push(fiberToResult(fiber, c.Text, c.Image));
             } else if (matchCount === nth) {
               results.push(fiberToResult(fiber, c.Text, c.Image));
@@ -1106,6 +1175,11 @@ var MCP = {
           visit(fiber.child);
           visit(fiber.sibling);
         })(root);
+      }
+
+      // :last → keep only the last match
+      if (lastSeg.selector.nth === -2 && results.length > 1) {
+        results = [results[results.length - 1]];
       }
 
       // 같은 testID를 가진 중복 제거: capabilities가 더 많은 쪽 유지
@@ -1140,8 +1214,8 @@ var MCP = {
     var el = MCP.querySelector(selector);
     if (!el) return Promise.resolve(null);
     if (el.measure) return Promise.resolve(el);
-    // Bridge fallback
-    return MCP.measureView(el.uid)
+    // Bridge fallback: composite fiber면 _measureUid(host child) 사용
+    return MCP.measureView(el._measureUid || el.uid)
       .then(function (m) {
         el.measure = m;
         return el;
@@ -1168,7 +1242,7 @@ var MCP = {
     var chain = Promise.resolve();
     needsMeasure.forEach(function (idx) {
       chain = chain.then(function () {
-        return MCP.measureView(list[idx].uid)
+        return MCP.measureView(list[idx]._measureUid || list[idx].uid)
           .then(function (m) {
             list[idx].measure = m;
           })
@@ -1242,46 +1316,51 @@ var MCP = {
 
         if (!found) return reject(new Error('uid "' + uid + '" not found or has no native view'));
 
-        var node = found.stateNode;
-
         // Fabric: stateNode.node + nativeFabricUIManager.measureInWindow
         var g = typeof globalThis !== 'undefined' ? globalThis : global;
-        if (g.nativeFabricUIManager && node) {
-          var shadowNode =
-            node.node ||
-            (node._internalInstanceHandle &&
-              node._internalInstanceHandle.stateNode &&
-              node._internalInstanceHandle.stateNode.node);
-          // Reanimated AnimatedComponent: _viewInfo.shadowNodeWrapper
-          if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) {
-            shadowNode = node._viewInfo.shadowNodeWrapper;
-          }
-          if (shadowNode) {
-            resolveScreenOffset();
-            g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y, w, h) {
-              resolve({
-                x: x,
-                y: y,
-                width: w,
-                height: h,
-                pageX: x + _screenOffsetX,
-                pageY: y + _screenOffsetY,
-              });
-            });
-            return;
-          }
-        }
-
         // Bridge: UIManager.measure
         var rn = typeof require !== 'undefined' && require('react-native');
-        if (rn && rn.UIManager && rn.findNodeHandle) {
-          var handle = rn.findNodeHandle(node);
-          if (handle) {
-            rn.UIManager.measure(handle, function (x, y, w, h, pageX, pageY) {
-              resolve({ x: x, y: y, width: w, height: h, pageX: pageX, pageY: pageY });
-            });
-            return;
+
+        // 현재 fiber가 측정 불가면 host 조상으로 올라가서 측정 시도 (RNGH Swipeable 내부 View 등)
+        while (found) {
+          var node = found.stateNode;
+          if (g.nativeFabricUIManager && node) {
+            var shadowNode =
+              node.node ||
+              (node._internalInstanceHandle &&
+                node._internalInstanceHandle.stateNode &&
+                node._internalInstanceHandle.stateNode.node);
+            // Reanimated AnimatedComponent: _viewInfo.shadowNodeWrapper
+            if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) {
+              shadowNode = node._viewInfo.shadowNodeWrapper;
+            }
+            if (shadowNode) {
+              resolveScreenOffset();
+              g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y, w, h) {
+                resolve({
+                  x: x,
+                  y: y,
+                  width: w,
+                  height: h,
+                  pageX: x + _screenOffsetX,
+                  pageY: y + _screenOffsetY,
+                });
+              });
+              return;
+            }
           }
+
+          if (rn && rn.UIManager && rn.findNodeHandle && node) {
+            var handle = rn.findNodeHandle(node);
+            if (handle) {
+              rn.UIManager.measure(handle, function (x, y, w, h, pageX, pageY) {
+                resolve({ x: x, y: y, width: w, height: h, pageX: pageX, pageY: pageY });
+              });
+              return;
+            }
+          }
+
+          found = found.return;
         }
 
         reject(new Error('cannot measure: no native node'));
@@ -1303,7 +1382,6 @@ var MCP = {
       var found = null;
       if (isPathUid(uid)) {
         found = getFiberByPath(root, uid);
-        if (found && !found.stateNode) found = null;
       }
       if (!found) {
         (function find(fiber) {

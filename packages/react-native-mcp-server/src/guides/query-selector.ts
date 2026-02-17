@@ -62,12 +62,29 @@ Pressable:text("확인")
 View[accessibilityRole="button"]
 \`\`\`
 
-### 인덱스 셀렉터
+### displayName 셀렉터
 
-\`:nth(N)\` — N번째 매칭 요소 (0-based):
+\`:display-name("...")\` — \`fiber.type.displayName\`으로 매칭 (타입 이름과 무관):
 
 \`\`\`
-Text:nth(0)          # 첫 번째 Text
+:display-name("Animated.View")   # Reanimated: 컴포넌트 이름은 AnimatedComponent, displayName으로 Animated.View 매칭
+View:display-name("CustomBox")
+\`\`\`
+
+### 인덱스 셀렉터
+
+\`:first\` — 첫 번째 매칭 (\`:nth(0)\`와 동일). \`:last\` — 마지막 매칭:
+
+\`\`\`
+Pressable:first      # 첫 번째 Pressable
+Pressable:last       # 마지막 Pressable
+View:text("Bottom sheet"):last   # "Bottom sheet" 포함 View 중 마지막 (예: 하단 시트 패널)
+\`\`\`
+
+\`:nth(N)\` — N번째 매칭 (0-based):
+
+\`\`\`
+Text:nth(0)          # 첫 번째 Text (= :first)
 Pressable:nth(2)     # 세 번째 Pressable
 :text("항목"):nth(1) # "항목" 텍스트가 포함된 두 번째 요소
 \`\`\`
@@ -215,6 +232,9 @@ query_selector_all('Text')
 | \`#id\` | testID | \`#login-btn\` |
 | \`[attr="val"]\` | props 속성 | \`[accessibilityLabel="닫기"]\` |
 | \`:text("...")\` | 텍스트 부분 매칭 | \`:text("로그인")\` |
+| \`:display-name("...")\` | fiber.type.displayName 매칭 | \`:display-name("Animated.View")\` |
+| \`:first\` | 첫 번째 매칭 | \`Pressable:first\` |
+| \`:last\` | 마지막 매칭 | \`View:text("Bottom sheet"):last\` |
 | \`:nth(N)\` | N번째 매칭 (0-based) | \`:nth(0)\` |
 | \`:has-press\` | onPress 존재 | \`:has-press\` |
 | \`:has-scroll\` | scrollTo 존재 | \`:has-scroll\` |
