@@ -45,6 +45,7 @@ playwright-report/
 # React Native
 # iOS
 **/ios/Pods/
+**/ios/vendor/
 **/ios/build/
 **/ios/DerivedData/
 **/ios/*.xcworkspace/xcuserdata/
