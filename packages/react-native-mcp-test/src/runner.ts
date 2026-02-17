@@ -1,5 +1,5 @@
 import { mkdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { AppClient } from '@ohah/react-native-mcp-client';
 import type { Reporter } from './reporters/index.js';
 import type {
@@ -15,7 +15,14 @@ function stepKey(step: TestStep): string {
   return Object.keys(step)[0]!;
 }
 
-async function executeStep(app: AppClient, step: TestStep, outputDir: string): Promise<void> {
+interface StepContext {
+  outputDir: string;
+  /** create()에서 이미 실행한 bundleId와 같으면 launch 스텝을 건너뜀 (재시작으로 WebSocket 끊김 방지) */
+  alreadyLaunchedBundleId?: string;
+}
+
+async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Promise<void> {
+  const { alreadyLaunchedBundleId } = ctx;
   if ('tap' in step) {
     await app.tap(step.tap.selector, { duration: step.tap.duration });
   } else if ('swipe' in step) {
@@ -64,13 +71,16 @@ async function executeStep(app: AppClient, step: TestStep, outputDir: string): P
     const filePath = step.screenshot.path
       ? step.screenshot.path.startsWith('/')
         ? resolve(step.screenshot.path)
-        : resolve(outputDir, step.screenshot.path.replace(/^\.\//, ''))
+        : resolve(ctx.outputDir, step.screenshot.path.replace(/^\.\//, ''))
       : undefined;
     if (filePath) mkdirSync(dirname(filePath), { recursive: true });
     await app.screenshot({ filePath });
   } else if ('wait' in step) {
     await new Promise((resolve) => setTimeout(resolve, step.wait));
   } else if ('launch' in step) {
+    if (alreadyLaunchedBundleId !== undefined && step.launch === alreadyLaunchedBundleId) {
+      return; // 이미 create()에서 실행됨. 재실행 시 앱 재시작 → WebSocket 끊김 → 이후 스텝 실패 방지
+    }
     await app.launch(step.launch);
   } else if ('terminate' in step) {
     await app.terminate(step.terminate);
@@ -116,10 +126,11 @@ async function runSteps(
   steps: TestStep[],
   reporter: Reporter,
   suiteName: string,
-  outputDir: string
+  ctx: StepContext
 ): Promise<{ results: StepResult[]; failed: boolean }> {
   const results: StepResult[] = [];
   let failed = false;
+  const { outputDir } = ctx;
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i]!;
@@ -132,7 +143,7 @@ async function runSteps(
     }
 
     try {
-      await executeStep(app, step, outputDir);
+      await executeStep(app, step, ctx);
       const result: StepResult = { step, status: 'passed', duration: Date.now() - start };
       results.push(result);
       reporter.onStepResult(result);
@@ -198,24 +209,29 @@ export async function runSuite(
   const allStepResults: StepResult[] = [];
   let suiteFailed = false;
 
+  const stepCtx: StepContext = {
+    outputDir,
+    alreadyLaunchedBundleId: suite.config.bundleId,
+  };
+
   try {
     // setup
     if (suite.setup) {
-      const { results, failed } = await runSteps(app, suite.setup, reporter, suite.name, outputDir);
+      const { results, failed } = await runSteps(app, suite.setup, reporter, suite.name, stepCtx);
       allStepResults.push(...results);
       if (failed) suiteFailed = true;
     }
 
     // steps (skip if setup failed)
     if (!suiteFailed) {
-      const { results, failed } = await runSteps(app, suite.steps, reporter, suite.name, outputDir);
+      const { results, failed } = await runSteps(app, suite.steps, reporter, suite.name, stepCtx);
       allStepResults.push(...results);
       if (failed) suiteFailed = true;
     }
   } finally {
     // teardown always runs
     if (suite.teardown) {
-      const { results } = await runSteps(app, suite.teardown, reporter, suite.name, outputDir);
+      const { results } = await runSteps(app, suite.teardown, reporter, suite.name, stepCtx);
       allStepResults.push(...results);
     }
 
