@@ -59,7 +59,7 @@ jobs:
         run: bun install
 
       - name: MCP 서버 빌드
-        run: bun run build:server
+        run: bun run build
 
       - name: MCP 클라이언트 빌드
         run: bun run --filter @ohah/react-native-mcp-client build

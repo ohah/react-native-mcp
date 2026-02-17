@@ -172,13 +172,14 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
         if (platform === 'ios') {
           if (!(await checkIdbAvailable())) throw new Error('idb not available');
           const udid = await resolveUdid(deviceId);
+          // idb expects integer arguments
           const cmd = [
             'ui',
             'swipe',
-            String(coords.x1),
-            String(coords.y1),
-            String(coords.x2),
-            String(coords.y2),
+            String(Math.round(coords.x1)),
+            String(Math.round(coords.y1)),
+            String(Math.round(coords.x2)),
+            String(Math.round(coords.y2)),
             '--delta',
             '10',
           ];

@@ -91,7 +91,7 @@ teardown:
 
 ## How to run
 
-1. Build the MCP server: `bun run build` (or `build:server`)
+1. Build the MCP server: `bun run build`
 2. Have the app running or use `launch` in the scenario `setup`
 3. Run the test runner, e.g.:
 

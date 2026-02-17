@@ -14,6 +14,7 @@ const { values, positionals } = parseArgs({
     output: { type: 'string', short: 'o', default: './results' },
     timeout: { type: 'string', short: 't' },
     device: { type: 'string', short: 'd' },
+    'no-bail': { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -30,6 +31,7 @@ Options:
   -o, --output <dir>             Output directory (default: ./results)
   -t, --timeout <ms>             Global timeout override
   -d, --device <id>              Device ID
+  --no-bail                      Continue running after suite failure
   -h, --help                     Show help`);
   process.exit(values.help ? 0 : 1);
 }
@@ -70,6 +72,7 @@ async function main() {
     output: values.output,
     timeout: values.timeout ? Number(values.timeout) : undefined,
     deviceId: values.device,
+    bail: !values['no-bail'],
   });
 
   process.exit(result.failed > 0 ? 1 : 0);

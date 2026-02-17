@@ -130,7 +130,8 @@ export function registerDescribeUi(server: McpServer): void {
           const udid = await resolveUdid(deviceId);
           const cmd: string[] = [];
           if (mode === 'point') {
-            cmd.push('ui', 'describe-point', String(x), String(y));
+            // idb expects integer arguments for describe-point
+            cmd.push('ui', 'describe-point', String(Math.round(x)), String(Math.round(y)));
           } else {
             cmd.push('ui', 'describe-all');
           }

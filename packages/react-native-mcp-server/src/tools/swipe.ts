@@ -64,7 +64,12 @@ export function registerSwipe(server: McpServer, appSession: AppSession): void {
           if (!(await checkIdbAvailable())) return idbNotInstalledError();
           const udid = await resolveUdid(deviceId);
           const durationSec = duration / 1000;
-          const cmd = ['ui', 'swipe', String(x1), String(y1), String(x2), String(y2)];
+          // idb expects integer arguments; measure can yield floats (e.g. 742.75)
+          const ix1 = Math.round(x1);
+          const iy1 = Math.round(y1);
+          const ix2 = Math.round(x2);
+          const iy2 = Math.round(y2);
+          const cmd = ['ui', 'swipe', String(ix1), String(iy1), String(ix2), String(iy2)];
           if (durationSec !== 0.3) cmd.push('--duration', String(durationSec));
           cmd.push('--delta', '10');
           await runIdbCommand(cmd, udid);

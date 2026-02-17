@@ -206,7 +206,7 @@ This builds the server, starts it, sends MCP `initialize` → `notifications/ini
 
 E2E tests are defined as YAML files under `examples/demo-app/e2e/` (e.g. `press-counter.yaml`). The runner starts the MCP server, launches the demo app, and runs the steps. **YAML syntax reference:** [E2E YAML Reference (API docs)](docs/e2e-yaml-reference.md).
 
-From the repo root (after `bun run build:server`, and with idb/adb available):
+From the repo root (after `bun run build`, and with idb/adb available):
 
 ```bash
 # iOS (simulator must be booted, app built and installed)
