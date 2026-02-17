@@ -62,29 +62,29 @@ steps:
   - waitForVisible: { selector: 'ScrollView', timeout: 5000 }
   # ─── Step 7: ScrollView no ref (타입+텍스트로 찾기) ─────────────────
   - swipe: { selector: 'ScrollView', direction: 'up', distance: 200 }
-  - wait: 500
+  - wait: 1500
   - scrollUntilVisible:
-      { selector: 'Pressable:text("버튼 5 (0)")', direction: 'down', maxScrolls: 5 }
-  - tap: { selector: 'Pressable:text("버튼 5 (0)")' }
-  - waitForText: { text: '버튼 5 (1)', timeout: 3000 }
+      { selector: 'Pressable:text("버튼 15 (0)")', direction: 'down', maxScrolls: 5 }
+  - tap: { selector: 'Pressable:text("버튼 15 (0)")' }
+  - waitForText: { text: '버튼 15 (1)', timeout: 3000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'ScrollView', timeout: 5000 }
   # ─── Step 8: ScrollView with ref (타입+텍스트로 버튼 찾기) ──────────
   - swipe: { selector: 'ScrollView', direction: 'up', distance: 200 }
-  - wait: 500
+  - wait: 1500
   - scrollUntilVisible:
-      { selector: 'Pressable:text("버튼 10 (0)")', direction: 'down', maxScrolls: 5 }
-  - tap: { selector: 'Pressable:text("버튼 10 (0)")' }
-  - waitForText: { text: '버튼 10 (1)', timeout: 3000 }
+      { selector: 'Pressable:text("버튼 20 (0)")', direction: 'down', maxScrolls: 5 }
+  - tap: { selector: 'Pressable:text("버튼 20 (0)")' }
+  - waitForText: { text: '버튼 20 (1)', timeout: 3000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'Pressable:text("버튼 0 (0)")', timeout: 5000 }
   # ─── Step 9: ScrollView no testID ──────────────────────────────────
   - swipe: { selector: 'ScrollView', direction: 'up', distance: 250 }
-  - wait: 500
+  - wait: 1500
   - scrollUntilVisible:
-      { selector: 'Pressable:text("버튼 10 (0)")', direction: 'down', maxScrolls: 5 }
-  - tap: { selector: 'Pressable:text("버튼 10 (0)")' }
-  - waitForText: { text: '버튼 10 (1)', timeout: 3000 }
+      { selector: 'Pressable:text("버튼 20 (0)")', direction: 'down', maxScrolls: 5 }
+  - tap: { selector: 'Pressable:text("버튼 20 (0)")' }
+  - waitForText: { text: '버튼 20 (1)', timeout: 3000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'FlatList', timeout: 5000 }
   # ─── Step 10: FlatList (타입+텍스트:nth로 아이템 찾기) ──────────────
@@ -216,12 +216,13 @@ steps:
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#sheet-status', timeout: 5000 }
   # ─── Step 32: Bottom sheet ─────────────────────────────────────────
-  # 시트 패널 = "Bottom sheet" 텍스트를 가진 View 중 마지막(실제 드래그 영역)
+  # Animated.View(translateY) → measureInWindow가 transform 포함 좌표를 반환해
+  # center가 화면 밖으로 계산됨. viewport clamping이 자동으로 visible rect 내 좌표로 보정.
   - swipe:
       {
-        selector: 'View:text("Bottom sheet"):last-of-type',
+        selector: 'GestureDetector View:text("Bottom sheet")',
         direction: 'up',
-        distance: 150,
+        distance: 200,
         duration: 400,
       }
   - waitForText: { text: '상태: 열림', selector: '#sheet-status', timeout: 5000 }
