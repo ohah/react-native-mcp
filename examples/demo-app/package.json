@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android --port 8230",
-    "android:release": "react-native run-android --port 8230 --mode=release",
+    "android:release": "REACT_NATIVE_MCP_ENABLED=true react-native run-android --port 8230 --mode=release",
     "ios": "react-native run-ios --port 8230",
-    "ios:release": "react-native run-ios --port 8230 --mode Release",
+    "ios:release": "REACT_NATIVE_MCP_ENABLED=true react-native run-ios --port 8230 --mode Release",
     "start": "react-native start --port 8230 --reset-cache"
   },
   "dependencies": {
