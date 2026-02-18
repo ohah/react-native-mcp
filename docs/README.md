@@ -38,7 +38,7 @@ React Native MCP 프로젝트 문서 목차.
 
 - [설계 (DESIGN)](DESIGN.md)
 - [쿼리 셀렉터](query-selector.md)
-- [CDP 이벤트 수집 설계](cdp-interceptor-library-design.md)
+- [CDP 이벤트 수집 설계](cdp-event-collection-design.md)
 - [CDP 전용 전환 시 변경 사항](cdp-only-migration.md)
 - [앱 연결 안 됨 원인 분석](troubleshooting-app-connection.md)
 - [앱 연결 connected false](troubleshooting-app-connected-false.md)

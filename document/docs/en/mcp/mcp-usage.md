@@ -102,7 +102,7 @@ Ask the AI to "take a snapshot of the app" or "tap the login button" and it will
 
 ## When connection fails
 
-- **App not connected**: Check that Metro is running and the app has cdp-interceptor (in Metro) and the Babel preset
+- **App not connected**: Check that Metro is running and the app has the Babel preset and MCP runtime enabled (`__REACT_NATIVE_MCP__?.enable()`)
 - **Tap/screenshot not working**: Ensure idb (iOS) or adb (Android) is installed and the device is listed (`idb list-targets`, `adb devices`)
 - **Single tool failing**: Check arguments (selector, timeout, etc.) and that the app UI is loaded
 

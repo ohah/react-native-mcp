@@ -102,7 +102,7 @@ AI에게 "지금 앱 화면 스냅샷 찍어줘", "로그인 버튼 눌러줘"�
 
 ## 연결이 안 될 때
 
-- **앱이 연결되지 않음**: Metro가 실행 중인지, 앱에 cdp-interceptor(Metro)와 Babel 프리셋이 적용되었는지 확인
+- **앱이 연결되지 않음**: Metro가 실행 중인지, 앱에 Babel 프리셋 적용 및 MCP 런타임 활성화(`__REACT_NATIVE_MCP__?.enable()`)가 되어 있는지 확인
 - **tap/스크린샷이 안 됨**: iOS는 idb, Android는 adb가 설치되어 있고 디바이스가 잡히는지 확인 (`idb list-targets`, `adb devices`)
 - **특정 도구만 실패**: 해당 도구의 인자(selector, timeout 등)가 올바른지, 앱 UI가 로드된 상태인지 확인
 

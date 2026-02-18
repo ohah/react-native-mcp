@@ -48,25 +48,7 @@ npm install -g @ohah/react-native-mcp-server
 ```
 
 3. Restart Cursor (or refresh MCP)
-4. In your React Native app, load the CDP interceptor in Metro (required for console/network tools) and add the Babel preset.
-
-**Metro** — at the **very top** of `metro.config.js`, require the interceptor, then your usual config:
-
-```js
-// metro.config.js
-require('@ohah/react-native-mcp-server/cdp-interceptor');
-
-const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
-module.exports = mergeConfig(getDefaultConfig(__dirname), {
-  // your overrides
-});
-```
-
-Alternatively, run Metro with the interceptor preloaded:
-
-```bash
-node -r @ohah/react-native-mcp-server/cdp-interceptor node_modules/react-native/cli.js start
-```
+4. In your React Native app, add the Babel preset and enable the MCP runtime. For console/network tools, run Metro as usual (the MCP server connects to Metro’s debugger endpoint; no Metro config change is required).
 
 **Babel** — add the preset (AppRegistry wrapping, auto testID injection):
 
