@@ -1,3 +1,7 @@
+---
+description: Cursor, Claude Desktop, GitHub Copilot CLI에서 React Native MCP 서버 연결 및 사용 방법.
+---
+
 # MCP 사용법
 
 Cursor, Claude Desktop, GitHub Copilot CLI에서 React Native MCP 서버를 연결하고 사용하는 방법입니다.

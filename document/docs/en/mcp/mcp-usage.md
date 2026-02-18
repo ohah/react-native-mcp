@@ -1,3 +1,7 @@
+---
+description: How to connect and use the React Native MCP server in Cursor, Claude Desktop, and GitHub Copilot CLI.
+---
+
 # Using MCP
 
 How to connect and use the React Native MCP server in Cursor, Claude Desktop, and GitHub Copilot CLI.

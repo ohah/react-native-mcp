@@ -1,3 +1,7 @@
+---
+description: Reference for all 42 MCP tools (tap, snapshot, assert, etc.) with selector syntax and common parameters.
+---
+
 # Tool Reference
 
 React Native MCP provides **42 tools** across 12 categories. Every tool is available to any MCP-compatible client (Cursor, Claude, Copilot, etc.) out of the box.
