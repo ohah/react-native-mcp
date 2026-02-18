@@ -83,6 +83,8 @@ module.exports = {
 
    `true` or `1` enables MCP. When unset, the Metro transformer and Babel preset apply no MCP transforms, so no MCP code is included in the bundle. In `__DEV__` (development) the runtime also connects automatically when the env var is set.
 
+> **Expo?** See the [Expo Guide](./docs/expo-guide.md) for Expo-specific setup (babel-preset-expo, Expo Router `app/_layout.tsx`, Dev Client vs Expo Go).
+
 ### Claude Desktop
 
 Edit Claude Desktop configuration file:
