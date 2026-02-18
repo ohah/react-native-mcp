@@ -93,6 +93,25 @@ export async function resolveSerial(serial?: string): Promise<string> {
   return online[0]!.serial;
 }
 
+/* ─── 에뮬레이터 여부 (실기기 vs 에뮬 구분) ─── */
+
+/**
+ * 해당 Android 대상이 에뮬레이터(AVD)인지 여부.
+ * - adb shell getprop ro.kernel.qemu → "1" 이면 에뮬.
+ * - 시리얼이 "emulator-" 로 시작해도 에뮬로 간주 (getprop 실패 시 fallback).
+ */
+export async function isAndroidEmulator(serial: string): Promise<boolean> {
+  try {
+    const out = await runAdbCommand(['shell', 'getprop', 'ro.kernel.qemu'], serial, {
+      timeoutMs: 3000,
+    });
+    return out.trim() === '1';
+  } catch {
+    // getprop 실패 시 시리얼 접두사로 추정 (AVD는 보통 emulator-5554 등)
+    return serial.startsWith('emulator-');
+  }
+}
+
 /* ─── adb 명령 실행 ─── */
 
 export async function runAdbCommand(

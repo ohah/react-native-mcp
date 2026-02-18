@@ -66,6 +66,15 @@ const stepSchema: z.ZodType<unknown> = z.lazy(() =>
     z.object({ launch: z.string() }),
     z.object({ terminate: z.string() }),
     z.object({ openDeepLink: z.object({ url: z.string() }) }),
+    z.object({ clearState: z.string() }),
+    z.object({
+      setLocation: z.object({
+        latitude: z.number(),
+        longitude: z.number(),
+      }),
+    }),
+    z.object({ copyText: z.object({ selector: z.string() }) }),
+    z.object({ pasteText: z.null().or(z.object({}).strict()).default(null) }).strict(),
     z.object({ evaluate: z.object({ script: z.string() }) }),
     z.object({
       webviewEval: z.object({

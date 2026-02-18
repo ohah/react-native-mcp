@@ -28,6 +28,8 @@ import { registerFilePush } from './file-push.js';
 import { registerAddMedia } from './add-media.js';
 import { registerListDevices } from './list-devices.js';
 import { registerOpenDeeplink } from './open-deeplink.js';
+import { registerClearState } from './clear-state.js';
+import { registerSetLocation } from './set-location.js';
 import { registerScrollUntilVisible } from './scroll-until-visible.js';
 import { registerInspectState } from './inspect-state.js';
 import { registerGetStateChanges } from './get-state-changes.js';
@@ -59,6 +61,9 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerSwitchKeyboard(server);
   // 딥링크
   registerOpenDeeplink(server);
+  // 앱 데이터/권한 초기화, 위치 설정 (시뮬/에뮬)
+  registerClearState(server);
+  registerSetLocation(server);
   // scroll_until_visible — 요소가 보일 때까지 자동 스크롤
   registerScrollUntilVisible(server, appSession);
   // React 상태 인스펙션 — state Hook 조회 및 변경 이력

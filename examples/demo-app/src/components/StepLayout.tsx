@@ -62,5 +62,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0066cc',
   },
+  textDark: {
+    color: '#fff',
+  },
   answerArea: { flex: 1 },
 });

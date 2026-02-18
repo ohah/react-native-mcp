@@ -40,6 +40,10 @@ export type TestStep =
   | { launch: string }
   | { terminate: string }
   | { openDeepLink: { url: string } }
+  | { clearState: string }
+  | { setLocation: { latitude: number; longitude: number } }
+  | { copyText: { selector: string } }
+  | { pasteText: null | Record<string, never> }
   | { evaluate: { script: string } }
   | { webviewEval: { webViewId: string; script: string } }
   | { scrollUntilVisible: { selector: string; direction?: string; maxScrolls?: number } }

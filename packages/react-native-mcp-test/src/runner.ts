@@ -42,6 +42,8 @@ interface StepContext {
   visitedFlows?: Set<string>;
   /** CLI --env로 전달된 환경 변수. runFlow에서 하위 파일 파싱 시 전달 */
   envVars?: Record<string, string>;
+  /** setup 구간에서만 중복 launch 스킵. steps에서 terminate 후 launch는 항상 실행 */
+  phase?: 'setup' | 'steps' | 'teardown';
 }
 
 async function executeStep(
@@ -109,11 +111,12 @@ async function executeStep(
     const toLaunch =
       step.launch === '__bundleId__' ? (ctx.resolvedBundleId ?? step.launch) : step.launch;
     if (
+      ctx.phase === 'setup' &&
       ctx.didLaunchInCreate &&
       alreadyLaunchedBundleId !== undefined &&
       toLaunch === alreadyLaunchedBundleId
     ) {
-      return; // 이미 create()에서 실행됨. 재실행 시 앱 재시작 → WebSocket 끊김 → 이후 스텝 실패 방지
+      return; // setup에서 이미 create()로 실행됨. 재실행 시 WebSocket 끊김 방지. steps에서 terminate 후 launch는 실행함.
     }
     await app.launch(toLaunch);
     // --no-auto-launch 모드에서 launch 후 앱 WebSocket 연결을 대기한다.
@@ -122,9 +125,23 @@ async function executeStep(
       await app.waitForConnection(opts?.timeout ?? 90_000, 2_000);
     }
   } else if ('terminate' in step) {
-    await app.terminate(step.terminate);
+    const toTerminate =
+      step.terminate === '__bundleId__' ? (ctx.resolvedBundleId ?? step.terminate) : step.terminate;
+    await app.terminate(toTerminate);
   } else if ('openDeepLink' in step) {
     await app.openDeepLink(step.openDeepLink.url);
+  } else if ('clearState' in step) {
+    const appId =
+      step.clearState === '__bundleId__'
+        ? (ctx.resolvedBundleId ?? step.clearState)
+        : step.clearState;
+    await app.clearState(appId);
+  } else if ('setLocation' in step) {
+    await app.setLocation(step.setLocation.latitude, step.setLocation.longitude);
+  } else if ('copyText' in step) {
+    await app.copyText(step.copyText.selector);
+  } else if ('pasteText' in step) {
+    await app.pasteText();
   } else if ('evaluate' in step) {
     await app.evaluate(step.evaluate.script);
   } else if ('webviewEval' in step) {
@@ -357,27 +374,57 @@ export async function runSuite(
   try {
     // setup
     if (suite.setup) {
-      const { results, failed } = await runSteps(app, suite.setup, reporter, suite.name, stepCtx, {
-        timeout: connectionTimeout,
-      });
+      const { results, failed } = await runSteps(
+        app,
+        suite.setup,
+        reporter,
+        suite.name,
+        {
+          ...stepCtx,
+          phase: 'setup',
+        },
+        {
+          timeout: connectionTimeout,
+        }
+      );
       allStepResults.push(...results);
       if (failed) suiteFailed = true;
     }
 
     // steps (skip if setup failed)
     if (!suiteFailed) {
-      const { results, failed } = await runSteps(app, suite.steps, reporter, suite.name, stepCtx, {
-        timeout: connectionTimeout,
-      });
+      const { results, failed } = await runSteps(
+        app,
+        suite.steps,
+        reporter,
+        suite.name,
+        {
+          ...stepCtx,
+          phase: 'steps',
+        },
+        {
+          timeout: connectionTimeout,
+        }
+      );
       allStepResults.push(...results);
       if (failed) suiteFailed = true;
     }
   } finally {
     // teardown always runs
     if (suite.teardown) {
-      const { results } = await runSteps(app, suite.teardown, reporter, suite.name, stepCtx, {
-        timeout: connectionTimeout,
-      });
+      const { results } = await runSteps(
+        app,
+        suite.teardown,
+        reporter,
+        suite.name,
+        {
+          ...stepCtx,
+          phase: 'teardown',
+        },
+        {
+          timeout: connectionTimeout,
+        }
+      );
       allStepResults.push(...results);
     }
 

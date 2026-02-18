@@ -11,6 +11,10 @@ export function StepInputWithTestId({ isDarkMode }: StepProps) {
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
     >
+      {/* E2E Phase 3 copyText/pasteText: 이 텍스트를 복사해 input에 붙여넣기 검증 */}
+      <Text style={[styles.copySource, isDarkMode && styles.textDark]} testID="e2e-copy-source">
+        PASTE_ME
+      </Text>
       <TextInput
         style={[styles.textInput, isDarkMode && styles.textInputDark]}
         testID="input-with-testid"
@@ -42,6 +46,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   textInputDark: { color: '#fff', backgroundColor: '#333', borderColor: '#555' },
+  copySource: { marginBottom: 8, fontSize: 14, color: '#666' },
   result: { marginTop: 6, fontSize: 14, color: '#666' },
   textDark: { color: '#fff' },
 });

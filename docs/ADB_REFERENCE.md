@@ -430,7 +430,21 @@ adb kill-server
 adb start-server
 ```
 
-### 8.2 에뮬레이터 관리
+### 8.2 에뮬레이터 vs 실기기 구분
+
+`set_location` 등 에뮬레이터 전용 기능 사용 전에 대상이 에뮬인지 확인할 수 있다.
+
+```bash
+# 에뮬레이터면 "1", 실기기면 비어 있거나 다른 값
+adb -s <serial> shell getprop ro.kernel.qemu
+```
+
+- **"1"** → AVD(에뮬레이터). `adb emu geo fix` 등 동작.
+- **빈 문자열/기타** → 실기기. `adb emu` 명령은 지원되지 않음.
+
+시리얼이 `emulator-5554` 처럼 `emulator-` 로 시작해도 보통 에뮬레이터다. MCP `list_devices`(platform=android) 호출 시 각 디바이스에 `isEmulator: true/false` 가 포함된다.
+
+### 8.3 에뮬레이터 관리
 
 ```bash
 # 사용 가능한 AVD 목록
@@ -443,7 +457,7 @@ emulator -avd <avd_name> [-no-window] [-no-audio]
 adb emu kill
 ```
 
-### 8.3 디바이스 정보
+### 8.4 디바이스 정보
 
 ```bash
 # 기본 정보

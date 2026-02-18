@@ -305,6 +305,64 @@ Open a deep link.
 
 ---
 
+### clearState
+
+Clear app data or reset permissions. **Behavior differs by platform** — see "Platform differences and limitations" below.
+
+| Field   | Type   | Required | Description                       |
+| ------- | ------ | -------- | --------------------------------- |
+| (value) | string | ✓        | iOS: bundle ID. Android: package. |
+
+```yaml
+- clearState: org.reactnativemcp.demo
+```
+
+---
+
+### setLocation
+
+Set GPS location on the simulator (iOS) or emulator (Android). **Not supported on Android physical devices.**
+
+| Field     | Type   | Required | Description          |
+| --------- | ------ | -------- | -------------------- |
+| latitude  | number | ✓        | Latitude (-90–90)    |
+| longitude | number | ✓        | Longitude (-180–180) |
+
+```yaml
+- setLocation:
+    latitude: 37.5665
+    longitude: 126.978
+```
+
+---
+
+### copyText
+
+Read the text of the element matching the selector and store it in the **app client internal clipboard** (OS clipboard is not used). Use with `pasteText`.
+
+| Field    | Type   | Required | Description          |
+| -------- | ------ | -------- | -------------------- |
+| selector | string | ✓        | Element to read from |
+
+```yaml
+- copyText:
+    selector: '#invite-code'
+```
+
+---
+
+### pasteText
+
+Paste the content stored by `copyText` into the currently focused input via `input_text`. Reuses idb/adb input flow on both platforms.
+
+No parameters.
+
+```yaml
+- pasteText:
+```
+
+---
+
 ### evaluate
 
 Run JavaScript in the app context.
@@ -470,6 +528,17 @@ Scroll until the element is visible (repeat up to limit).
     direction: down
     maxScrolls: 10
 ```
+
+---
+
+## clearState / setLocation / copyText·pasteText — Platform differences and limitations
+
+| Step            | iOS                  | Android           | Notes                                                                                                                                                                                                                                                        |
+| --------------- | -------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **clearState**  | ✓ (permissions only) | ✓ (full)          | **iOS**: `simctl privacy reset all` — resets permissions/privacy only; app sandbox (documents, caches) is **not** cleared. Full reset requires uninstall + reinstall. **Android**: `pm clear` — clears all app data (AsyncStorage, SharedPreferences, etc.). |
+| **setLocation** | ✓                    | ✓ (emulator only) | **iOS**: All simulators supported (`idb set-location`). **Android**: **Emulator only**. `adb emu geo fix` does not work on physical devices. Use a mock location app or similar on real devices.                                                             |
+| **copyText**    | ✓                    | ✓                 | Platform-agnostic. Stores text in app client internal variable; OS clipboard is not used.                                                                                                                                                                    |
+| **pasteText**   | ✓                    | ✓                 | Pastes internal clipboard via `input_text`. Reuses idb (iOS) / adb (Android) input flow. Subject to same Unicode/keyboard limits as `input_text`.                                                                                                            |
 
 ---
 

@@ -105,7 +105,7 @@ function connect(): void {
           origin = new URL(scriptURL).origin;
         } catch (_ue) {
           var match = scriptURL.match(/^(https?:\/\/[^/?#]+)/);
-          if (match) origin = match[1];
+          if (match) origin = match[1] ?? null;
         }
       }
     } catch (_e2) {

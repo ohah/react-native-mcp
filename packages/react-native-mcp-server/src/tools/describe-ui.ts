@@ -131,7 +131,9 @@ export function registerDescribeUi(server: McpServer): void {
           const cmd: string[] = [];
           if (mode === 'point') {
             // idb expects integer arguments for describe-point
-            cmd.push('ui', 'describe-point', String(Math.round(x)), String(Math.round(y)));
+            const ix = Math.round(x!);
+            const iy = Math.round(y!);
+            cmd.push('ui', 'describe-point', String(ix), String(iy));
           } else {
             cmd.push('ui', 'describe-all');
           }

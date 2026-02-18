@@ -305,6 +305,64 @@ teardown?: Step[] # 종료 시 실행 (선택)
 
 ---
 
+### clearState
+
+앱 데이터 또는 권한을 초기화한다. **플랫폼별 동작이 다름** — 아래 "플랫폼별 차이 및 한계" 참고.
+
+| 필드 | 타입   | 필수 | 설명                                  |
+| ---- | ------ | ---- | ------------------------------------- |
+| (값) | string | ✓    | iOS: bundle ID. Android: 패키지 이름. |
+
+```yaml
+- clearState: org.reactnativemcp.demo
+```
+
+---
+
+### setLocation
+
+시뮬레이터(iOS) 또는 에뮬레이터(Android)에 GPS 위치를 설정한다. **Android 실기기에서는 미지원.**
+
+| 필드      | 타입   | 필수 | 설명              |
+| --------- | ------ | ---- | ----------------- |
+| latitude  | number | ✓    | 위도 (-90 ~ 90)   |
+| longitude | number | ✓    | 경도 (-180 ~ 180) |
+
+```yaml
+- setLocation:
+    latitude: 37.5665
+    longitude: 126.978
+```
+
+---
+
+### copyText
+
+셀렉터로 지정한 요소의 텍스트를 읽어 **앱 클라이언트 내부 클립보드**에 저장한다. OS 클립보드는 사용하지 않는다. `pasteText`와 쌍으로 사용.
+
+| 필드     | 타입   | 필수 | 설명               |
+| -------- | ------ | ---- | ------------------ |
+| selector | string | ✓    | 텍스트를 읽을 요소 |
+
+```yaml
+- copyText:
+    selector: '#invite-code'
+```
+
+---
+
+### pasteText
+
+`copyText`로 저장한 내용을 현재 포커스된 입력 필드에 **input_text**로 붙여 넣는다. iOS/Android 모두 idb·adb 입력 흐름 재사용.
+
+파라미터 없음.
+
+```yaml
+- pasteText:
+```
+
+---
+
 ### evaluate
 
 앱 컨텍스트에서 JavaScript를 실행한다.
@@ -470,6 +528,17 @@ TextInput 등의 `value` prop이 기대값과 일치하는지 검증한다.
     direction: down
     maxScrolls: 10
 ```
+
+---
+
+## clearState / setLocation / copyText·pasteText — 플랫폼별 차이 및 한계
+
+| 스텝            | iOS        | Android    | 비고                                                                                                                                                                                                                           |
+| --------------- | ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **clearState**  | ✓ (권한만) | ✓ (전체)   | **iOS**: `simctl privacy reset all` — 권한/프라이버시만 리셋. 앱 샌드박스(문서·캐시)는 삭제되지 않음. 완전 초기화는 앱 삭제 후 재설치 필요. **Android**: `pm clear` — 앱 데이터 전부 삭제(AsyncStorage, SharedPreferences 등). |
+| **setLocation** | ✓          | ✓ (에뮬만) | **iOS**: 시뮬레이터 모두 지원 (`idb set-location`). **Android**: **에뮬레이터 전용**. `adb emu geo fix`는 실기기에서 동작하지 않음. 실기기에서는 mock location 앱 등 별도 수단 필요.                                           |
+| **copyText**    | ✓          | ✓          | 플랫폼 무관. 앱 클라이언트 내부 변수에 텍스트 저장. OS 클립보드 미사용.                                                                                                                                                        |
+| **pasteText**   | ✓          | ✓          | 내부 클립보드 내용을 `input_text`로 입력. idb(iOS)·adb(Android) 입력 흐름 재사용. 한글/유니코드는 `input_text` 제한에 따름.                                                                                                    |
 
 ---
 

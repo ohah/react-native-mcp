@@ -1,0 +1,56 @@
+# Phase 3: clearState, setLocation, copyText, pasteText E2E 테스트
+# 실행: react-native-mcp-test run examples/demo-app/e2e/phase3-clear-state-set-location-copy-paste.yaml -p ios
+#       react-native-mcp-test run examples/demo-app/e2e/phase3-clear-state-set-location-copy-paste.yaml -p android
+# 주의: setLocation은 Android 에뮬레이터에서만 동작. 실기기면 해당 스텝에서 실패할 수 있음.
+name: Phase 3 clearState / setLocation / copyText·pasteText
+config:
+  platform: ios
+  timeout: 90000
+  bundleId:
+    ios: org.reactnativemcp.demo
+    android: com.reactnativemcp.demo
+
+setup:
+  - launch: __bundleId__
+  - waitForVisible:
+      selector: 'Pressable:text("Count:")'
+      timeout: 15000
+
+steps:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 1. clearState — 앱 데이터/권한 초기화 후 재기동
+  # iOS: 권한만 리셋. Android: pm clear로 전체 데이터 삭제.
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  - terminate: __bundleId__
+  - clearState: __bundleId__
+  - launch: __bundleId__
+  - waitForVisible:
+      selector: 'Pressable:text("Count:")'
+      timeout: 15000
+  - assertText: { text: 'Count: 0', selector: 'Pressable:text("Count:")' }
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 2. setLocation — 시뮬/에뮬에 GPS 설정
+  # iOS: 시뮬 모두 지원. Android: 에뮬레이터 전용(실기기 시 스텝 실패 가능).
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  - setLocation:
+      latitude: 37.5665
+      longitude: 126.978
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 3. copyText / pasteText — 내부 클립보드 → input_text
+  # Step 5(Input with testID)까지 이동: 다음 x4 → e2e-copy-source 복사 → 입력란에 붙여넣기
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  - tap: { selector: 'Pressable:text("다음")' }
+  - wait: 300
+  - tap: { selector: 'Pressable:text("다음")' }
+  - wait: 300
+  - tap: { selector: 'Pressable:text("다음")' }
+  - wait: 300
+  - tap: { selector: 'Pressable:text("다음")' }
+  - wait: 300
+  - waitForVisible: { selector: '#e2e-copy-source', timeout: 5000 }
+  - copyText: { selector: '#e2e-copy-source' }
+  - tap: { selector: '#input-with-testid' }
+  - pasteText:
+  - waitForText: { text: '입력값: PASTE_ME', selector: '#input-result-1', timeout: 3000 }
