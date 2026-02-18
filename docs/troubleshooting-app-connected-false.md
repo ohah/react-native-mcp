@@ -77,12 +77,13 @@
 
 - `__REACT_NATIVE_MCP__`가 없다면, 12300으로 접속하는 코드 자체가 번들에 없음.
 - Babel preset은 넣었는데 **진입점이 해당 preset을 타지 않거나**, **캐시** 때문에 예전 번들이 로드되는 경우.
+- **Release/비개발 빌드**: Metro를 `REACT_NATIVE_MCP_ENABLED=true` 로 실행하지 않으면 런타임이 12300에 연결하지 않음. 앱 진입점에 `enable()` 호출은 필요 없고, 환경변수로 활성화함.
 
 **확인**
 
 - 앱 로그에 `[MCP] runtime loaded, __REACT_NATIVE_MCP__ available`가 한 번 나오는지.
 - 연결 성공 시 `[MCP] Connected to server ws://localhost:12300`가 나오는지.
-- 없으면: Metro 캐시 리셋(`react-native start --reset-cache`) 후 앱 다시 빌드/실행.
+- 없으면: Metro 캐시 리셋(`react-native start --reset-cache`) 후 앱 다시 빌드/실행. Release면 `REACT_NATIVE_MCP_ENABLED=true` 로 Metro 실행했는지 확인.
 
 ---
 

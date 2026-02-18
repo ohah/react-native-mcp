@@ -32,8 +32,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bunup",
-    "dev": "bunup --watch"
+    "build": "bunx tsdown",
+    "dev": "bunx tsdown --watch"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.0",
@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "bunup": "^0.16.22",
+    "tsdown": "0.20.3",
     "typescript": "^5.9.3"
   }
 }

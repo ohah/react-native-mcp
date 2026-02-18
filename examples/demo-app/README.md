@@ -26,6 +26,14 @@ bun run android   # 또는 npm run android
 bun run start
 ```
 
+MCP 연결을 쓰려면 Metro를 **환경변수로 활성화**한 뒤 실행하면 됩니다 (앱 코드에 `enable()` 호출 불필요).
+
+```bash
+REACT_NATIVE_MCP_ENABLED=true bun run start
+# 또는
+REACT_NATIVE_MCP_ENABLED=1 npx react-native start
+```
+
 ## 앱 이름
 
 - **표시 이름**: React Native MCP Demo

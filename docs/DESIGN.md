@@ -205,7 +205,7 @@ Source Code
   ↓
 Bundle (Babel 변환 포함, runtime 포함)
   ↓
-App 실행 → __DEV__=false → WebSocket 미연결 (MCP.enable() 호출 시 수동 활성화 가능)
+App 실행 → __DEV__=false → WebSocket 미연결 (REACT_NATIVE_MCP_ENABLED로 Metro 실행 시 또는 MCP.enable() 수동 활성화)
 ```
 
 ---
@@ -367,7 +367,7 @@ function MyButton({ title, onPress }) {
 8. **WebView**: `registerWebView`, `unregisterWebView`, `evaluateInWebView` (Babel 주입 필수 — Fiber 대체 불가)
 9. **콘솔 로그 캡처**: `nativeLoggingHook` 체이닝으로 콘솔 출력 버퍼링 (최대 500개). `getConsoleLogs(options)` / `clearConsoleLogs()`. level 맵핑: 0=log, 1=info, 2=warn, 3=error
 10. **네트워크 요청 캡처**: `XMLHttpRequest.prototype` + `fetch` monkey-patch로 네트워크 요청 버퍼링 (최대 200개, body 최대 10000자). `getNetworkRequests(options)` / `clearNetworkRequests()`. 필터: url(substring), method(정확), status(정확), since(timestamp), limit(기본 50)
-11. **WebSocket 연결**: `__DEV__` 자동 연결, `MCP.enable()` 수동 활성화, 지수 백오프 재연결 (최대 30초)
+11. **WebSocket 연결**: `__DEV__` 자동 연결, Release는 `REACT_NATIVE_MCP_ENABLED`(빌드 시) 또는 `MCP.enable()` 수동 활성화, 지수 백오프 재연결 (최대 30초)
 
 > runtime.js의 레거시 함수(registerPressHandler, registerScrollRef 등)는 코드가 유지되어 있으나,
 > Babel 플래그 비활성화로 호출되지 않음. Babel 플래그 재활성화 시 즉시 동작.
@@ -377,7 +377,7 @@ function MyButton({ title, onPress }) {
 **WebSocket 연결 조건**:
 
 - `__DEV__ === true` → 자동 연결
-- `__DEV__ === false` → `MCP.enable()` 호출 시 수동 연결
+- `__DEV__ === false` → Metro 실행 시 `REACT_NATIVE_MCP_ENABLED=true` 로 주입된 플래그 또는 `MCP.enable()` 호출 시 수동 연결
 - `runApplication` 시점에 미연결이면 재시도
 - 5초 주기 재시도 (MCP 서버가 나중에 뜨는 경우 대응)
 
@@ -466,7 +466,7 @@ function MyButton({ title, onPress }) {
   - [ ] 추적 코드 삽입 (미구현)
 - [x] 프로덕션 처리
   - [x] Babel 변환은 항상 적용 (testID, ref, onPress 래핑)
-  - [x] runtime은 `__DEV__` 체크 → false이면 WebSocket 미연결 (`MCP.enable()`으로 수동 활성화 가능)
+  - [x] runtime은 `__DEV__` 체크 → false이면 WebSocket 미연결 (`REACT_NATIVE_MCP_ENABLED` 또는 `MCP.enable()`으로 활성화)
   - [ ] Dead code elimination 검증 (미검증)
 - [x] MCP 조작 (evaluate_script로 구현)
   - [x] testID로 onPress 트리거 → 네이티브 `tap` 도구로 대체 (실제 터치 파이프라인)
@@ -637,7 +637,7 @@ const INJECT_SCROLL_REF = true; // false → true
 ### Phase 3
 
 - [x] AI가 버튼 클릭 등 조작 (네이티브 tap 도구로 실제 터치 주입)
-- [x] 프로덕션 빌드에서 WebSocket 미연결 (`__DEV__` 체크, `MCP.enable()` 수동 활성화)
+- [x] 프로덕션 빌드에서 WebSocket 미연결 (`__DEV__` 체크, `REACT_NATIVE_MCP_ENABLED` 또는 `MCP.enable()` 활성화)
 - [ ] Dead code elimination 검증
 
 ### Phase 4
