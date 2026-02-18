@@ -668,16 +668,111 @@ npx react-native-mcp-test run e2e/ -p ios -r slack --slack-webhook $SLACK_WEBHOO
 
 ### 12. VS Code / Cursor 확장
 
+**설계 원칙**: 시각화 로직을 VS Code에 종속시키지 않는다. **Shared UI + Thin Shell** 구조로 설계하여, 동일한 UI 컴포넌트를 VS Code webview, 웹 대시보드, 데스크탑 앱에서 재사용할 수 있게 한다.
+
+#### 패키지 구조
+
 ```
-현재: CLI + MCP tool로만 사용
-추가:
-├─ 사이드 패널에 컴포넌트 트리 시각화
-├─ 트리에서 컴포넌트 클릭 → 소스 코드로 이동
-├─ 인라인 접근성 경고 표시
-└─ 네트워크 요청 실시간 뷰
+packages/
+├── react-native-mcp-ui/        ← 공유 React UI (웹 컴포넌트)
+│   ├── src/
+│   │   ├── panels/
+│   │   │   ├── NetworkInspector.tsx    ← 요청 목록 + 모킹 룰 관리
+│   │   │   ├── ConsoleViewer.tsx       ← 콘솔 로그 실시간 뷰
+│   │   │   ├── ComponentTree.tsx       ← Fiber 트리 시각화
+│   │   │   ├── StateInspector.tsx      ← Hook 상태 + 변경 이력
+│   │   │   └── MockRuleEditor.tsx      ← 네트워크 모킹 룰 CRUD UI
+│   │   ├── hooks/
+│   │   │   └── useMcpConnection.ts     ← MCP 서버 통신 추상화
+│   │   └── store/
+│   │       └── mcp-store.ts            ← Zustand — 전체 MCP 상태 관리
+│   └── package.json
+│
+├── react-native-mcp-vscode/    ← VS Code 확장 (thin shell)
+│   ├── src/
+│   │   ├── extension.ts               ← activate/deactivate
+│   │   ├── webview-provider.ts         ← WebviewPanel에 mcp-ui 렌더
+│   │   ├── tree-providers/
+│   │   │   ├── DeviceTreeProvider.ts   ← 사이드바: 연결된 디바이스
+│   │   │   └── ComponentTreeProvider.ts← 사이드바: 컴포넌트 트리
+│   │   └── commands.ts                 ← 팔레트 명령 (Ctrl+Shift+P)
+│   └── package.json
 ```
 
-**난이도**: ★★★
+#### 레이어 분리
+
+| 레이어     | 패키지              | 역할                       | 재사용 범위                            |
+| ---------- | ------------------- | -------------------------- | -------------------------------------- |
+| **데이터** | `mcp-client` (기존) | MCP 서버 통신, 도구 호출   | 모든 곳                                |
+| **UI**     | `mcp-ui` (신규)     | React 컴포넌트 + 상태 관리 | VS Code webview, 웹 대시보드, Electron |
+| **Shell**  | `mcp-vscode` (신규) | VS Code API 래핑만         | VS Code 전용                           |
+
+`mcp-ui`는 순수 React 앱이라서 어디서든 import 가능:
+
+```tsx
+// VS Code webview에서
+panel.webview.html = `<div id="root"></div><script src="${uiBundle}"></script>`;
+
+// 미래 웹 대시보드에서
+import { NetworkInspector, ConsoleViewer } from '@ohah/react-native-mcp-ui';
+```
+
+#### VS Code 네이티브 API를 쓰는 부분 (shell에서만 처리)
+
+| 기능                    | VS Code API            | 이유                                                     |
+| ----------------------- | ---------------------- | -------------------------------------------------------- |
+| 사이드바 컴포넌트 트리  | TreeView               | 클릭 → 소스 코드 점프는 VS Code API 필요                 |
+| 연결 상태 표시          | StatusBar              | `🟢 ios-1 connected`                                     |
+| 명령 팔레트             | Command Palette        | `RN MCP: Take Screenshot`, `RN MCP: Set Network Mock` 등 |
+| 접근성 감사 인라인 표시 | CodeLens / Diagnostics | 에디터 내 경고 표시                                      |
+| testID 파일 표시        | File decoration        | testID가 있는 컴포넌트 파일에 아이콘                     |
+
+#### 통신 아키텍처
+
+```
+VS Code Extension
+  ├── Webview (mcp-ui)
+  │     ↕ postMessage
+  ├── Extension Host
+  │     ↕ AppClient (기존)
+  └── MCP Server (localhost:12300)
+        ↕ WebSocket
+      React Native App
+```
+
+Extension Host가 AppClient로 MCP 서버에 연결하고, webview와는 `postMessage`로 통신. mcp-ui의 Zustand store가 메시지를 받아 상태 업데이트.
+
+#### 실시간 데이터
+
+현재 MCP 서버는 poll 방식 (도구 호출 → 결과 반환). 실시간 모니터링에는 두 가지 선택:
+
+| 방식                    | 설명                                                 | 장단점                                        |
+| ----------------------- | ---------------------------------------------------- | --------------------------------------------- |
+| **Polling**             | 1초 간격으로 `list_network_requests` 등 호출         | 간단하지만 비효율적                           |
+| **WebSocket subscribe** | Extension이 12300 포트에 직접 연결, 이벤트 push 수신 | 효율적, 서버에 `subscribe` 프로토콜 추가 필요 |
+
+서버에 `{type: 'subscribe', channels: ['network', 'console', 'state']}` 구독 프로토콜을 추가하면 mcp-ui가 실시간 업데이트를 받을 수 있다.
+
+#### 구현 Phase
+
+```
+Phase 1: mcp-ui 기본 패널 (NetworkInspector + ConsoleViewer)
+         + mcp-vscode shell (webview + 연결 상태)
+         → "앱 네트워크/콘솔을 VS Code에서 실시간으로 본다"
+
+Phase 2: ComponentTree (TreeView) + 소스 코드 점프
+         → "컴포넌트 클릭하면 해당 파일로 이동"
+
+Phase 3: MockRuleEditor + StateInspector
+         → "VS Code에서 네트워크 모킹 룰을 GUI로 관리"
+
+Phase 4: CodeLens (접근성 감사 인라인 표시)
+         → "파일 편집 중에 a11y 경고가 보인다"
+```
+
+**데스크탑 앱과의 관계**: mcp-ui 패키지를 공유하므로, 필요 시 웹 대시보드(QA/비개발자용)나 Electron 앱으로 확장 가능. VS Code 확장을 먼저 구현하고 수요가 확인되면 별도 셸 추가.
+
+**난이도**: ★★★ (전체), Phase 1만 ★★☆
 
 ---
 
