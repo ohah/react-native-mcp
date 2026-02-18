@@ -88,7 +88,7 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
 
       const queryCode = buildQuerySelectorEvalCode(selector);
 
-      /** 요소가 뷰포트(화면) 안에 있는지. measure가 없으면 true(기존 동작 유지). */
+      /** 요소의 중심이 뷰포트(화면) 안에 있는지. measure가 없으면 true(기존 동작 유지). */
       function isInViewport(
         measure: { pageX: number; pageY: number; width: number; height: number } | undefined,
         screenWidth: number,
@@ -96,13 +96,9 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
       ): boolean {
         if (!measure) return true;
         const { pageX, pageY, width, height } = measure;
-        const margin = 20;
-        return (
-          pageX + width >= -margin &&
-          pageX <= screenWidth + margin &&
-          pageY + height >= -margin &&
-          pageY <= screenHeight + margin
-        );
+        const centerX = pageX + width / 2;
+        const centerY = pageY + height / 2;
+        return centerX >= 0 && centerX <= screenWidth && centerY >= 0 && centerY <= screenHeight;
       }
 
       async function getScreenBounds(): Promise<{ width: number; height: number }> {

@@ -109,29 +109,34 @@ export async function runAdbCommand(
 
 /* ─── Android density scale (dp → pixel 변환) ─── */
 
-let _cachedScale: number | null = null;
+const _scaleBySerial = new Map<string, number>();
 
 /**
- * Android screen density scale.
+ * Android screen density scale (디바이스별 캐싱).
  * density 160 = 1x, 320 = 2x, 480 = 3x 등.
  * dp × scale = pixel.
  */
 export async function getAndroidScale(serial?: string): Promise<number> {
-  if (_cachedScale != null) return _cachedScale;
+  const key = serial ?? '_default';
+  const cached = _scaleBySerial.get(key);
+  if (cached != null) return cached;
   try {
     const args = serial ? ['-s', serial, 'shell', 'wm', 'density'] : ['shell', 'wm', 'density'];
     const buf = await runCommand('adb', args, { timeoutMs: 5000 });
     const match = buf.toString().match(/(\d+)/);
-    _cachedScale = match ? parseInt(match[1]!, 10) / 160 : 1;
+    if (!match) throw new Error('density not found in wm output');
+    const scale = parseInt(match[1]!, 10) / 160;
+    _scaleBySerial.set(key, scale);
+    return scale;
   } catch {
-    _cachedScale = 1;
+    // 감지 실패 시 캐싱하지 않음 → 다음 호출에서 재시도
+    return 2.75; // 일반적인 Android 밀도 fallback (440dpi)
   }
-  return _cachedScale;
 }
 
 /** 테스트용 density 캐시 초기화 */
 export function _resetScaleCache(): void {
-  _cachedScale = null;
+  _scaleBySerial.clear();
 }
 
 /* ─── 에러 헬퍼 ─── */
