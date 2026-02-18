@@ -2094,7 +2094,11 @@
 									return Promise.resolve(_body);
 								},
 								json: function() {
-									return Promise.resolve(JSON.parse(_body));
+									try {
+										return Promise.resolve(JSON.parse(_body));
+									} catch (e) {
+										return Promise.reject(/* @__PURE__ */ new SyntaxError("Invalid JSON: " + e.message));
+									}
 								},
 								clone: function() {
 									return fakeResponse;
