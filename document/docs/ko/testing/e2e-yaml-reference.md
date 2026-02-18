@@ -1,3 +1,7 @@
+---
+description: react-native-mcp-test 러너용 YAML 시나리오 문법 레퍼런스. 파일 구조, config, steps, teardown 설명.
+---
+
 # E2E YAML 레퍼런스
 
 `react-native-mcp-test` 러너가 읽는 YAML 시나리오 문법 레퍼런스. 한 파일에 하나의 테스트 스위트를 정의한다.

@@ -1,3 +1,7 @@
+---
+description: Reference for 33 E2E YAML step types (tap, assert, wait, navigate, etc.) with syntax and selector rules.
+---
+
 # Steps Reference
 
 The E2E YAML runner supports **33 step types** across 7 categories. Each step performs a single action — tap, assert, wait, navigate, etc.

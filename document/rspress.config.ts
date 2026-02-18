@@ -7,8 +7,15 @@ const base = '/react-native-mcp/';
 const config: UserConfig = {
   root: path.join(__dirname, 'docs'),
   base,
+  title: 'React Native MCP',
+  description:
+    'MCP server for React Native app automation and monitoring. Use with Cursor, Claude Desktop, and GitHub Actions.',
   logo: `${base}logo.svg`,
   lang: 'en',
+  head: [
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:site_name', content: 'React Native MCP' }],
+  ],
   locales: [
     {
       lang: 'en',

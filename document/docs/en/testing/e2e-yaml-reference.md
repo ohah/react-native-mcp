@@ -1,3 +1,7 @@
+---
+description: Reference for the YAML scenario syntax used by react-native-mcp-test (file structure, config, steps, teardown).
+---
+
 # E2E YAML Reference
 
 Reference for the YAML scenario syntax used by the `react-native-mcp-test` runner. One test suite per file.
