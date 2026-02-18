@@ -95,7 +95,9 @@ export class GithubPrReporter implements Reporter {
 
     for (const suite of result.suites) {
       const icon = suite.status === 'passed' ? '✅' : '❌';
-      lines.push(`| ${suite.name} | ${icon} ${suite.status} | ${suite.steps.length} | ${formatDuration(suite.duration)} |`);
+      lines.push(
+        `| ${suite.name} | ${icon} ${suite.status} | ${suite.steps.length} | ${formatDuration(suite.duration)} |`
+      );
     }
 
     if (result.failed > 0) {

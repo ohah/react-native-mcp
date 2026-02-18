@@ -48,10 +48,7 @@ export class SlackReporter implements Reporter {
     try {
       await this.sendToSlack(result);
     } catch (err) {
-      console.error(
-        'Slack reporter failed to send:',
-        err instanceof Error ? err.message : err
-      );
+      console.error('Slack reporter failed to send:', err instanceof Error ? err.message : err);
     }
   }
 

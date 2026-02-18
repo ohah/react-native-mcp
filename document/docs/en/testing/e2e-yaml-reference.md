@@ -555,14 +555,14 @@ teardown:
 
 ### Reporter types
 
-| Reporter      | Description |
-| ------------- | ----------- |
-| `console`     | Terminal summary and step output (default). |
-| `junit`       | `output/junit.xml`. CI JUnit report. |
-| `json`        | `output/results.json`. |
-| `html`        | `output/report.html`. Visual report with screenshots. |
-| `slack`       | Send results to Slack webhook. Requires `--slack-webhook` or `SLACK_WEBHOOK_URL`. |
-| `github-pr`   | Post comment on PR via `gh pr comment` when in a PR; otherwise writes `output/pr-comment.md`. |
+| Reporter    | Description                                                                                   |
+| ----------- | --------------------------------------------------------------------------------------------- |
+| `console`   | Terminal summary and step output (default).                                                   |
+| `junit`     | `output/junit.xml`. CI JUnit report.                                                          |
+| `json`      | `output/results.json`.                                                                        |
+| `html`      | `output/report.html`. Visual report with screenshots.                                         |
+| `slack`     | Send results to Slack webhook. Requires `--slack-webhook` or `SLACK_WEBHOOK_URL`.             |
+| `github-pr` | Post comment on PR via `gh pr comment` when in a PR; otherwise writes `output/pr-comment.md`. |
 
 ### How to verify reporters
 
