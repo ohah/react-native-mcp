@@ -29,6 +29,7 @@
     "test:coverage": "bun test packages/ --coverage",
     "test:e2e": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/all-steps.yaml",
     "test:e2e:phase2": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/phase2-flow-control.yaml",
+    "test:e2e:network-mock": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/network-mock.yaml",
     "setup-mcp": "bun run .cursor/scripts/set-mcp-mise-path.ts",
     "test:yaml": "bun run --filter @ohah/react-native-mcp-test run",
     "docs:dev": "bun run --filter document dev",

@@ -1,5 +1,6 @@
 import { NETWORK_BODY_LIMIT } from './shared';
-import { pushNetworkEntry } from './network-helpers';
+import { pushNetworkEntry, truncateBody } from './network-helpers';
+import { findMatchingMock } from './network-mock';
 
 // ─── fetch monkey-patch — 네이티브 fetch 요청 캡처 ──────────────
 (function () {
@@ -85,6 +86,72 @@ import { pushNetworkEntry } from './network-helpers';
       error: null,
       state: 'pending',
     };
+
+    // ─── Network mock intercept ──────────────────────
+    var mockRule = findMatchingMock(method, url);
+    if (mockRule) {
+      var mockResp = mockRule.response;
+      var deliverMock = function () {
+        entry.status = mockResp.status;
+        entry.statusText = mockResp.statusText || null;
+        entry.responseHeaders = JSON.stringify(mockResp.headers);
+        entry.responseBody = truncateBody(mockResp.body);
+        entry.duration = Date.now() - entry.startTime;
+        entry.state = 'done';
+        entry.mocked = true;
+        pushNetworkEntry(entry);
+        var fakeResponse: any;
+        try {
+          fakeResponse = new Response(mockResp.body, {
+            status: mockResp.status,
+            statusText: mockResp.statusText || '',
+            headers: mockResp.headers,
+          });
+        } catch (_e) {
+          var _body = mockResp.body;
+          fakeResponse = {
+            ok: mockResp.status >= 200 && mockResp.status < 300,
+            status: mockResp.status,
+            statusText: mockResp.statusText || '',
+            headers: {
+              get: function (k: string) {
+                return mockResp.headers[k] || null;
+              },
+              forEach: function (cb: (v: string, k: string) => void) {
+                for (var hk in mockResp.headers) cb(mockResp.headers[hk]!, hk);
+              },
+            },
+            text: function () {
+              return Promise.resolve(_body);
+            },
+            json: function () {
+              return Promise.resolve(JSON.parse(_body));
+            },
+            clone: function () {
+              return fakeResponse;
+            },
+            url: url,
+            type: 'basic',
+            redirected: false,
+            bodyUsed: false,
+          };
+        }
+        return fakeResponse;
+      };
+      if (mockResp.delay > 0) {
+        return new Promise(function (resolve: any) {
+          setTimeout(function () {
+            resolve(deliverMock());
+          }, mockResp.delay);
+        });
+      }
+      return new Promise(function (resolve: any) {
+        setTimeout(function () {
+          resolve(deliverMock());
+        }, 0);
+      });
+    }
+    // ─── End mock intercept ──────────────────────────
 
     return _origFetch.apply(this, arguments).then(
       function (response: any) {

@@ -55,7 +55,20 @@ export type TestStep =
   | { repeat: { times: number; steps: TestStep[] } }
   | { runFlow: string }
   | { if: { platform?: Platform; visible?: string; steps: TestStep[] } }
-  | { retry: { times: number; steps: TestStep[] } };
+  | { retry: { times: number; steps: TestStep[] } }
+  | {
+      mockNetwork: {
+        urlPattern: string;
+        isRegex?: boolean;
+        method?: string;
+        status?: number;
+        statusText?: string;
+        headers?: Record<string, string>;
+        body?: string;
+        delay?: number;
+      };
+    }
+  | { clearNetworkMocks: null | Record<string, never> };
 
 export interface StepResult {
   step: TestStep;

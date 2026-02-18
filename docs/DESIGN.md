@@ -264,6 +264,10 @@ packages/react-native-mcp-server/
 - `clear_console_messages` - 콘솔 로그 버퍼 초기화 ✅
 - `list_network_requests` - XHR/fetch monkey-patch 기반 네트워크 요청 조회 (url/method/status/since/limit 필터) ✅
 - `clear_network_requests` - 네트워크 요청 버퍼 초기화 ✅
+- `set_network_mock` - 네트워크 응답 모킹 룰 추가 (urlPattern/isRegex/method/status/body/headers/delay) ✅
+- `list_network_mocks` - 현재 등록된 네트워크 모킹 룰 목록 조회 ✅
+- `remove_network_mock` - 특정 모킹 룰 제거 (id) ✅
+- `clear_network_mocks` - 모든 모킹 룰 초기화 ✅
 
 **네이티브 도구** (호스트 CLI에서 실행, `platform` 파라미터로 iOS/Android 통합):
 
@@ -493,6 +497,7 @@ function MyButton({ title, onPress }) {
 - [x] Modal — React Fiber 트리에 포함되므로 기존 도구(take_snapshot, query_selector, tap 등)로 별도 처리 없이 동작
 - [x] FlatList/ScrollView — 네이티브 `swipe` 도구로 수동 스크롤 후 `query_selector_all`로 조회·탭 가능 (자동화된 가상화 탐색은 미구현)
 - [x] 네트워크 모니터링 — XHR/fetch monkey-patch로 네트워크 요청 캡처 (`list_network_requests`, `clear_network_requests`) ✅
+- [x] 네트워크 모킹 — URL 패턴 매칭으로 XHR/fetch 요청을 실제 전송 없이 가짜 응답 반환 (`set_network_mock`, `list_network_mocks`, `remove_network_mock`, `clear_network_mocks`) ✅
 - [x] 콘솔 모니터링 — `nativeLoggingHook` 체이닝으로 콘솔 로그 캡처 (`list_console_messages`, `clear_console_messages`) ✅
 - [x] 연결 상태 + 디바이스 목록 확인 (`get_debugger_status`) ✅
 - [x] Fiber 트리 기반 셀렉터 (`query_selector`, `query_selector_all`) — CSS 유사 Fiber 셀렉터 ✅

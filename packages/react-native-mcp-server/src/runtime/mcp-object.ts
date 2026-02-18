@@ -26,6 +26,12 @@ import {
 } from './mcp-scroll';
 import { getConsoleLogs, clearConsoleLogs } from './mcp-console';
 import { getNetworkRequests, clearNetworkRequests } from './mcp-network';
+import {
+  addNetworkMock,
+  removeNetworkMock,
+  listNetworkMocks,
+  clearNetworkMocks,
+} from './network-mock';
 import { inspectState, getStateChanges, clearStateChanges } from './mcp-state';
 import {
   querySelector,
@@ -67,6 +73,10 @@ var MCP: any = {
   clearConsoleLogs: clearConsoleLogs,
   getNetworkRequests: getNetworkRequests,
   clearNetworkRequests: clearNetworkRequests,
+  addNetworkMock: addNetworkMock,
+  removeNetworkMock: removeNetworkMock,
+  listNetworkMocks: listNetworkMocks,
+  clearNetworkMocks: clearNetworkMocks,
   inspectState: inspectState,
   getStateChanges: getStateChanges,
   clearStateChanges: clearStateChanges,

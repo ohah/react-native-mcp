@@ -239,6 +239,18 @@ await app.clearConsoleLogs();
 const requests = await app.networkRequests({ url: '/api', method: 'POST' });
 await app.clearNetworkRequests();
 
+// 네트워크 모킹 — 실제 요청 없이 가짜 응답 반환
+await app.setNetworkMock({
+  urlPattern: 'api.example.com/users',
+  method: 'GET',
+  status: 200,
+  body: '{"users":[{"id":1,"name":"Mock User"}]}',
+  headers: { 'Content-Type': 'application/json' },
+});
+const mocks = await app.listNetworkMocks();
+await app.removeNetworkMock(1); // id로 특정 룰 제거
+await app.clearNetworkMocks(); // 모든 모킹 룰 제거
+
 const status = await app.getStatus();
 // { appConnected: true, devices: [{ deviceId: 'ios-1', platform: 'ios' }] }
 ```

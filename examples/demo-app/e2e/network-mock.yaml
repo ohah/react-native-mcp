@@ -1,0 +1,111 @@
+# Network Mocking E2E 테스트
+# 실행: bun run test:e2e:network-mock -- -p ios
+#   또는: node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/network-mock.yaml -p ios
+#
+# 검증 항목:
+#   1. mockNetwork → fetch GET → mock status 반영 확인
+#   2. mockNetwork → fetch POST → mock status 반영 확인
+#   3. mockNetwork → XHR GET → mock status 반영 확인
+#   4. mockNetwork → 404를 200으로 오버라이드 확인
+#   5. clearNetworkMocks → 실제 네트워크 통과 확인
+name: Network Mocking
+config:
+  platform: ios
+  timeout: 90000
+  bundleId:
+    ios: org.reactnativemcp.demo
+    android: com.reactnativemcp.demo
+
+setup:
+  - launch: __bundleId__
+  - waitForVisible:
+      selector: 'Pressable:text("Count:")'
+      timeout: 15000
+
+steps:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Step 1~14 건너뛰기: Network GET 화면(Step 15)까지 이동
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  - repeat:
+      times: 14
+      steps:
+        - wait: 1000
+        - runFlow: ./shared/go-next.yaml
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 테스트 1: fetch GET mock — /posts/1 → 200 (mock)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  - waitForVisible: { selector: '#network-fetch-get', timeout: 10000 }
+
+  # mock 설정: jsonplaceholder.typicode.com/posts/1 → 200
+  - mockNetwork:
+      urlPattern: 'jsonplaceholder.typicode.com/posts/1'
+      method: GET
+      status: 200
+      body: '{"id":1,"title":"Mocked Post","body":"This is mocked","userId":1}'
+      headers:
+        Content-Type: application/json
+
+  - tap: { selector: '#network-fetch-get' }
+  - waitForText: { text: '응답: 200', timeout: 5000 }
+  - clearNetworkMocks:
+
+  - runFlow: ./shared/go-next.yaml
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 테스트 2: fetch POST mock — /posts → 201 (mock)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  - waitForVisible: { selector: '#network-fetch-post', timeout: 10000 }
+
+  - mockNetwork:
+      urlPattern: 'jsonplaceholder.typicode.com/posts'
+      method: POST
+      status: 201
+      body: '{"id":101,"title":"MCP Test","body":"Hello","userId":1}'
+      headers:
+        Content-Type: application/json
+
+  - tap: { selector: '#network-fetch-post' }
+  - waitForText: { text: '응답: 201', timeout: 5000 }
+  - clearNetworkMocks:
+
+  # Step 17 (Multiple) 건너뛰기
+  - runFlow: ./shared/go-next.yaml
+  - wait: 1000
+  - runFlow: ./shared/go-next.yaml
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 테스트 3: mock으로 404를 200으로 오버라이드
+  # Step 18은 /posts/99999 → 실제 404, mock으로 200 반환
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  - waitForVisible: { selector: '#network-fetch-error', timeout: 10000 }
+
+  - mockNetwork:
+      urlPattern: 'posts/99999'
+      status: 200
+      body: '{"id":99999,"title":"Not found but mocked"}'
+
+  - tap: { selector: '#network-fetch-error' }
+  # 원래 404지만 mock으로 200이 반환됨
+  - waitForText: { text: '응답: 200', timeout: 5000 }
+  - clearNetworkMocks:
+
+  - runFlow: ./shared/go-next.yaml
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 테스트 4: XHR mock — /albums/1 → 200 (mock)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  - waitForVisible: { selector: '#network-xhr-get', timeout: 10000 }
+
+  - mockNetwork:
+      urlPattern: 'jsonplaceholder.typicode.com/albums/1'
+      status: 200
+      body: '{"userId":1,"id":1,"title":"Mocked Album"}'
+      headers:
+        Content-Type: application/json
+
+  - tap: { selector: '#network-xhr-get' }
+  - waitForText: { text: '응답: 200', timeout: 5000 }
+  - clearNetworkMocks:
+
+  - screenshot: { path: './results/network-mock-success.png' }
