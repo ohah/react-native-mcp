@@ -153,8 +153,11 @@ jobs:
 
       - name: 시뮬레이터 부팅 및 앱 설치
         run: |
-          # 사용 가능한 iPhone 시뮬레이터 찾기
-          DEVICE_UDID=$(xcrun simctl list devices iPhone available --json | jq -r '.devices | to_entries[] | .value[] | select(.name | contains("iPhone")) | .udid' | head -n 1)
+          # 비주얼 리그레션 해상도 일치를 위해 기기 고정 (iPhone 16 우선, 없으면 첫 번째 iPhone)
+          DEVICE_UDID=$(xcrun simctl list devices available --json | jq -r '.devices | to_entries[] | .value[] | select(.name == "iPhone 16") | .udid' | head -n 1)
+          if [ -z "$DEVICE_UDID" ]; then
+            DEVICE_UDID=$(xcrun simctl list devices iPhone available --json | jq -r '.devices | to_entries[] | .value[] | select(.name | contains("iPhone")) | .udid' | head -n 1)
+          fi
           if [ -z "$DEVICE_UDID" ]; then
             echo "Error: No available iPhone simulator found"
             exit 1
