@@ -1,0 +1,10 @@
+[
+  { "type": "file", "name": "index", "label": "Overview" },
+  { "type": "file", "name": "interaction", "label": "Interaction" },
+  { "type": "file", "name": "assertions", "label": "Assertions" },
+  { "type": "file", "name": "waits", "label": "Waits" },
+  { "type": "file", "name": "navigation", "label": "Navigation & Device" },
+  { "type": "file", "name": "lifecycle", "label": "App Lifecycle" },
+  { "type": "file", "name": "screenshots", "label": "Screenshots" },
+  { "type": "file", "name": "utilities", "label": "Utilities" }
+]
