@@ -95,11 +95,15 @@ MCP 도구 호출 시 "No React Native app connected"가 나올 때 가능한 �
    - `watchFolders`에 워크스페이스 루트 포함 → MCP 패키지 경로를 Metro가 볼 수 있음.
    - `resolver.nodeModulesPaths`에 앱·워크스페이스의 `node_modules` 포함 → `@ohah/react-native-mcp-server` 등이 resolve됨.
 
-4. **캐시**
+4. **MCP 런타임 활성화**
+   - Release/비개발 빌드에서는 Metro 실행 시 **`REACT_NATIVE_MCP_ENABLED=true`** 로 실행해야 앱이 12300에 연결됨.
+   - 예: `REACT_NATIVE_MCP_ENABLED=true npx react-native start`. 앱 진입점에 `enable()` 호출은 필요 없음(환경변수로 transformer가 플래그 주입).
+
+5. **캐시**
    - 설정이나 transformer를 바꾼 뒤에는 **Metro 캐시 리셋** 후 다시 번들링하는 것이 안전함.
      예: `react-native start --reset-cache` 또는 `bun run start:reset`.
 
-정리: **babelTransformerPath → MCP transformer** + **진입점이 해당 transformer를 타는지** + (모노레포면 watchFolders·resolver) + **필요 시 캐시 리셋**.
+정리: **babelTransformerPath → MCP transformer** + **진입점이 해당 transformer를 타는지** + **필요 시 REACT_NATIVE_MCP_ENABLED** + (모노레포면 watchFolders·resolver) + **필요 시 캐시 리셋**.
 
 ### Metro에서 연결이 제대로 안 될 때 점검할 원인
 
@@ -113,8 +117,9 @@ MCP 도구 호출 시 "No React Native app connected"가 나올 때 가능한 �
 | 4   | **진입점에 `AppRegistry.registerComponent` 없음** | transformer는 이 문자열이 **그 파일 소스에 포함된 경우에만** 런타임 주입. 진입점이 `import './App'` 만 하고 App 쪽에 registerComponent 있으면, **App이 있는 파일**이 변환 대상. 그 파일이 node_modules 밖이면 됨. |
 | 5   | **transformer-entry 미빌드**                      | `packages/react-native-mcp-server/dist/transformer-entry.js` 가 없으면 transformer 로드 시 에러. `bun run build` (또는 해당 패키지 build) 후 dist 생성 여부 확인.                                                 |
 | 6   | **모노레포에서 resolver/watchFolders 누락**       | 앱을 모노레포 루트에서 실행할 때 `watchFolders`, `resolver.nodeModulesPaths` 에 워크스페이스 루트·패키지 경로가 없으면 `@ohah/react-native-mcp-server` resolve 실패할 수 있음.                                    |
+| 7   | **Release에서 MCP 미활성화**                      | 비개발 빌드에서는 Metro를 `REACT_NATIVE_MCP_ENABLED=true` 로 실행해야 앱이 12300에 연결됨. 앱 코드에 `enable()` 넣을 필요 없음.                                                                                   |
 
-**요약**: MCP용 Metro 동작을 보려면 **(1) MCP 포함한 config로 실행 (2) 캐시 리셋 (3) 진입점/App 파일이 node_modules 밖이고 registerComponent 포함 (4) dist 빌드됨 (5) 모노레포면 resolver/watchFolders 설정**.
+**요약**: MCP용 Metro 동작을 보려면 **(1) MCP 포함한 config로 실행 (2) 캐시 리셋 (3) 진입점/App 파일이 node_modules 밖이고 registerComponent 포함 (4) dist 빌드됨 (5) 모노레포면 resolver/watchFolders 설정 (6) Release면 REACT_NATIVE_MCP_ENABLED=true 로 Metro 실행)**.
 
 ### 직접 확인 결과 (번들 검사)
 

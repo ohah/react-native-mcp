@@ -100,9 +100,23 @@ AI에게 "지금 앱 화면 스냅샷 찍어줘", "로그인 버튼 눌러줘"�
 
 ---
 
+## MCP 런타임 활성화
+
+앱이 MCP 서버(WebSocket 12300)에 연결되려면 **빌드 시 환경변수**로 활성화합니다. 앱 진입점(`index.js`)에 코드를 넣을 필요 없습니다.
+
+- Metro 실행 시: `REACT_NATIVE_MCP_ENABLED=true` 또는 `REACT_NATIVE_MCP_ENABLED=1`
+
+  ```bash
+  REACT_NATIVE_MCP_ENABLED=true npx react-native start
+  ```
+
+- 개발 모드(`__DEV__ === true`)에서는 이 환경변수 없이도 자동으로 연결을 시도합니다.
+
+---
+
 ## 연결이 안 될 때
 
-- **앱이 연결되지 않음**: Metro가 실행 중인지, 앱에 Babel 프리셋 적용 및 MCP 런타임 활성화(`__REACT_NATIVE_MCP__?.enable()`)가 되어 있는지 확인
+- **앱이 연결되지 않음**: Metro가 실행 중인지, 앱에 Babel 프리셋 적용 여부, MCP 활성화용 환경변수(`REACT_NATIVE_MCP_ENABLED=true`)로 Metro를 실행했는지 확인
 - **tap/스크린샷이 안 됨**: iOS는 idb, Android는 adb가 설치되어 있고 디바이스가 잡히는지 확인 (`idb list-targets`, `adb devices`)
 - **특정 도구만 실패**: 해당 도구의 인자(selector, timeout 등)가 올바른지, 앱 UI가 로드된 상태인지 확인
 

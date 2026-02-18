@@ -100,9 +100,23 @@ Ask the AI to "take a snapshot of the app" or "tap the login button" and it will
 
 ---
 
+## Enabling the MCP runtime
+
+For the app to connect to the MCP server (WebSocket 12300), enable it at **build time** with an environment variable. No code is required in your app entry (`index.js`).
+
+- When starting Metro: set `REACT_NATIVE_MCP_ENABLED=true` or `REACT_NATIVE_MCP_ENABLED=1`
+
+  ```bash
+  REACT_NATIVE_MCP_ENABLED=true npx react-native start
+  ```
+
+- In development (`__DEV__ === true`), the runtime also tries to connect automatically without this env var.
+
+---
+
 ## When connection fails
 
-- **App not connected**: Check that Metro is running and the app has the Babel preset and MCP runtime enabled (`__REACT_NATIVE_MCP__?.enable()`)
+- **App not connected**: Check that Metro is running, the app uses the Babel preset, and Metro was started with `REACT_NATIVE_MCP_ENABLED=true`
 - **Tap/screenshot not working**: Ensure idb (iOS) or adb (Android) is installed and the device is listed (`idb list-targets`, `adb devices`)
 - **Single tool failing**: Check arguments (selector, timeout, etc.) and that the app UI is loaded
 

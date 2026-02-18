@@ -17,6 +17,12 @@ import * as t from '@babel/types';
 const MCP_RUNTIME_ID = '__REACT_NATIVE_MCP__';
 const RUNTIME_MODULE_ID = '@ohah/react-native-mcp-server/runtime';
 
+/** 빌드 시 MCP 활성화 여부 (Metro 실행 시점의 환경변수) */
+function isBuildTimeMcpEnabled(): boolean {
+  const v = process.env.REACT_NATIVE_MCP_ENABLED;
+  return v === 'true' || v === '1';
+}
+
 /** traverse visitor에서 받는 path (타입만 명시) */
 interface TraversePath {
   node: t.Node;
@@ -34,6 +40,10 @@ interface TraversePath {
  * @returns 변환된 code (그리고 추후 sourceMap)
  */
 export async function transformSource(src: string, filename?: string): Promise<{ code: string }> {
+  if (!isBuildTimeMcpEnabled()) {
+    return { code: src };
+  }
+
   const ast = parser.parse(src, {
     sourceType: 'module',
     plugins: ['jsx', 'typescript'],
@@ -56,11 +66,27 @@ export async function transformSource(src: string, filename?: string): Promise<{
           (p) => (p as { isProgram?: () => boolean }).isProgram?.() === true
         ) as { node: t.Program } | null | undefined;
         if (programPath?.node?.body) {
+          // 1) 런타임 require (실행 순서상 먼저 넣으면 나중에 실행됨 → 나중에 unshift)
           programPath.node.body.unshift(
             t.expressionStatement(
               t.callExpression(t.identifier('require'), [t.stringLiteral(RUNTIME_MODULE_ID)])
             )
           );
+          // 2) 빌드 시 환경변수로 MCP 활성화 시 global 플래그 주입 (enable() 호출 불필요)
+          if (isBuildTimeMcpEnabled()) {
+            programPath.node.body.unshift(
+              t.expressionStatement(
+                t.assignmentExpression(
+                  '=',
+                  t.memberExpression(
+                    t.identifier('global'),
+                    t.identifier('__REACT_NATIVE_MCP_ENABLED__')
+                  ),
+                  t.booleanLiteral(true)
+                )
+              )
+            );
+          }
           runtimeInjected = true;
         }
       }

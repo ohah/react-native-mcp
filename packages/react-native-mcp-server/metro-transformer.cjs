@@ -101,9 +101,18 @@ async function loadTransforms() {
   injectTestIdsFn = mod.injectTestIds;
 }
 
+function isMcpEnabled() {
+  const v = process.env.REACT_NATIVE_MCP_ENABLED;
+  return v === 'true' || v === '1';
+}
+
 async function pretransform(filename, src) {
   await loadTransforms();
   let code = src;
+
+  if (!isMcpEnabled()) {
+    return code;
+  }
 
   // node_modules 내부 파일은 변환하지 않음 (파서/문법 호환 이슈 방지)
   if (filename.includes('node_modules')) {
@@ -139,6 +148,7 @@ module.exports = {
   getCacheKey() {
     const projectRoot = process.cwd();
     const transformer = getDefaultTransformer(projectRoot);
-    return transformer.getCacheKey ? transformer.getCacheKey() : '';
+    const base = transformer.getCacheKey ? transformer.getCacheKey() : '';
+    return base + ':mcp:' + (process.env.REACT_NATIVE_MCP_ENABLED || '');
   },
 };

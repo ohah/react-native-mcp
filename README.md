@@ -75,11 +75,13 @@ module.exports = {
 - **Release only**: use `process.env.NODE_ENV === 'production'` instead of `isDev`.
 - **Custom env**: e.g. add the preset only when `process.env.ENABLE_MCP === '1'`.
 
-6. In your app entry file (e.g. `index.js`), enable the MCP runtime:
+6. **Enable the MCP runtime**: run Metro with the env var so the transformer injects the flag (no app code change).
 
-```js
-__REACT_NATIVE_MCP__?.enable();
-```
+   ```bash
+   REACT_NATIVE_MCP_ENABLED=true npx react-native start
+   ```
+
+   `true` or `1` enables MCP. When unset, the Metro transformer and Babel preset apply no MCP transforms, so no MCP code is included in the bundle. In `__DEV__` (development) the runtime also connects automatically when the env var is set.
 
 ### Claude Desktop
 

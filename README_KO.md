@@ -73,6 +73,14 @@ module.exports = {
 - **릴리즈에서만 적용**: `isDev` 대신 `process.env.NODE_ENV === 'production'` 사용.
 - **커스텀 env로 제어**: 예) `process.env.ENABLE_MCP === '1'`일 때만 프리셋 추가.
 
+**MCP 런타임 활성화** — Metro를 아래 환경변수와 함께 실행하면 앱 코드 수정 없이 연결됨.
+
+```bash
+REACT_NATIVE_MCP_ENABLED=true npx react-native start
+```
+
+`true` 또는 `1`이면 활성화. **미설정 시** Metro transformer와 Babel 프리셋이 MCP 변환을 하지 않아 번들에 MCP 코드가 포함되지 않는다. `__DEV__`(개발 모드)에서는 env 설정 시 자동 연결된다.
+
 ### Claude Desktop
 
 Claude Desktop 설정 파일 편집:

@@ -2143,7 +2143,8 @@
 		PONG_TIMEOUT_MS = 1e4;
 		/**
 		* 릴리즈 빌드에서 MCP WebSocket 연결을 활성화한다.
-		* 앱 진입점에서 __REACT_NATIVE_MCP__.enable() 호출.
+		* 기본은 빌드 시 REACT_NATIVE_MCP_ENABLED 로 활성화(transformer가 global 주입).
+		* 필요 시 앱에서 __REACT_NATIVE_MCP__.enable() 호출 가능.
 		*/
 		MCP.enable = function() {
 			_mcpEnabled = true;
