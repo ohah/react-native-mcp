@@ -16,6 +16,8 @@ import type {
   ScrollUntilVisibleResult,
   DebuggerStatus,
   WaitOpts,
+  VisualCompareOpts,
+  VisualCompareResult,
 } from './types.js';
 import { McpToolError, ConnectionError } from './errors.js';
 import {
@@ -397,6 +399,12 @@ export class AppClient {
   /** 내부 클립보드 내용을 input_text로 입력. copyText 후 사용. */
   async pasteText(opts?: DeviceOpts): Promise<unknown> {
     return this.inputText(this.clipboard, opts);
+  }
+
+  // ─── Visual Compare ────────────────────────────────────
+
+  async visualCompare(opts: VisualCompareOpts): Promise<VisualCompareResult> {
+    return this.call('visual_compare', { ...opts }) as Promise<VisualCompareResult>;
   }
 
   // ─── Convenience: tap by selector ───────────────────────

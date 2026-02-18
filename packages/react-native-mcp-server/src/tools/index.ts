@@ -34,6 +34,7 @@ import { registerScrollUntilVisible } from './scroll-until-visible.js';
 import { registerInspectState } from './inspect-state.js';
 import { registerGetStateChanges } from './get-state-changes.js';
 import { registerNetworkMock } from './network-mock.js';
+import { registerVisualCompare } from './visual-compare.js';
 
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
@@ -71,4 +72,6 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerGetStateChanges(server, appSession);
   // 네트워크 모킹
   registerNetworkMock(server, appSession);
+  // 비주얼 리그레션 테스트
+  registerVisualCompare(server, appSession);
 }

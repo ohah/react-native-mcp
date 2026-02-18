@@ -472,17 +472,29 @@ MCP tool: get_render_report
 
 ---
 
-### 8. 비주얼 리그레션 테스트
+### 8. 비주얼 리그레션 테스트 — 구현 완료 ✓
 
 **왜 중요**: 스크린샷은 이미 있으니, 컴포넌트 단위 캡처 + 이미지 비교만 추가하면 됨.
 
-**구현 방식**: querySelector로 좌표 획득 → 해당 영역만 크롭 → 베이스라인과 비교.
+**구현 내용**:
+
+- `image-compare.ts` — Sharp + pixelmatch 기반 PNG 비교 (`compareImages`, `cropElement`, `getScreenScale`)
+- `visual-compare.ts` — MCP 도구 `visual_compare` (텍스트 결과만 반환, diff 이미지는 파일로만 저장하여 토큰 절약)
+- E2E YAML `compareScreenshot` 스텝 — YAML 러너에서 프로그래밍적 실행 (LLM 토큰 0)
+- HTML 리포터 diff 이미지 표시
 
 ```yaml
-- screenshot:
-    selector: '#product-card' # 특정 컴포넌트만 캡처
-    compare: ./baseline/card.png # 베이스라인과 비교
-    threshold: 0.01 # 1% 이상 차이면 실패
+# 베이스라인 생성
+- compareScreenshot:
+    baseline: ./baselines/product-card.png
+    selector: '#product-card'
+    update: true
+
+# 비교 테스트
+- compareScreenshot:
+    baseline: ./baselines/product-card.png
+    selector: '#product-card'
+    threshold: 0.005
 ```
 
 **경쟁 도구 비교**:
@@ -491,9 +503,9 @@ MCP tool: get_render_report
 | ------------------ | ---------------- | -------- | ------- | -------- |
 | 전체 스크린샷      | ✓                | ✓        | ✓       | ✓        |
 | 컴포넌트 단위 캡처 | ✓ (fiber 좌표)   | ✗        | ✗       | ✗        |
-| 이미지 비교        | 예정             | 플러그인 | ✗       | 플러그인 |
+| 이미지 비교        | ✓ (pixelmatch)   | 플러그인 | ✗       | 플러그인 |
 
-**난이도**: ★★☆ — 이미지 크롭은 간단. 비교 알고리즘은 pixelmatch 등 기존 라이브러리 활용.
+**난이도**: ★★☆ (완료)
 
 ---
 
@@ -833,7 +845,7 @@ npx react-native-mcp init --expo
  ├─ ✓ 네트워크 모킹 (구현 완료)    ★★☆  — XHR/fetch 인터셉트 + 응답 주입
  ├─ 6. 접근성 자동 감사            ★★☆  — 규제 트렌드 + fiber 강점
  ├─ 7. E2E YAML Phase 2            ★★☆~★★★ — 흐름 제어 5개
- └─ 8. 비주얼 리그레션             ★★☆  — 스크린샷 이미 있음
+ └─ ✓ 비주얼 리그레션 (구현 완료)  ★★☆  — pixelmatch + 컴포넌트 크롭
 
 중기 (생태계) ───────────────────────────────────────────────
  ├─ 9.  CI/CD 통합                 ★★☆  — GitHub Actions 등 템플릿 + 검증
@@ -884,7 +896,7 @@ npx react-native-mcp init --expo
 | React 상태 인스펙션        | runtime.js + 서버 도구           | memoizedState 순회                |
 | ✓ 네트워크 모킹 (완료)     | runtime.js + 서버 도구           | 기존 인터셉터에 룰 매칭 추가      |
 | 접근성 자동 감사           | runtime.js + 서버 도구           | fiber 순회 + 규칙 체크            |
-| 비주얼 리그레션            | 서버 도구 + runner               | 이미지 크롭 + pixelmatch          |
+| ✓ 비주얼 리그레션 (완료)   | 서버 도구 + runner               | 이미지 크롭 + pixelmatch          |
 | 원커맨드 셋업              | 새 CLI 패키지                    | AST 파싱으로 import 삽입          |
 | 문서 + 예제                | docs/ + examples/                | 기술 난이도 낮음, 시간 소요       |
 | waitForIdle (네트워크)     | runtime.js                       | XHR/fetch 펜딩 카운터             |
@@ -919,7 +931,7 @@ Week 4: React 상태 인스펙션 + 네트워크 모킹
 Week 5: 접근성 자동 감사 + if/when + retry
          → 규제 대응 기능 + 흐름 제어 완성
 
-Week 6: 비주얼 리그레션 + 원커맨드 셋업
+Week 6: ✓ 비주얼 리그레션 (완료) + 원커맨드 셋업
          → 실용 기능 + 온보딩 개선
 
 Week 7: CI/CD 통합 (GitHub Actions 템플릿)
@@ -936,15 +948,15 @@ Week 8: 병렬 테스트
 
 fiber 접근 + MCP 조합으로만 가능한 고유 기능:
 
-| 기능                          | Detox | Maestro | Appium | react-native-mcp               |
-| ----------------------------- | ----- | ------- | ------ | ------------------------------ |
-| 컴포넌트 이름으로 셀렉팅      | ✗     | ✗       | ✗      | ✓ `CustomerCard`               |
-| React 상태/Hook 인스펙션      | ✗     | ✗       | ✗      | ✓ `memoizedState`              |
-| 리렌더 추적 + 성능 분석       | ✗     | ✗       | ✗      | ✓ `onCommitFiberRoot`          |
-| 접근성 자동 감사 (props 기반) | ✗     | ✗       | ✗      | ✓ fiber props 직접 검사        |
-| 네트워크 응답 모킹            | ✗     | ✗       | ✗      | ✓ JS 인터셉터 확장 (구현 완료) |
-| 컴포넌트 단위 스크린샷        | ✗     | ✗       | ✗      | ✓ fiber measure                |
-| AI 자율 디버깅                | ✗     | ✗       | ✗      | ✓ MCP 프로토콜                 |
-| WebView 내부 JS 실행          | ✗     | ✗       | △      | ✓ `webviewEval`                |
+| 기능                          | Detox | Maestro | Appium | react-native-mcp                         |
+| ----------------------------- | ----- | ------- | ------ | ---------------------------------------- |
+| 컴포넌트 이름으로 셀렉팅      | ✗     | ✗       | ✗      | ✓ `CustomerCard`                         |
+| React 상태/Hook 인스펙션      | ✗     | ✗       | ✗      | ✓ `memoizedState`                        |
+| 리렌더 추적 + 성능 분석       | ✗     | ✗       | ✗      | ✓ `onCommitFiberRoot`                    |
+| 접근성 자동 감사 (props 기반) | ✗     | ✗       | ✗      | ✓ fiber props 직접 검사                  |
+| 네트워크 응답 모킹            | ✗     | ✗       | ✗      | ✓ JS 인터셉터 확장 (구현 완료)           |
+| 컴포넌트 단위 비주얼 비교     | ✗     | ✗       | ✗      | ✓ fiber measure + pixelmatch (구현 완료) |
+| AI 자율 디버깅                | ✗     | ✗       | ✗      | ✓ MCP 프로토콜                           |
+| WebView 내부 JS 실행          | ✗     | ✗       | △      | ✓ `webviewEval`                          |
 
 이 기능들이 구현되면 "E2E 테스트 도구"가 아니라 **"React Native 개발 필수 도구"**로 포지셔닝할 수 있다.

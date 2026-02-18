@@ -248,6 +248,43 @@ Save a screenshot.
 
 ---
 
+### compareScreenshot
+
+Compare the current screenshot against a baseline PNG image. Supports element-level cropping via selector for component-level visual regression testing.
+
+| Field     | Type    | Required | Description                                                                    |
+| --------- | ------- | -------- | ------------------------------------------------------------------------------ |
+| baseline  | string  | ✓        | Path to baseline PNG (relative to YAML file)                                   |
+| selector  | string  |          | CSS-like selector to crop a specific element. If omitted, compares full screen |
+| threshold | number  |          | pixelmatch threshold (0–1). Default 0.01                                       |
+| update    | boolean |          | If true, save current screenshot as new baseline (skip comparison)             |
+
+```yaml
+# Full screen comparison
+- compareScreenshot:
+    baseline: ./baselines/home-screen.png
+    threshold: 0.01
+
+# Component-level comparison
+- compareScreenshot:
+    baseline: ./baselines/counter-button.png
+    selector: 'Pressable:text("Count:")'
+    threshold: 0.005
+
+# Update baseline (save current as new baseline)
+- compareScreenshot:
+    baseline: ./baselines/home-screen.png
+    update: true
+```
+
+**Workflow:**
+
+1. Run with `update: true` to create baselines → commit to Git.
+2. Run without `update` to compare current state against baselines.
+3. On failure, a diff image is saved to the output directory. The HTML reporter shows the diff inline.
+
+---
+
 ### wait
 
 Fixed delay in ms.

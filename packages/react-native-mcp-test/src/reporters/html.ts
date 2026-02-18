@@ -60,12 +60,16 @@ export class HtmlReporter implements Reporter {
         const imgTag =
           screenshotRel &&
           `<p class="screenshot"><img src="${escapeHtml(screenshotRel)}" alt="Failure screenshot" loading="lazy" /></p>`;
+        const diffRel = step.diffImagePath ? basename(step.diffImagePath) : '';
+        const diffTag =
+          diffRel &&
+          `<p class="screenshot"><strong>Diff:</strong> <img src="${escapeHtml(diffRel)}" alt="Visual diff" loading="lazy" /></p>`;
         stepRows.push(`
         <tr class="step ${stepStatus}">
           <td class="step-name">${escapeHtml(stepLabel(step.step))}</td>
           <td class="step-status">${stepStatus}</td>
           <td class="step-duration">${formatDuration(step.duration)}</td>
-          <td class="step-detail">${err}${imgTag ? imgTag : ''}</td>
+          <td class="step-detail">${err}${imgTag ? imgTag : ''}${diffTag ? diffTag : ''}</td>
         </tr>`);
       }
       suiteRows.push(`

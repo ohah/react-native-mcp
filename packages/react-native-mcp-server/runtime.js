@@ -568,49 +568,11 @@
 
 //#endregion
 //#region src/runtime/screen-offset.ts
-	function resolveScreenOffset() {
-		if (_screenOffsetResolved) return;
-		_screenOffsetResolved = true;
-		try {
-			var rn = typeof require !== "undefined" && require("react-native");
-			if (!rn) return;
-			var Platform = rn.Platform;
-			if (!Platform || Platform.OS !== "android") return;
-			var statusBarHeight = 0;
-			if (rn.StatusBar && typeof rn.StatusBar.currentHeight === "number") statusBarHeight = rn.StatusBar.currentHeight;
-			var g = typeof globalThis !== "undefined" ? globalThis : global;
-			var root = getFiberRoot();
-			if (root && g.nativeFabricUIManager) {
-				var hostFiber = null;
-				(function findHost(f) {
-					if (!f || hostFiber) return;
-					if (f.stateNode && (f.tag === 5 || f.tag === 27)) {
-						hostFiber = f;
-						return;
-					}
-					findHost(f.child);
-				})(root);
-				if (hostFiber) {
-					var node = hostFiber.stateNode;
-					var shadowNode = node.node || node._internalInstanceHandle && node._internalInstanceHandle.stateNode && node._internalInstanceHandle.stateNode.node;
-					if (shadowNode) {
-						g.nativeFabricUIManager.measureInWindow(shadowNode, function(x, y) {
-							screenOffsetX = -x;
-							screenOffsetY = statusBarHeight - y;
-						});
-						return;
-					}
-				}
-			}
-			if (g.nativeFabricUIManager) screenOffsetY = statusBarHeight;
-		} catch (_unused) {}
-	}
-	var screenOffsetX, screenOffsetY, _screenOffsetResolved;
+	function resolveScreenOffset() {}
+	var screenOffsetX, screenOffsetY;
 	var init_screen_offset = __esmMin(() => {
-		init_fiber_helpers();
 		screenOffsetX = 0;
 		screenOffsetY = 0;
-		_screenOffsetResolved = false;
 	});
 
 //#endregion
@@ -677,7 +639,7 @@
 						var shadowNode = node.node || node._internalInstanceHandle && node._internalInstanceHandle.stateNode && node._internalInstanceHandle.stateNode.node;
 						if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) shadowNode = node._viewInfo.shadowNodeWrapper;
 						if (shadowNode) {
-							resolveScreenOffset();
+							/* @__PURE__ */ resolveScreenOffset();
 							g.nativeFabricUIManager.measureInWindow(shadowNode, function(x, y, w, h) {
 								resolve({
 									x,
@@ -742,7 +704,7 @@
 				if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) shadowNode = node._viewInfo.shadowNodeWrapper;
 				if (shadowNode) {
 					var result = null;
-					resolveScreenOffset();
+					/* @__PURE__ */ resolveScreenOffset();
 					g.nativeFabricUIManager.measureInWindow(shadowNode, function(x, y, w, h) {
 						result = {
 							x,
@@ -2366,7 +2328,6 @@
 		init_state_hooks();
 		init_state_change_tracking();
 		init_query_selector();
-		init_screen_offset();
 		init_fiber_serialization();
 		init_mcp_registration();
 		init_mcp_introspection();

@@ -1,0 +1,48 @@
+# 비주얼 리그레션 — 베이스라인 생성/갱신용
+# 최초 1회 또는 UI 변경 후 실행: bun e2e examples/demo-app/e2e/visual-regression-update.yaml
+name: 비주얼 리그레션 베이스라인 갱신
+config:
+  platform: ios
+  timeout: 90000
+  bundleId:
+    ios: org.reactnativemcp.demo
+    android: com.reactnativemcp.demo
+
+setup:
+  - launch: __bundleId__
+  - waitForVisible:
+      selector: 'Pressable:text("Count:")'
+      timeout: 15000
+
+steps:
+  # ─── Step 1: 카운터 화면 전체 스크린샷 베이스라인 ──────────────
+  - compareScreenshot:
+      baseline: ./baselines/step1-counter-screen.png
+      update: true
+
+  # ─── Step 1: 카운터 버튼만 크롭해서 베이스라인 ────────────────
+  - compareScreenshot:
+      baseline: ./baselines/step1-counter-button.png
+      selector: 'Pressable:text("Count:")'
+      update: true
+
+  # ─── Step 5로 이동: Input 화면 ────────────────────────────────
+  - tap: { selector: 'Pressable:text("다음")' }
+  - waitForVisible: { selector: 'Pressable:text("testID 없음")', timeout: 5000 }
+  - tap: { selector: 'Pressable:text("다음")' }
+  - waitForVisible: { selector: 'TouchableOpacity:text("TouchableOpacity (0)")', timeout: 5000 }
+  - tap: { selector: 'Pressable:text("다음")' }
+  - waitForVisible: { selector: 'Pressable:text("Long Press (0)")', timeout: 5000 }
+  - tap: { selector: 'Pressable:text("다음")' }
+  - waitForVisible: { selector: '#input-with-testid', timeout: 5000 }
+
+  # ─── Step 5: Input 화면 전체 베이스라인 ───────────────────────
+  - compareScreenshot:
+      baseline: ./baselines/step5-input-screen.png
+      update: true
+
+  # ─── Step 5: TextInput 컴포넌트만 베이스라인 ──────────────────
+  - compareScreenshot:
+      baseline: ./baselines/step5-input-field.png
+      selector: '#input-with-testid'
+      update: true

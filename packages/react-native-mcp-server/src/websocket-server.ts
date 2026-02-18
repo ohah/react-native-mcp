@@ -6,6 +6,7 @@
 
 import { WebSocketServer, WebSocket } from 'ws';
 import { setMetroBaseUrlFromApp } from './tools/metro-cdp.js';
+import { getAndroidTopInset, getAndroidScale } from './tools/adb-utils.js';
 
 const DEFAULT_PORT = 12300;
 
@@ -38,6 +39,8 @@ export interface DeviceConnection {
   metroBaseUrl: string | null;
   /** PixelRatio.get() from React Native runtime (dp→px scale). */
   pixelRatio: number | null;
+  /** Android top inset in px (상태바/캡션바). ADB dumpsys에서 감지. */
+  topInsetPx: number;
   /** Date.now() of last message received from this device (for stale detection). */
   lastMessageTime: number;
 }
@@ -107,15 +110,20 @@ export class AppSession {
     platform: string;
     deviceName: string | null;
     connected: true;
+    topInsetDp: number;
   }> {
     return [...this.devices.values()]
       .filter((c) => c.ws.readyState === WebSocket.OPEN)
-      .map((c) => ({
-        deviceId: c.deviceId,
-        platform: c.platform,
-        deviceName: c.deviceName,
-        connected: true as const,
-      }));
+      .map((c) => {
+        const ratio = c.pixelRatio ?? 1;
+        return {
+          deviceId: c.deviceId,
+          platform: c.platform,
+          deviceName: c.deviceName,
+          connected: true as const,
+          topInsetDp: c.platform === 'android' && c.topInsetPx > 0 ? c.topInsetPx / ratio : 0,
+        };
+      });
   }
 
   /** 연결된 디바이스의 pixelRatio 반환 (없으면 null) */
@@ -126,6 +134,31 @@ export class AppSession {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Android top inset을 dp 단위로 반환.
+   * topInsetPx / pixelRatio. iOS는 항상 0.
+   */
+  getTopInsetDp(deviceId?: string, platform?: string): number {
+    try {
+      const conn = this.resolveDevice(deviceId, platform);
+      if (conn.platform !== 'android' || conn.topInsetPx === 0) return 0;
+      const ratio = conn.pixelRatio ?? 1;
+      return conn.topInsetPx / ratio;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * 수동으로 Android top inset(dp) 설정.
+   * ADB 자동 감지 결과를 덮어쓴다.
+   */
+  setTopInsetDp(dp: number, deviceId?: string, platform?: string): void {
+    const conn = this.resolveDevice(deviceId, platform);
+    const ratio = conn.pixelRatio ?? 1;
+    conn.topInsetPx = Math.round(dp * ratio);
   }
 
   /** 디버깅: WebSocket 서버/클라이언트 상태 */
@@ -216,11 +249,30 @@ export class AppSession {
               pending: new Map(),
               metroBaseUrl,
               pixelRatio,
+              topInsetPx: 0,
               lastMessageTime: Date.now(),
             };
             this.devices.set(deviceId, conn);
             this.deviceByWs.set(ws, deviceId);
             if (metroBaseUrl) setMetroBaseUrlFromApp(metroBaseUrl, deviceId);
+
+            // Android: top inset 감지 (비동기, 연결 차단하지 않음)
+            if (platform === 'android') {
+              // init 메시지에 topInsetDp가 있으면 수동 오버라이드
+              const userTopInset = typeof msg.topInsetDp === 'number' ? msg.topInsetDp : null;
+              if (userTopInset != null) {
+                const ratio = pixelRatio ?? 1;
+                conn.topInsetPx = Math.round(userTopInset * ratio);
+              } else {
+                getAndroidTopInset()
+                  .then((px) => {
+                    conn.topInsetPx = px;
+                  })
+                  .catch(() => {
+                    /* keep 0 */
+                  });
+              }
+            }
             return;
           }
 

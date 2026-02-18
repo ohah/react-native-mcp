@@ -82,3 +82,25 @@ export interface WaitOpts extends DeviceOpts {
   timeout?: number;
   interval?: number;
 }
+
+export interface VisualCompareOpts extends DeviceOpts {
+  baseline: string;
+  selector?: string;
+  threshold?: number;
+  updateBaseline?: boolean;
+  saveDiff?: string;
+  saveCurrent?: string;
+}
+
+export interface VisualCompareResult {
+  pass: boolean;
+  diffRatio: number;
+  diffPixels: number;
+  totalPixels: number;
+  dimensions: { width: number; height: number };
+  threshold: number;
+  baseline: string;
+  selector: string | null;
+  message: string;
+  updated?: boolean;
+}

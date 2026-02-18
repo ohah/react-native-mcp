@@ -500,6 +500,41 @@ TextInput 등의 `value` prop이 기대값과 일치하는지 검증한다.
 
 ---
 
+### compareScreenshot
+
+현재 스크린샷을 베이스라인 PNG 파일과 픽셀 단위로 비교한다 (비주얼 리그레션 테스트). `selector` 지정 시 해당 요소만 크롭하여 비교한다. **LLM 토큰을 사용하지 않고** 프로그래밍적으로 실행된다.
+
+| 필드      | 타입    | 필수 | 설명                                                                                        |
+| --------- | ------- | ---- | ------------------------------------------------------------------------------------------- |
+| baseline  | string  | ✓    | 베이스라인 PNG 경로 (YAML 파일 기준 상대경로)                                               |
+| selector  | string  |      | 비교할 요소 셀렉터. 생략 시 전체 화면 비교                                                  |
+| threshold | number  |      | pixelmatch 민감도 (0~1). 낮을수록 엄격. 기본 0.1                                            |
+| update    | boolean |      | `true`면 현재 스크린샷을 베이스라인으로 저장하고 비교 건너뜀. 최초 1회 또는 UI 변경 후 사용 |
+
+**워크플로**: `update: true`로 베이스라인 생성 → Git 커밋 → 이후 `update` 없이 비교 테스트 실행.
+
+```yaml
+# 베이스라인 생성 (최초 1회)
+- compareScreenshot:
+    baseline: ./baselines/home-screen.png
+    update: true
+
+# 전체 화면 비교
+- compareScreenshot:
+    baseline: ./baselines/home-screen.png
+    threshold: 0.01
+
+# 컴포넌트 단위 비교 (selector로 크롭)
+- compareScreenshot:
+    baseline: ./baselines/product-card.png
+    selector: '#product-card'
+    threshold: 0.005
+```
+
+실패 시 diff 이미지가 `results/` 폴더에 자동 저장되며, HTML 리포트에 diff 이미지가 표시된다.
+
+---
+
 ### scrollUntilVisible
 
 스크롤하여 요소가 보일 때까지 반복한다.
@@ -556,6 +591,9 @@ steps:
       duration: 1000
   - screenshot:
       path: ./results/login-success.png
+  - compareScreenshot:
+      baseline: ./baselines/home-after-login.png
+      threshold: 0.01
   - back:
 
 teardown:
