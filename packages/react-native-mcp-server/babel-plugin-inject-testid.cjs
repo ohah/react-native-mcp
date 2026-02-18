@@ -44,12 +44,13 @@ function babel_plugin_inject_testid_default(babel) {
 					const scope = state.stack[state.stack.length - 1];
 					if (scope && scope.jsxIndex > 0 && scope.componentName !== "Anonymous" && /^[A-Z]/.test(scope.componentName)) {
 						const stmt = t.expressionStatement(t.assignmentExpression("=", t.memberExpression(t.identifier(scope.componentName), t.identifier("displayName")), t.stringLiteral(scope.componentName)));
-						if (t.isFunctionDeclaration(path.node)) (path.parentPath && (t.isExportDefaultDeclaration(path.parent) || t.isExportNamedDeclaration(path.parent)) ? path.parentPath : path).insertAfter(stmt);
+						let target = null;
+						if (t.isFunctionDeclaration(path.node)) target = path.parentPath && (t.isExportDefaultDeclaration(path.parent) || t.isExportNamedDeclaration(path.parent)) ? path.parentPath : path;
 						else if (path.parentPath && t.isVariableDeclarator(path.parent)) {
-							let target = path.parentPath.parentPath;
+							target = path.parentPath.parentPath;
 							if (target?.parentPath && (t.isExportDefaultDeclaration(target.parent) || t.isExportNamedDeclaration(target.parent))) target = target.parentPath;
-							target?.insertAfter(stmt);
 						}
+						target?.insertAfter(stmt);
 					}
 					state.stack.pop();
 				}
