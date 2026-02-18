@@ -72,6 +72,13 @@ jobs:
       - name: MCP 클라이언트 빌드
         run: bun run --filter @ohah/react-native-mcp-client build
 
+      - name: idb 설치
+        run: |
+          brew tap facebook/fb
+          brew install idb-companion
+          pip3 install fb-idb --break-system-packages
+          idb list-targets
+
       - name: Bundler 캐시
         uses: actions/cache@v4
         with:
