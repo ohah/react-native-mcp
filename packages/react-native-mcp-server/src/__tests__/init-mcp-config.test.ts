@@ -1,8 +1,9 @@
-import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
+import { describe, expect, it, beforeEach, afterEach, mock } from 'bun:test';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { setupMcpConfig } from '../init/mcp-config.js';
+import * as childProcess from 'node:child_process';
 
 describe('setupMcpConfig', () => {
   let tmpDir: string;
@@ -68,14 +69,46 @@ describe('setupMcpConfig', () => {
   });
 
   describe('claude-code', () => {
-    it('claude CLI 실패 시 에러 메시지 반환', () => {
-      // claude CLI가 설치되지 않은 환경에서 실패 케이스 확인
-      const result = setupMcpConfig('claude-code', tmpDir);
-      // CI/로컬에 claude CLI가 없으면 실패
-      if (!result.success) {
-        expect(result.message).toContain('claude mcp add failed');
-        expect(result.message).toContain('Run manually');
-      }
+    it('execSync 성공 시 success 반환', () => {
+      const originalExecSync = childProcess.execSync;
+      mock.module('node:child_process', () => ({
+        ...childProcess,
+        execSync: mock(() => Buffer.from('')),
+      }));
+
+      // re-import to pick up mock
+      const { setupMcpConfig: setup } = require('../init/mcp-config.js');
+      const result = setup('claude-code', tmpDir);
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('added via claude mcp add');
+
+      // restore
+      mock.module('node:child_process', () => ({
+        ...childProcess,
+        execSync: originalExecSync,
+      }));
+    });
+
+    it('execSync 실패 시 에러 메시지 반환', () => {
+      const originalExecSync = childProcess.execSync;
+      mock.module('node:child_process', () => ({
+        ...childProcess,
+        execSync: mock(() => {
+          throw new Error('command not found: claude');
+        }),
+      }));
+
+      const { setupMcpConfig: setup } = require('../init/mcp-config.js');
+      const result = setup('claude-code', tmpDir);
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('claude mcp add failed');
+      expect(result.message).toContain('Run manually');
+
+      // restore
+      mock.module('node:child_process', () => ({
+        ...childProcess,
+        execSync: originalExecSync,
+      }));
     });
   });
 });
