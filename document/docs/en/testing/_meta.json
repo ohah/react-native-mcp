@@ -2,5 +2,6 @@
   { "type": "file", "name": "index", "label": "Install" },
   "getting-started",
   { "type": "file", "name": "e2e-yaml-reference", "label": "YAML" },
+  { "type": "dir", "name": "steps", "label": "Steps Reference" },
   { "type": "file", "name": "e2e-github-actions", "label": "GitHub Actions" }
 ]

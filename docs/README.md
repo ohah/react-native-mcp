@@ -6,8 +6,8 @@ React Native MCP 프로젝트 문서 목차.
 
 ## E2E / YAML
 
-- [**E2E YAML 레퍼런스 (API 문서)**](e2e-yaml-reference.md) — 시나리오 YAML 문법, Step 타입, config, 예시
 - [E2E 테스트 계획](e2e-test-plan.md)
+- YAML 레퍼런스 → [published docs](../document/docs/ko/testing/e2e-yaml-reference.md)로 이동
 
 ---
 
