@@ -56,6 +56,12 @@ const stepSchema = z.union([
       maxScrolls: z.number().optional(),
     }),
   }),
+  z.object({ back: z.null().or(z.object({})).default(null) }).strict(),
+  z.object({ home: z.null().or(z.object({})).default(null) }).strict(),
+  z.object({ hideKeyboard: z.null().or(z.object({})).default(null) }).strict(),
+  z.object({ longPress: z.object({ selector: z.string(), duration: z.number().optional() }) }),
+  z.object({ addMedia: z.object({ paths: z.array(z.string()).min(1) }) }),
+  z.object({ assertHasText: z.object({ text: z.string(), selector: z.string().optional() }) }),
 ]);
 
 const suiteSchema = z.object({
