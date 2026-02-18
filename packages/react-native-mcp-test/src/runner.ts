@@ -44,7 +44,12 @@ interface StepContext {
   envVars?: Record<string, string>;
 }
 
-async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Promise<void> {
+async function executeStep(
+  app: AppClient,
+  step: TestStep,
+  ctx: StepContext,
+  opts?: { timeout?: number }
+): Promise<void> {
   const { alreadyLaunchedBundleId } = ctx;
   if ('tap' in step) {
     await app.tap(step.tap.selector, { duration: step.tap.duration });
@@ -111,6 +116,11 @@ async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Pr
       return; // 이미 create()에서 실행됨. 재실행 시 앱 재시작 → WebSocket 끊김 → 이후 스텝 실패 방지
     }
     await app.launch(toLaunch);
+    // --no-auto-launch 모드에서 launch 후 앱 WebSocket 연결을 대기한다.
+    // setup 내 launch 이후의 waitForVisible 등이 연결 전에 실행되는 것을 방지.
+    if (!ctx.didLaunchInCreate) {
+      await app.waitForConnection(opts?.timeout ?? 90_000, 2_000);
+    }
   } else if ('terminate' in step) {
     await app.terminate(step.terminate);
   } else if ('openDeepLink' in step) {
@@ -154,7 +164,7 @@ async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Pr
   } else if ('repeat' in step) {
     for (let i = 0; i < step.repeat.times; i++) {
       for (const s of step.repeat.steps) {
-        await executeStep(app, s as TestStep, ctx);
+        await executeStep(app, s as TestStep, ctx, opts);
       }
     }
   } else if ('runFlow' in step) {
@@ -175,7 +185,7 @@ async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Pr
       visitedFlows: new Set([...visited, flowPath]),
     };
     for (const s of flowSuite.steps) {
-      await executeStep(app, s, childCtx);
+      await executeStep(app, s, childCtx, opts);
     }
   } else if ('if' in step) {
     let shouldRun = true;
@@ -188,7 +198,7 @@ async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Pr
     }
     if (shouldRun) {
       for (const s of step.if.steps) {
-        await executeStep(app, s as TestStep, ctx);
+        await executeStep(app, s as TestStep, ctx, opts);
       }
     }
   } else if ('mockNetwork' in step) {
@@ -200,7 +210,7 @@ async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Pr
     for (let attempt = 0; attempt <= step.retry.times; attempt++) {
       try {
         for (const s of step.retry.steps) {
-          await executeStep(app, s as TestStep, ctx);
+          await executeStep(app, s as TestStep, ctx, opts);
         }
         lastError = undefined;
         break;
@@ -242,7 +252,8 @@ async function runSteps(
   steps: TestStep[],
   reporter: Reporter,
   suiteName: string,
-  ctx: StepContext
+  ctx: StepContext,
+  stepOpts?: { timeout?: number }
 ): Promise<{ results: StepResult[]; failed: boolean }> {
   const results: StepResult[] = [];
   let failed = false;
@@ -259,7 +270,7 @@ async function runSteps(
     }
 
     try {
-      await executeStep(app, step, ctx);
+      await executeStep(app, step, ctx, stepOpts);
       const result: StepResult = { step, status: 'passed', duration: Date.now() - start };
       results.push(result);
       reporter.onStepResult(result);
@@ -341,29 +352,32 @@ export async function runSuite(
     envVars: opts.envVars,
   };
 
+  const connectionTimeout = opts.timeout ?? suite.config.timeout ?? 90_000;
+
   try {
     // setup
     if (suite.setup) {
-      const { results, failed } = await runSteps(app, suite.setup, reporter, suite.name, stepCtx);
+      const { results, failed } = await runSteps(app, suite.setup, reporter, suite.name, stepCtx, {
+        timeout: connectionTimeout,
+      });
       allStepResults.push(...results);
       if (failed) suiteFailed = true;
     }
 
-    // autoLaunch false면 create()에서 앱을 실행하지 않음. setup의 launch 스텝 후 연결 대기.
-    if (!autoLaunch && !suiteFailed) {
-      await app.waitForConnection(opts.timeout ?? suite.config.timeout ?? 90_000, 2_000);
-    }
-
     // steps (skip if setup failed)
     if (!suiteFailed) {
-      const { results, failed } = await runSteps(app, suite.steps, reporter, suite.name, stepCtx);
+      const { results, failed } = await runSteps(app, suite.steps, reporter, suite.name, stepCtx, {
+        timeout: connectionTimeout,
+      });
       allStepResults.push(...results);
       if (failed) suiteFailed = true;
     }
   } finally {
     // teardown always runs
     if (suite.teardown) {
-      const { results } = await runSteps(app, suite.teardown, reporter, suite.name, stepCtx);
+      const { results } = await runSteps(app, suite.teardown, reporter, suite.name, stepCtx, {
+        timeout: connectionTimeout,
+      });
       allStepResults.push(...results);
     }
 
