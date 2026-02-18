@@ -405,6 +405,55 @@ teardown?: Step[] # 종료 시 실행 (선택)
 
 ---
 
+### clearText
+
+TextInput의 텍스트를 전부 지운다.
+
+| 필드     | 타입   | 필수 | 설명                  |
+| -------- | ------ | ---- | --------------------- |
+| selector | string | ✓    | 대상 TextInput 셀렉터 |
+
+```yaml
+- clearText:
+    selector: '#email'
+```
+
+---
+
+### doubleTap
+
+요소를 빠르게 두 번 탭한다.
+
+| 필드     | 타입   | 필수 | 설명                         |
+| -------- | ------ | ---- | ---------------------------- |
+| selector | string | ✓    | 탭할 요소 셀렉터             |
+| interval | number |      | 두 탭 사이 간격(ms). 기본 50 |
+
+```yaml
+- doubleTap:
+    selector: '#zoomable-image'
+    interval: 100
+```
+
+---
+
+### assertValue
+
+TextInput 등의 `value` prop이 기대값과 일치하는지 검증한다.
+
+| 필드     | 타입   | 필수 | 설명               |
+| -------- | ------ | ---- | ------------------ |
+| selector | string | ✓    | 검사할 요소 셀렉터 |
+| expected | string | ✓    | 기대하는 값        |
+
+```yaml
+- assertValue:
+    selector: '#quantity-input'
+    expected: '3'
+```
+
+---
+
 ### scrollUntilVisible
 
 스크롤하여 요소가 보일 때까지 반복한다.
