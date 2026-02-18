@@ -1,4 +1,4 @@
-# React Native MCP 서버 설계 문서
+dksl dortus # React Native MCP 서버 설계 문서
 
 React Native 앱 자동화·모니터링을 위한 MCP 서버 설계. Chrome DevTools MCP와 유사하지만 DOM이 없는 React Native 환경에 맞춰 Metro + Babel + Fiber tree 기반으로 구축.
 
@@ -284,7 +284,7 @@ packages/react-native-mcp-server/
 - `switch_keyboard` - 키보드 언어 전환 ✅
 - `open_deeplink` - 딥링크 열기 ✅
 
-> **앱 생명주기(launch/terminate/deeplink)**: 별도 MCP 도구 대신 **MCP Resource** (`docs://guides/app-lifecycle`)로 가이드 제공. AI 에이전트가 리소스를 읽고 기존 Bash 도구로 실행. 상세: 섹션 15.
+> **앱 생명주기**: `clear_state`, `open_deeplink`는 MCP 도구로 제공. launch/terminate는 adb/simctl Bash 명령 사용. 상세: 섹션 15.
 
 **삭제된 Tools**:
 
@@ -1248,13 +1248,7 @@ Step 4: assert_element_count (선택)          ┘
 
 ### 15.1 구현
 
-```
-src/guides/app-lifecycle.ts    →  MCP Resource "docs://guides/app-lifecycle"
-src/resources/app-lifecycle.ts →  registerAppLifecycleResource()
-src/resources/index.ts         →  registerAllResources()에 등록
-```
-
-가이드에 포함할 내용 (ADB_REFERENCE.md, IDB_REFERENCE.md에서 발췌):
+앱 생명주기 MCP Resource는 제공하지 않음. 데이터 초기화는 `clear_state` 도구, 딥링크는 `open_deeplink` 도구 사용. launch/terminate는 아래 명령을 Bash로 실행 (ADB_REFERENCE.md, IDB_REFERENCE.md 참고):
 
 | 작업          | Android                                     | iOS 시뮬레이터                                     |
 | ------------- | ------------------------------------------- | -------------------------------------------------- |
@@ -1276,10 +1270,9 @@ src/resources/index.ts         →  registerAllResources()에 등록
 ```
 사용자: "앱을 재시작하고 로그인 화면 확인해줘"
 AI:
-  1. (리소스 "docs://guides/app-lifecycle" 참조)
-  2. Bash: adb shell am force-stop com.example.app
-  3. Bash: adb shell am start -n com.example.app/.MainActivity
-  4. assert_visible({ selector: "#login-screen", timeoutMs: 5000 })
+  1. Bash: adb shell am force-stop com.example.app
+  2. Bash: adb shell am start -n com.example.app/.MainActivity
+  3. assert_visible({ selector: "#login-screen", timeoutMs: 5000 })
 ```
 
 ### 15.4 Phase A (SDK)에서의 활용

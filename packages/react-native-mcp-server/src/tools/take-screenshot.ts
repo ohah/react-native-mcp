@@ -17,20 +17,18 @@ const MAX_HEIGHT = 720;
 const JPEG_QUALITY = 80;
 
 const schema = z.object({
-  platform: z
-    .enum(['android', 'ios'])
-    .describe('android: adb shell screencap. ios: xcrun simctl (simulator only).'),
-  filePath: z.string().optional().describe('Path to save screenshot (optional).'),
+  platform: z.enum(['android', 'ios']).describe('android: adb. ios: simctl (simulator only).'),
+  filePath: z.string().optional().describe('Path to save screenshot.'),
 });
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-function isValidPng(buf: Buffer): boolean {
+export function isValidPng(buf: Buffer): boolean {
   return buf.length >= PNG_SIGNATURE.length && buf.subarray(0, 8).equals(PNG_SIGNATURE);
 }
 
 /** Android: adb exec-out screencap -p 로 raw PNG 수신. */
-async function captureAndroid(): Promise<Buffer> {
+export async function captureAndroid(): Promise<Buffer> {
   const png = await runCommand('adb', ['exec-out', 'screencap', '-p'], { timeoutMs: 10000 });
   if (!isValidPng(png)) {
     throw new Error('adb screencap produced invalid PNG. Try again or check device.');
@@ -39,7 +37,7 @@ async function captureAndroid(): Promise<Buffer> {
 }
 
 /** iOS 시뮬레이터: simctl io booted screenshot → 파일 읽기. */
-async function captureIos(): Promise<Buffer> {
+export async function captureIos(): Promise<Buffer> {
   const path = join(tmpdir(), `rn-mcp-screenshot-${Date.now()}.png`);
   await runCommand('xcrun', ['simctl', 'io', 'booted', 'screenshot', path], { timeoutMs: 10000 });
   try {
@@ -108,7 +106,7 @@ export function registerTakeScreenshot(server: McpServer, appSession: AppSession
     'take_screenshot',
     {
       description:
-        'Capture current screen of Android device (adb) or iOS simulator (xcrun simctl). Always JPEG 80% 720p. Response includes device point size and coordinate scale for mapping screenshot pixels to device points. NOTE: Screenshots use vision tokens (expensive). Prefer assert_text or assert_visible for verification.',
+        'Capture device/simulator screen. JPEG 720p. Returns point size for coords. Prefer assert_text/assert_visible (screenshots use vision tokens).',
       inputSchema: schema,
     },
     async (args: unknown) => {

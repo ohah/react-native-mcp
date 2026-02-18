@@ -14,21 +14,16 @@ const timeoutParam = z
   .number()
   .optional()
   .default(0)
-  .describe('Max wait time in ms. 0 (default) = single check. >0 = poll until pass or timeout.');
+  .describe('Max wait ms. 0 = single check; >0 = poll until pass or timeout.');
 const intervalParam = z
   .number()
   .optional()
   .default(300)
-  .describe('Polling interval in ms (default 300). Only used when timeoutMs > 0.');
+  .describe('Poll interval ms. Used only when timeoutMs > 0.');
 
 const assertTextSchema = z.object({
   text: z.string().describe('Text substring to assert exists on screen'),
-  selector: z
-    .string()
-    .optional()
-    .describe(
-      'Optional selector to narrow search scope. If provided, checks text within matching elements only.'
-    ),
+  selector: z.string().optional().describe('Optional selector to narrow scope.'),
   timeoutMs: timeoutParam,
   intervalMs: intervalParam,
   deviceId: deviceParam,
@@ -36,7 +31,7 @@ const assertTextSchema = z.object({
 });
 
 const assertVisibleSchema = z.object({
-  selector: z.string().describe('Selector to check visibility. Uses querySelector syntax.'),
+  selector: z.string().describe('Selector to check visibility.'),
   timeoutMs: timeoutParam,
   intervalMs: intervalParam,
   deviceId: deviceParam,
@@ -44,9 +39,7 @@ const assertVisibleSchema = z.object({
 });
 
 const assertNotVisibleSchema = z.object({
-  selector: z
-    .string()
-    .describe('Selector of element that should NOT be visible (not found in Fiber tree).'),
+  selector: z.string().describe('Selector of element that must not be visible.'),
   timeoutMs: timeoutParam,
   intervalMs: intervalParam,
   deviceId: deviceParam,
@@ -58,9 +51,9 @@ const assertElementCountSchema = z.object({
   expectedCount: z
     .number()
     .optional()
-    .describe('Exact expected count. Mutually exclusive with minCount/maxCount.'),
-  minCount: z.number().optional().describe('Minimum expected count (inclusive).'),
-  maxCount: z.number().optional().describe('Maximum expected count (inclusive).'),
+    .describe('Exact count. Mutually exclusive with min/maxCount.'),
+  minCount: z.number().optional().describe('Min count (inclusive).'),
+  maxCount: z.number().optional().describe('Max count (inclusive).'),
   timeoutMs: timeoutParam,
   intervalMs: intervalParam,
   deviceId: deviceParam,
@@ -121,7 +114,7 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
   registerTool(
     server,
     'assert_text',
-    'Assert that a text substring exists on screen. Returns { pass: boolean, message: string }. Optionally narrow scope with a selector. Supports polling with timeoutMs/intervalMs for CI stability.',
+    'Assert text exists on screen. Returns { pass, message }. Optional selector; supports timeoutMs/intervalMs polling.',
     assertTextSchema,
     async (args: unknown) => {
       const { text, selector, timeoutMs, intervalMs, deviceId, platform } =
@@ -177,7 +170,7 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
   registerTool(
     server,
     'assert_visible',
-    'Assert that an element matching the selector is visible (exists in Fiber tree). Returns { pass: boolean, message: string }. Supports polling with timeoutMs/intervalMs for CI stability.',
+    'Assert element matching selector is visible. Returns { pass, message }. Supports polling.',
     assertVisibleSchema,
     async (args: unknown) => {
       const { selector, timeoutMs, intervalMs, deviceId, platform } =
@@ -228,7 +221,7 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
   registerTool(
     server,
     'assert_not_visible',
-    'Assert that an element matching the selector is NOT visible (not found in Fiber tree). Returns { pass: boolean, message: string }. Supports polling with timeoutMs/intervalMs — waits until element disappears.',
+    'Assert element matching selector is NOT visible. Returns { pass, message }. Polling until gone.',
     assertNotVisibleSchema,
     async (args: unknown) => {
       const { selector, timeoutMs, intervalMs, deviceId, platform } =
@@ -280,7 +273,7 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
   registerTool(
     server,
     'assert_element_count',
-    'Assert the count of elements matching a selector. Specify expectedCount for exact match, or minCount/maxCount for range. Returns { pass: boolean, actualCount: number, message: string }. Supports polling with timeoutMs/intervalMs.',
+    'Assert count of elements matching selector. expectedCount or minCount/maxCount. Returns { pass, actualCount, message }.',
     assertElementCountSchema,
     async (args: unknown) => {
       const {

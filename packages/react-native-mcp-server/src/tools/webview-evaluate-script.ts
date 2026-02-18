@@ -14,14 +14,10 @@ import { deviceParam, platformParam } from './device-param.js';
 const schema = z.object({
   webViewId: z
     .string()
-    .describe(
-      'WebView id (auto-assigned by Babel plugin). Use evaluate_script("() => __REACT_NATIVE_MCP__.getRegisteredWebViewIds()") to discover available IDs.'
-    ),
+    .describe('WebView id. Use evaluate_script getRegisteredWebViewIds() to discover.'),
   script: z
     .string()
-    .describe(
-      'JavaScript to execute in the WebView. Any valid JS: DOM query, click, navigation, etc. (e.g. "document.querySelector(\'h1\').innerText", "document.getElementById(\'btn\').click()"). Must evaluate to a value to get result back.'
-    ),
+    .describe('JS to run in WebView (DOM query, click, etc). Must evaluate to value for result.'),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -39,7 +35,7 @@ export function registerWebviewEvaluateScript(server: McpServer, appSession: App
     'webview_evaluate_script',
     {
       description:
-        'Run JavaScript in the in-app WebView context. The Babel plugin auto-registers all <WebView> components — no manual setup needed. Workflow: (1) evaluate_script("() => __REACT_NATIVE_MCP__.getRegisteredWebViewIds()") to discover available WebView IDs, (2) call this tool with the discovered webViewId. For clicking buttons or reading DOM, always prefer this tool over coordinate-based tap — it is faster, cheaper, and 100% reliable. To get return values, the app must forward onMessage (auto-injected by Babel plugin); otherwise only OK/error is returned.',
+        'Run JS in in-app WebView. Get webViewId via getRegisteredWebViewIds(). Prefer over tap for DOM (faster, reliable). onMessage needed for return value.',
       inputSchema: schema,
     },
     async (args: unknown) => {

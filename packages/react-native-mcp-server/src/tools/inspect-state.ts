@@ -10,11 +10,7 @@ import type { AppSession } from '../websocket-server.js';
 import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
-  selector: z
-    .string()
-    .describe(
-      'querySelector selector to find component (e.g. "CartScreen", ":display-name(\\"CartScreen\\")", "#cart-view").'
-    ),
+  selector: z.string().describe('Selector for component (e.g. CartScreen, #cart-view).'),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -34,7 +30,7 @@ export function registerInspectState(server: McpServer, appSession: AppSession):
     'inspect_state',
     {
       description:
-        'Inspect React state hooks of a component found by selector. Returns component name and an array of state hooks with index and value. Works with useState, useReducer, Zustand, Redux, React Query, and other hook-based state.',
+        'Inspect React state hooks of component by selector. Returns hooks with index and value. Works with useState, Zustand, etc.',
       inputSchema: schema,
     },
     async (args: unknown) => {

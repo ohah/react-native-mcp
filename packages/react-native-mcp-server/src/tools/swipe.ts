@@ -28,23 +28,9 @@ const schema = z.object({
   y1: z.number().describe('Start Y in points (dp). Auto-converted to pixels on Android.'),
   x2: z.number().describe('End X in points (dp). Auto-converted to pixels on Android.'),
   y2: z.number().describe('End Y in points (dp). Auto-converted to pixels on Android.'),
-  duration: z
-    .number()
-    .optional()
-    .default(300)
-    .describe('Duration in milliseconds (default 300). Longer = slower swipe.'),
-  deviceId: z
-    .string()
-    .optional()
-    .describe(
-      'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected. Use list_devices to find IDs.'
-    ),
-  iosOrientation: z
-    .number()
-    .optional()
-    .describe(
-      'iOS GraphicsOrientation override (1-4). 1=Portrait, 2=Portrait180, 3=LandscapeA, 4=LandscapeB. Skips auto-detection when set.'
-    ),
+  duration: z.number().optional().default(300).describe('Swipe duration ms. Default 300.'),
+  deviceId: z.string().optional().describe('Device ID. Auto if single. list_devices to find.'),
+  iosOrientation: z.number().optional().describe('iOS orientation 1-4. Skips auto-detect.'),
 });
 
 export function registerSwipe(server: McpServer, appSession: AppSession): void {
@@ -60,7 +46,7 @@ export function registerSwipe(server: McpServer, appSession: AppSession): void {
     'swipe',
     {
       description:
-        'Swipe from (x1,y1) to (x2,y2) on iOS simulator or Android device. Coordinates are always in points (dp) — Android pixels are auto-calculated. Duration in ms (default 300). Use for drawer, pager, bottom sheet, scroll. Workflow: query_selector → evaluate_script(measureView(uid)) → swipe. Verify with assert_text.',
+        'Swipe (x1,y1)→(x2,y2) in points. Duration ms (default 300). For scroll/drawer. Use measureView(uid) then swipe; verify with assert_text.',
       inputSchema: schema,
     },
     async (args: unknown) => {

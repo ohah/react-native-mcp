@@ -14,14 +14,9 @@ import {
 import { runCommand } from './run-command.js';
 
 const schema = z.object({
-  url: z.string().describe('The deep link URL to open (e.g. "myapp://product/123").'),
+  url: z.string().describe('Deep link URL (e.g. myapp://product/123).'),
   platform: z.enum(['ios', 'android']).describe('Target platform.'),
-  deviceId: z
-    .string()
-    .optional()
-    .describe(
-      'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected. Use list_devices to find IDs.'
-    ),
+  deviceId: z.string().optional().describe('Device ID. Auto if single. list_devices to find.'),
 });
 
 export function registerOpenDeeplink(server: McpServer): void {
@@ -36,8 +31,7 @@ export function registerOpenDeeplink(server: McpServer): void {
   ).registerTool(
     'open_deeplink',
     {
-      description:
-        'Open a deep link / URL on iOS simulator or Android device. Use this to navigate to specific screens via custom URL schemes or universal links.',
+      description: 'Open deep link on simulator/device. Navigate to screens via URL scheme.',
       inputSchema: schema,
     },
     async (args: unknown) => {

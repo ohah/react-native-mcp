@@ -10,13 +10,7 @@ import type { AppSession } from '../websocket-server.js';
 import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
-  maxDepth: z
-    .number()
-    .int()
-    .min(1)
-    .max(100)
-    .optional()
-    .describe('Max tree depth. Default 30. Reduces payload on large apps.'),
+  maxDepth: z.number().int().min(1).max(100).optional().describe('Max tree depth. Default 30.'),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -34,7 +28,7 @@ export function registerTakeSnapshot(server: McpServer, appSession: AppSession):
     'take_snapshot',
     {
       description:
-        'Capture component tree to discover uids. Returns uid, type, testID, accessibilityLabel, text. Auto-generated testIDs follow ComponentName-index-TagName (e.g. LoginForm-0-Button). uid is testID when present, else path like "0.1.2". Workflow: take_snapshot or query_selector → evaluate_script(measureView(uid)) → tap/swipe.',
+        'Capture component tree for uids. Returns uid, type, testID, text. uid = testID or path. Then measureView(uid) → tap/swipe.',
       inputSchema: schema,
     },
     async (args) => {

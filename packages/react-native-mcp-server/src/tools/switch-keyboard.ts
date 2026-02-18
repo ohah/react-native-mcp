@@ -13,14 +13,12 @@ const schema = z.object({
   action: z
     .enum(['list', 'get', 'switch'])
     .describe(
-      'list: show available keyboards. get: show current keyboard. switch: toggle (iOS) or set (Android) keyboard.'
+      'list: available keyboards. get: current. switch: toggle (iOS) or set IME (Android).'
     ),
   keyboard_id: z
     .string()
     .optional()
-    .describe(
-      'Android switch only. IME ID to activate (e.g. "com.google.android.inputmethod.latin/.LatinIME"). Use action=list to see IDs.'
-    ),
+    .describe('Android switch only. IME ID. Use action=list to see IDs.'),
 });
 
 /* ─── iOS helpers ─── */
@@ -83,7 +81,7 @@ export function registerSwitchKeyboard(server: McpServer): void {
     'switch_keyboard',
     {
       description:
-        'Switch keyboard language on iOS simulator or Android emulator. Use before input_text to ensure correct keyboard layout (e.g. switch to English before typing English text). iOS: toggles via Ctrl+Space. Android: sets IME by ID.',
+        'Switch keyboard on simulator/emulator. Use before input_text for correct layout. iOS: Ctrl+Space. Android: IME by ID.',
       inputSchema: schema,
     },
     async (args: unknown) => {

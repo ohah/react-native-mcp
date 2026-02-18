@@ -12,10 +12,8 @@ import { deviceParam, platformParam } from './device-param.js';
 const schema = z.object({
   function: z
     .string()
-    .describe(
-      'JavaScript function to run in the app (e.g. "(x) => x + 1", "() => measureView(uid)"). require() is not available in RN runtime.'
-    ),
-  args: z.array(z.unknown()).optional().describe('Array of arguments to pass to the function.'),
+    .describe('JS function string. E.g. "() => measureView(uid)". require() not available.'),
+  args: z.array(z.unknown()).optional().describe('Arguments array for the function.'),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -46,7 +44,7 @@ export function registerEvaluateScript(server: McpServer, appSession: AppSession
     'evaluate_script',
     {
       description:
-        'Run a JavaScript function in the React Native app context. function (string), args (array). Returns JSON-serializable result. Use measureView(uid) to get element coordinates for tap/swipe. Note: require() is not available — use only in-app globals.',
+        'Run JS in app context. function (string), args (array). Returns JSON result. Use measureView(uid) for tap/swipe coords.',
       inputSchema: schema,
     },
     async (args: unknown) => {

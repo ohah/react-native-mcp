@@ -24,9 +24,7 @@ AI 에이전트는 이 프로토콜을 자동으로 처리하지만, 일반 테�
 - **CI 워크플로우**: GitHub Actions에서 iOS/Android 자동 E2E (`.github/workflows/e2e-ios.yml`, `e2e-android.yml`)
 - **데모앱** (`examples/demo-app/`): 테스트용 다양한 화면 (Scroll, Input, WebView, Gesture 등)
 - **딥링크 도구** (`open_deeplink`): MCP 도구로 구현 완료
-- **앱 생명주기 가이드** (`docs://guides/app-lifecycle`): MCP Resource로 제공
-
-**현재 구현된 MCP 도구 (27개):**
+  **현재 구현된 MCP 도구 (27개):**
 
 | 카테고리      | 도구                                                                                                 |
 | ------------- | ---------------------------------------------------------------------------------------------------- |
@@ -265,12 +263,13 @@ await app.assertDisabled('#submit-btn');
 
 **현재 구현 상태:**
 
-| 기능                                 | 상태          | 구현 방식                                    |
-| ------------------------------------ | ------------- | -------------------------------------------- |
-| `open_deeplink`                      | **구현 완료** | MCP 도구 (`open-deeplink.ts`)                |
-| `launch` / `terminate` / `clearData` | 가이드만 제공 | MCP Resource (`docs://guides/app-lifecycle`) |
+| 기능                   | 상태          | 구현 방식                     |
+| ---------------------- | ------------- | ----------------------------- |
+| `open_deeplink`        | **구현 완료** | MCP 도구 (`open-deeplink.ts`) |
+| `launch` / `terminate` | MCP 도구 없음 | Bash(adb/simctl) 직접 사용    |
+| `clearData`            | **구현 완료** | MCP 도구 `clear_state`        |
 
-> **결정 사항**: `launch`/`terminate`/`clearData`는 별도 MCP 도구 대신 **MCP Resource 가이드**로 제공하는 방식을 선택함. AI 에이전트가 가이드를 읽고 Bash 도구로 실행. 프로그래매틱 SDK(Phase A)에서는 `child_process.exec`으로 직접 래핑.
+> **결정 사항**: launch/terminate는 MCP 도구 없이 Bash로 실행. clear는 `clear_state` 도구 사용. 프로그래매틱 SDK(Phase A)에서는 `child_process.exec`으로 직접 래핑.
 
 **API (SDK에서 구현 예정)**:
 
@@ -459,8 +458,7 @@ Results: 1 passed, 1 failed (8.3s)
   └── 데모앱 (examples/demo-app/)
 
 Phase D 부분 완료:
-  ├── open_deeplink MCP 도구 ✅
-  └── app-lifecycle MCP Resource 가이드 ✅
+  └── open_deeplink MCP 도구 ✅
 
 Phase 0 완료:
   ├── assert_text / assert_visible: timeoutMs/intervalMs 폴링 추가 ✅

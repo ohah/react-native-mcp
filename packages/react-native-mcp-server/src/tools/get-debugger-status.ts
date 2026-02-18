@@ -22,7 +22,7 @@ export function registerGetDebuggerStatus(server: McpServer, appSession: AppSess
     'get_debugger_status',
     {
       description:
-        'MCP connection status. appConnected: true when app is connected to MCP server (snapshot/eval/tap available). devices: list of connected devices with deviceId, platform, deviceName.',
+        'MCP connection status. appConnected, devices list (deviceId, platform). Call first to see connected devices.',
       inputSchema: schema,
     },
     async (args: unknown) => {
