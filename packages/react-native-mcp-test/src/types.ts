@@ -46,7 +46,10 @@ export type TestStep =
   | { hideKeyboard: null | Record<string, never> }
   | { longPress: { selector: string; duration?: number } }
   | { addMedia: { paths: string[] } }
-  | { assertHasText: { text: string; selector?: string } };
+  | { assertHasText: { text: string; selector?: string } }
+  | { clearText: { selector: string } }
+  | { doubleTap: { selector: string; interval?: number } }
+  | { assertValue: { selector: string; expected: string } };
 
 export interface StepResult {
   step: TestStep;
