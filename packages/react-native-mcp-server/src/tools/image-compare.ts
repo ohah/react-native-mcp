@@ -49,6 +49,9 @@ export async function compareImages(
   const cw = curMeta.width!;
   const ch = curMeta.height!;
 
+  // 해상도가 다르면 픽셀 비교를 수행하지 않음. threshold(퍼센트)는 같은 크기일 때만 적용됨.
+  // CI와 로컬 시뮬레이터 해상도가 다르면 이 단계에서 실패하므로, 베이스라인은 CI와 동일한
+  // 기기/해상도에서 생성하거나, 워크플로에서 시뮬레이터를 고정하는 것이 필요함.
   if (bw !== cw || bh !== ch) {
     return {
       pass: false,
