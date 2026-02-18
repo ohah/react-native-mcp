@@ -22,6 +22,7 @@ function babel_plugin_app_registry_default(babel) {
 					const programPath = path.findParent((p) => p.isProgram?.());
 					if (programPath?.node?.body) {
 						programPath.node.body.unshift(t.expressionStatement(t.callExpression(t.identifier("require"), [t.stringLiteral(RUNTIME_MODULE_ID)])));
+						programPath.node.body.unshift(t.expressionStatement(t.assignmentExpression("=", t.memberExpression(t.identifier("global"), t.identifier("__REACT_NATIVE_MCP_ENABLED__")), t.booleanLiteral(true))));
 						state.runtimeInjected = true;
 					}
 				}
