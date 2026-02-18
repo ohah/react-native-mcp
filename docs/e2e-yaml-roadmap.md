@@ -17,12 +17,12 @@ Detox, Maestro와 비교하여 추가 예정인 스텝 및 기능 목록. 구현
 | 2    | ~~`home`~~          | ★☆☆    | 0.5h   | ✗ (press_button 재사용)     | ✅ 구현 완료. pressButton HOME 래핑                        |
 | 3    | ~~`hideKeyboard`~~  | ★☆☆    | 0.5h   | ✗ (press_button / inputKey) | ✅ 구현 완료. iOS: inputKey(41) Escape, Android: BACK      |
 | 4    | ~~`longPress`~~     | ★☆☆    | 0.5h   | ✗ (tap duration 재사용)     | ✅ 구현 완료. tap + duration 래핑 (기본 800ms)             |
-| 5    | `clearText`         | ★★☆    | 1h     | ✗ (evaluate 활용)           | evaluate로 TextInput 값 비우기 또는 전체선택+삭제          |
-| 6    | `doubleTap`         | ★★☆    | 1h     | △ (tap 2회 또는 새 도구)    | tap 빠르게 2회. 간격 조정 필요                             |
+| 5    | ~~`clearText`~~     | ★★☆    | 1h     | ✗ (typeText 빈 문자열)      | ✅ 구현 완료. typeText(selector, '') 래핑                  |
+| 6    | ~~`doubleTap`~~     | ★★☆    | 1h     | ✗ (tap 2회)                 | ✅ 구현 완료. tap 2회 (기본 간격 50ms)                     |
 | 7    | `${VAR}` 환경 변수  | ★★☆    | 1.5h   | ✗                           | parser에서 문자열 치환. CLI --env 옵션 추가                |
 | 8    | ~~`addMedia`~~      | ★☆☆    | 0.5h   | ✗ (add_media 이미 존재)     | ✅ 구현 완료. 서버 도구 있음. runner 연결만                |
 | 9    | ~~`assertHasText`~~ | ★☆☆    | 0.5h   | ✗ (assert_text 재사용)      | ✅ 구현 완료. assertText alias                             |
-| 10   | `assertValue`       | ★★☆    | 1h     | △ (새 assert 또는 evaluate) | querySelector로 value prop 읽어서 비교                     |
+| 10   | ~~`assertValue`~~   | ★★☆    | 1h     | ✗ (querySelector value)     | ✅ 구현 완료. querySelector value prop 비교                |
 | 11   | `repeat`            | ★★☆    | 1.5h   | ✗                           | runner에 재귀 루프. stepSchema 재귀 정의                   |
 | 12   | `runFlow`           | ★★☆    | 2h     | ✗                           | parser에서 YAML include + 상대경로 해석 + 순환참조 방지    |
 | 13   | `if / when`         | ★★★    | 2h     | ✗                           | runner에 조건 평가. visible 조건은 assertVisible 결과 활용 |
@@ -84,32 +84,9 @@ runner의 `StepContext`에 `platform` 추가하여 iOS/Android 분기 처리.
 
 ---
 
-### 5. clearText ★★☆
+### 5. ~~clearText~~ ★★☆ ✅ 구현 완료
 
-셀렉터로 TextInput을 찾아 텍스트를 전부 지운다.
-
-**구현 범위**: types.ts + parser.ts + runner.ts + app-client.ts (4파일)
-
-**구현 전략**: `evaluate`로 React Native TextInput의 `clear()` 또는 `onChangeText('')` 호출. 또는 전체선택(Ctrl+A) → 삭제.
-
-```typescript
-// app-client.ts
-async clearText(selector: string): Promise<void> {
-  // 방법 1: evaluate로 직접 TextInput 값 비우기
-  await this.evaluate(`() => {
-    const el = __REACT_NATIVE_MCP__.querySelector('${selector}');
-    if (el && el._measureUid) {
-      __REACT_NATIVE_MCP__.typeText(el._measureUid, '');
-    }
-  }`);
-  // 방법 2: typeText에 빈 문자열 (서버의 type_text가 빈 문자열 지원하도록)
-}
-
-// runner.ts
-else if ('clearText' in step) {
-  await app.clearText(step.clearText.selector);
-}
-```
+셀렉터로 TextInput을 찾아 텍스트를 전부 지운다. `typeText(selector, '')` 래핑.
 
 ```yaml
 - clearText:
@@ -118,32 +95,14 @@ else if ('clearText' in step) {
 
 ---
 
-### 6. doubleTap ★★☆
+### 6. ~~doubleTap~~ ★★☆ ✅ 구현 완료
 
-같은 좌표를 빠르게 2회 탭. tap 사이 간격이 짧아야 OS가 더블탭으로 인식.
-
-**구현 범위**: types.ts + parser.ts + runner.ts + app-client.ts (4파일)
-
-**구현 전략**: `querySelector` → 좌표 획득 → `tap` 2회 (간격 ~100ms). 또는 서버에 `double_tap` 도구 추가.
-
-```typescript
-// app-client.ts
-async doubleTap(selector: string): Promise<void> {
-  const el = await this.querySelector(selector);
-  const x = el.measure.pageX + el.measure.width / 2;
-  const y = el.measure.pageY + el.measure.height / 2;
-  // 연속 탭 — 서버의 tap 호출 2회 (300ms sleep 제거 필요)
-  await this.callTool('tap', { platform: this.platform, x, y });
-  await new Promise(r => setTimeout(r, 80));
-  await this.callTool('tap', { platform: this.platform, x, y });
-}
-```
-
-**주의**: 현재 tap 서버 도구에 300ms 딜레이가 있어서 doubleTap으로 인식 안 될 수 있음. 서버에 `count` 파라미터 추가하거나, 별도 `double_tap` 도구가 필요할 수 있음. idb/adb 멀티탭 명령 확인 필요.
+같은 좌표를 빠르게 2회 탭. `querySelector` → 좌표 획득 → `tapXY` 2회 (기본 간격 50ms).
 
 ```yaml
 - doubleTap:
     selector: '#zoomable-image'
+    interval: 100 # 두 탭 사이 간격(ms), 기본 50
 ```
 
 ---
@@ -171,27 +130,14 @@ async doubleTap(selector: string): Promise<void> {
 
 ---
 
-### 9. assertValue ★★☆
+### 9. ~~assertValue~~ ★★☆ ✅ 구현 완료
 
-TextInput 등의 `value` prop 검증. querySelector 결과의 `value` 필드 활용.
-
-**구현 범위**: types.ts + parser.ts + runner.ts + app-client.ts (4파일)
-
-```typescript
-// app-client.ts
-async assertValue(selector: string, expected: string): Promise<{ pass: boolean; message: string }> {
-  const el = await this.querySelector(selector);
-  const actual = String(el.value ?? '');
-  return actual === expected
-    ? { pass: true, message: `Value matches: "${expected}"` }
-    : { pass: false, message: `Expected value "${expected}" but got "${actual}"` };
-}
-```
+TextInput 등의 `value` prop 검증. `querySelector` 결과의 `value` 필드를 `expected`와 비교.
 
 ```yaml
 - assertValue:
     selector: '#quantity-input'
-    value: '3'
+    expected: '3'
 ```
 
 ---
@@ -555,11 +501,11 @@ Phase 1 (기존 도구 래핑) ─── 예상 6h
  ├─ #2 home              ★☆☆  0.5h  ✅ 완료
  ├─ #3 hideKeyboard      ★☆☆  0.5h  ✅ 완료
  ├─ #4 longPress         ★☆☆  0.5h  ✅ 완료
- ├─ #5 clearText         ★★☆  1h
- ├─ #6 doubleTap         ★★☆  1h
+ ├─ #5 clearText         ★★☆  1h    ✅ 완료
+ ├─ #6 doubleTap         ★★☆  1h    ✅ 완료
  ├─ #7 addMedia          ★☆☆  0.5h  ✅ 완료
  ├─ #8 assertHasText     ★☆☆  0.5h  ✅ 완료
- └─ #9 assertValue       ★★☆  1h
+ └─ #9 assertValue       ★★☆  1h    ✅ 완료
 
 Phase 2 (흐름 제어) ─────── 예상 8h
  ├─ #10 ${VAR}           ★★☆  1.5h
@@ -602,13 +548,13 @@ React Native 컴포넌트의 `displayName` (또는 함수 이름)은 웹의 DOM 
 
 ## 현재 지원 vs 추가 예정 요약
 
-| 카테고리      | 현재 지원                                                                   | 추가 예정                               |
-| ------------- | --------------------------------------------------------------------------- | --------------------------------------- |
-| **탭/제스처** | tap, swipe, scrollUntilVisible, **longPress**                               | doubleTap, pinch                        |
-| **텍스트**    | typeText, inputText                                                         | clearText, copyText, pasteText          |
-| **대기**      | wait, waitForText, waitForVisible, waitForNotVisible                        | waitForIdle (자동 동기화)               |
-| **검증**      | assertText, assertVisible, assertNotVisible, assertCount, **assertHasText** | assertValue                             |
-| **흐름 제어** | —                                                                           | runFlow, repeat, if/when, ${VAR}, retry |
-| **디바이스**  | pressButton, **back**, **home**, **hideKeyboard**                           | setLocation, clearState                 |
-| **앱 제어**   | launch, terminate, openDeepLink, **addMedia**                               | —                                       |
-| **기타**      | screenshot, evaluate, webviewEval                                           | —                                       |
+| 카테고리      | 현재 지원                                                                                    | 추가 예정                               |
+| ------------- | -------------------------------------------------------------------------------------------- | --------------------------------------- |
+| **탭/제스처** | tap, swipe, scrollUntilVisible, **longPress**, **doubleTap**                                 | pinch                                   |
+| **텍스트**    | typeText, inputText, **clearText**                                                           | copyText, pasteText                     |
+| **대기**      | wait, waitForText, waitForVisible, waitForNotVisible                                         | waitForIdle (자동 동기화)               |
+| **검증**      | assertText, assertVisible, assertNotVisible, assertCount, **assertHasText**, **assertValue** | —                                       |
+| **흐름 제어** | —                                                                                            | runFlow, repeat, if/when, ${VAR}, retry |
+| **디바이스**  | pressButton, **back**, **home**, **hideKeyboard**                                            | setLocation, clearState                 |
+| **앱 제어**   | launch, terminate, openDeepLink, **addMedia**                                                | —                                       |
+| **기타**      | screenshot, evaluate, webviewEval                                                            | —                                       |
