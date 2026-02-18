@@ -1,0 +1,210 @@
+# CLI Init — 빠른 설정
+
+한 줄 명령어로 React Native MCP를 프로젝트에 설정합니다.
+
+```bash
+npx -y @ohah/react-native-mcp-server init
+```
+
+수동 설정(babel config, 클라이언트 config, gitignore)을 대체하는 인터랙티브 셋업 위저드입니다.
+
+---
+
+## 동작 과정
+
+<div className="terminal">
+  <div className="terminal-header">
+    <span className="terminal-dot red" />
+    <span className="terminal-dot yellow" />
+    <span className="terminal-dot green" />
+    <span className="terminal-title">Terminal</span>
+  </div>
+  <div className="terminal-body">
+    <div className="terminal-line input">$ npx -y @ohah/react-native-mcp-server init</div>
+    <br />
+    <div className="terminal-line bold"> React Native MCP Setup</div>
+    <br />
+    <div className="terminal-line"> Detecting project...</div>
+    <div className="terminal-line success"> ✓ React Native 0.83.1</div>
+    <div className="terminal-line success"> ✓ Expo detected (expo@~52.0.0)</div>
+    <div className="terminal-line success"> ✓ Package manager: bun</div>
+    <br />
+    <div className="terminal-line">? Which MCP client do you use?</div>
+    <div className="terminal-line dim"> 1. Cursor</div>
+    <div className="terminal-line dim"> 2. Claude Code (CLI)</div>
+    <div className="terminal-line dim"> 3. Claude Desktop</div>
+    <div className="terminal-line dim"> 4. Windsurf</div>
+    <div className="terminal-line dim"> 5. Antigravity</div>
+    <div className="terminal-line input">&gt; 1</div>
+    <br />
+    <div className="terminal-line"> Applying changes...</div>
+    <div className="terminal-line success"> ✓ babel.config.js — preset added</div>
+    <div className="terminal-line success"> ✓ MCP config — created .cursor/mcp.json</div>
+    <div className="terminal-line success"> ✓ .gitignore — updated</div>
+    <br />
+    <div className="terminal-line success"> Done! Next steps:</div>
+    <div className="terminal-line"> 1. Start your app: npx expo start</div>
+    <div className="terminal-line"> 2. Open Cursor — MCP tools are ready to use</div>
+  </div>
+</div>
+
+<style>{`
+  .terminal {
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 1.5rem 0;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+    font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .terminal-header {
+    background: #3c3c3c;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .terminal-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .terminal-dot.red { background: #ff5f57; }
+  .terminal-dot.yellow { background: #febc2e; }
+  .terminal-dot.green { background: #28c840; }
+  .terminal-title {
+    flex: 1;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+    margin-right: 52px;
+  }
+  .terminal-body {
+    background: #1e1e1e;
+    padding: 16px 20px;
+    color: #d4d4d4;
+  }
+  .terminal-line {
+    white-space: pre;
+  }
+  .terminal-line.input {
+    color: #f1f1f1;
+  }
+  .terminal-line.bold {
+    color: #f1f1f1;
+    font-weight: bold;
+  }
+  .terminal-line.success {
+    color: #4ec9b0;
+  }
+  .terminal-line.warn {
+    color: #d7ba7d;
+  }
+  .terminal-line.dim {
+    color: #808080;
+  }
+`}</style>
+
+---
+
+## 단계별 상세
+
+### Step 1 — 프로젝트 감지
+
+프로젝트 디렉토리를 읽어 자동으로 감지합니다:
+
+| 항목              | 감지 방법                                                                |
+| ----------------- | ------------------------------------------------------------------------ |
+| React Native 버전 | `package.json`의 `dependencies["react-native"]`                          |
+| Expo 여부         | `dependencies["expo"]`, 또는 `app.json` / `app.config.ts` 존재           |
+| Babel 설정        | `babel.config.js`, `babel.config.cjs`, `.babelrc`                        |
+| 패키지 매니저     | `bun.lock` → bun, `yarn.lock` → yarn, `pnpm-lock.yaml` → pnpm, 그 외 npm |
+
+`package.json`에 `react-native`가 없으면 에러와 함께 종료됩니다.
+
+### Step 2 — MCP 클라이언트 선택
+
+사용하는 MCP 클라이언트를 선택합니다. 설정 파일 생성 위치가 결정됩니다.
+
+| 클라이언트        | 설정 경로                                                                 |
+| ----------------- | ------------------------------------------------------------------------- |
+| Cursor            | `{project}/.cursor/mcp.json`                                              |
+| Claude Code (CLI) | `claude mcp add` 명령어 실행                                              |
+| Claude Desktop    | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
+| Windsurf          | `~/.codeium/windsurf/mcp_config.json`                                     |
+| Antigravity       | `~/.gemini/antigravity/mcp_config.json`                                   |
+
+생성되는 설정 내용:
+
+```json
+{
+  "mcpServers": {
+    "react-native-mcp": {
+      "command": "npx",
+      "args": ["-y", "@ohah/react-native-mcp-server"]
+    }
+  }
+}
+```
+
+파일이 이미 있으면 `react-native-mcp` 항목만 병합합니다. 기존 설정은 유지됩니다.
+
+### Step 3 — 변경 적용
+
+세 파일이 수정됩니다:
+
+1. **babel.config.js** — `presets` 배열에 `@ohah/react-native-mcp-server/babel-preset` 추가.
+2. **MCP 클라이언트 설정** — 위에서 설명한 경로에 생성/병합.
+3. **.gitignore** — `/results/` 추가 (E2E 테스트 출력 디렉토리).
+
+각 단계는 **멱등성**을 보장합니다. 다시 실행하면 이미 적용된 변경은 건너뜁니다.
+
+### Step 4 — 다음 단계 안내
+
+프로젝트 타입에 따라 다음 할 일을 안내합니다:
+
+- **Expo**: `npx expo start`
+- **Bare RN**: `REACT_NATIVE_MCP_ENABLED=true npx react-native start`
+
+---
+
+## 옵션
+
+| 플래그            | 설명                             | 예시              |
+| ----------------- | -------------------------------- | ----------------- |
+| `--client <name>` | 클라이언트 선택 프롬프트 건너뜀  | `--client cursor` |
+| `-y`, `--yes`     | 비인터랙티브 모드 (기본: Cursor) | `-y`              |
+| `-h`, `--help`    | 도움말 표시                      | `--help`          |
+
+```bash
+# CI / 자동화
+npx -y @ohah/react-native-mcp-server init --client cursor -y
+
+# 특정 클라이언트 지정
+npx -y @ohah/react-native-mcp-server init --client antigravity
+```
+
+## 멱등성
+
+`init`을 여러 번 실행해도 안전합니다:
+
+<div className="terminal">
+  <div className="terminal-header">
+    <span className="terminal-dot red" />
+    <span className="terminal-dot yellow" />
+    <span className="terminal-dot green" />
+    <span className="terminal-title">Terminal — 재실행</span>
+  </div>
+  <div className="terminal-body">
+    <div className="terminal-line input">
+      $ npx -y @ohah/react-native-mcp-server init --client cursor -y
+    </div>
+    <br />
+    <div className="terminal-line"> Applying changes...</div>
+    <div className="terminal-line success"> ✓ babel.config.js — preset already configured</div>
+    <div className="terminal-line success"> ✓ MCP config — already configured</div>
+    <div className="terminal-line success"> ✓ .gitignore — already has results/</div>
+  </div>
+</div>

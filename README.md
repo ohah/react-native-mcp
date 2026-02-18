@@ -11,6 +11,110 @@ MCP(Model Context Protocol) server for React Native app automation and monitorin
 - 📝 Collect console logs
 - 🤖 AI-powered debugging and automation
 
+## Quick Start (CLI init)
+
+The fastest way to set up React Native MCP in your project:
+
+```bash
+npx -y @ohah/react-native-mcp-server init
+```
+
+### What it does
+
+The init command runs through these steps:
+
+**Step 1 — Project Detection** (automatic)
+
+Reads `package.json`, lock files, and config files to detect:
+
+- React Native version (`dependencies.react-native`)
+- Expo (`dependencies.expo`, `app.json`, `app.config.ts`)
+- Babel config location (`babel.config.js`, `.babelrc`, etc.)
+- Package manager (`bun.lock` → bun, `yarn.lock` → yarn, `pnpm-lock.yaml` → pnpm, otherwise npm)
+
+```
+ Detecting project...
+  ✓ React Native 0.83.1
+  ✓ Expo detected (expo@~52.0.0)
+  ✓ Package manager: bun
+```
+
+**Step 2 — MCP Client Selection** (interactive prompt)
+
+Asks which MCP client you use. This determines where the server config file is created.
+
+```
+? Which MCP client do you use?
+  1. Cursor
+  2. Claude Code (CLI)
+  3. Claude Desktop
+  4. Windsurf
+  5. Antigravity
+> 1
+```
+
+| Client         | Config location                                                           |
+| -------------- | ------------------------------------------------------------------------- |
+| Cursor         | `{project}/.cursor/mcp.json`                                              |
+| Claude Code    | `claude mcp add` CLI command                                              |
+| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
+| Windsurf       | `~/.codeium/windsurf/mcp_config.json`                                     |
+| Antigravity    | `~/.gemini/antigravity/mcp_config.json`                                   |
+
+**Step 3 — Apply Changes** (automatic)
+
+1. **babel.config.js** — Appends `@ohah/react-native-mcp-server/babel-preset` to the `presets` array. Skipped if already present.
+2. **MCP config** — Creates or merges the server entry into the client config file. Existing settings are preserved.
+3. **.gitignore** — Appends `/results/` if not already present.
+
+```
+ Applying changes...
+  ✓ babel.config.js — preset added
+  ✓ MCP config — created .cursor/mcp.json
+  ✓ .gitignore — updated
+```
+
+**Step 4 — Next Steps**
+
+Shows what to do after setup:
+
+```
+ Done! Next steps:
+  1. Start your app: npx expo start           # Expo
+     Start Metro: REACT_NATIVE_MCP_ENABLED=true npx react-native start  # bare RN
+  2. Open Cursor — MCP tools are ready to use
+```
+
+### Options
+
+```bash
+# Non-interactive mode — skip prompts, use Cursor as default client
+npx -y @ohah/react-native-mcp-server init -y
+
+# Specify client explicitly (no prompt)
+npx -y @ohah/react-native-mcp-server init --client cursor
+npx -y @ohah/react-native-mcp-server init --client claude-code
+npx -y @ohah/react-native-mcp-server init --client claude-desktop
+npx -y @ohah/react-native-mcp-server init --client windsurf
+npx -y @ohah/react-native-mcp-server init --client antigravity
+
+# CI — combine both
+npx -y @ohah/react-native-mcp-server init --client cursor -y
+
+# Help
+npx -y @ohah/react-native-mcp-server init --help
+```
+
+### Idempotent
+
+Running `init` multiple times is safe. Each step checks if the change is already applied and skips if so:
+
+```
+  ✓ babel.config.js — preset already configured
+  ✓ MCP config — already configured
+  ✓ .gitignore — already has results/
+```
+
 ## Installation
 
 **Prerequisites:** Node.js 18+ or Bun (e.g. [mise](https://mise.jdx.dev/): `mise install` in this repo, or install [Node](https://nodejs.org/) / [Bun](https://bun.sh/) globally).
@@ -84,6 +188,12 @@ module.exports = {
    `true` or `1` enables MCP. When unset, the Metro transformer and Babel preset apply no MCP transforms, so no MCP code is included in the bundle. In `__DEV__` (development) the runtime also connects automatically when the env var is set.
 
 > **Expo?** See the [Expo Guide](./docs/expo-guide.md) for Expo-specific setup (babel-preset-expo, Expo Router `app/_layout.tsx`, Dev Client vs Expo Go).
+
+### Expo
+
+React Native MCP works with Expo projects. The CLI init command (`npx -y @ohah/react-native-mcp-server init`) auto-detects Expo and configures everything correctly.
+
+For detailed Expo setup (babel-preset-expo, Expo Router, Dev Client vs Expo Go), see the [Expo Guide](./docs/expo-guide.md).
 
 ### Claude Desktop
 
