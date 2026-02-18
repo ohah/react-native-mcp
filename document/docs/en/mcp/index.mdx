@@ -28,27 +28,7 @@ Register the MCP server in your AI client.
 
 ## 3. React Native app setup
 
-The app must load the **cdp-interceptor** in Metro (for console/network tools) and use the **Babel preset** so the MCP server can communicate with it.
-
-### Metro — cdp-interceptor
-
-At the **very top** of `metro.config.js`, require the interceptor, then your usual config:
-
-```js
-// metro.config.js
-require('@ohah/react-native-mcp-server/cdp-interceptor');
-
-const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
-module.exports = mergeConfig(getDefaultConfig(__dirname), {
-  // your overrides
-});
-```
-
-Or run Metro with the interceptor preloaded:
-
-```bash
-node -r @ohah/react-native-mcp-server/cdp-interceptor node_modules/react-native/cli.js start
-```
+The app must use the **Babel preset** and enable the MCP runtime in the app entry so the MCP server can communicate with it. For console/network tools, run Metro as usual (the MCP server connects to Metro’s debugger; no Metro config change is required).
 
 ### Babel preset
 

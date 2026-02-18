@@ -28,27 +28,7 @@ Cursor·Claude·Copilot 설정에서는 보통 설치 없이 실행하는 방식
 
 ## 3. React Native 앱 설정
 
-MCP 서버가 앱과 통신하려면 Metro에서 **cdp-interceptor**를 로드하고, **Babel 프리셋**을 적용해야 합니다.
-
-### Metro — cdp-interceptor
-
-`metro.config.js` **맨 위**에서 인터셉터를 require한 뒤 기존 설정을 이어갑니다.
-
-```js
-// metro.config.js
-require('@ohah/react-native-mcp-server/cdp-interceptor');
-
-const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
-module.exports = mergeConfig(getDefaultConfig(__dirname), {
-  // 필요한 오버라이드
-});
-```
-
-또는 Metro를 인터셉터와 함께 실행:
-
-```bash
-node -r @ohah/react-native-mcp-server/cdp-interceptor node_modules/react-native/cli.js start
-```
+MCP 서버가 앱과 통신하려면 **Babel 프리셋**을 적용하고 앱 진입점에서 MCP 런타임을 활성화해야 합니다. 콘솔/네트워크 도구는 Metro를 평소처럼 실행하면 됩니다 (MCP 서버가 Metro 디버거에 연결하며, Metro 설정 변경은 필요 없습니다).
 
 ### Babel 프리셋
 
