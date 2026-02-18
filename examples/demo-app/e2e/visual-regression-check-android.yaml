@@ -1,0 +1,26 @@
+# 비주얼 리그레션 — Android 비교 테스트
+name: 비주얼 리그레션 비교 (Android)
+config:
+  platform: android
+  timeout: 90000
+  bundleId:
+    ios: org.reactnativemcp.demo
+    android: com.reactnativemcp.demo
+
+setup:
+  - launch: __bundleId__
+  - waitForVisible:
+      selector: 'Pressable:text("Count:")'
+      timeout: 15000
+
+steps:
+  # ─── Step 1: 카운터 화면 전체 비교 ────────────────────────────
+  - compareScreenshot:
+      baseline: ./baselines/step1-counter-screen-android.png
+      threshold: 0.01
+
+  # ─── Step 1: 카운터 버튼만 비교 (컴포넌트 단위) ───────────────
+  - compareScreenshot:
+      baseline: ./baselines/step1-counter-button-android.png
+      selector: 'Pressable:text("Count:")'
+      threshold: 0.005

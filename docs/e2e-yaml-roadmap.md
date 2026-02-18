@@ -548,13 +548,15 @@ React Native 컴포넌트의 `displayName` (또는 함수 이름)은 웹의 DOM 
 
 ## 현재 지원 vs 추가 예정 요약
 
-| 카테고리      | 현재 지원                                                                                    | 추가 예정                 |
-| ------------- | -------------------------------------------------------------------------------------------- | ------------------------- |
-| **탭/제스처** | tap, swipe, scrollUntilVisible, **longPress**, **doubleTap**                                 | pinch                     |
-| **텍스트**    | typeText, inputText, **clearText**                                                           | copyText, pasteText       |
-| **대기**      | wait, waitForText, waitForVisible, waitForNotVisible                                         | waitForIdle (자동 동기화) |
-| **검증**      | assertText, assertVisible, assertNotVisible, assertCount, **assertHasText**, **assertValue** | —                         |
-| **흐름 제어** | **runFlow**, **repeat**, **if/when**, **${VAR}**, **retry**                                  | —                         |
-| **디바이스**  | pressButton, **back**, **home**, **hideKeyboard**                                            | setLocation, clearState   |
-| **앱 제어**   | launch, terminate, openDeepLink, **addMedia**                                                | —                         |
-| **기타**      | screenshot, evaluate, webviewEval                                                            | —                         |
+| 카테고리          | 현재 지원                                                                                    | 추가 예정                 |
+| ----------------- | -------------------------------------------------------------------------------------------- | ------------------------- |
+| **탭/제스처**     | tap, swipe, scrollUntilVisible, **longPress**, **doubleTap**                                 | pinch                     |
+| **텍스트**        | typeText, inputText, **clearText**                                                           | copyText, pasteText       |
+| **대기**          | wait, waitForText, waitForVisible, waitForNotVisible                                         | waitForIdle (자동 동기화) |
+| **검증**          | assertText, assertVisible, assertNotVisible, assertCount, **assertHasText**, **assertValue** | —                         |
+| **비주얼 비교**   | **compareScreenshot** (전체 화면 + 컴포넌트 크롭, pixelmatch)                                | —                         |
+| **흐름 제어**     | **runFlow**, **repeat**, **if/when**, **${VAR}**, **retry**                                  | —                         |
+| **네트워크 모킹** | **mockNetwork**, **clearNetworkMocks**                                                       | —                         |
+| **디바이스**      | pressButton, **back**, **home**, **hideKeyboard**                                            | setLocation, clearState   |
+| **앱 제어**       | launch, terminate, openDeepLink, **addMedia**                                                | —                         |
+| **기타**          | screenshot, evaluate, webviewEval                                                            | —                         |

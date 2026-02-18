@@ -31,6 +31,8 @@
     "test:e2e:phase2": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/phase2-flow-control.yaml",
     "test:e2e:network-mock": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/network-mock.yaml",
     "test:e2e:phase3": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/phase3-clear-state-set-location-copy-paste.yaml",
+    "test:e2e:visual-update": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/visual-regression-update.yaml",
+    "test:e2e:visual-check": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/visual-regression-check.yaml",
     "setup-mcp": "bun run .cursor/scripts/set-mcp-mise-path.ts",
     "test:yaml": "bun run --filter @ohah/react-native-mcp-test run",
     "docs:dev": "bun run --filter document dev",

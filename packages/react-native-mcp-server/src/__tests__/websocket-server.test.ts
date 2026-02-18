@@ -22,6 +22,7 @@ function makeDevice(
     pending: new Map(),
     metroBaseUrl: null,
     pixelRatio: null,
+    topInsetPx: 0,
     lastMessageTime: Date.now(),
   };
 }
@@ -170,6 +171,7 @@ describe('AppSession', () => {
         platform: 'ios',
         deviceName: 'iPhone 15',
         connected: true,
+        topInsetDp: 0,
       });
       expect((info as Record<string, unknown>).ws).toBeUndefined();
     });

@@ -7,7 +7,15 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
 
-const schema = z.object({});
+const schema = z.object({
+  topInsetDp: z
+    .number()
+    .optional()
+    .describe(
+      'Set Android top inset override (dp). Overrides ADB auto-detect. Persists for the connection.'
+    ),
+  deviceId: z.string().optional().describe('Target device for topInsetDp override.'),
+});
 
 export function registerGetDebuggerStatus(server: McpServer, appSession: AppSession): void {
   (
@@ -26,7 +34,17 @@ export function registerGetDebuggerStatus(server: McpServer, appSession: AppSess
       inputSchema: schema,
     },
     async (args: unknown) => {
-      schema.parse(args ?? {});
+      const { topInsetDp, deviceId } = schema.parse(args ?? {});
+
+      // 수동 topInsetDp 오버라이드 설정
+      if (topInsetDp != null) {
+        try {
+          appSession.setTopInsetDp(topInsetDp, deviceId, 'android');
+        } catch {
+          // 연결된 Android 디바이스 없으면 무시
+        }
+      }
+
       const appConnected = appSession.isConnected();
       const devices = appSession.getConnectedDevices();
       const status: {
@@ -63,7 +81,7 @@ export function registerGetDebuggerStatus(server: McpServer, appSession: AppSess
       }
       const text = [
         `appConnected: ${appConnected}`,
-        `devices: ${devices.length > 0 ? devices.map((d) => `${d.deviceId}(${d.platform}${d.deviceName ? ', ' + d.deviceName : ''})`).join(', ') : 'none'}`,
+        `devices: ${devices.length > 0 ? devices.map((d) => `${d.deviceId}(${d.platform}${d.deviceName ? ', ' + d.deviceName : ''}${d.platform === 'android' ? `, topInset=${d.topInsetDp}dp` : ''})`).join(', ') : 'none'}`,
         status.orientation != null ? `orientation: ${status.orientation}` : '',
       ]
         .filter(Boolean)

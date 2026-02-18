@@ -12,4 +12,6 @@ export type {
   ScrollUntilVisibleResult,
   DebuggerStatus,
   WaitOpts,
+  VisualCompareOpts,
+  VisualCompareResult,
 } from './types.js';

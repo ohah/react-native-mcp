@@ -86,8 +86,9 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
           const serial = await resolveSerial(deviceId);
           const scale =
             appSession.getPixelRatio(undefined, 'android') ?? (await getAndroidScale(serial));
+          const topInsetDp = appSession.getTopInsetDp(deviceId, 'android');
           const px = Math.round(x * scale);
-          const py = Math.round(y * scale);
+          const py = Math.round((y + topInsetDp) * scale);
           if (isLongPress) {
             // Long press = swipe from same point to same point with duration
             await runAdbCommand(

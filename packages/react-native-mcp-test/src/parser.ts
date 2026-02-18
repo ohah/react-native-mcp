@@ -133,6 +133,15 @@ const stepSchema: z.ZodType<unknown> = z.lazy(() =>
       }),
     }),
     z.object({ clearNetworkMocks: z.null().or(z.object({})).default(null) }).strict(),
+    // Visual regression
+    z.object({
+      compareScreenshot: z.object({
+        baseline: z.string(),
+        selector: z.string().optional(),
+        threshold: z.number().min(0).max(1).optional(),
+        update: z.boolean().optional(),
+      }),
+    }),
   ])
 );
 

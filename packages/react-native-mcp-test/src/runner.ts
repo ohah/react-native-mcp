@@ -239,6 +239,25 @@ async function executeStep(
       }
     }
     if (lastError) throw lastError;
+  } else if ('compareScreenshot' in step) {
+    const cs = step.compareScreenshot;
+    // baseline 경로를 YAML 파일 기준 상대경로로 해석
+    const baselinePath = ctx.yamlFilePath
+      ? resolve(dirname(ctx.yamlFilePath), cs.baseline)
+      : resolve(cs.baseline);
+    const diffPath = resolve(ctx.outputDir, `diff-${Date.now()}.png`);
+    const result = await app.visualCompare({
+      baseline: baselinePath,
+      selector: cs.selector,
+      threshold: cs.threshold,
+      updateBaseline: cs.update,
+      saveDiff: cs.update ? undefined : diffPath,
+    });
+    if (!result.pass && !cs.update) {
+      const err = new Error(result.message) as Error & { diffImagePath?: string };
+      err.diffImagePath = diffPath;
+      throw err;
+    }
   } else {
     throw new Error(`Unknown step type: ${stepKey(step as TestStep)}`);
   }
@@ -294,12 +313,17 @@ async function runSteps(
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       const failure = await captureFailure(app, suiteName, i, outputDir);
+      const diffImagePath =
+        err && typeof err === 'object' && 'diffImagePath' in err
+          ? (err as { diffImagePath?: string }).diffImagePath
+          : undefined;
       const result: StepResult = {
         step,
         status: 'failed',
         duration: Date.now() - start,
         error,
         screenshotPath: failure.screenshotPath,
+        diffImagePath,
       };
       results.push(result);
       reporter.onStepResult(result);

@@ -222,10 +222,11 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
           const serial = await resolveSerial(deviceId);
           const scale =
             appSession.getPixelRatio(undefined, 'android') ?? (await getAndroidScale(serial));
+          const topInsetDp = appSession.getTopInsetDp(deviceId, 'android');
           const px1 = Math.round(coords.x1 * scale);
-          const py1 = Math.round(coords.y1 * scale);
+          const py1 = Math.round((coords.y1 + topInsetDp) * scale);
           const px2 = Math.round(coords.x2 * scale);
-          const py2 = Math.round(coords.y2 * scale);
+          const py2 = Math.round((coords.y2 + topInsetDp) * scale);
           await runAdbCommand(
             [
               'shell',

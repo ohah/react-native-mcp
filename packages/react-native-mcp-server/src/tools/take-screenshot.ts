@@ -67,11 +67,14 @@ async function processImage(
   const rawHeight = metadata.height || 0;
 
   // 화면 스케일 계산 (pixel → point 변환용)
+  // 런타임 pixelRatio 우선, 없으면 플랫폼별 fallback
   let scale: number;
-  if (platform === 'android') {
-    scale = runtimePixelRatio ?? (await getAndroidScale());
+  if (runtimePixelRatio != null) {
+    scale = runtimePixelRatio;
+  } else if (platform === 'android') {
+    scale = await getAndroidScale();
   } else {
-    // iOS simctl PNG: 144 DPI = 2x, 216 DPI = 3x
+    // iOS fallback: simctl PNG DPI (144=2x, 216=3x). 일부 버전은 72로 찍힘
     const density = metadata.density || 72;
     scale = Math.round(density / 72) || 1;
   }
@@ -117,8 +120,7 @@ export function registerTakeScreenshot(server: McpServer, appSession: AppSession
         if (!isValidPng(png)) {
           throw new Error('Capture produced invalid PNG.');
         }
-        const runtimeRatio =
-          platform === 'android' ? appSession.getPixelRatio(undefined, 'android') : null;
+        const runtimeRatio = appSession.getPixelRatio(undefined, platform);
         const { buffer, pointSize, outputSize } = await processImage(png, platform, runtimeRatio);
         if (filePath) {
           await writeFile(filePath, buffer);

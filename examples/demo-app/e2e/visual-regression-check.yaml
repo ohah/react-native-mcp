@@ -1,0 +1,49 @@
+# 비주얼 리그레션 — 비교 테스트 (CI용)
+# 베이스라인 생성 후 실행: bun e2e examples/demo-app/e2e/visual-regression-check.yaml
+# 실패 시 results/ 폴더에 diff 이미지 생성됨
+name: 비주얼 리그레션 비교
+config:
+  platform: ios
+  timeout: 90000
+  bundleId:
+    ios: org.reactnativemcp.demo
+    android: com.reactnativemcp.demo
+
+setup:
+  - launch: __bundleId__
+  - waitForVisible:
+      selector: 'Pressable:text("Count:")'
+      timeout: 15000
+
+steps:
+  # ─── Step 1: 카운터 화면 전체 비교 ────────────────────────────
+  - compareScreenshot:
+      baseline: ./baselines/step1-counter-screen.png
+      threshold: 0.01
+
+  # ─── Step 1: 카운터 버튼만 비교 (컴포넌트 단위) ───────────────
+  - compareScreenshot:
+      baseline: ./baselines/step1-counter-button.png
+      selector: 'Pressable:text("Count:")'
+      threshold: 0.005
+
+  # ─── Step 5로 이동 ────────────────────────────────────────────
+  - tap: { selector: 'Pressable:text("다음")' }
+  - waitForVisible: { selector: 'Pressable:text("testID 없음")', timeout: 5000 }
+  - tap: { selector: 'Pressable:text("다음")' }
+  - waitForVisible: { selector: 'TouchableOpacity:text("TouchableOpacity (0)")', timeout: 5000 }
+  - tap: { selector: 'Pressable:text("다음")' }
+  - waitForVisible: { selector: 'Pressable:text("Long Press (0)")', timeout: 5000 }
+  - tap: { selector: 'Pressable:text("다음")' }
+  - waitForVisible: { selector: '#input-with-testid', timeout: 5000 }
+
+  # ─── Step 5: Input 화면 전체 비교 ─────────────────────────────
+  - compareScreenshot:
+      baseline: ./baselines/step5-input-screen.png
+      threshold: 0.01
+
+  # ─── Step 5: TextInput 컴포넌트만 비교 ────────────────────────
+  - compareScreenshot:
+      baseline: ./baselines/step5-input-field.png
+      selector: '#input-with-testid'
+      threshold: 0.005

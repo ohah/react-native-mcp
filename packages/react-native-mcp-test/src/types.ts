@@ -72,7 +72,15 @@ export type TestStep =
         delay?: number;
       };
     }
-  | { clearNetworkMocks: null | Record<string, never> };
+  | { clearNetworkMocks: null | Record<string, never> }
+  | {
+      compareScreenshot: {
+        baseline: string;
+        selector?: string;
+        threshold?: number;
+        update?: boolean;
+      };
+    };
 
 export interface StepResult {
   step: TestStep;
@@ -80,6 +88,8 @@ export interface StepResult {
   duration: number;
   error?: string;
   screenshotPath?: string;
+  /** visual_compare 실패 시 diff 이미지 경로 */
+  diffImagePath?: string;
 }
 
 export interface SuiteResult {

@@ -470,6 +470,66 @@ describe('mockNetwork + clearNetworkMocks 혼합', () => {
   });
 });
 
+/* ================================================================== */
+/*  Visual Regression — compareScreenshot                              */
+/* ================================================================== */
+
+describe('compareScreenshot', () => {
+  it('전체 화면 비교 (baseline + threshold)', () => {
+    const suite = writeAndParse(
+      "  - compareScreenshot: { baseline: './baselines/home.png', threshold: 0.01 }"
+    );
+    expect(suite.steps[0]).toEqual({
+      compareScreenshot: { baseline: './baselines/home.png', threshold: 0.01 },
+    });
+  });
+
+  it('selector로 컴포넌트 비교', () => {
+    const suite = writeAndParse(
+      "  - compareScreenshot: { baseline: './baselines/card.png', selector: '#product-card', threshold: 0.005 }"
+    );
+    expect(suite.steps[0]).toEqual({
+      compareScreenshot: {
+        baseline: './baselines/card.png',
+        selector: '#product-card',
+        threshold: 0.005,
+      },
+    });
+  });
+
+  it('update: true로 베이스라인 갱신', () => {
+    const suite = writeAndParse(
+      "  - compareScreenshot: { baseline: './baselines/card.png', selector: '#card', update: true }"
+    );
+    const step = suite.steps[0] as any;
+    expect(step.compareScreenshot.update).toBe(true);
+    expect(step.compareScreenshot.baseline).toBe('./baselines/card.png');
+  });
+
+  it('baseline만 필수 — threshold, selector, update 생략 가능', () => {
+    const suite = writeAndParse("  - compareScreenshot: { baseline: './baselines/screen.png' }");
+    expect(suite.steps[0]).toEqual({
+      compareScreenshot: { baseline: './baselines/screen.png' },
+    });
+  });
+
+  it('baseline 누락 시 에러', () => {
+    expect(() => writeAndParse("  - compareScreenshot: { selector: '#btn' }")).toThrow();
+  });
+
+  it('threshold 범위 초과 시 에러', () => {
+    expect(() =>
+      writeAndParse("  - compareScreenshot: { baseline: './b.png', threshold: 2 }")
+    ).toThrow();
+  });
+
+  it('threshold 음수 시 에러', () => {
+    expect(() =>
+      writeAndParse("  - compareScreenshot: { baseline: './b.png', threshold: -0.1 }")
+    ).toThrow();
+  });
+});
+
 describe('Phase 2 스텝 혼합', () => {
   it('흐름 제어 + 기존 스텝이 함께 파싱됨', () => {
     const suite = writeAndParse(

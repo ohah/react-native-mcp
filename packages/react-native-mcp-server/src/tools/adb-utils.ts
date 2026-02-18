@@ -158,6 +158,57 @@ export function _resetScaleCache(): void {
   _scaleBySerial.clear();
 }
 
+/* ─── Android top inset (상태바/캡션바 높이, px) ─── */
+
+const _topInsetBySerial = new Map<string, number>();
+
+/**
+ * Android 디바이스의 실제 top inset(px)을 `dumpsys window displays`에서 파싱.
+ * captionBar(태블릿 등)가 있으면 우선, 없으면 statusBars 사용.
+ * 파싱 실패 시 0 반환 (호출자가 fallback 처리).
+ */
+export async function getAndroidTopInset(serial?: string): Promise<number> {
+  const key = serial ?? '_default';
+  const cached = _topInsetBySerial.get(key);
+  if (cached != null) return cached;
+  try {
+    const text = await runAdbCommand(['shell', 'dumpsys', 'window', 'displays'], serial, {
+      timeoutMs: 5000,
+    });
+
+    // captionBar가 있으면 우선 (Pixel Tablet 등)
+    const captionMatch = text.match(
+      /InsetsSource[^\n]*type=captionBar[^\n]*frame=\[\d+,\d+\]\[\d+,(\d+)\]/
+    );
+    if (captionMatch) {
+      const px = parseInt(captionMatch[1]!, 10);
+      _topInsetBySerial.set(key, px);
+      return px;
+    }
+
+    // 없으면 statusBars
+    const statusMatch = text.match(
+      /InsetsSource[^\n]*type=statusBars[^\n]*frame=\[\d+,\d+\]\[\d+,(\d+)\]/
+    );
+    if (statusMatch) {
+      const px = parseInt(statusMatch[1]!, 10);
+      _topInsetBySerial.set(key, px);
+      return px;
+    }
+
+    _topInsetBySerial.set(key, 0);
+    return 0;
+  } catch {
+    // 파싱 실패 시 캐싱하지 않음 → 다음 호출에서 재시도
+    return 0;
+  }
+}
+
+/** 테스트용 top inset 캐시 초기화 */
+export function _resetTopInsetCache(): void {
+  _topInsetBySerial.clear();
+}
+
 /* ─── 에러 헬퍼 ─── */
 
 export function adbNotInstalledError(): {
