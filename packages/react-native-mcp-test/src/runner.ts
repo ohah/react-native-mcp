@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { AppClient } from '@ohah/react-native-mcp-client';
+import { parseFile } from './parser.js';
 import type { Reporter } from './reporters/index.js';
 import type {
   TestSuite,
@@ -35,6 +36,12 @@ interface StepContext {
   resolvedBundleId?: string;
   /** hideKeyboard에서 iOS/Android 분기용 */
   platform: Platform;
+  /** 현재 YAML 파일 경로. runFlow 상대경로 해석에 사용 */
+  yamlFilePath?: string;
+  /** runFlow 순환참조 방지용. 현재 포함 체인의 절대 경로 집합 */
+  visitedFlows?: Set<string>;
+  /** CLI --env로 전달된 환경 변수. runFlow에서 하위 파일 파싱 시 전달 */
+  envVars?: Record<string, string>;
 }
 
 async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Promise<void> {
@@ -144,6 +151,63 @@ async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Pr
   } else if ('assertValue' in step) {
     const result = await app.assertValue(step.assertValue.selector, step.assertValue.expected);
     if (!result.pass) throw new Error(result.message);
+  } else if ('repeat' in step) {
+    for (let i = 0; i < step.repeat.times; i++) {
+      for (const s of step.repeat.steps) {
+        await executeStep(app, s as TestStep, ctx);
+      }
+    }
+  } else if ('runFlow' in step) {
+    if (!ctx.yamlFilePath) {
+      throw new Error(
+        'runFlow requires yamlFilePath in context (suite must be parsed from a file)'
+      );
+    }
+    const flowPath = resolve(dirname(ctx.yamlFilePath), step.runFlow);
+    const visited = ctx.visitedFlows ?? new Set<string>();
+    if (visited.has(flowPath)) {
+      throw new Error(`Circular runFlow reference: ${flowPath}`);
+    }
+    const flowSuite = parseFile(flowPath, ctx.envVars);
+    const childCtx: StepContext = {
+      ...ctx,
+      yamlFilePath: flowPath,
+      visitedFlows: new Set([...visited, flowPath]),
+    };
+    for (const s of flowSuite.steps) {
+      await executeStep(app, s, childCtx);
+    }
+  } else if ('if' in step) {
+    let shouldRun = true;
+    if (step.if.platform) {
+      shouldRun = step.if.platform === ctx.platform;
+    }
+    if (step.if.visible && shouldRun) {
+      const result = await app.assertVisible(step.if.visible);
+      shouldRun = result.pass;
+    }
+    if (shouldRun) {
+      for (const s of step.if.steps) {
+        await executeStep(app, s as TestStep, ctx);
+      }
+    }
+  } else if ('retry' in step) {
+    let lastError: Error | undefined;
+    for (let attempt = 0; attempt <= step.retry.times; attempt++) {
+      try {
+        for (const s of step.retry.steps) {
+          await executeStep(app, s as TestStep, ctx);
+        }
+        lastError = undefined;
+        break;
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        if (attempt < step.retry.times) {
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+    }
+    if (lastError) throw lastError;
   } else {
     throw new Error(`Unknown step type: ${stepKey(step as TestStep)}`);
   }
@@ -268,6 +332,9 @@ export async function runSuite(
     didLaunchInCreate: autoLaunch,
     resolvedBundleId,
     platform,
+    yamlFilePath: suite.filePath,
+    visitedFlows: suite.filePath ? new Set([suite.filePath]) : undefined,
+    envVars: opts.envVars,
   };
 
   try {

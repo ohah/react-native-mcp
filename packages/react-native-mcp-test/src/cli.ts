@@ -16,6 +16,7 @@ const { values, positionals } = parseArgs({
     device: { type: 'string', short: 'd' },
     'slack-webhook': { type: 'string' },
     'report-url': { type: 'string' },
+    env: { type: 'string', short: 'e', multiple: true },
     'no-bail': { type: 'boolean' },
     'no-auto-launch': { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
@@ -36,6 +37,7 @@ Options:
   -d, --device <id>              Device ID
   --slack-webhook <url>          Slack webhook URL (for -r slack; or set SLACK_WEBHOOK_URL)
   --report-url <url>             Report link for Slack message (e.g. CI artifact URL)
+  -e, --env <KEY=VALUE>          Set environment variable (repeatable)
   --no-bail                      Continue running after suite failure
   --no-auto-launch               Do not launch app in create(); use setup launch step (e.g. CI install-only)
   -h, --help                     Show help`);
@@ -55,8 +57,17 @@ if (platform && platform !== 'ios' && platform !== 'android') {
 }
 
 async function main() {
+  // --env KEY=VALUE 파싱
+  const envVars: Record<string, string> = {};
+  for (const pair of values.env ?? []) {
+    const idx = pair.indexOf('=');
+    if (idx > 0) {
+      envVars[pair.slice(0, idx)] = pair.slice(idx + 1);
+    }
+  }
+
   const targetPath = resolve(target!);
-  const suites = parsePath(targetPath);
+  const suites = parsePath(targetPath, Object.keys(envVars).length > 0 ? envVars : undefined);
 
   if (suites.length === 0) {
     console.error('No test suites found at: ' + targetPath);
@@ -76,6 +87,7 @@ async function main() {
     deviceId: values.device,
     bail: !values['no-bail'],
     autoLaunch: !values['no-auto-launch'],
+    envVars: Object.keys(envVars).length > 0 ? envVars : undefined,
   });
 
   process.exit(result.failed > 0 ? 1 : 0);

@@ -1,0 +1,155 @@
+# Phase 2 흐름 제어 기능 통합 테스트
+# 실행: react-native-mcp-test run examples/demo-app/e2e/phase2-flow-control.yaml \
+#       -p ios -e TEST_INPUT=hello -e COUNTER_TIMES=3
+name: Phase 2 흐름 제어
+config:
+  platform: ios
+  timeout: 90000
+  bundleId:
+    ios: org.reactnativemcp.demo
+    android: com.reactnativemcp.demo
+
+setup:
+  - launch: __bundleId__
+  - waitForVisible:
+      selector: 'Pressable:text("Count:")'
+      timeout: 15000
+
+steps:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 1. repeat — 카운터 버튼 3회 반복 탭
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  - assertText: { text: 'Count: 0', selector: 'Pressable:text("Count:")' }
+  - repeat:
+      times: 3
+      steps:
+        - tap: { selector: 'Pressable:text("Count:")' }
+        - wait: 300
+  - retry:
+      times: 3
+      steps:
+        - assertText: { text: 'Count: 3' }
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 2. runFlow — 공유 플로우로 다음 화면 이동
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  - runFlow: ./shared/go-next.yaml
+  - waitForVisible: { selector: 'Pressable:text("testID 없음")', timeout: 5000 }
+
+  # Step 2: testID 없음 → 탭 후 다음 이동
+  - tap: { selector: 'Pressable:text("testID 없음")' }
+  - waitForText: { text: 'testID 없음 (1)', timeout: 3000 }
+  - runFlow: ./shared/go-next.yaml
+
+  # Step 3: Press Variants — 건너뛰기
+  - waitForVisible: { selector: 'TouchableOpacity:text("TouchableOpacity (0)")', timeout: 5000 }
+  - runFlow: ./shared/go-next.yaml
+
+  # Step 4: Long Press — 건너뛰기
+  - waitForVisible: { selector: 'Pressable:text("Long Press (0)")', timeout: 5000 }
+  - runFlow: ./shared/go-next.yaml
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 3. ${VAR} — 환경 변수로 입력 텍스트 주입
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Step 5: Input with testID
+  - waitForVisible: { selector: '#input-with-testid', timeout: 5000 }
+  - typeText: { selector: '#input-with-testid', text: '${TEST_INPUT}' }
+  - waitForText: { text: '입력값: ${TEST_INPUT}', timeout: 3000 }
+  - runFlow: ./shared/go-next.yaml
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 4. if — 플랫폼별 분기
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Step 6: Input no testID
+  - waitForVisible: { selector: 'TextInput[placeholder="testID 없는 입력"]', timeout: 5000 }
+  - typeText: { selector: 'TextInput[placeholder="testID 없는 입력"]', text: 'platform-test' }
+
+  # iOS에서만 키보드 닫기 (Escape 키)
+  - if:
+      platform: ios
+      steps:
+        - hideKeyboard:
+
+  # Android에서만 BACK으로 키보드 닫기
+  - if:
+      platform: android
+      steps:
+        - hideKeyboard:
+
+  - waitForText: { text: '입력값: platform-test', timeout: 3000 }
+  - runFlow: ./shared/go-next.yaml
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 5. if + visible — 조건부 실행 (요소 존재 여부)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Step 7~9: ScrollView 3개 건너뛰기
+  - waitForVisible: { selector: 'ScrollView', timeout: 5000 }
+  - runFlow: ./shared/go-next.yaml
+  - waitForVisible: { selector: 'ScrollView', timeout: 5000 }
+  - runFlow: ./shared/go-next.yaml
+  - waitForVisible: { selector: 'Pressable:text("버튼 0 (0)")', timeout: 5000 }
+  - runFlow: ./shared/go-next.yaml
+
+  # Step 10~11: FlatList 건너뛰기
+  - waitForVisible: { selector: 'FlatList', timeout: 5000 }
+  - runFlow: ./shared/go-next.yaml
+  - waitForVisible: { selector: 'Pressable:text("클릭: 0")', timeout: 5000 }
+  - runFlow: ./shared/go-next.yaml
+
+  # Step 12~14: WebView 건너뛰기
+  - waitForVisible: { selector: '#demo-app-webview', timeout: 5000 }
+  - runFlow: ./shared/go-next.yaml
+  - waitForVisible: { selector: '#demo-app-webview-naver', timeout: 5000 }
+  - runFlow: ./shared/go-next.yaml
+  - waitForVisible: { selector: '#postmessage-count', timeout: 5000 }
+  - runFlow: ./shared/go-next.yaml
+
+  # Step 15~19: Network 5개 건너뛰기
+  - repeat:
+      times: 5
+      steps:
+        - wait: 1000
+        - runFlow: ./shared/go-next.yaml
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 6. retry + if/visible — Toggle visibility에서 검증
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Step 20~31: Gesture 12개 건너뛰기 (Bottom sheet 직전까지)
+  - repeat:
+      times: 12
+      steps:
+        - wait: 1000
+        - runFlow: ./shared/go-next.yaml
+
+  # Step 32: Bottom sheet — 시트를 열어야 "다음" 버튼 접근 가능
+  - wait: 1500
+  - swipe:
+      selector: 'GestureDetector View:text("Bottom sheet")'
+      direction: up
+      distance: '30%'
+      duration: 400
+  - waitForText: { text: '상태: 열림', selector: '#sheet-status', timeout: 5000 }
+  - wait: 10000
+  - runFlow: ./shared/go-next.yaml
+
+  # Step 33: Toggle visibility — if/visible + retry 활용
+  - waitForVisible: { selector: '#toggle-target', timeout: 5000 }
+
+  # toggle-target이 보이면 숨기기
+  - if:
+      visible: '#toggle-target'
+      steps:
+        - tap: { selector: '#toggle-visibility-btn' }
+        - waitForNotVisible: { selector: '#toggle-target', timeout: 3000 }
+
+  # 다시 보이게
+  - tap: { selector: '#toggle-visibility-btn' }
+
+  # retry로 visibility 검증 (애니메이션 타이밍 대응)
+  - retry:
+      times: 3
+      steps:
+        - assertVisible: { selector: '#toggle-target' }
+
+  - screenshot: { path: './results/phase2-flow-control-success.png' }

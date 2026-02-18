@@ -11,28 +11,28 @@ Detox, Maestro와 비교하여 추가 예정인 스텝 및 기능 목록. 구현
 
 새 스텝을 추가하는 패턴: `types.ts` → `parser.ts` → `runner.ts` → (필요 시) `app-client.ts` → (필요 시) 서버 `tools/*.ts`
 
-| 순서 | 기능                | 난이도 | 작업량 | 서버 도구 필요              | 비고                                                       |
-| ---- | ------------------- | ------ | ------ | --------------------------- | ---------------------------------------------------------- |
-| 1    | ~~`back`~~          | ★☆☆    | 0.5h   | ✗ (press_button 재사용)     | ✅ 구현 완료. pressButton BACK 래핑                        |
-| 2    | ~~`home`~~          | ★☆☆    | 0.5h   | ✗ (press_button 재사용)     | ✅ 구현 완료. pressButton HOME 래핑                        |
-| 3    | ~~`hideKeyboard`~~  | ★☆☆    | 0.5h   | ✗ (press_button / inputKey) | ✅ 구현 완료. iOS: inputKey(41) Escape, Android: BACK      |
-| 4    | ~~`longPress`~~     | ★☆☆    | 0.5h   | ✗ (tap duration 재사용)     | ✅ 구현 완료. tap + duration 래핑 (기본 800ms)             |
-| 5    | ~~`clearText`~~     | ★★☆    | 1h     | ✗ (typeText 빈 문자열)      | ✅ 구현 완료. typeText(selector, '') 래핑                  |
-| 6    | ~~`doubleTap`~~     | ★★☆    | 1h     | ✗ (tap 2회)                 | ✅ 구현 완료. tap 2회 (기본 간격 50ms)                     |
-| 7    | `${VAR}` 환경 변수  | ★★☆    | 1.5h   | ✗                           | parser에서 문자열 치환. CLI --env 옵션 추가                |
-| 8    | ~~`addMedia`~~      | ★☆☆    | 0.5h   | ✗ (add_media 이미 존재)     | ✅ 구현 완료. 서버 도구 있음. runner 연결만                |
-| 9    | ~~`assertHasText`~~ | ★☆☆    | 0.5h   | ✗ (assert_text 재사용)      | ✅ 구현 완료. assertText alias                             |
-| 10   | ~~`assertValue`~~   | ★★☆    | 1h     | ✗ (querySelector value)     | ✅ 구현 완료. querySelector value prop 비교                |
-| 11   | `repeat`            | ★★☆    | 1.5h   | ✗                           | runner에 재귀 루프. stepSchema 재귀 정의                   |
-| 12   | `runFlow`           | ★★☆    | 2h     | ✗                           | parser에서 YAML include + 상대경로 해석 + 순환참조 방지    |
-| 13   | `if / when`         | ★★★    | 2h     | ✗                           | runner에 조건 평가. visible 조건은 assertVisible 결과 활용 |
-| 14   | `retry`             | ★★☆    | 1.5h   | ✗                           | runner에 try-catch 루프. 중첩 스텝 실행                    |
-| 15   | `clearState`        | ★★☆    | 1h     | ✓ 새 도구                   | iOS: xcrun simctl, Android: adb pm clear                   |
-| 16   | `setLocation`       | ★★☆    | 1.5h   | ✓ 새 도구                   | iOS: simctl location, Android: adb emu geo fix             |
-| 17   | `copyText`          | ★★☆    | 1.5h   | △                           | querySelector로 텍스트 읽어서 내부 변수 저장               |
-| 18   | `pasteText`         | ★★☆    | 1h     | △                           | 저장된 텍스트를 inputText로 입력                           |
-| 19   | `pinch`             | ★★★    | 3h     | ✓ 새 도구                   | 멀티터치. idb 미지원 가능성, adb input 제한                |
-| 20   | `waitForIdle`       | ★★★    | 4h+    | ✗ (runtime.js 수정)         | 애니메이션/네트워크 자동 대기. 아래 별도 섹션 참고         |
+| 순서 | 기능                   | 난이도 | 작업량 | 서버 도구 필요              | 비고                                                      |
+| ---- | ---------------------- | ------ | ------ | --------------------------- | --------------------------------------------------------- |
+| 1    | ~~`back`~~             | ★☆☆    | 0.5h   | ✗ (press_button 재사용)     | ✅ 구현 완료. pressButton BACK 래핑                       |
+| 2    | ~~`home`~~             | ★☆☆    | 0.5h   | ✗ (press_button 재사용)     | ✅ 구현 완료. pressButton HOME 래핑                       |
+| 3    | ~~`hideKeyboard`~~     | ★☆☆    | 0.5h   | ✗ (press_button / inputKey) | ✅ 구현 완료. iOS: inputKey(41) Escape, Android: BACK     |
+| 4    | ~~`longPress`~~        | ★☆☆    | 0.5h   | ✗ (tap duration 재사용)     | ✅ 구현 완료. tap + duration 래핑 (기본 800ms)            |
+| 5    | ~~`clearText`~~        | ★★☆    | 1h     | ✗ (typeText 빈 문자열)      | ✅ 구현 완료. typeText(selector, '') 래핑                 |
+| 6    | ~~`doubleTap`~~        | ★★☆    | 1h     | ✗ (tap 2회)                 | ✅ 구현 완료. tap 2회 (기본 간격 50ms)                    |
+| 7    | ~~`${VAR}` 환경 변수~~ | ★★☆    | 1.5h   | ✗                           | ✅ 구현 완료. parser에서 문자열 치환. CLI --env 옵션 추가 |
+| 8    | ~~`addMedia`~~         | ★☆☆    | 0.5h   | ✗ (add_media 이미 존재)     | ✅ 구현 완료. 서버 도구 있음. runner 연결만               |
+| 9    | ~~`assertHasText`~~    | ★☆☆    | 0.5h   | ✗ (assert_text 재사용)      | ✅ 구현 완료. assertText alias                            |
+| 10   | ~~`assertValue`~~      | ★★☆    | 1h     | ✗ (querySelector value)     | ✅ 구현 완료. querySelector value prop 비교               |
+| 11   | ~~`repeat`~~           | ★★☆    | 1.5h   | ✗                           | ✅ 구현 완료. runner에 재귀 루프. z.lazy() 재귀 정의      |
+| 12   | ~~`runFlow`~~          | ★★☆    | 2h     | ✗                           | ✅ 구현 완료. 상대경로 해석 + Set 순환참조 방지           |
+| 13   | ~~`if / when`~~        | ★★★    | 2h     | ✗                           | ✅ 구현 완료. platform/visible 조건. assertVisible 활용   |
+| 14   | ~~`retry`~~            | ★★☆    | 1.5h   | ✗                           | ✅ 구현 완료. try-catch 루프. 중첩 스텝 실행              |
+| 15   | `clearState`           | ★★☆    | 1h     | ✓ 새 도구                   | iOS: xcrun simctl, Android: adb pm clear                  |
+| 16   | `setLocation`          | ★★☆    | 1.5h   | ✓ 새 도구                   | iOS: simctl location, Android: adb emu geo fix            |
+| 17   | `copyText`             | ★★☆    | 1.5h   | △                           | querySelector로 텍스트 읽어서 내부 변수 저장              |
+| 18   | `pasteText`            | ★★☆    | 1h     | △                           | 저장된 텍스트를 inputText로 입력                          |
+| 19   | `pinch`                | ★★★    | 3h     | ✓ 새 도구                   | 멀티터치. idb 미지원 가능성, adb input 제한               |
+| 20   | `waitForIdle`          | ★★★    | 4h+    | ✗ (runtime.js 수정)         | 애니메이션/네트워크 자동 대기. 아래 별도 섹션 참고        |
 
 **예상 총 작업량**: ~24h (pinch, waitForIdle 제외 시 ~17h)
 
@@ -144,7 +144,7 @@ TextInput 등의 `value` prop 검증. `querySelector` 결과의 `value` 필드�
 
 ## Phase 2 — 파서/러너 확장 (흐름 제어)
 
-### 10. `${VAR}` 환경 변수 ★★☆
+### 10. ~~`${VAR}` 환경 변수~~ ★★☆ ✅ 구현 완료
 
 **구현 범위**: parser.ts + cli.ts (2파일)
 
@@ -175,7 +175,7 @@ const result = suiteSchema.parse(interpolated);
 
 ---
 
-### 11. repeat ★★☆
+### 11. ~~repeat~~ ★★☆ ✅ 구현 완료
 
 **구현 범위**: types.ts + parser.ts + runner.ts (3파일)
 
@@ -213,7 +213,7 @@ else if ('repeat' in step) {
 
 ---
 
-### 12. runFlow ★★☆
+### 12. ~~runFlow~~ ★★☆ ✅ 구현 완료
 
 **구현 범위**: parser.ts + runner.ts + types.ts (3파일)
 
@@ -242,7 +242,7 @@ else if ('runFlow' in step) {
 
 ---
 
-### 13. if / when ★★★
+### 13. ~~if / when~~ ★★★ ✅ 구현 완료
 
 **구현 범위**: types.ts + parser.ts + runner.ts (3파일)
 
@@ -281,7 +281,7 @@ else if ('if' in step) {
 
 ---
 
-### 14. retry ★★☆
+### 14. ~~retry~~ ★★☆ ✅ 구현 완료
 
 **구현 범위**: types.ts + parser.ts + runner.ts (3파일)
 
@@ -508,11 +508,11 @@ Phase 1 (기존 도구 래핑) ─── 예상 6h
  └─ #9 assertValue       ★★☆  1h    ✅ 완료
 
 Phase 2 (흐름 제어) ─────── 예상 8h
- ├─ #10 ${VAR}           ★★☆  1.5h
- ├─ #11 repeat           ★★☆  1.5h
- ├─ #12 runFlow          ★★☆  2h
- ├─ #13 if/when          ★★★  2h
- └─ #14 retry            ★★☆  1.5h  (repeat 구현 후 유사 패턴)
+ ├─ #10 ${VAR}           ★★☆  1.5h  ✅ 완료
+ ├─ #11 repeat           ★★☆  1.5h  ✅ 완료
+ ├─ #12 runFlow          ★★☆  2h    ✅ 완료
+ ├─ #13 if/when          ★★★  2h    ✅ 완료
+ └─ #14 retry            ★★☆  1.5h  ✅ 완료
 
 Phase 3 (새 서버 도구) ──── 예상 7h
  ├─ #15 clearState       ★★☆  1h
@@ -548,13 +548,13 @@ React Native 컴포넌트의 `displayName` (또는 함수 이름)은 웹의 DOM 
 
 ## 현재 지원 vs 추가 예정 요약
 
-| 카테고리      | 현재 지원                                                                                    | 추가 예정                               |
-| ------------- | -------------------------------------------------------------------------------------------- | --------------------------------------- |
-| **탭/제스처** | tap, swipe, scrollUntilVisible, **longPress**, **doubleTap**                                 | pinch                                   |
-| **텍스트**    | typeText, inputText, **clearText**                                                           | copyText, pasteText                     |
-| **대기**      | wait, waitForText, waitForVisible, waitForNotVisible                                         | waitForIdle (자동 동기화)               |
-| **검증**      | assertText, assertVisible, assertNotVisible, assertCount, **assertHasText**, **assertValue** | —                                       |
-| **흐름 제어** | —                                                                                            | runFlow, repeat, if/when, ${VAR}, retry |
-| **디바이스**  | pressButton, **back**, **home**, **hideKeyboard**                                            | setLocation, clearState                 |
-| **앱 제어**   | launch, terminate, openDeepLink, **addMedia**                                                | —                                       |
-| **기타**      | screenshot, evaluate, webviewEval                                                            | —                                       |
+| 카테고리      | 현재 지원                                                                                    | 추가 예정                 |
+| ------------- | -------------------------------------------------------------------------------------------- | ------------------------- |
+| **탭/제스처** | tap, swipe, scrollUntilVisible, **longPress**, **doubleTap**                                 | pinch                     |
+| **텍스트**    | typeText, inputText, **clearText**                                                           | copyText, pasteText       |
+| **대기**      | wait, waitForText, waitForVisible, waitForNotVisible                                         | waitForIdle (자동 동기화) |
+| **검증**      | assertText, assertVisible, assertNotVisible, assertCount, **assertHasText**, **assertValue** | —                         |
+| **흐름 제어** | **runFlow**, **repeat**, **if/when**, **${VAR}**, **retry**                                  | —                         |
+| **디바이스**  | pressButton, **back**, **home**, **hideKeyboard**                                            | setLocation, clearState   |
+| **앱 제어**   | launch, terminate, openDeepLink, **addMedia**                                                | —                         |
+| **기타**      | screenshot, evaluate, webviewEval                                                            | —                         |

@@ -1,0 +1,7 @@
+# 공통: 카운터 버튼 1회 탭
+# repeat 내부에서 runFlow로 재사용 가능
+name: tap-counter
+config:
+  platform: ios
+steps:
+  - tap: { selector: 'Pressable:text("Count:")' }

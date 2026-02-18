@@ -16,6 +16,8 @@ export interface TestSuite {
   setup?: TestStep[];
   steps: TestStep[];
   teardown?: TestStep[];
+  /** 파싱된 YAML 파일의 절대 경로. runFlow 상대경로 해석에 사용. */
+  filePath?: string;
 }
 
 export type TestStep =
@@ -49,7 +51,11 @@ export type TestStep =
   | { assertHasText: { text: string; selector?: string } }
   | { clearText: { selector: string } }
   | { doubleTap: { selector: string; interval?: number } }
-  | { assertValue: { selector: string; expected: string } };
+  | { assertValue: { selector: string; expected: string } }
+  | { repeat: { times: number; steps: TestStep[] } }
+  | { runFlow: string }
+  | { if: { platform?: Platform; visible?: string; steps: TestStep[] } }
+  | { retry: { times: number; steps: TestStep[] } };
 
 export interface StepResult {
   step: TestStep;
@@ -85,4 +91,6 @@ export interface RunOptions {
   bail?: boolean;
   /** false면 create()에서 앱 자동 실행 안 함. 워크플로에서 설치만 하고 setup의 launch로 실행할 때 사용 (default: true) */
   autoLaunch?: boolean;
+  /** CLI --env로 전달된 환경 변수. runFlow에서 하위 파일 파싱 시 전달 */
+  envVars?: Record<string, string>;
 }

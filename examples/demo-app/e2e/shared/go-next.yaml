@@ -1,0 +1,8 @@
+# 공통: "다음" 버튼 탭 + 다음 화면 로드 대기
+# runFlow로 include하여 반복 사용
+name: go-next
+config:
+  platform: ios
+steps:
+  - tap: { selector: 'Pressable:text("다음")' }
+  - wait: 500
