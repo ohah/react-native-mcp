@@ -4,6 +4,7 @@
  * Metro transformer 대신 babel.config.js plugins에 넣어 사용.
  */
 
+import type { NodePath } from '@babel/traverse';
 import type * as t from '@babel/types';
 
 interface BabelApi {
@@ -63,15 +64,7 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
         },
       },
       Function: {
-        enter(
-          path: {
-            node: t.Function;
-            parent: t.Node | null;
-            parentPath?: { parent: t.Node | null };
-            insertAfter: (n: t.Node) => void;
-          },
-          state: PluginState
-        ) {
+        enter(path: NodePath<t.Function>, state: PluginState) {
           let name: string | null =
             t.isFunctionDeclaration(path.node) || t.isFunctionExpression(path.node)
               ? (path.node.id?.name ?? null)
@@ -89,7 +82,7 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
           }
           state.stack.push({ componentName: name ?? 'Anonymous', jsxIndex: 0 });
         },
-        exit(path: any, state: PluginState) {
+        exit(path: NodePath<t.Function>, state: PluginState) {
           const scope = state.stack[state.stack.length - 1];
           if (
             scope &&
@@ -104,16 +97,16 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
                 t.stringLiteral(scope.componentName)
               )
             );
+            let target: NodePath<t.Node> | null = null;
             if (t.isFunctionDeclaration(path.node)) {
-              const target =
+              target =
                 path.parentPath &&
                 (t.isExportDefaultDeclaration(path.parent) ||
                   t.isExportNamedDeclaration(path.parent))
                   ? path.parentPath
                   : path;
-              (target as any).insertAfter(stmt);
             } else if (path.parentPath && t.isVariableDeclarator(path.parent)) {
-              let target = path.parentPath.parentPath;
+              target = path.parentPath.parentPath;
               if (
                 target?.parentPath &&
                 (t.isExportDefaultDeclaration(target.parent) ||
@@ -121,8 +114,8 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
               ) {
                 target = target.parentPath;
               }
-              (target as any)?.insertAfter(stmt);
             }
+            target?.insertAfter(stmt);
           }
           state.stack.pop();
         },
