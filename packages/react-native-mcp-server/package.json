@@ -49,7 +49,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bunup && bun build src/index.ts --outdir=dist --target=node --external=sharp && bun build src/transformer-entry.ts --outdir=dist --target=node && bun build src/babel-plugin-app-registry.ts --outfile=dist/babel-plugin-app-registry.cjs --target=node --format=cjs && bun build src/babel-plugin-inject-testid.ts --outfile=dist/babel-plugin-inject-testid.cjs --target=node --format=cjs && bun scripts/chmod-dist.mjs",
+    "build:runtime": "tsdown",
+    "build": "bun run build:runtime && bunup && bun build src/index.ts --outdir=dist --target=node --external=sharp && bun build src/transformer-entry.ts --outdir=dist --target=node && bun build src/babel-plugin-app-registry.ts --outfile=dist/babel-plugin-app-registry.cjs --target=node --format=cjs && bun build src/babel-plugin-inject-testid.ts --outfile=dist/babel-plugin-inject-testid.cjs --target=node --format=cjs && bun scripts/chmod-dist.mjs",
     "prepublishOnly": "bun run build",
     "dev": "bun run --watch src/index.ts",
     "mcp:run": "bun dist/index.js",
@@ -77,6 +78,7 @@
     "@types/ws": "^8.5.0",
     "bunup": "^0.16.22",
     "metro": "^0.83.3",
+    "tsdown": "0.20.3",
     "typescript": "^5.9.3"
   },
   "engines": {

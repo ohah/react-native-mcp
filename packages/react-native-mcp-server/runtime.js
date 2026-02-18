@@ -1,758 +1,1042 @@
-/**
- * React Native 앱에 주입되는 MCP 런타임 (Phase 1)
- * - __REACT_NATIVE_MCP__.registerComponent → AppRegistry.registerComponent 위임
- * - __DEV__ 시 WebSocket으로 MCP 서버(12300)에 연결, eval 요청 처리
- *
- * Metro transformer가 진입점 상단에 require('@ohah/react-native-mcp-server/runtime') 주입
- * global은 모듈 로드 직후 최상단에서 설정해 ReferenceError 방지.
- */
-
 'use strict';
 
-// ─── DevTools hook 보장 ───────────────────────────────────────
-// DEV: React DevTools가 이미 hook을 설치 → 건너뜀.
-// Release: hook이 없으므로 MCP가 설치. React 로드 시 inject/onCommitFiberRoot로
-// renderer·fiber root를 캡처해 DEV와 동일하게 Fiber 트리 접근 가능.
 (function () {
-  var g =
-    typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : null;
-  if (!g || g.__REACT_DEVTOOLS_GLOBAL_HOOK__) return;
+  //#region \0rolldown/runtime.js
+  var __esmMin = (fn, res) => () => (fn && (res = fn((fn = 0))), res);
 
-  var _renderers = new Map();
-  var _roots = new Map();
+  //#endregion
 
-  g.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
-    supportsFiber: true,
-    renderers: _renderers,
-    inject: function (internals) {
-      var id = _renderers.size + 1;
-      _renderers.set(id, internals);
-      return id;
-    },
-    onCommitFiberRoot: function (rendererID, root) {
-      if (!_roots.has(rendererID)) _roots.set(rendererID, new Set());
-      _roots.get(rendererID).add(root);
-    },
-    onCommitFiberUnmount: function () {},
-    getFiberRoots: function (rendererID) {
-      return _roots.get(rendererID) || new Set();
-    },
-  };
-})();
+  //#region src/runtime/devtools-hook.ts
+  var init_devtools_hook = __esmMin(() => {
+    (function () {
+      var g =
+        typeof globalThis !== 'undefined'
+          ? globalThis
+          : typeof global !== 'undefined'
+            ? global
+            : null;
+      if (!g || g.__REACT_DEVTOOLS_GLOBAL_HOOK__) return;
+      var _renderers = /* @__PURE__ */ new Map();
+      var _roots = /* @__PURE__ */ new Map();
+      g.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+        supportsFiber: true,
+        renderers: _renderers,
+        inject: function (internals) {
+          var id = _renderers.size + 1;
+          _renderers.set(id, internals);
+          return id;
+        },
+        onCommitFiberRoot: function (rendererID, root) {
+          if (!_roots.has(rendererID)) _roots.set(rendererID, /* @__PURE__ */ new Set());
+          _roots.get(rendererID).add(root);
+        },
+        onCommitFiberUnmount: function () {},
+        getFiberRoots: function (rendererID) {
+          return _roots.get(rendererID) || /* @__PURE__ */ new Set();
+        },
+      };
+    })();
+  });
 
-// ─── onCommitFiberRoot 래핑 — 상태 변경 추적 ─────────────────────
-// DevTools hook의 onCommitFiberRoot를 래핑해 커밋마다 state 변경 수집.
-// MCP가 hook을 설치했든 DevTools가 이미 설치했든 동일하게 동작.
-(function () {
-  var g =
-    typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : null;
-  if (!g || !g.__REACT_DEVTOOLS_GLOBAL_HOOK__) return;
-  var hook = g.__REACT_DEVTOOLS_GLOBAL_HOOK__;
-  var orig = hook.onCommitFiberRoot;
-  hook.onCommitFiberRoot = function (rendererID, root) {
-    if (typeof orig === 'function') orig.call(hook, rendererID, root);
-    try {
-      if (root && root.current) collectStateChanges(root.current);
-    } catch (_e) {}
-  };
-})();
-
-var _pressHandlers = {};
-var _webViews = {};
-/** ref → id 역조회 (selector로 찾은 WebView의 webViewId 반환용) */
-var _webViewRefToId = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
-/** requestId -> { resolve, reject } for webview_evaluate_script result feedback via postMessage */
-var _webViewEvalPending = {};
-var _webViewEvalRequestId = 0;
-var _scrollRefs = {};
-var _consoleLogs = [];
-var _consoleLogId = 0;
-var _CONSOLE_BUFFER_SIZE = 500;
-
-var _networkRequests = [];
-var _networkRequestId = 0;
-var _NETWORK_BUFFER_SIZE = 200;
-var _NETWORK_BODY_LIMIT = 10000;
-
-var _stateChanges = [];
-var _stateChangeId = 0;
-var _STATE_CHANGE_BUFFER = 300;
-
-// ─── Fiber 트리 헬퍼 ────────────────────────────────────────────
-
-/** DevTools hook에서 root Fiber를 얻는다. hook.getFiberRoots 우선, fallback으로 getCurrentFiber 사용. */
-function getFiberRootFromHook(hook, rendererID) {
-  if (!hook) return null;
-  function toRootFiber(r) {
-    return r && r.current ? r.current : r;
+  //#endregion
+  //#region src/runtime/shared.ts
+  function pushConsoleLog(entry) {
+    consoleLogs.push(entry);
+    if (consoleLogs.length > CONSOLE_BUFFER_SIZE) consoleLogs.shift();
   }
-  if (typeof hook.getFiberRoots === 'function') {
-    try {
-      var roots = hook.getFiberRoots(rendererID);
-      if (roots && roots.size > 0) {
-        var first = roots.values().next().value;
-        if (first) return toRootFiber(first);
+  function nextConsoleLogId() {
+    return ++consoleLogId;
+  }
+  function resetConsoleLogs() {
+    consoleLogs = [];
+    consoleLogId = 0;
+  }
+  function nextNetworkRequestId() {
+    return ++networkRequestId;
+  }
+  function resetNetworkRequests() {
+    networkRequests = [];
+    networkRequestId = 0;
+  }
+  function pushStateChange(entry) {
+    stateChanges.push(entry);
+    if (stateChanges.length > STATE_CHANGE_BUFFER) stateChanges.shift();
+  }
+  function nextStateChangeId() {
+    return ++stateChangeId;
+  }
+  function resetStateChanges() {
+    stateChanges = [];
+    stateChangeId = 0;
+  }
+  var pressHandlers,
+    consoleLogs,
+    consoleLogId,
+    CONSOLE_BUFFER_SIZE,
+    networkRequests,
+    networkRequestId,
+    NETWORK_BUFFER_SIZE,
+    NETWORK_BODY_LIMIT,
+    stateChanges,
+    stateChangeId,
+    STATE_CHANGE_BUFFER;
+  var init_shared = __esmMin(() => {
+    pressHandlers = {};
+    consoleLogs = [];
+    consoleLogId = 0;
+    CONSOLE_BUFFER_SIZE = 500;
+    networkRequests = [];
+    networkRequestId = 0;
+    NETWORK_BUFFER_SIZE = 200;
+    NETWORK_BODY_LIMIT = 1e4;
+    stateChanges = [];
+    stateChangeId = 0;
+    STATE_CHANGE_BUFFER = 300;
+  });
+
+  //#endregion
+  //#region src/runtime/fiber-helpers.ts
+  /** DevTools hook에서 root Fiber를 얻는다. hook.getFiberRoots 우선, fallback으로 getCurrentFiber 사용. */
+  function getFiberRootFromHook(hook, rendererID) {
+    if (!hook) return null;
+    function toRootFiber(r) {
+      return r && r.current ? r.current : r;
+    }
+    if (typeof hook.getFiberRoots === 'function')
+      try {
+        var roots = hook.getFiberRoots(rendererID);
+        if (roots && roots.size > 0) {
+          var first = roots.values().next().value;
+          if (first) return toRootFiber(first);
+        }
+      } catch (_e) {}
+    var renderer = hook.renderers && hook.renderers.get(rendererID);
+    if (renderer && typeof renderer.getCurrentFiber === 'function') {
+      var fiber = renderer.getCurrentFiber();
+      if (fiber) {
+        while (fiber && fiber.return) fiber = fiber.return;
+        return fiber || null;
       }
-    } catch (_e) {}
+    }
+    return null;
   }
-  var renderer = hook.renderers && hook.renderers.get(rendererID);
-  if (renderer && typeof renderer.getCurrentFiber === 'function') {
-    var fiber = renderer.getCurrentFiber();
-    if (fiber) {
-      while (fiber && fiber.return) fiber = fiber.return;
-      return fiber || null;
+  /** __REACT_DEVTOOLS_GLOBAL_HOOK__ 반환. 없으면 null. */
+  function getDevToolsHook() {
+    return (
+      (typeof global !== 'undefined' && global.__REACT_DEVTOOLS_GLOBAL_HOOK__) ||
+      (typeof globalThis !== 'undefined' && globalThis.__REACT_DEVTOOLS_GLOBAL_HOOK__) ||
+      null
+    );
+  }
+  /** DevTools hook → fiber root. 없으면 null. */
+  function getFiberRoot() {
+    var hook = getDevToolsHook();
+    if (!hook || !hook.renderers) return null;
+    return getFiberRootFromHook(hook, 1);
+  }
+  /** fiber 하위 Text 노드의 문자열 수집 */
+  function collectText(fiber, TextComponent) {
+    if (!fiber) return '';
+    if (fiber.type === TextComponent && fiber.memoizedProps) {
+      var c = fiber.memoizedProps.children;
+      if (typeof c === 'string') return c.trim();
+      if (typeof c === 'number' || typeof c === 'boolean') return String(c);
+      if (Array.isArray(c))
+        return c
+          .map(function (x) {
+            if (typeof x === 'string') return x;
+            if (typeof x === 'number' || typeof x === 'boolean') return String(x);
+            return '';
+          })
+          .join('')
+          .trim();
+    }
+    var s = '';
+    var ch = fiber.child;
+    while (ch) {
+      s += collectText(ch, TextComponent);
+      ch = ch.sibling;
+    }
+    return s;
+  }
+  /** fiber의 accessibilityLabel 또는 자식 Image의 accessibilityLabel 수집 */
+  function collectAccessibilityLabel(fiber, ImageComponent) {
+    if (!fiber || !fiber.memoizedProps) return '';
+    var p = fiber.memoizedProps;
+    if (typeof p.accessibilityLabel === 'string' && p.accessibilityLabel.trim())
+      return p.accessibilityLabel.trim();
+    var ch = fiber.child;
+    while (ch) {
+      if (
+        ch.type === ImageComponent &&
+        ch.memoizedProps &&
+        typeof ch.memoizedProps.accessibilityLabel === 'string'
+      )
+        return ch.memoizedProps.accessibilityLabel.trim();
+      ch = ch.sibling;
+    }
+    return '';
+  }
+  /** fiber에서 사용자에게 보이는 라벨 추출 (text 우선, a11y fallback) */
+  function getLabel(fiber, TextComponent, ImageComponent) {
+    var text = collectText(fiber, TextComponent).replace(/\s+/g, ' ').trim();
+    var a11y = collectAccessibilityLabel(fiber, ImageComponent);
+    return text || a11y || '';
+  }
+  /** require('react-native')에서 Text, Image 컴포넌트 추출 */
+  function getRNComponents() {
+    var rn = typeof require !== 'undefined' && require('react-native');
+    return {
+      Text: rn && rn.Text,
+      Image: rn && rn.Image,
+    };
+  }
+  /** fiber 자신(또는 조상)에서 처음 나오는 testID */
+  function getAncestorTestID(fiber) {
+    var f = fiber;
+    while (f && f.memoizedProps) {
+      if (typeof f.memoizedProps.testID === 'string' && f.memoizedProps.testID.trim())
+        return f.memoizedProps.testID.trim();
+      f = f.return;
     }
   }
-  return null;
-}
-
-/** __REACT_DEVTOOLS_GLOBAL_HOOK__ 반환. 없으면 null. */
-function getDevToolsHook() {
-  return (
-    (typeof global !== 'undefined' && global.__REACT_DEVTOOLS_GLOBAL_HOOK__) ||
-    (typeof globalThis !== 'undefined' && globalThis.__REACT_DEVTOOLS_GLOBAL_HOOK__) ||
-    null
-  );
-}
-
-/** DevTools hook → fiber root. 없으면 null. */
-function getFiberRoot() {
-  var hook = getDevToolsHook();
-  if (!hook || !hook.renderers) return null;
-  return getFiberRootFromHook(hook, 1);
-}
-
-/** fiber 하위 Text 노드의 문자열 수집 */
-function collectText(fiber, TextComponent) {
-  if (!fiber) return '';
-  if (fiber.type === TextComponent && fiber.memoizedProps) {
+  /** Text fiber 한 노드의 직접 children 문자열만 (자식 Text 노드 제외) */
+  function getTextNodeContent(fiber, TextComponent) {
+    if (!fiber || fiber.type !== TextComponent || !fiber.memoizedProps) return '';
     var c = fiber.memoizedProps.children;
     if (typeof c === 'string') return c.trim();
-    if (typeof c === 'number' || typeof c === 'boolean') return String(c);
     if (Array.isArray(c))
       return c
         .map(function (x) {
-          if (typeof x === 'string') return x;
-          if (typeof x === 'number' || typeof x === 'boolean') return String(x);
-          return '';
+          return typeof x === 'string' ? x : '';
         })
         .join('')
         .trim();
+    return '';
   }
-  var s = '';
-  var ch = fiber.child;
-  while (ch) {
-    s += collectText(ch, TextComponent);
-    ch = ch.sibling;
+  /** Fiber의 컴포넌트 타입 이름 (displayName/name/문자열) */
+  function getFiberTypeName(fiber) {
+    if (!fiber || !fiber.type) return 'Unknown';
+    var t = fiber.type;
+    if (typeof t === 'string') return t;
+    if (t.displayName && typeof t.displayName === 'string') return t.displayName;
+    if (t.name && typeof t.name === 'string') return t.name;
+    return 'Component';
   }
-  return s;
-}
+  var init_fiber_helpers = __esmMin(() => {});
 
-/** fiber의 accessibilityLabel 또는 자식 Image의 accessibilityLabel 수집 */
-function collectAccessibilityLabel(fiber, ImageComponent) {
-  if (!fiber || !fiber.memoizedProps) return '';
-  var p = fiber.memoizedProps;
-  if (typeof p.accessibilityLabel === 'string' && p.accessibilityLabel.trim())
-    return p.accessibilityLabel.trim();
-  var ch = fiber.child;
-  while (ch) {
-    if (
-      ch.type === ImageComponent &&
-      ch.memoizedProps &&
-      typeof ch.memoizedProps.accessibilityLabel === 'string'
-    )
-      return ch.memoizedProps.accessibilityLabel.trim();
-    ch = ch.sibling;
-  }
-  return '';
-}
-
-/** fiber에서 사용자에게 보이는 라벨 추출 (text 우선, a11y fallback) */
-function getLabel(fiber, TextComponent, ImageComponent) {
-  var text = collectText(fiber, TextComponent).replace(/\s+/g, ' ').trim();
-  var a11y = collectAccessibilityLabel(fiber, ImageComponent);
-  return text || a11y || '';
-}
-
-/** require('react-native')에서 Text, Image 컴포넌트 추출 */
-function getRNComponents() {
-  var rn = typeof require !== 'undefined' && require('react-native');
-  return { Text: rn && rn.Text, Image: rn && rn.Image };
-}
-
-/** fiber 자신(또는 조상)에서 처음 나오는 testID */
-function getAncestorTestID(fiber) {
-  var f = fiber;
-  while (f && f.memoizedProps) {
-    if (typeof f.memoizedProps.testID === 'string' && f.memoizedProps.testID.trim())
-      return f.memoizedProps.testID.trim();
-    f = f.return;
-  }
-  return undefined;
-}
-
-/** Text fiber 한 노드의 직접 children 문자열만 (자식 Text 노드 제외) */
-function getTextNodeContent(fiber, TextComponent) {
-  if (!fiber || fiber.type !== TextComponent || !fiber.memoizedProps) return '';
-  var c = fiber.memoizedProps.children;
-  if (typeof c === 'string') return c.trim();
-  if (Array.isArray(c))
-    return c
-      .map(function (x) {
-        return typeof x === 'string' ? x : '';
-      })
-      .join('')
-      .trim();
-  return '';
-}
-
-/** Fiber의 컴포넌트 타입 이름 (displayName/name/문자열) */
-function getFiberTypeName(fiber) {
-  if (!fiber || !fiber.type) return 'Unknown';
-  var t = fiber.type;
-  if (typeof t === 'string') return t;
-  if (t.displayName && typeof t.displayName === 'string') return t.displayName;
-  if (t.name && typeof t.name === 'string') return t.name;
-  return 'Component';
-}
-
-// ─── State Hook 파싱 & 변경 추적 ──────────────────────────────────
-
-/** fiber의 memoizedState 체인에서 state Hook(queue 존재)만 추출 */
-function parseHooks(fiber) {
-  var hooks = [];
-  var hook = fiber ? fiber.memoizedState : null;
-  var i = 0;
-  while (hook && typeof hook === 'object') {
-    if (hook.queue) {
-      hooks.push({ index: i, type: 'state', value: hook.memoizedState });
+  //#endregion
+  //#region src/runtime/state-hooks.ts
+  /** fiber의 memoizedState 체인에서 state Hook(queue 존재)만 추출 */
+  function parseHooks(fiber) {
+    var hooks = [];
+    var hook = fiber ? fiber.memoizedState : null;
+    var i = 0;
+    while (hook && typeof hook === 'object') {
+      if (hook.queue)
+        hooks.push({
+          index: i,
+          type: 'state',
+          value: hook.memoizedState,
+        });
+      hook = hook.next;
+      i++;
     }
-    hook = hook.next;
-    i++;
+    return hooks;
   }
-  return hooks;
-}
+  /** 얕은 비교. 참조 동일 → true, 타입 불일치/키 다름 → false */
+  function shallowEqual(a, b) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (typeof a !== typeof b) return false;
+    if (typeof a !== 'object') return false;
+    if (Array.isArray(a)) {
+      if (!Array.isArray(b) || a.length !== b.length) return false;
+      for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+      return true;
+    }
+    var ka = Object.keys(a);
+    var kb = Object.keys(b);
+    if (ka.length !== kb.length) return false;
+    for (var j = 0; j < ka.length; j++) if (a[ka[j]] !== b[ka[j]]) return false;
+    return true;
+  }
+  /** JSON.stringify 안전 래퍼 (depth 제한 + 순환 참조 방지) */
+  function safeClone(val, maxDepth) {
+    if (maxDepth === void 0) maxDepth = 4;
+    var seen = [];
+    function clone(v, depth) {
+      if (v === null || v === void 0) return v;
+      if (typeof v !== 'object' && typeof v !== 'function') return v;
+      if (typeof v === 'function') return '[Function]';
+      if (depth > maxDepth) return '[depth limit]';
+      if (seen.indexOf(v) !== -1) return '[Circular]';
+      seen.push(v);
+      if (Array.isArray(v)) {
+        var arr = [];
+        for (var i = 0; i < Math.min(v.length, 100); i++) arr.push(clone(v[i], depth + 1));
+        if (v.length > 100) arr.push('...' + (v.length - 100) + ' more');
+        return arr;
+      }
+      var obj = {};
+      var keys = Object.keys(v);
+      for (var j = 0; j < Math.min(keys.length, 50); j++)
+        obj[keys[j]] = clone(v[keys[j]], depth + 1);
+      if (keys.length > 50) obj['...'] = keys.length - 50 + ' more keys';
+      return obj;
+    }
+    return clone(val, 0);
+  }
+  /**
+   * onCommitFiberRoot에서 호출: 변경된 state Hook을 _stateChanges에 수집.
+   * fiber.alternate(이전 버전)와 비교해 memoizedState가 달라진 Hook만 기록.
+   */
+  function collectStateChanges(fiber) {
+    if (!fiber) return;
+    if (fiber.tag === 0 || fiber.tag === 1) {
+      var prev = fiber.alternate;
+      if (prev) {
+        var prevHook = prev.memoizedState;
+        var nextHook = fiber.memoizedState;
+        var hookIdx = 0;
+        while (
+          prevHook &&
+          nextHook &&
+          typeof prevHook === 'object' &&
+          typeof nextHook === 'object'
+        ) {
+          if (nextHook.queue && !shallowEqual(prevHook.memoizedState, nextHook.memoizedState)) {
+            var name = getFiberTypeName(fiber);
+            pushStateChange({
+              id: nextStateChangeId(),
+              timestamp: Date.now(),
+              component: name,
+              hookIndex: hookIdx,
+              prev: safeClone(prevHook.memoizedState),
+              next: safeClone(nextHook.memoizedState),
+            });
+          }
+          prevHook = prevHook.next;
+          nextHook = nextHook.next;
+          hookIdx++;
+        }
+      }
+    }
+    collectStateChanges(fiber.child);
+    collectStateChanges(fiber.sibling);
+  }
+  var init_state_hooks = __esmMin(() => {
+    init_fiber_helpers();
+    init_shared();
+  });
 
-/** 얕은 비교. 참조 동일 → true, 타입 불일치/키 다름 → false */
-function shallowEqual(a, b) {
-  if (a === b) return true;
-  if (a == null || b == null) return false;
-  if (typeof a !== typeof b) return false;
-  if (typeof a !== 'object') return false;
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return false;
+  //#endregion
+  //#region src/runtime/state-change-tracking.ts
+  var init_state_change_tracking = __esmMin(() => {
+    init_state_hooks();
+    (function () {
+      var g =
+        typeof globalThis !== 'undefined'
+          ? globalThis
+          : typeof global !== 'undefined'
+            ? global
+            : null;
+      if (!g || !g.__REACT_DEVTOOLS_GLOBAL_HOOK__) return;
+      var hook = g.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+      var orig = hook.onCommitFiberRoot;
+      hook.onCommitFiberRoot = function (rendererID, root) {
+        if (typeof orig === 'function') orig.call(hook, rendererID, root);
+        try {
+          if (root && root.current) collectStateChanges(root.current);
+        } catch (_e) {}
+      };
+    })();
+  });
+
+  //#endregion
+  //#region src/runtime/query-selector.ts
+  /**
+   * 셀렉터 문자열을 AST로 파싱한다 (재귀 하강 파서).
+   * 지원 문법:
+   *   Type#testID[attr="val"]:text("..."):display-name("..."):nth-of-type(N):has-press:has-scroll
+   *   A > B (직접 자식), A B (후손), A, B (OR)
+   */
+  function parseSelector(input) {
+    var pos = 0;
+    var len = input.length;
+    function isIdentChar(ch) {
+      return /[A-Za-z0-9_.-]/.test(ch);
+    }
+    function skipSpaces() {
+      while (pos < len && (input.charAt(pos) === ' ' || input.charAt(pos) === '	')) pos++;
+    }
+    function readIdentifier() {
+      var start = pos;
+      while (pos < len && isIdentChar(input.charAt(pos))) pos++;
+      return input.substring(start, pos);
+    }
+    function readQuotedString() {
+      var quote = input.charAt(pos);
+      if (quote !== '"' && quote !== "'") return '';
+      pos++;
+      var start = pos;
+      while (pos < len && input.charAt(pos) !== quote) {
+        if (input.charAt(pos) === '\\') pos++;
+        pos++;
+      }
+      if (pos >= len) return null;
+      var str = input.substring(start, pos);
+      pos++;
+      return str;
+    }
+    function readNumber() {
+      var start = pos;
+      while (pos < len && /[0-9]/.test(input.charAt(pos))) pos++;
+      return parseInt(input.substring(start, pos), 10);
+    }
+    function parseCompound() {
+      var sel = {
+        type: null,
+        testID: null,
+        attrs: [],
+        text: null,
+        displayName: null,
+        nth: -1,
+        hasPress: false,
+        hasScroll: false,
+      };
+      var ch = pos < len ? input.charAt(pos) : '';
+      if (/[A-Za-z_]/.test(ch)) sel.type = readIdentifier();
+      if (pos < len && input.charAt(pos) === '#') {
+        pos++;
+        sel.testID = readIdentifier();
+      }
+      while (pos < len && input.charAt(pos) === '[') {
+        pos++;
+        skipSpaces();
+        var attrName = readIdentifier();
+        skipSpaces();
+        if (pos < len && input.charAt(pos) === '=') {
+          pos++;
+          skipSpaces();
+          var attrVal = readQuotedString();
+          if (attrVal === null) throw new Error('Unclosed quote in selector [attr="..."]');
+          sel.attrs.push({
+            name: attrName,
+            value: attrVal,
+          });
+        }
+        skipSpaces();
+        if (pos < len && input.charAt(pos) === ']') pos++;
+      }
+      while (pos < len && input.charAt(pos) === ':') {
+        pos++;
+        var pseudo = readIdentifier();
+        if (pseudo === 'text') {
+          if (pos < len && input.charAt(pos) === '(') {
+            pos++;
+            skipSpaces();
+            var textVal = readQuotedString();
+            if (textVal === null) throw new Error('Unclosed quote in selector :text(...)');
+            sel.text = textVal;
+            skipSpaces();
+            if (pos < len && input.charAt(pos) === ')') pos++;
+          }
+        } else if (pseudo === 'nth-of-type') {
+          if (pos < len && input.charAt(pos) === '(') {
+            pos++;
+            skipSpaces();
+            sel.nth = readNumber() - 1;
+            skipSpaces();
+            if (pos < len && input.charAt(pos) === ')') pos++;
+          }
+        } else if (pseudo === 'first-of-type') sel.nth = 0;
+        else if (pseudo === 'last-of-type') sel.nth = -2;
+        else if (pseudo === 'display-name') {
+          if (pos < len && input.charAt(pos) === '(') {
+            pos++;
+            skipSpaces();
+            var dn = readQuotedString();
+            if (dn === null) throw new Error('Unclosed quote in selector :display-name("...")');
+            skipSpaces();
+            if (pos < len && input.charAt(pos) === ')') pos++;
+            sel.displayName = dn;
+          }
+        } else if (pseudo === 'has-press') sel.hasPress = true;
+        else if (pseudo === 'has-scroll') sel.hasScroll = true;
+      }
+      return sel;
+    }
+    function parseComplex() {
+      skipSpaces();
+      var segments = [];
+      segments.push({
+        selector: parseCompound(),
+        combinator: null,
+      });
+      while (pos < len) {
+        var beforeSkip = pos;
+        skipSpaces();
+        if (pos >= len || input.charAt(pos) === ',') break;
+        var combinator = ' ';
+        if (input.charAt(pos) === '>') {
+          combinator = '>';
+          pos++;
+          skipSpaces();
+        } else if (pos === beforeSkip) break;
+        var nextCh = pos < len ? input.charAt(pos) : '';
+        if (!/[A-Za-z_#[:]/.test(nextCh)) break;
+        segments.push({
+          selector: parseCompound(),
+          combinator,
+        });
+      }
+      return { segments };
+    }
+    var selectors = [];
+    selectors.push(parseComplex());
+    while (pos < len) {
+      skipSpaces();
+      if (pos >= len || input.charAt(pos) !== ',') break;
+      pos++;
+      selectors.push(parseComplex());
+    }
+    return { selectors };
+  }
+  /** compound 셀렉터가 단일 fiber 노드에 매칭되는지 검사 */
+  function matchesCompound(fiber, compound, TextComp, ImgComp) {
+    if (!fiber) return false;
+    var props = fiber.memoizedProps || {};
+    if (compound.type !== null) {
+      if (getFiberTypeName(fiber) !== compound.type) return false;
+    }
+    if (compound.displayName !== null) {
+      var t = fiber.type;
+      if (!t || typeof t.displayName !== 'string' || t.displayName !== compound.displayName)
+        return false;
+    }
+    if (compound.testID !== null && props.testID !== compound.testID) return false;
+    for (var i = 0; i < compound.attrs.length; i++) {
+      var attr = compound.attrs[i];
+      if (String(props[attr.name] || '') !== attr.value) return false;
+    }
+    if (compound.text !== null) {
+      if (collectText(fiber, TextComp).replace(/\s+/g, ' ').trim().indexOf(compound.text) === -1)
+        return false;
+    }
+    if (compound.hasPress && typeof props.onPress !== 'function') return false;
+    if (compound.hasScroll) {
+      var sn = fiber.stateNode;
+      if (!sn || (typeof sn.scrollTo !== 'function' && typeof sn.scrollToOffset !== 'function'))
+        return false;
     }
     return true;
   }
-  var ka = Object.keys(a);
-  var kb = Object.keys(b);
-  if (ka.length !== kb.length) return false;
-  for (var j = 0; j < ka.length; j++) {
-    if (a[ka[j]] !== b[ka[j]]) return false;
-  }
-  return true;
-}
-
-/** JSON.stringify 안전 래퍼 (depth 제한 + 순환 참조 방지) */
-function safeClone(val, maxDepth) {
-  if (maxDepth === undefined) maxDepth = 4;
-  var seen = [];
-  function clone(v, depth) {
-    if (v === null || v === undefined) return v;
-    if (typeof v !== 'object' && typeof v !== 'function') return v;
-    if (typeof v === 'function') return '[Function]';
-    if (depth > maxDepth) return '[depth limit]';
-    if (seen.indexOf(v) !== -1) return '[Circular]';
-    seen.push(v);
-    if (Array.isArray(v)) {
-      var arr = [];
-      for (var i = 0; i < Math.min(v.length, 100); i++) {
-        arr.push(clone(v[i], depth + 1));
-      }
-      if (v.length > 100) arr.push('...' + (v.length - 100) + ' more');
-      return arr;
-    }
-    var obj = {};
-    var keys = Object.keys(v);
-    for (var j = 0; j < Math.min(keys.length, 50); j++) {
-      obj[keys[j]] = clone(v[keys[j]], depth + 1);
-    }
-    if (keys.length > 50) obj['...'] = keys.length - 50 + ' more keys';
-    return obj;
-  }
-  return clone(val, 0);
-}
-
-/**
- * onCommitFiberRoot에서 호출: 변경된 state Hook을 _stateChanges에 수집.
- * fiber.alternate(이전 버전)와 비교해 memoizedState가 달라진 Hook만 기록.
- */
-function collectStateChanges(fiber) {
-  if (!fiber) return;
-  if (fiber.tag === 0 || fiber.tag === 1) {
-    var prev = fiber.alternate;
-    if (prev) {
-      var prevHook = prev.memoizedState;
-      var nextHook = fiber.memoizedState;
-      var hookIdx = 0;
-      while (prevHook && nextHook && typeof prevHook === 'object' && typeof nextHook === 'object') {
-        if (nextHook.queue && !shallowEqual(prevHook.memoizedState, nextHook.memoizedState)) {
-          var name = getFiberTypeName(fiber);
-          _stateChanges.push({
-            id: ++_stateChangeId,
-            timestamp: Date.now(),
-            component: name,
-            hookIndex: hookIdx,
-            prev: safeClone(prevHook.memoizedState),
-            next: safeClone(nextHook.memoizedState),
-          });
-          if (_stateChanges.length > _STATE_CHANGE_BUFFER) _stateChanges.shift();
-        }
-        prevHook = prevHook.next;
-        nextHook = nextHook.next;
-        hookIdx++;
-      }
-    }
-  }
-  collectStateChanges(fiber.child);
-  collectStateChanges(fiber.sibling);
-}
-
-// ─── querySelector 셀렉터 파서 & 매칭 엔진 ──────────────────────
-
-/**
- * 셀렉터 문자열을 AST로 파싱한다 (재귀 하강 파서).
- * 지원 문법:
- *   Type#testID[attr="val"]:text("..."):display-name("..."):nth-of-type(N):has-press:has-scroll
- *   A > B (직접 자식), A B (후손), A, B (OR)
- */
-function parseSelector(input) {
-  var pos = 0;
-  var len = input.length;
-
-  function isIdentChar(ch) {
-    return /[A-Za-z0-9_.-]/.test(ch);
-  }
-
-  function skipSpaces() {
-    while (pos < len && (input.charAt(pos) === ' ' || input.charAt(pos) === '\t')) pos++;
-  }
-
-  function readIdentifier() {
-    var start = pos;
-    while (pos < len && isIdentChar(input.charAt(pos))) pos++;
-    return input.substring(start, pos);
-  }
-
-  function readQuotedString() {
-    var quote = input.charAt(pos);
-    if (quote !== '"' && quote !== "'") return '';
-    pos++; // skip opening quote
-    var start = pos;
-    while (pos < len && input.charAt(pos) !== quote) {
-      if (input.charAt(pos) === '\\') pos++; // skip escaped char
-      pos++;
-    }
-    if (pos >= len) return null; // 따옴표 미닫힘 → 파싱 실패로 처리
-    var str = input.substring(start, pos);
-    pos++; // skip closing quote
-    return str;
-  }
-
-  function readNumber() {
-    var start = pos;
-    while (pos < len && /[0-9]/.test(input.charAt(pos))) pos++;
-    return parseInt(input.substring(start, pos), 10);
-  }
-
-  function parseCompound() {
-    var sel = {
-      type: null,
-      testID: null,
-      attrs: [],
-      text: null,
-      displayName: null,
-      nth: -1,
-      hasPress: false,
-      hasScroll: false,
-    };
-
-    // Optional type selector
-    var ch = pos < len ? input.charAt(pos) : '';
-    if (/[A-Za-z_]/.test(ch)) {
-      sel.type = readIdentifier();
-    }
-
-    // Optional #testID
-    if (pos < len && input.charAt(pos) === '#') {
-      pos++; // skip #
-      sel.testID = readIdentifier();
-    }
-
-    // Zero or more [attr="val"]
-    while (pos < len && input.charAt(pos) === '[') {
-      pos++; // skip [
-      skipSpaces();
-      var attrName = readIdentifier();
-      skipSpaces();
-      if (pos < len && input.charAt(pos) === '=') {
-        pos++; // skip =
-        skipSpaces();
-        var attrVal = readQuotedString();
-        if (attrVal === null) throw new Error('Unclosed quote in selector [attr="..."]');
-        sel.attrs.push({ name: attrName, value: attrVal });
-      }
-      skipSpaces();
-      if (pos < len && input.charAt(pos) === ']') pos++; // skip ]
-    }
-
-    // Zero or more :pseudo selectors
-    while (pos < len && input.charAt(pos) === ':') {
-      pos++; // skip :
-      var pseudo = readIdentifier();
-      if (pseudo === 'text') {
-        if (pos < len && input.charAt(pos) === '(') {
-          pos++; // skip (
-          skipSpaces();
-          var textVal = readQuotedString();
-          if (textVal === null) throw new Error('Unclosed quote in selector :text(...)');
-          sel.text = textVal;
-          skipSpaces();
-          if (pos < len && input.charAt(pos) === ')') pos++; // skip )
-        }
-      } else if (pseudo === 'nth-of-type') {
-        if (pos < len && input.charAt(pos) === '(') {
-          pos++; // skip (
-          skipSpaces();
-          sel.nth = readNumber() - 1; // 1-based input → 0-based internal
-          skipSpaces();
-          if (pos < len && input.charAt(pos) === ')') pos++; // skip )
-        }
-      } else if (pseudo === 'first-of-type') {
-        sel.nth = 0; // first matching element (same as :nth-of-type(1))
-      } else if (pseudo === 'last-of-type') {
-        sel.nth = -2; // -2 = last matching element
-      } else if (pseudo === 'display-name') {
-        if (pos < len && input.charAt(pos) === '(') {
-          pos++; // skip (
-          skipSpaces();
-          var dn = readQuotedString();
-          if (dn === null) throw new Error('Unclosed quote in selector :display-name("...")');
-          skipSpaces();
-          if (pos < len && input.charAt(pos) === ')') pos++;
-          sel.displayName = dn;
-        }
-      } else if (pseudo === 'has-press') {
-        sel.hasPress = true;
-      } else if (pseudo === 'has-scroll') {
-        sel.hasScroll = true;
-      }
-    }
-
-    return sel;
-  }
-
-  function parseComplex() {
-    skipSpaces();
-    var segments = [];
-    segments.push({ selector: parseCompound(), combinator: null });
-
-    while (pos < len) {
-      var beforeSkip = pos;
-      skipSpaces();
-      if (pos >= len || input.charAt(pos) === ',') break;
-
-      var combinator = ' '; // 기본: 후손 (descendant)
-      if (input.charAt(pos) === '>') {
-        combinator = '>';
-        pos++; // skip >
-        skipSpaces();
-      } else if (pos === beforeSkip) {
-        // 공백 없이 바로 다음 토큰 → compound의 연속이므로 break
-        break;
-      }
-
-      // 다음 compound가 있는지 확인
-      var nextCh = pos < len ? input.charAt(pos) : '';
-      if (!/[A-Za-z_#[:]/.test(nextCh)) break;
-
-      segments.push({ selector: parseCompound(), combinator: combinator });
-    }
-
-    return { segments: segments };
-  }
-
-  var selectors = [];
-  selectors.push(parseComplex());
-  while (pos < len) {
-    skipSpaces();
-    if (pos >= len || input.charAt(pos) !== ',') break;
-    pos++; // skip comma
-    selectors.push(parseComplex());
-  }
-
-  return { selectors: selectors };
-}
-
-/** compound 셀렉터가 단일 fiber 노드에 매칭되는지 검사 */
-function matchesCompound(fiber, compound, TextComp, ImgComp) {
-  if (!fiber) return false;
-  var props = fiber.memoizedProps || {};
-
-  // 타입 검사 (getFiberTypeName: displayName > name)
-  if (compound.type !== null) {
-    if (getFiberTypeName(fiber) !== compound.type) return false;
-  }
-
-  // displayName 검사 (fiber.type.displayName으로 매칭. Reanimated는 타입명 AnimatedComponent, displayName "Animated.View")
-  if (compound.displayName !== null) {
-    var t = fiber.type;
-    if (!t || typeof t.displayName !== 'string' || t.displayName !== compound.displayName)
-      return false;
-  }
-
-  // testID 검사
-  if (compound.testID !== null && props.testID !== compound.testID) return false;
-
-  // 속성 검사
-  for (var i = 0; i < compound.attrs.length; i++) {
-    var attr = compound.attrs[i];
-    if (String(props[attr.name] || '') !== attr.value) return false;
-  }
-
-  // 텍스트 검사 (substring)
-  if (compound.text !== null) {
-    var text = collectText(fiber, TextComp).replace(/\s+/g, ' ').trim();
-    if (text.indexOf(compound.text) === -1) return false;
-  }
-
-  // :has-press
-  if (compound.hasPress && typeof props.onPress !== 'function') return false;
-
-  // :has-scroll
-  if (compound.hasScroll) {
-    var sn = fiber.stateNode;
-    if (!sn || (typeof sn.scrollTo !== 'function' && typeof sn.scrollToOffset !== 'function'))
-      return false;
-  }
-
-  return true;
-}
-
-/** 계층 셀렉터(A > B, A B) 매칭 — fiber.return을 상향 탐색 */
-function matchesComplexSelector(fiber, complex, TextComp, ImgComp) {
-  var segs = complex.segments;
-  var last = segs.length - 1;
-
-  // 마지막 segment가 현재 fiber에 매칭되어야 함
-  if (!matchesCompound(fiber, segs[last].selector, TextComp, ImgComp)) return false;
-
-  var current = fiber;
-  for (var i = last - 1; i >= 0; i--) {
-    var combinator = segs[i + 1].combinator;
-    var targetSel = segs[i].selector;
-
-    if (combinator === '>') {
-      // 직접 부모가 매칭되어야 함
-      current = current.return;
-      if (!current || !matchesCompound(current, targetSel, TextComp, ImgComp)) return false;
-    } else {
-      // 후손: 조상 중 하나가 매칭되면 됨
-      current = current.return;
-      while (current) {
-        if (matchesCompound(current, targetSel, TextComp, ImgComp)) break;
+  /** 계층 셀렉터(A > B, A B) 매칭 — fiber.return을 상향 탐색 */
+  function matchesComplexSelector(fiber, complex, TextComp, ImgComp) {
+    var segs = complex.segments;
+    var last = segs.length - 1;
+    if (!matchesCompound(fiber, segs[last].selector, TextComp, ImgComp)) return false;
+    var current = fiber;
+    for (var i = last - 1; i >= 0; i--) {
+      var combinator = segs[i + 1].combinator;
+      var targetSel = segs[i].selector;
+      if (combinator === '>') {
         current = current.return;
+        if (!current || !matchesCompound(current, targetSel, TextComp, ImgComp)) return false;
+      } else {
+        current = current.return;
+        while (current) {
+          if (matchesCompound(current, targetSel, TextComp, ImgComp)) break;
+          current = current.return;
+        }
+        if (!current) return false;
       }
-      if (!current) return false;
+    }
+    return true;
+  }
+  /** testID 없는 fiber의 경로 기반 uid 계산 ("0.1.2" 형식) */
+  function getPathUid(fiber) {
+    var parts = [];
+    var cur = fiber;
+    while (cur && cur.return) {
+      var parent = cur.return;
+      var idx = 0;
+      var ch = parent.child;
+      while (ch) {
+        if (ch === cur) break;
+        ch = ch.sibling;
+        idx++;
+      }
+      parts.unshift(idx);
+      cur = parent;
+    }
+    parts.unshift(0);
+    return parts.join('.');
+  }
+  /** path("0.1.2")로 Fiber 트리에서 노드 찾기. getComponentTree와 동일한 인덱스 규칙. */
+  function getFiberByPath(root, pathStr) {
+    if (!root || typeof pathStr !== 'string') return null;
+    var parts = pathStr.trim().split('.');
+    var fiber = root;
+    for (var i = 0; i < parts.length; i++) {
+      if (!fiber) return null;
+      var idx = parseInt(parts[i], 10);
+      if (i === 0) {
+        if (idx !== 0) return null;
+        continue;
+      }
+      var child = fiber.child;
+      var j = 0;
+      while (child && j < idx) {
+        child = child.sibling;
+        j++;
+      }
+      fiber = child;
+    }
+    return fiber;
+  }
+  /** uid가 경로 형식인지 ("0", "0.1", "0.1.2" 등) */
+  function isPathUid(uid) {
+    return typeof uid === 'string' && /^\d+(\.\d+)*$/.test(uid.trim());
+  }
+  var init_query_selector = __esmMin(() => {
+    init_fiber_helpers();
+  });
+
+  //#endregion
+  //#region src/runtime/screen-offset.ts
+  function resolveScreenOffset() {
+    if (_screenOffsetResolved) return;
+    _screenOffsetResolved = true;
+    try {
+      var g = typeof globalThis !== 'undefined' ? globalThis : global;
+      var Platform = require('react-native').Platform;
+      if (!Platform || Platform.OS !== 'android') return;
+      var root = getFiberRoot();
+      if (!root || !g.nativeFabricUIManager) return;
+      var hostFiber = null;
+      (function findHost(f) {
+        if (!f || hostFiber) return;
+        if (f.stateNode && (f.tag === 5 || f.tag === 27)) {
+          hostFiber = f;
+          return;
+        }
+        findHost(f.child);
+      })(root);
+      if (!hostFiber) return;
+      var node = hostFiber.stateNode;
+      var shadowNode =
+        node.node ||
+        (node._internalInstanceHandle &&
+          node._internalInstanceHandle.stateNode &&
+          node._internalInstanceHandle.stateNode.node);
+      if (!shadowNode) return;
+      g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y) {
+        screenOffsetX = -x;
+        screenOffsetY = -y;
+      });
+    } catch (e) {}
+  }
+  var screenOffsetX, screenOffsetY, _screenOffsetResolved;
+  var init_screen_offset = __esmMin(() => {
+    init_fiber_helpers();
+    screenOffsetX = 0;
+    screenOffsetY = 0;
+    _screenOffsetResolved = false;
+  });
+
+  //#endregion
+  //#region src/runtime/mcp-measure.ts
+  /**
+   * getScreenInfo() → { screen, window, scale, fontScale, orientation }
+   */
+  function getScreenInfo() {
+    try {
+      var rn = typeof require !== 'undefined' && require('react-native');
+      if (!rn) return { error: 'react-native not available' };
+      var screen = rn.Dimensions.get('screen');
+      var win = rn.Dimensions.get('window');
+      var pixelRatio = rn.PixelRatio ? rn.PixelRatio.get() : 1;
+      var fontScale = rn.PixelRatio ? rn.PixelRatio.getFontScale() : 1;
+      return {
+        screen: {
+          width: screen.width,
+          height: screen.height,
+        },
+        window: {
+          width: win.width,
+          height: win.height,
+        },
+        scale: pixelRatio,
+        fontScale,
+        orientation: win.width > win.height ? 'landscape' : 'portrait',
+      };
+    } catch (e) {
+      return { error: String(e) };
     }
   }
-  return true;
-}
-
-/** testID 없는 fiber의 경로 기반 uid 계산 ("0.1.2" 형식) */
-function getPathUid(fiber) {
-  var parts = [];
-  var cur = fiber;
-  while (cur && cur.return) {
-    var parent = cur.return;
-    var idx = 0;
-    var ch = parent.child;
-    while (ch) {
-      if (ch === cur) break;
-      ch = ch.sibling;
-      idx++;
-    }
-    parts.unshift(idx);
-    cur = parent;
+  /**
+   * measureView(uid) → Promise<{ x, y, width, height, pageX, pageY }>
+   * uid: testID 또는 경로("0.1.2"). query_selector로 얻은 uid 그대로 사용 가능.
+   * Fiber에서 native node를 찾아 measureInWindow (Fabric) 또는 measure (Bridge)로 절대 좌표 반환.
+   * pageX/pageY: 화면 왼쪽 상단 기준 절대 좌표 (points).
+   */
+  function measureView(uid) {
+    return new Promise(function (resolve, reject) {
+      try {
+        var root = getFiberRoot();
+        if (!root) return reject(/* @__PURE__ */ new Error('no fiber root'));
+        var found = null;
+        if (isPathUid(uid)) {
+          found = getFiberByPath(root, uid);
+          if (found && !found.stateNode) found = null;
+        }
+        if (!found)
+          (function find(fiber) {
+            if (!fiber || found) return;
+            if (fiber.memoizedProps && fiber.memoizedProps.testID === uid && fiber.stateNode) {
+              found = fiber;
+              return;
+            }
+            find(fiber.child);
+            if (!found) find(fiber.sibling);
+          })(root);
+        if (!found)
+          return reject(
+            /* @__PURE__ */ new Error('uid "' + uid + '" not found or has no native view')
+          );
+        var g = typeof globalThis !== 'undefined' ? globalThis : global;
+        var rn = typeof require !== 'undefined' && require('react-native');
+        while (found) {
+          var node = found.stateNode;
+          if (g.nativeFabricUIManager && node) {
+            var shadowNode =
+              node.node ||
+              (node._internalInstanceHandle &&
+                node._internalInstanceHandle.stateNode &&
+                node._internalInstanceHandle.stateNode.node);
+            if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper)
+              shadowNode = node._viewInfo.shadowNodeWrapper;
+            if (shadowNode) {
+              resolveScreenOffset();
+              g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y, w, h) {
+                resolve({
+                  x,
+                  y,
+                  width: w,
+                  height: h,
+                  pageX: x + screenOffsetX,
+                  pageY: y + screenOffsetY,
+                });
+              });
+              return;
+            }
+          }
+          if (rn && rn.UIManager && rn.findNodeHandle && node) {
+            var handle = rn.findNodeHandle(node);
+            if (handle) {
+              rn.UIManager.measure(handle, function (x, y, w, h, pageX, pageY) {
+                resolve({
+                  x,
+                  y,
+                  width: w,
+                  height: h,
+                  pageX,
+                  pageY,
+                });
+              });
+              return;
+            }
+          }
+          found = found.return;
+        }
+        reject(/* @__PURE__ */ new Error('cannot measure: no native node'));
+      } catch (e) {
+        reject(e);
+      }
+    });
   }
-  parts.unshift(0); // root
-  return parts.join('.');
-}
-
-/** path("0.1.2")로 Fiber 트리에서 노드 찾기. getComponentTree와 동일한 인덱스 규칙. */
-function getFiberByPath(root, pathStr) {
-  if (!root || typeof pathStr !== 'string') return null;
-  var parts = pathStr.trim().split('.');
-  var fiber = root;
-  for (var i = 0; i < parts.length; i++) {
-    if (!fiber) return null;
-    var idx = parseInt(parts[i], 10);
-    if (i === 0) {
-      if (idx !== 0) return null;
-      continue;
-    }
-    var child = fiber.child;
-    var j = 0;
-    while (child && j < idx) {
-      child = child.sibling;
-      j++;
-    }
-    fiber = child;
-  }
-  return fiber;
-}
-
-/** uid가 경로 형식인지 ("0", "0.1", "0.1.2" 등) */
-function isPathUid(uid) {
-  return typeof uid === 'string' && /^\d+(\.\d+)*$/.test(uid.trim());
-}
-
-/** fiber 노드를 결과 객체로 직렬화 */
-function fiberToResult(fiber, TextComp, ImgComp) {
-  var props = fiber.memoizedProps || {};
-  var typeName = getFiberTypeName(fiber);
-  var testID =
-    typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : undefined;
-  var text = collectText(fiber, TextComp).replace(/\s+/g, ' ').trim() || undefined;
-  var a11y =
-    typeof props.accessibilityLabel === 'string' && props.accessibilityLabel.trim()
-      ? props.accessibilityLabel.trim()
-      : undefined;
-  var hasOnPress = typeof props.onPress === 'function';
-  var hasOnLongPress = typeof props.onLongPress === 'function';
-  var sn = fiber.stateNode;
-  var hasScrollTo = !!(
-    sn &&
-    (typeof sn.scrollTo === 'function' || typeof sn.scrollToOffset === 'function')
-  );
-
-  var uid = testID || getPathUid(fiber);
-  var result = { uid: uid, type: typeName };
-  if (testID) result.testID = testID;
-  if (text) result.text = text;
-  if (a11y) result.accessibilityLabel = a11y;
-  result.hasOnPress = hasOnPress;
-  result.hasOnLongPress = hasOnLongPress;
-  result.hasScrollTo = hasScrollTo;
-  if (props.value !== undefined) result.value = props.value;
-  if (props.disabled != null) result.disabled = !!props.disabled;
-  if (props.editable !== undefined) result.editable = props.editable;
-  // Fabric: measureViewSync → 동기 좌표, Bridge: null
-  var measure = null;
-  try {
-    measure = MCP.measureViewSync(uid);
-  } catch (e) {}
-  // composite fiber(AnimatedComponent 등)면 measure가 null일 수 있음.
-  // 하위 첫 번째 host child의 uid로 재시도.
-  if (!measure && typeof fiber.type !== 'string') {
-    var hostChild = (function findHost(f) {
-      if (!f) return null;
-      if (typeof f.type === 'string' && f.stateNode) return f;
-      var c = f.child;
-      while (c) {
-        var h = findHost(c);
-        if (h) return h;
-        c = c.sibling;
+  /**
+   * measureViewSync(uid) → { x, y, width, height, pageX, pageY } | null
+   * Fabric에서는 동기 호출 가능. Bridge에서는 null → measureView() 사용 권장.
+   */
+  function measureViewSync$1(uid) {
+    try {
+      var root = getFiberRoot();
+      if (!root) return null;
+      var found = null;
+      if (isPathUid(uid)) found = getFiberByPath(root, uid);
+      if (!found)
+        (function find(fiber) {
+          if (!fiber || found) return;
+          if (fiber.memoizedProps && fiber.memoizedProps.testID === uid && fiber.stateNode) {
+            found = fiber;
+            return;
+          }
+          find(fiber.child);
+          if (!found) find(fiber.sibling);
+        })(root);
+      if (!found) return null;
+      var node = found.stateNode;
+      var g = typeof globalThis !== 'undefined' ? globalThis : global;
+      if (g.nativeFabricUIManager && node) {
+        var shadowNode =
+          node.node ||
+          (node._internalInstanceHandle &&
+            node._internalInstanceHandle.stateNode &&
+            node._internalInstanceHandle.stateNode.node);
+        if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper)
+          shadowNode = node._viewInfo.shadowNodeWrapper;
+        if (shadowNode) {
+          var result = null;
+          resolveScreenOffset();
+          g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y, w, h) {
+            result = {
+              x,
+              y,
+              width: w,
+              height: h,
+              pageX: x + screenOffsetX,
+              pageY: y + screenOffsetY,
+            };
+          });
+          return result;
+        }
       }
       return null;
-    })(fiber.child);
-    if (hostChild) {
-      var hostUid =
-        (hostChild.memoizedProps && hostChild.memoizedProps.testID) || getPathUid(hostChild);
-      try {
-        measure = MCP.measureViewSync(hostUid);
-      } catch (e) {}
-      // Bridge fallback용: host child uid 저장
-      if (!measure) result._measureUid = hostUid;
+    } catch (e) {
+      return null;
     }
   }
-  result.measure = measure;
-  // WebView: 등록된 ref→id가 있으면 webViewId 포함 (selector로 찾은 WebView에 스크립트 실행 시 사용)
-  if (typeName === 'WebView' && sn && typeof sn.injectJavaScript === 'function') {
-    var wvId = MCP.getWebViewIdForRef(sn);
-    if (wvId) result.webViewId = wvId;
+  var init_mcp_measure = __esmMin(() => {
+    init_fiber_helpers();
+    init_query_selector();
+    init_screen_offset();
+  });
+
+  //#endregion
+  //#region src/runtime/mcp-webview.ts
+  function registerWebView(ref, id) {
+    if (ref && typeof id === 'string') {
+      _webViews[id] = ref;
+      if (_webViewRefToId)
+        try {
+          _webViewRefToId.set(ref, id);
+        } catch (e) {}
+    }
   }
-  return result;
-}
-
-// ─── Android 루트 뷰 Y 오프셋 (상태바 등 시스템 UI 보정) ─────────
-// Android에서 measureInWindow는 윈도우 기준 좌표를 반환하지만
-// adb shell input은 스크린 절대 좌표를 사용. 루트 뷰의 pageY(-36dp 등)가
-// 그 차이. iOS는 offset 0이므로 Android만 보정.
-var _screenOffsetX = 0;
-var _screenOffsetY = 0;
-var _screenOffsetResolved = false;
-
-function resolveScreenOffset() {
-  if (_screenOffsetResolved) return;
-  _screenOffsetResolved = true;
-  try {
-    var g = typeof globalThis !== 'undefined' ? globalThis : global;
-    // Android만 보정 필요 (iOS는 offset 0)
-    var Platform = require('react-native').Platform;
-    if (!Platform || Platform.OS !== 'android') return;
-
-    // 루트 Fiber의 host node를 찾아 measureInWindow
-    var root = getFiberRoot();
-    if (!root || !g.nativeFabricUIManager) return;
-    // 루트 fiber → 첫 번째 host fiber (stateNode가 있는)
-    var fiber = root;
-    var hostFiber = null;
-    (function findHost(f) {
-      if (!f || hostFiber) return;
-      if (f.stateNode && (f.tag === 5 || f.tag === 27)) {
-        hostFiber = f;
-        return;
-      }
-      findHost(f.child);
-    })(fiber);
-    if (!hostFiber) return;
-    var node = hostFiber.stateNode;
-    var shadowNode =
-      node.node ||
-      (node._internalInstanceHandle &&
-        node._internalInstanceHandle.stateNode &&
-        node._internalInstanceHandle.stateNode.node);
-    if (!shadowNode) return;
-    g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y) {
-      // 루트가 pageY=-36이면 offset = -(-36) = 36
-      _screenOffsetX = -x;
-      _screenOffsetY = -y;
+  function unregisterWebView(id) {
+    if (typeof id === 'string') {
+      var ref = _webViews[id];
+      if (ref && _webViewRefToId) _webViewRefToId.delete(ref);
+      delete _webViews[id];
+    }
+  }
+  /** ref에 해당하는 등록된 webViewId 반환 (query_selector로 찾은 WebView → webViewId용) */
+  function getWebViewIdForRef(ref) {
+    return _webViewRefToId && ref ? _webViewRefToId.get(ref) || null : null;
+  }
+  function clickInWebView(id, selector) {
+    var ref = _webViews[id];
+    if (!ref || typeof ref.injectJavaScript !== 'function')
+      return {
+        ok: false,
+        error: 'WebView not found or injectJavaScript not available',
+      };
+    var script =
+      '(function(){ var el = document.querySelector(' +
+      JSON.stringify(selector) +
+      '); if (el) el.click(); })();';
+    ref.injectJavaScript(script);
+    return { ok: true };
+  }
+  /** 등록된 WebView 내부에서 임의의 JavaScript를 실행 (동기, 반환값 없음) */
+  function evaluateInWebView(id, script) {
+    var ref = _webViews[id];
+    if (!ref || typeof ref.injectJavaScript !== 'function')
+      return {
+        ok: false,
+        error: 'WebView not found or injectJavaScript not available',
+      };
+    ref.injectJavaScript(script);
+    return { ok: true };
+  }
+  /**
+   * WebView에서 스크립트 실행 후 postMessage로 결과 수신.
+   * @returns Promise<{ ok: true, value: string } | { ok: false, error: string }>
+   */
+  function evaluateInWebViewAsync(id, script) {
+    var ref = _webViews[id];
+    if (!ref || typeof ref.injectJavaScript !== 'function')
+      return Promise.resolve({
+        ok: false,
+        error: 'WebView not found or injectJavaScript not available',
+      });
+    var requestId = 'wv_' + ++_webViewEvalRequestId + '_' + Date.now();
+    var wrapped =
+      '(function(){ var __reqId=' +
+      JSON.stringify(requestId) +
+      '; var __script=' +
+      JSON.stringify(script) +
+      '; try { var __r=(function(){ return eval(__script); })(); var __v=typeof __r==="string" ? __r : (function(){ try { return JSON.stringify(__r); } catch(e){ return String(__r); } })(); window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({__mcpEvalResult:true,requestId:__reqId,value:__v})); } catch(e) { window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({__mcpEvalResult:true,requestId:__reqId,error:(e&&e.message)||String(e)})); } })();';
+    return new Promise(function (resolve) {
+      _webViewEvalPending[requestId] = {
+        resolve,
+        timeout: setTimeout(function () {
+          if (_webViewEvalPending[requestId]) {
+            delete _webViewEvalPending[requestId];
+            resolve({
+              ok: false,
+              error: 'WebView eval timeout (10s)',
+            });
+          }
+        }, 1e4),
+      };
+      ref.injectJavaScript(wrapped);
     });
-  } catch (e) {
-    /* ignore */
   }
-}
+  /**
+   * WebView onMessage에서 호출. postMessage로 온 __mcpEvalResult 수신 시 evaluateInWebViewAsync Promise resolve.
+   * @returns true if the message was __mcpEvalResult (consumed), false otherwise.
+   */
+  function handleWebViewMessage(data) {
+    if (!data || typeof data !== 'string') return false;
+    try {
+      var payload = JSON.parse(data);
+      if (!payload || payload.__mcpEvalResult !== true || !payload.requestId) return false;
+      var reqId = payload.requestId;
+      var pending = _webViewEvalPending[reqId];
+      if (!pending) return false;
+      delete _webViewEvalPending[reqId];
+      if (pending.timeout) clearTimeout(pending.timeout);
+      if (payload.error != null)
+        pending.resolve({
+          ok: false,
+          error: payload.error,
+        });
+      else
+        pending.resolve({
+          ok: true,
+          value: payload.value,
+        });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+  /**
+   * WebView onMessage와 사용자 핸들러를 함께 쓰기 위한 래퍼.
+   */
+  function createWebViewOnMessage(userHandler) {
+    if (typeof userHandler !== 'function')
+      return function (e) {
+        globalThis.__REACT_NATIVE_MCP__.handleWebViewMessage(e.nativeEvent.data);
+      };
+    return function (e) {
+      var data = e && e.nativeEvent && e.nativeEvent.data;
+      if (!globalThis.__REACT_NATIVE_MCP__.handleWebViewMessage(data)) userHandler(e);
+    };
+  }
+  function getRegisteredWebViewIds() {
+    return Object.keys(_webViews);
+  }
+  var _webViews, _webViewRefToId, _webViewEvalPending, _webViewEvalRequestId;
+  var init_mcp_webview = __esmMin(() => {
+    _webViews = {};
+    _webViewRefToId = typeof WeakMap !== 'undefined' ? /* @__PURE__ */ new WeakMap() : null;
+    _webViewEvalPending = {};
+    _webViewEvalRequestId = 0;
+  });
 
-// ─── MCP 글로벌 객체 ────────────────────────────────────────────
+  //#endregion
+  //#region src/runtime/fiber-serialization.ts
+  /** fiber 노드를 결과 객체로 직렬화 */
+  function fiberToResult(fiber, TextComp, ImgComp) {
+    var props = fiber.memoizedProps || {};
+    var typeName = getFiberTypeName(fiber);
+    var testID =
+      typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : void 0;
+    var text = collectText(fiber, TextComp).replace(/\s+/g, ' ').trim() || void 0;
+    var a11y =
+      typeof props.accessibilityLabel === 'string' && props.accessibilityLabel.trim()
+        ? props.accessibilityLabel.trim()
+        : void 0;
+    var hasOnPress = typeof props.onPress === 'function';
+    var hasOnLongPress = typeof props.onLongPress === 'function';
+    var sn = fiber.stateNode;
+    var hasScrollTo = !!(
+      sn &&
+      (typeof sn.scrollTo === 'function' || typeof sn.scrollToOffset === 'function')
+    );
+    var uid = testID || getPathUid(fiber);
+    var result = {
+      uid,
+      type: typeName,
+    };
+    if (testID) result.testID = testID;
+    if (text) result.text = text;
+    if (a11y) result.accessibilityLabel = a11y;
+    result.hasOnPress = hasOnPress;
+    result.hasOnLongPress = hasOnLongPress;
+    result.hasScrollTo = hasScrollTo;
+    if (props.value !== void 0) result.value = props.value;
+    if (props.disabled != null) result.disabled = !!props.disabled;
+    if (props.editable !== void 0) result.editable = props.editable;
+    var measure = null;
+    try {
+      measure = measureViewSync$1(uid);
+    } catch (e) {}
+    if (!measure && typeof fiber.type !== 'string') {
+      var hostChild = (function findHost(f) {
+        if (!f) return null;
+        if (typeof f.type === 'string' && f.stateNode) return f;
+        var c = f.child;
+        while (c) {
+          var h = findHost(c);
+          if (h) return h;
+          c = c.sibling;
+        }
+        return null;
+      })(fiber.child);
+      if (hostChild) {
+        var hostUid =
+          (hostChild.memoizedProps && hostChild.memoizedProps.testID) || getPathUid(hostChild);
+        try {
+          measure = measureViewSync$1(hostUid);
+        } catch (e) {}
+        if (!measure) result._measureUid = hostUid;
+      }
+    }
+    result.measure = measure;
+    if (typeName === 'WebView' && sn && typeof sn.injectJavaScript === 'function') {
+      var wvId = getWebViewIdForRef(sn);
+      if (wvId) result.webViewId = wvId;
+    }
+    return result;
+  }
+  var init_fiber_serialization = __esmMin(() => {
+    init_fiber_helpers();
+    init_query_selector();
+    init_mcp_measure();
+    init_mcp_webview();
+  });
 
-var MCP = {
-  registerComponent: function (name, component) {
+  //#endregion
+  //#region src/runtime/mcp-registration.ts
+  function registerComponent(name, component) {
     return require('react-native').AppRegistry.registerComponent(name, component);
-  },
-  registerPressHandler: function (testID, handler) {
+  }
+  function registerPressHandler(testID, handler) {
     if (typeof testID === 'string' && typeof handler === 'function')
-      _pressHandlers[testID] = handler;
-  },
-  triggerPress: function (testID) {
-    var h = _pressHandlers[testID];
+      pressHandlers[testID] = handler;
+  }
+  function triggerPress(testID) {
+    var h = pressHandlers[testID];
     if (typeof h === 'function') {
       h();
       return true;
     }
-    // Fiber fallback: Babel 주입(INJECT_PRESS_HANDLER) 비활성 시 Fiber memoizedProps.onPress() 직접 호출
     var root = getFiberRoot();
     if (root) {
       var found = (function findByTestID(fiber) {
@@ -771,8 +1055,8 @@ var MCP = {
       }
     }
     return false;
-  },
-  triggerLongPress: function (testID) {
+  }
+  function triggerLongPress(testID) {
     var root = getFiberRoot();
     if (!root) return false;
     var found = (function find(fiber) {
@@ -790,23 +1074,29 @@ var MCP = {
       return true;
     }
     return false;
-  },
-  getRegisteredPressTestIDs: function () {
-    return Object.keys(_pressHandlers);
-  },
+  }
+  function getRegisteredPressTestIDs() {
+    return Object.keys(pressHandlers);
+  }
+  var init_mcp_registration = __esmMin(() => {
+    init_fiber_helpers();
+    init_shared();
+  });
+
+  //#endregion
+  //#region src/runtime/mcp-introspection.ts
   /**
    * 클릭 가능 요소 목록 (uid + label). Fiber 트리에서 onPress 있는 모든 노드 수집.
    * _pressHandlers 레지스트리가 있으면 우선 사용, 없으면 Fiber 순회.
    */
-  getClickables: function () {
-    var ids = Object.keys(_pressHandlers);
-    // 레지스트리에 항목이 있으면 기존 방식 (INJECT_PRESS_HANDLER=true 시)
+  function getClickables() {
+    var ids = Object.keys(pressHandlers);
     if (ids.length > 0) {
       var root0 = getFiberRoot();
       var c0 = root0 ? getRNComponents() : null;
       return ids.map(function (id) {
         var label = '';
-        if (root0 && c0) {
+        if (root0 && c0)
           (function visit(fiber) {
             if (!fiber || label) return;
             if (fiber.memoizedProps && fiber.memoizedProps.testID === id) {
@@ -816,11 +1106,12 @@ var MCP = {
             visit(fiber.child);
             visit(fiber.sibling);
           })(root0);
-        }
-        return { uid: id, label: label };
+        return {
+          uid: id,
+          label,
+        };
       });
     }
-    // Fiber fallback: onPress 있는 모든 노드 수집
     try {
       var root = getFiberRoot();
       if (!root) return [];
@@ -830,9 +1121,12 @@ var MCP = {
         if (!fiber) return;
         var props = fiber.memoizedProps;
         if (typeof (props && props.onPress) === 'function') {
-          var testID = (props && props.testID) || undefined;
+          var testID = (props && props.testID) || void 0;
           var label = getLabel(fiber, c.Text, c.Image);
-          out.push({ uid: testID || '', label: label });
+          out.push({
+            uid: testID || '',
+            label,
+          });
           visit(fiber.sibling);
           return;
         }
@@ -844,12 +1138,12 @@ var MCP = {
     } catch (e) {
       return [];
     }
-  },
+  }
   /**
    * Fiber 트리 전체에서 Text 노드 내용 수집. 버튼 여부와 무관하게 모든 보이는 텍스트.
    * 반환: [{ text, testID? }] — testID는 해당 Text의 조상 중 가장 가까운 testID.
    */
-  getTextNodes: function () {
+  function getTextNodes() {
     try {
       var root = getFiberRoot();
       if (!root) return [];
@@ -861,7 +1155,11 @@ var MCP = {
         if (!fiber) return;
         if (fiber.type === TextComponent) {
           var text = getTextNodeContent(fiber, TextComponent);
-          if (text) out.push({ text: text.replace(/\s+/g, ' '), testID: getAncestorTestID(fiber) });
+          if (text)
+            out.push({
+              text: text.replace(/\s+/g, ' '),
+              testID: getAncestorTestID(fiber),
+            });
         }
         visit(fiber.child);
         visit(fiber.sibling);
@@ -871,35 +1169,33 @@ var MCP = {
     } catch (e) {
       return [];
     }
-  },
+  }
   /**
    * Fiber 트리 전체를 컴포넌트 트리로 직렬화. querySelector 대체용 스냅샷.
    * 노드: { uid, type, testID?, accessibilityLabel?, text?, children? }
    * uid: testID 있으면 testID, 없으면 경로 "0.1.2". click(uid)는 testID일 때만 동작.
    * options: { maxDepth } (기본 무제한, 권장 20~30)
    */
-  getComponentTree: function (options) {
+  function getComponentTree(options) {
     try {
       var root = getFiberRoot();
       if (!root) return null;
       var c = getRNComponents();
       var TextComponent = c && c.Text;
-      var ImageComponent = c && c.Image;
       var maxDepth = options && typeof options.maxDepth === 'number' ? options.maxDepth : 999;
       function buildNode(fiber, path, depth) {
         if (!fiber || depth > maxDepth) return null;
         var props = fiber.memoizedProps || {};
         var testID =
-          typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : undefined;
+          typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : void 0;
         var typeName = getFiberTypeName(fiber);
-        var uid = testID || path;
         var node = {
-          uid: uid,
+          uid: testID || path,
           type: typeName,
         };
         if (testID) node.testID = testID;
-        var a11y = typeof props.accessibilityLabel === 'string' && props.accessibilityLabel.trim();
-        if (a11y) node.accessibilityLabel = props.accessibilityLabel.trim();
+        if (typeof props.accessibilityLabel === 'string' && props.accessibilityLabel.trim())
+          node.accessibilityLabel = props.accessibilityLabel.trim();
         if (fiber.type === TextComponent) {
           var text = getTextNodeContent(fiber, TextComponent);
           if (text) node.text = text.replace(/\s+/g, ' ');
@@ -921,12 +1217,19 @@ var MCP = {
     } catch (e) {
       return null;
     }
-  },
+  }
+  var init_mcp_introspection = __esmMin(() => {
+    init_fiber_helpers();
+    init_shared();
+  });
+
+  //#endregion
+  //#region src/runtime/mcp-actions.ts
   /**
    * Fiber 트리에서 라벨(텍스트)에 해당하는 onPress 노드들을 순서대로 수집한 뒤, index번째(0-based) 호출.
    * index 생략 시 0 (첫 번째). querySelectorAll()[index]와 유사.
    */
-  pressByLabel: function (labelSubstring, index) {
+  function pressByLabel(labelSubstring, index) {
     if (typeof labelSubstring !== 'string' || !labelSubstring.trim()) return false;
     try {
       var root = getFiberRoot();
@@ -939,8 +1242,7 @@ var MCP = {
         var props = fiber.memoizedProps;
         var onPress = props && props.onPress;
         if (typeof onPress === 'function') {
-          var label = getLabel(fiber, c.Text, c.Image);
-          if (label.indexOf(search) !== -1) matches.push(onPress);
+          if (getLabel(fiber, c.Text, c.Image).indexOf(search) !== -1) matches.push(onPress);
           visit(fiber.sibling);
           return;
         }
@@ -959,11 +1261,11 @@ var MCP = {
     } catch (e) {
       return false;
     }
-  },
+  }
   /**
    * Fiber 트리에서 라벨(텍스트)에 해당하는 onLongPress 노드들을 순서대로 수집한 뒤, index번째(0-based) 호출.
    */
-  longPressByLabel: function (labelSubstring, index) {
+  function longPressByLabel(labelSubstring, index) {
     if (typeof labelSubstring !== 'string' || !labelSubstring.trim()) return false;
     try {
       var root = getFiberRoot();
@@ -976,8 +1278,7 @@ var MCP = {
         var props = fiber.memoizedProps;
         var onLP = props && props.onLongPress;
         if (typeof onLP === 'function') {
-          var label = getLabel(fiber, c.Text, c.Image);
-          if (label.indexOf(search) !== -1) matches.push(onLP);
+          if (getLabel(fiber, c.Text, c.Image).indexOf(search) !== -1) matches.push(onLP);
           visitLP(fiber.sibling);
           return;
         }
@@ -996,14 +1297,18 @@ var MCP = {
     } catch (e) {
       return false;
     }
-  },
+  }
   /**
    * TextInput에 텍스트 입력. Fiber에서 testID 매칭 → onChangeText(text) 호출 + setNativeProps 동기화.
    */
-  typeText: function (testID, text) {
+  function typeText(testID, text) {
     try {
       var root = getFiberRoot();
-      if (!root) return { ok: false, error: 'No Fiber root' };
+      if (!root)
+        return {
+          ok: false,
+          error: 'No Fiber root',
+        };
       var found = (function find(fiber) {
         if (!fiber) return null;
         if (
@@ -1014,136 +1319,39 @@ var MCP = {
           return fiber;
         return find(fiber.child) || find(fiber.sibling);
       })(root);
-      if (!found) return { ok: false, error: 'TextInput not found: ' + testID };
+      if (!found)
+        return {
+          ok: false,
+          error: 'TextInput not found: ' + testID,
+        };
       found.memoizedProps.onChangeText(text);
-      if (found.stateNode && typeof found.stateNode.setNativeProps === 'function') {
-        found.stateNode.setNativeProps({ text: text });
-      }
+      if (found.stateNode && typeof found.stateNode.setNativeProps === 'function')
+        found.stateNode.setNativeProps({ text });
       return { ok: true };
     } catch (e) {
-      return { ok: false, error: String(e) };
-    }
-  },
-  registerWebView: function (ref, id) {
-    if (ref && typeof id === 'string') {
-      _webViews[id] = ref;
-      if (_webViewRefToId)
-        try {
-          _webViewRefToId.set(ref, id);
-        } catch (e) {}
-    }
-  },
-  unregisterWebView: function (id) {
-    if (typeof id === 'string') {
-      var ref = _webViews[id];
-      if (ref && _webViewRefToId) _webViewRefToId.delete(ref);
-      delete _webViews[id];
-    }
-  },
-  /** ref에 해당하는 등록된 webViewId 반환 (query_selector로 찾은 WebView → webViewId용) */
-  getWebViewIdForRef: function (ref) {
-    return _webViewRefToId && ref ? _webViewRefToId.get(ref) || null : null;
-  },
-  clickInWebView: function (id, selector) {
-    var ref = _webViews[id];
-    if (!ref || typeof ref.injectJavaScript !== 'function')
-      return { ok: false, error: 'WebView not found or injectJavaScript not available' };
-    var script =
-      '(function(){ var el = document.querySelector(' +
-      JSON.stringify(selector) +
-      '); if (el) el.click(); })();';
-    ref.injectJavaScript(script);
-    return { ok: true };
-  },
-  /** 등록된 WebView 내부에서 임의의 JavaScript를 실행 (동기, 반환값 없음) */
-  evaluateInWebView: function (id, script) {
-    var ref = _webViews[id];
-    if (!ref || typeof ref.injectJavaScript !== 'function')
-      return { ok: false, error: 'WebView not found or injectJavaScript not available' };
-    ref.injectJavaScript(script);
-    return { ok: true };
-  },
-  /**
-   * WebView에서 스크립트 실행 후 postMessage로 결과 수신. 앱이 WebView onMessage에서
-   * __REACT_NATIVE_MCP__.handleWebViewMessage(event.nativeEvent.data) 호출 시 결과 반환.
-   * @returns Promise<{ ok: true, value: string } | { ok: false, error: string }>
-   */
-  evaluateInWebViewAsync: function (id, script) {
-    var ref = _webViews[id];
-    if (!ref || typeof ref.injectJavaScript !== 'function')
-      return Promise.resolve({
+      return {
         ok: false,
-        error: 'WebView not found or injectJavaScript not available',
-      });
-    var requestId = 'wv_' + ++_webViewEvalRequestId + '_' + Date.now();
-    var wrapped =
-      '(function(){ var __reqId=' +
-      JSON.stringify(requestId) +
-      '; var __script=' +
-      JSON.stringify(script) +
-      '; try { var __r=(function(){ return eval(__script); })(); var __v=typeof __r==="string" ? __r : (function(){ try { return JSON.stringify(__r); } catch(e){ return String(__r); } })(); window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({__mcpEvalResult:true,requestId:__reqId,value:__v})); } catch(e) { window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({__mcpEvalResult:true,requestId:__reqId,error:(e&&e.message)||String(e)})); } })();';
-    return new Promise(function (resolve) {
-      var t = setTimeout(function () {
-        if (_webViewEvalPending[requestId]) {
-          delete _webViewEvalPending[requestId];
-          resolve({ ok: false, error: 'WebView eval timeout (10s)' });
-        }
-      }, 10000);
-      _webViewEvalPending[requestId] = { resolve: resolve, timeout: t };
-      ref.injectJavaScript(wrapped);
-    });
-  },
-  /**
-   * WebView onMessage에서 호출. postMessage로 온 __mcpEvalResult 수신 시 evaluateInWebViewAsync Promise resolve.
-   * @returns {boolean} true if the message was __mcpEvalResult (consumed), false otherwise. 사용자 onMessage와 함께 쓰려면 createWebViewOnMessage 사용.
-   */
-  handleWebViewMessage: function (data) {
-    if (!data || typeof data !== 'string') return false;
-    try {
-      var payload = JSON.parse(data);
-      if (!payload || payload.__mcpEvalResult !== true || !payload.requestId) return false;
-      var reqId = payload.requestId;
-      var pending = _webViewEvalPending[reqId];
-      if (!pending) return false;
-      delete _webViewEvalPending[reqId];
-      if (pending.timeout) clearTimeout(pending.timeout);
-      if (payload.error != null) pending.resolve({ ok: false, error: payload.error });
-      else pending.resolve({ ok: true, value: payload.value });
-      return true;
-    } catch (_) {
-      return false;
-    }
-  },
-  /**
-   * WebView onMessage와 사용자 핸들러를 함께 쓰기 위한 래퍼. 우리 __mcpEvalResult는 처리하고, 나머지 메시지는 userHandler에 넘김.
-   * 사용: onMessage={__REACT_NATIVE_MCP__.createWebViewOnMessage((e) => { ... })}
-   */
-  createWebViewOnMessage: function (userHandler) {
-    if (typeof userHandler !== 'function')
-      return function (e) {
-        __REACT_NATIVE_MCP__.handleWebViewMessage(e.nativeEvent.data);
+        error: String(e),
       };
-    return function (e) {
-      var data = e && e.nativeEvent && e.nativeEvent.data;
-      var consumed = __REACT_NATIVE_MCP__.handleWebViewMessage(data);
-      if (!consumed) userHandler(e);
-    };
-  },
-  getRegisteredWebViewIds: function () {
-    return Object.keys(_webViews);
-  },
-  registerScrollRef: function (testID, ref) {
+    }
+  }
+  var init_mcp_actions = __esmMin(() => {
+    init_fiber_helpers();
+  });
+
+  //#endregion
+  //#region src/runtime/mcp-scroll.ts
+  function registerScrollRef(testID, ref) {
     if (typeof testID === 'string' && ref != null) _scrollRefs[testID] = ref;
-  },
-  unregisterScrollRef: function (testID) {
+  }
+  function unregisterScrollRef(testID) {
     if (typeof testID === 'string') delete _scrollRefs[testID];
-  },
-  scrollTo: function (testID, options) {
+  }
+  function scrollTo(testID, options) {
     var ref = _scrollRefs[testID];
-    // Fiber fallback: Babel 주입(INJECT_SCROLL_REF) 비활성 시 Fiber stateNode에서 직접 접근
     if (!ref) {
       var root = getFiberRoot();
-      if (root) {
+      if (root)
         ref = (function findScrollable(fiber) {
           if (!fiber) return null;
           if (fiber.memoizedProps && fiber.memoizedProps.testID === testID && fiber.stateNode) {
@@ -1153,45 +1361,73 @@ var MCP = {
           }
           return findScrollable(fiber.child) || findScrollable(fiber.sibling);
         })(root);
-      }
     }
-    if (!ref) return { ok: false, error: 'ScrollView not found for testID: ' + testID };
+    if (!ref)
+      return {
+        ok: false,
+        error: 'ScrollView not found for testID: ' + testID,
+      };
     var opts = typeof options === 'object' && options !== null ? options : {};
     var x = opts.x || 0;
     var y = opts.y || 0;
     var animated = opts.animated !== false;
     try {
       if (typeof ref.scrollTo === 'function') {
-        ref.scrollTo({ x: x, y: y, animated: animated });
+        ref.scrollTo({
+          x,
+          y,
+          animated,
+        });
         return { ok: true };
       }
       if (typeof ref.scrollToOffset === 'function') {
-        ref.scrollToOffset({ offset: y, animated: animated });
+        ref.scrollToOffset({
+          offset: y,
+          animated,
+        });
         return { ok: true };
       }
-      return { ok: false, error: 'scrollTo/scrollToOffset not available on stateNode' };
+      return {
+        ok: false,
+        error: 'scrollTo/scrollToOffset not available on stateNode',
+      };
     } catch (e) {
-      return { ok: false, error: e && e.message ? e.message : String(e) };
+      return {
+        ok: false,
+        error: e && e.message ? e.message : String(e),
+      };
     }
-  },
-  getRegisteredScrollTestIDs: function () {
+  }
+  function getRegisteredScrollTestIDs() {
     return Object.keys(_scrollRefs);
-  },
+  }
+  var _scrollRefs;
+  var init_mcp_scroll = __esmMin(() => {
+    init_fiber_helpers();
+    _scrollRefs = {};
+  });
+
+  //#endregion
+  //#region src/runtime/mcp-console.ts
   /**
    * 콘솔 로그 조회. options: { level?, since?, limit? }
    * level 맵핑: 0=log, 1=info, 2=warn, 3=error
    */
-  getConsoleLogs: function (options) {
+  function getConsoleLogs(options) {
     var opts = typeof options === 'object' && options !== null ? options : {};
-    var levelMap = { log: 0, info: 1, warn: 2, error: 3 };
-    var out = _consoleLogs;
+    var levelMap = {
+      log: 0,
+      info: 1,
+      warn: 2,
+      error: 3,
+    };
+    var out = consoleLogs;
     if (opts.level != null) {
       var targetLevel = typeof opts.level === 'string' ? levelMap[opts.level] : opts.level;
-      if (targetLevel != null) {
+      if (targetLevel != null)
         out = out.filter(function (entry) {
           return entry.level === targetLevel;
         });
-      }
     }
     if (typeof opts.since === 'number') {
       var since = opts.since;
@@ -1202,19 +1438,24 @@ var MCP = {
     var limit = typeof opts.limit === 'number' && opts.limit > 0 ? opts.limit : 100;
     if (out.length > limit) out = out.slice(out.length - limit);
     return out;
-  },
+  }
   /** 콘솔 로그 버퍼 초기화 */
-  clearConsoleLogs: function () {
-    _consoleLogs = [];
-    _consoleLogId = 0;
-  },
+  function clearConsoleLogs() {
+    resetConsoleLogs();
+  }
+  var init_mcp_console = __esmMin(() => {
+    init_shared();
+  });
+
+  //#endregion
+  //#region src/runtime/mcp-network.ts
   /**
    * 네트워크 요청 조회. options: { url?, method?, status?, since?, limit? }
    * url: substring 매칭, method: 정확 매칭, status: 정확 매칭
    */
-  getNetworkRequests: function (options) {
+  function getNetworkRequests(options) {
     var opts = typeof options === 'object' && options !== null ? options : {};
-    var out = _networkRequests;
+    var out = networkRequests;
     if (typeof opts.url === 'string' && opts.url) {
       var urlFilter = opts.url;
       out = out.filter(function (entry) {
@@ -1242,18 +1483,23 @@ var MCP = {
     var limit = typeof opts.limit === 'number' && opts.limit > 0 ? opts.limit : 50;
     if (out.length > limit) out = out.slice(out.length - limit);
     return out;
-  },
+  }
   /** 네트워크 요청 버퍼 초기화 */
-  clearNetworkRequests: function () {
-    _networkRequests = [];
-    _networkRequestId = 0;
-  },
+  function clearNetworkRequests() {
+    resetNetworkRequests();
+  }
+  var init_mcp_network = __esmMin(() => {
+    init_shared();
+  });
+
+  //#endregion
+  //#region src/runtime/mcp-state.ts
   /**
    * inspectState(selector) → 셀렉터로 찾은 컴포넌트의 state Hook 목록.
    * 반환: { component, hooks: [{ index, type, value }] } 또는 null.
    * FunctionComponent가 아닌 host fiber가 매칭되면 가장 가까운 조상 FunctionComponent로 이동.
    */
-  inspectState: function (selector) {
+  function inspectState(selector) {
     if (typeof selector !== 'string' || !selector.trim()) return null;
     try {
       var root = getFiberRoot();
@@ -1265,7 +1511,6 @@ var MCP = {
       } catch (_parseErr) {
         return null;
       }
-      // 첫 번째 매칭 fiber 찾기 (querySelectorAll 로직 재사용)
       var foundFiber = null;
       for (var si = 0; si < parsed.selectors.length && !foundFiber; si++) {
         var complex = parsed.selectors[si];
@@ -1280,7 +1525,6 @@ var MCP = {
         })(root);
       }
       if (!foundFiber) return null;
-      // host fiber면 조상 FunctionComponent로 이동
       var target = foundFiber;
       if (target.tag !== 0 && target.tag !== 1) {
         var p = target.return;
@@ -1297,20 +1541,24 @@ var MCP = {
       return {
         component: getFiberTypeName(target),
         hooks: hooks.map(function (h) {
-          return { index: h.index, type: h.type, value: safeClone(h.value) };
+          return {
+            index: h.index,
+            type: h.type,
+            value: safeClone(h.value),
+          };
         }),
       };
     } catch (e) {
       return null;
     }
-  },
+  }
   /**
    * getStateChanges(options) → 상태 변경 이력 조회.
    * options: { component?, since?, limit? }
    */
-  getStateChanges: function (options) {
+  function getStateChanges(options) {
     var opts = typeof options === 'object' && options !== null ? options : {};
-    var out = _stateChanges;
+    var out = stateChanges;
     if (typeof opts.component === 'string' && opts.component) {
       var componentFilter = opts.component;
       out = out.filter(function (entry) {
@@ -1326,32 +1574,24 @@ var MCP = {
     var limit = typeof opts.limit === 'number' && opts.limit > 0 ? opts.limit : 100;
     if (out.length > limit) out = out.slice(out.length - limit);
     return out;
-  },
+  }
   /** 상태 변경 버퍼 초기화 */
-  clearStateChanges: function () {
-    _stateChanges = [];
-    _stateChangeId = 0;
-  },
-  /**
-   * querySelector(selector) → 첫 번째 매칭 fiber 정보 또는 null.
-   * 셀렉터 문법: Type#testID[attr="val"]:text("..."):nth-of-type(N):has-press:has-scroll
-   * 콤비네이터: ">" (직접 자식), " " (후손), "," (OR)
-   * 반환: { uid, type, testID?, text?, accessibilityLabel?, hasOnPress, hasScrollTo }
-   */
-  querySelector: function (selector) {
-    if (typeof selector !== 'string' || !selector.trim()) return null;
-    try {
-      var all = MCP.querySelectorAll(selector);
-      return all.length > 0 ? all[0] : null;
-    } catch (e) {
-      return null;
-    }
-  },
+  function clearStateChanges() {
+    resetStateChanges();
+  }
+  var init_mcp_state = __esmMin(() => {
+    init_fiber_helpers();
+    init_query_selector();
+    init_state_hooks();
+    init_shared();
+  });
+
+  //#endregion
+  //#region src/runtime/mcp-query.ts
   /**
    * querySelectorAll(selector) → 매칭되는 모든 fiber 정보 배열.
-   * 반환: [{ uid, type, testID?, text?, accessibilityLabel?, hasOnPress, hasScrollTo }]
    */
-  querySelectorAll: function (selector) {
+  function querySelectorAll(selector) {
     if (typeof selector !== 'string' || !selector.trim()) return [];
     try {
       var root = getFiberRoot();
@@ -1361,48 +1601,36 @@ var MCP = {
       try {
         parsed = parseSelector(selector.trim());
       } catch (parseErr) {
-        return []; // 따옴표 미닫힘 등 파싱 실패 시 빈 배열
+        return [];
       }
       var results = [];
-
       for (var si = 0; si < parsed.selectors.length; si++) {
         var complex = parsed.selectors[si];
         var lastSeg = complex.segments[complex.segments.length - 1];
         var nth = lastSeg.selector.nth;
         var matchCount = 0;
-
         (function visit(fiber) {
           if (!fiber) return;
           if (matchesComplexSelector(fiber, complex, c.Text, c.Image)) {
-            if (nth === -1 || nth === -2) {
-              results.push(fiberToResult(fiber, c.Text, c.Image));
-            } else if (matchCount === nth) {
-              results.push(fiberToResult(fiber, c.Text, c.Image));
-            }
+            if (nth === -1 || nth === -2) results.push(fiberToResult(fiber, c.Text, c.Image));
+            else if (matchCount === nth) results.push(fiberToResult(fiber, c.Text, c.Image));
             matchCount++;
           }
           visit(fiber.child);
           visit(fiber.sibling);
         })(root);
       }
-
-      // :last-of-type → keep only the last match
-      if (lastSeg.selector.nth === -2 && results.length > 1) {
+      if (lastSeg.selector.nth === -2 && results.length > 1)
         results = [results[results.length - 1]];
-      }
-
-      // 같은 testID를 가진 중복 제거: capabilities가 더 많은 쪽 유지
-      // (예: ScrollView가 composite + class instance 2개 fiber로 나올 때)
       var deduped = [];
       var seen = {};
       for (var di = 0; di < results.length; di++) {
         var r = results[di];
         var key = r.uid || '';
-        if (!key || seen[key] === undefined) {
+        if (!key || seen[key] === void 0) {
           seen[key] = deduped.length;
           deduped.push(r);
         } else {
-          // 이미 있으면 capabilities 병합 (hasScrollTo, hasOnPress 중 true 우선)
           var prev = deduped[seen[key]];
           if (r.hasScrollTo && !prev.hasScrollTo) deduped[seen[key]] = r;
           else if (r.hasOnPress && !prev.hasOnPress) deduped[seen[key]] = r;
@@ -1412,19 +1640,29 @@ var MCP = {
     } catch (e) {
       return [];
     }
-  },
-
+  }
+  /**
+   * querySelector(selector) → 첫 번째 매칭 fiber 정보 또는 null.
+   */
+  function querySelector(selector) {
+    if (typeof selector !== 'string' || !selector.trim()) return null;
+    try {
+      var all = querySelectorAll(selector);
+      return all.length > 0 ? all[0] : null;
+    } catch (e) {
+      return null;
+    }
+  }
   /**
    * querySelectorWithMeasure(selector) → Promise<결과 | null>
    * Fabric: fiberToResult의 measureViewSync로 이미 measure 포함 → 즉시 반환.
    * Bridge: measure가 null인 경우 async measureView fallback.
    */
-  querySelectorWithMeasure: function (selector) {
-    var el = MCP.querySelector(selector);
+  function querySelectorWithMeasure(selector) {
+    var el = querySelector(selector);
     if (!el) return Promise.resolve(null);
     if (el.measure) return Promise.resolve(el);
-    // Bridge fallback: composite fiber면 _measureUid(host child) 사용
-    return MCP.measureView(el._measureUid || el.uid)
+    return measureView(el._measureUid || el.uid)
       .then(function (m) {
         el.measure = m;
         return el;
@@ -1432,26 +1670,21 @@ var MCP = {
       .catch(function () {
         return el;
       });
-  },
-
+  }
   /**
    * querySelectorAllWithMeasure(selector) → Promise<배열>
    * measure가 null인 요소만 비동기 보충.
    */
-  querySelectorAllWithMeasure: function (selector) {
-    var list = MCP.querySelectorAll(selector);
+  function querySelectorAllWithMeasure(selector) {
+    var list = querySelectorAll(selector);
     if (!list.length) return Promise.resolve(list);
-    // measure가 null인 요소만 비동기 보충
     var needsMeasure = [];
-    for (var i = 0; i < list.length; i++) {
-      if (!list[i].measure) needsMeasure.push(i);
-    }
+    for (var i = 0; i < list.length; i++) if (!list[i].measure) needsMeasure.push(i);
     if (!needsMeasure.length) return Promise.resolve(list);
-    // Bridge fallback — sequential measure
     var chain = Promise.resolve();
     needsMeasure.forEach(function (idx) {
       chain = chain.then(function () {
-        return MCP.measureView(list[idx]._measureUid || list[idx].uid)
+        return measureView(list[idx]._measureUid || list[idx].uid)
           .then(function (m) {
             list[idx].measure = m;
           })
@@ -1461,194 +1694,21 @@ var MCP = {
     return chain.then(function () {
       return list;
     });
-  },
+  }
+  var init_mcp_query = __esmMin(() => {
+    init_fiber_helpers();
+    init_query_selector();
+    init_fiber_serialization();
+    init_mcp_measure();
+  });
 
-  // ─── 화면 정보 · 뷰 좌표 측정 ─────────────────────────────────
-
-  /**
-   * getScreenInfo() → { screen, window, scale, fontScale, orientation }
-   * - screen: 물리 디스플레이 크기 (points)
-   * - window: 앱 윈도우 크기 (points, 상태바·노치 제외 가능)
-   * - scale: 픽셀 밀도 (1x, 2x, 3x)
-   * - fontScale: 접근성 글꼴 배율
-   * - orientation: 'portrait' | 'landscape'
-   */
-  getScreenInfo: function () {
-    try {
-      var rn = typeof require !== 'undefined' && require('react-native');
-      if (!rn) return { error: 'react-native not available' };
-      var screen = rn.Dimensions.get('screen');
-      var win = rn.Dimensions.get('window');
-      var pixelRatio = rn.PixelRatio ? rn.PixelRatio.get() : 1;
-      var fontScale = rn.PixelRatio ? rn.PixelRatio.getFontScale() : 1;
-      return {
-        screen: { width: screen.width, height: screen.height },
-        window: { width: win.width, height: win.height },
-        scale: pixelRatio,
-        fontScale: fontScale,
-        orientation: win.width > win.height ? 'landscape' : 'portrait',
-      };
-    } catch (e) {
-      return { error: String(e) };
-    }
-  },
-
-  /**
-   * measureView(uid) → Promise<{ x, y, width, height, pageX, pageY }>
-   * uid: testID 또는 경로("0.1.2"). query_selector로 얻은 uid 그대로 사용 가능.
-   * Fiber에서 native node를 찾아 measureInWindow (Fabric) 또는 measure (Bridge)로 절대 좌표 반환.
-   * pageX/pageY: 화면 왼쪽 상단 기준 절대 좌표 (points).
-   */
-  measureView: function (uid) {
-    return new Promise(function (resolve, reject) {
-      try {
-        var root = getFiberRoot();
-        if (!root) return reject(new Error('no fiber root'));
-
-        var found = null;
-        if (isPathUid(uid)) {
-          found = getFiberByPath(root, uid);
-          if (found && !found.stateNode) found = null;
-        }
-        if (!found) {
-          // testID로 host fiber 찾기
-          (function find(fiber) {
-            if (!fiber || found) return;
-            if (fiber.memoizedProps && fiber.memoizedProps.testID === uid && fiber.stateNode) {
-              found = fiber;
-              return;
-            }
-            find(fiber.child);
-            if (!found) find(fiber.sibling);
-          })(root);
-        }
-
-        if (!found) return reject(new Error('uid "' + uid + '" not found or has no native view'));
-
-        // Fabric: stateNode.node + nativeFabricUIManager.measureInWindow
-        var g = typeof globalThis !== 'undefined' ? globalThis : global;
-        // Bridge: UIManager.measure
-        var rn = typeof require !== 'undefined' && require('react-native');
-
-        // 현재 fiber가 측정 불가면 host 조상으로 올라가서 측정 시도 (RNGH Swipeable 내부 View 등)
-        while (found) {
-          var node = found.stateNode;
-          if (g.nativeFabricUIManager && node) {
-            var shadowNode =
-              node.node ||
-              (node._internalInstanceHandle &&
-                node._internalInstanceHandle.stateNode &&
-                node._internalInstanceHandle.stateNode.node);
-            // Reanimated AnimatedComponent: _viewInfo.shadowNodeWrapper
-            if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) {
-              shadowNode = node._viewInfo.shadowNodeWrapper;
-            }
-            if (shadowNode) {
-              resolveScreenOffset();
-              g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y, w, h) {
-                resolve({
-                  x: x,
-                  y: y,
-                  width: w,
-                  height: h,
-                  pageX: x + _screenOffsetX,
-                  pageY: y + _screenOffsetY,
-                });
-              });
-              return;
-            }
-          }
-
-          if (rn && rn.UIManager && rn.findNodeHandle && node) {
-            var handle = rn.findNodeHandle(node);
-            if (handle) {
-              rn.UIManager.measure(handle, function (x, y, w, h, pageX, pageY) {
-                resolve({ x: x, y: y, width: w, height: h, pageX: pageX, pageY: pageY });
-              });
-              return;
-            }
-          }
-
-          found = found.return;
-        }
-
-        reject(new Error('cannot measure: no native node'));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  },
-
-  /**
-   * measureViewSync(uid) → { x, y, width, height, pageX, pageY } | null
-   * uid: testID 또는 경로("0.1.2"). Fabric에서는 동기 호출 가능. Bridge에서는 null → measureView() 사용 권장.
-   */
-  measureViewSync: function (uid) {
-    try {
-      var root = getFiberRoot();
-      if (!root) return null;
-
-      var found = null;
-      if (isPathUid(uid)) {
-        found = getFiberByPath(root, uid);
-      }
-      if (!found) {
-        (function find(fiber) {
-          if (!fiber || found) return;
-          if (fiber.memoizedProps && fiber.memoizedProps.testID === uid && fiber.stateNode) {
-            found = fiber;
-            return;
-          }
-          find(fiber.child);
-          if (!found) find(fiber.sibling);
-        })(root);
-      }
-
-      if (!found) return null;
-
-      var node = found.stateNode;
-      var g = typeof globalThis !== 'undefined' ? globalThis : global;
-
-      if (g.nativeFabricUIManager && node) {
-        var shadowNode =
-          node.node ||
-          (node._internalInstanceHandle &&
-            node._internalInstanceHandle.stateNode &&
-            node._internalInstanceHandle.stateNode.node);
-        if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) {
-          shadowNode = node._viewInfo.shadowNodeWrapper;
-        }
-        if (shadowNode) {
-          var result = null;
-          resolveScreenOffset();
-          g.nativeFabricUIManager.measureInWindow(shadowNode, function (x, y, w, h) {
-            result = {
-              x: x,
-              y: y,
-              width: w,
-              height: h,
-              pageX: x + _screenOffsetX,
-              pageY: y + _screenOffsetY,
-            };
-          });
-          return result; // Fabric에서는 콜백이 동기 실행
-        }
-      }
-
-      return null; // Bridge → measureView() 사용 필요
-    } catch (e) {
-      return null;
-    }
-  },
-
+  //#endregion
+  //#region src/runtime/mcp-accessibility.ts
   /**
    * 접근성(a11y) 자동 감사. Fiber 트리 순회 후 규칙 위반 목록 반환.
    * 반환: [{ rule, selector, severity, message }]
-   * 규칙: pressable-needs-label, image-needs-alt, touch-target-size, missing-role.
-   * text-contrast 미구현: RN은 processColor()로 색이 숫자화되어 Fiber에서 hex/rgb 복원이 어렵고,
-   * 스타일 병합·부모 배경 추출이 복잡해 대비비 계산이 사실상 불가하여 제외함.
    */
-  getAccessibilityAudit: function (options) {
+  function getAccessibilityAudit(options) {
     try {
       var root = getFiberRoot();
       if (!root) return [];
@@ -1658,18 +1718,16 @@ var MCP = {
       var maxDepth = options && typeof options.maxDepth === 'number' ? options.maxDepth : 999;
       var minTouchTarget = 44;
       var violations = [];
-
-      function selectorFor(fiber, typeName, testID, pathUid) {
+      function selectorFor(_fiber, typeName, testID, pathUid) {
         if (testID) return '#' + testID;
         return typeName + (pathUid ? '@' + pathUid : '');
       }
-
       function visit(fiber, path, depth) {
         if (!fiber || depth > maxDepth) return;
         var props = fiber.memoizedProps || {};
         var typeName = getFiberTypeName(fiber);
         var testID =
-          typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : undefined;
+          typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : void 0;
         var pathUid = getPathUid(fiber);
         var hasOnPress = typeof props.onPress === 'function';
         var hasOnLongPress = typeof props.onLongPress === 'function';
@@ -1681,14 +1739,14 @@ var MCP = {
           typeof props.accessibilityRole === 'string' && props.accessibilityRole.trim()
             ? props.accessibilityRole.trim()
             : '';
-
-        // pressable-needs-label: onPress 있는데 accessibilityLabel 또는 접근 가능한 텍스트 없음
         if (hasOnPress || hasOnLongPress) {
-          var hasAccessibleText =
-            accessibilityLabel ||
-            collectText(fiber, TextComp).replace(/\s+/g, ' ').trim() ||
-            collectAccessibilityLabel(fiber, ImageComp);
-          if (!hasAccessibleText) {
+          if (
+            !(
+              accessibilityLabel ||
+              collectText(fiber, TextComp).replace(/\s+/g, ' ').trim() ||
+              collectAccessibilityLabel(fiber, ImageComp)
+            )
+          )
             violations.push({
               rule: 'pressable-needs-label',
               selector: selectorFor(fiber, typeName, testID, pathUid),
@@ -1697,30 +1755,23 @@ var MCP = {
                 typeName +
                 '에 onPress/onLongPress가 있으나 accessibilityLabel 또는 접근 가능한 텍스트가 없습니다.',
             });
-          }
-          // missing-role: 인터랙티브 요소에 accessibilityRole 없음
-          if (!accessibilityRole) {
+          if (!accessibilityRole)
             violations.push({
               rule: 'missing-role',
               selector: selectorFor(fiber, typeName, testID, pathUid),
               severity: 'warning',
               message: '인터랙티브 요소에 accessibilityRole이 없습니다.',
             });
-          }
         }
-
-        // image-needs-alt: Image에 accessibilityLabel 없음
         if (fiber.type === ImageComp) {
-          if (!accessibilityLabel) {
+          if (!accessibilityLabel)
             violations.push({
               rule: 'image-needs-alt',
               selector: selectorFor(fiber, typeName, testID, pathUid),
               severity: 'error',
               message: 'Image에 accessibilityLabel(또는 alt)이 없습니다.',
             });
-          }
         }
-
         var child = fiber.child;
         var idx = 0;
         while (child) {
@@ -1729,10 +1780,7 @@ var MCP = {
           idx += 1;
         }
       }
-
       visit(root, '0', 0);
-
-      // touch-target-size: onPress/onLongPress 있는 노드 중 measure로 44x44pt 미만인 것
       var touchables = [];
       (function collectTouchables(fiber, path, depth) {
         if (!fiber || depth > maxDepth) return;
@@ -1741,13 +1789,11 @@ var MCP = {
         var hasOnLongPress = typeof props.onLongPress === 'function';
         if (hasOnPress || hasOnLongPress) {
           var testID =
-            typeof props.testID === 'string' && props.testID.trim()
-              ? props.testID.trim()
-              : undefined;
+            typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : void 0;
           touchables.push({
-            fiber: fiber,
+            fiber,
             typeName: getFiberTypeName(fiber),
-            testID: testID,
+            testID,
             pathUid: getPathUid(fiber),
           });
         }
@@ -1759,23 +1805,22 @@ var MCP = {
           idx += 1;
         }
       })(root, '0', 0);
-
       for (var i = 0; i < touchables.length; i++) {
         var t = touchables[i];
         var uid = t.testID || t.pathUid;
         var measure = null;
         try {
-          measure = MCP.measureViewSync(uid);
+          measure = globalThis.__REACT_NATIVE_MCP__.measureViewSync(uid);
         } catch (e) {}
         if (!measure && typeof t.fiber.type !== 'string') {
           var hostChild = (function findHost(f) {
             if (!f) return null;
             if (typeof f.type === 'string' && f.stateNode) return f;
-            var c = f.child;
-            while (c) {
-              var h = findHost(c);
+            var ch = f.child;
+            while (ch) {
+              var h = findHost(ch);
               if (h) return h;
-              c = c.sibling;
+              ch = ch.sibling;
             }
             return null;
           })(t.fiber.child);
@@ -1783,11 +1828,11 @@ var MCP = {
             var hostUid =
               (hostChild.memoizedProps && hostChild.memoizedProps.testID) || getPathUid(hostChild);
             try {
-              measure = MCP.measureViewSync(hostUid);
+              measure = measureViewSync(hostUid);
             } catch (e) {}
           }
         }
-        if (measure && (measure.width < minTouchTarget || measure.height < minTouchTarget)) {
+        if (measure && (measure.width < minTouchTarget || measure.height < minTouchTarget))
           violations.push({
             rule: 'touch-target-size',
             selector: t.testID ? '#' + t.testID : t.typeName + '@' + t.pathUid,
@@ -1803,475 +1848,562 @@ var MCP = {
               Math.round(measure.height) +
               'pt)',
           });
-        }
       }
-
       return violations;
     } catch (e) {
       return [];
     }
-  },
-};
-if (typeof global !== 'undefined') global.__REACT_NATIVE_MCP__ = MCP;
-if (typeof globalThis !== 'undefined') globalThis.__REACT_NATIVE_MCP__ = MCP;
-
-// ─── nativeLoggingHook 체이닝 — 콘솔 로그 캡처 ─────────────────
-var _origNativeLoggingHook = typeof global !== 'undefined' ? global.nativeLoggingHook : undefined;
-if (typeof global !== 'undefined') {
-  global.nativeLoggingHook = function (msg, level) {
-    _consoleLogId++;
-    _consoleLogs.push({
-      id: _consoleLogId,
-      message: msg,
-      level: level,
-      timestamp: Date.now(),
-    });
-    if (_consoleLogs.length > _CONSOLE_BUFFER_SIZE) _consoleLogs.shift();
-    if (typeof _origNativeLoggingHook === 'function') _origNativeLoggingHook(msg, level);
-  };
-}
-
-// ─── 네트워크 캡처 공통 헬퍼 ─────────────────────────────────────
-function _pushNetworkEntry(entry) {
-  _networkRequestId++;
-  entry.id = _networkRequestId;
-  _networkRequests.push(entry);
-  if (_networkRequests.length > _NETWORK_BUFFER_SIZE) _networkRequests.shift();
-}
-
-function _truncateBody(body) {
-  if (body == null) return null;
-  var s = typeof body === 'string' ? body : String(body);
-  return s.length > _NETWORK_BODY_LIMIT ? s.substring(0, _NETWORK_BODY_LIMIT) : s;
-}
-
-// ─── XHR monkey-patch — 네트워크 요청 캡처 ──────────────────────
-// DEV/Release 무관하게 항상 설치. MCP.enable() 없이도 네트워크 캡처 동작.
-(function () {
-  if (typeof XMLHttpRequest === 'undefined') return;
-  var XHR = XMLHttpRequest.prototype;
-  var _origOpen = XHR.open;
-  var _origSend = XHR.send;
-  var _origSetRequestHeader = XHR.setRequestHeader;
-
-  XHR.open = function (method, url) {
-    this.__mcpNetworkEntry = {
-      id: 0,
-      method: (method || 'GET').toUpperCase(),
-      url: String(url || ''),
-      requestHeaders: {},
-      requestBody: null,
-      status: null,
-      statusText: null,
-      responseHeaders: null,
-      responseBody: null,
-      startTime: Date.now(),
-      duration: null,
-      error: null,
-      state: 'pending',
-    };
-    return _origOpen.apply(this, arguments);
-  };
-
-  XHR.setRequestHeader = function (name, value) {
-    if (this.__mcpNetworkEntry) {
-      this.__mcpNetworkEntry.requestHeaders[name] = value;
-    }
-    return _origSetRequestHeader.apply(this, arguments);
-  };
-
-  XHR.send = function (body) {
-    var entry = this.__mcpNetworkEntry;
-    if (entry) {
-      entry.requestBody = _truncateBody(body);
-      var xhr = this;
-
-      xhr.addEventListener('load', function () {
-        entry.status = xhr.status;
-        entry.statusText = xhr.statusText || null;
-        try {
-          entry.responseHeaders = xhr.getAllResponseHeaders() || null;
-        } catch (_e) {
-          entry.responseHeaders = null;
-        }
-        try {
-          entry.responseBody = _truncateBody(xhr.responseText);
-        } catch (_e) {
-          entry.responseBody = null;
-        }
-        entry.duration = Date.now() - entry.startTime;
-        entry.state = 'done';
-        _pushNetworkEntry(entry);
-      });
-
-      xhr.addEventListener('error', function () {
-        entry.duration = Date.now() - entry.startTime;
-        entry.error = 'Network error';
-        entry.state = 'error';
-        _pushNetworkEntry(entry);
-      });
-
-      xhr.addEventListener('timeout', function () {
-        entry.duration = Date.now() - entry.startTime;
-        entry.error = 'Timeout';
-        entry.state = 'error';
-        _pushNetworkEntry(entry);
-      });
-    }
-    return _origSend.apply(this, arguments);
-  };
-})();
-
-// ─── fetch monkey-patch — 네이티브 fetch 요청 캡처 ──────────────
-(function () {
-  var g =
-    typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : null;
-  if (!g || typeof g.fetch !== 'function') return;
-  var _origFetch = g.fetch;
-
-  g.fetch = function (input, init) {
-    var url = '';
-    var method = 'GET';
-    var requestHeaders = {};
-    var requestBody = null;
-
-    if (typeof input === 'string') {
-      url = input;
-    } else if (input && typeof input === 'object' && typeof input.url === 'string') {
-      url = input.url;
-      if (input.method) method = input.method.toUpperCase();
-      if (input.headers) {
-        try {
-          if (typeof input.headers.forEach === 'function') {
-            input.headers.forEach(function (v, k) {
-              requestHeaders[k] = v;
-            });
-          } else if (typeof input.headers === 'object') {
-            var hk = Object.keys(input.headers);
-            for (var i = 0; i < hk.length; i++) requestHeaders[hk[i]] = input.headers[hk[i]];
-          }
-        } catch (_e) {}
-      }
-      if (input.body != null) requestBody = input.body;
-    }
-
-    if (init && typeof init === 'object') {
-      if (init.method) method = init.method.toUpperCase();
-      if (init.headers) {
-        try {
-          if (typeof init.headers.forEach === 'function') {
-            init.headers.forEach(function (v, k) {
-              requestHeaders[k] = v;
-            });
-          } else if (typeof init.headers === 'object') {
-            var hk2 = Object.keys(init.headers);
-            for (var j = 0; j < hk2.length; j++) requestHeaders[hk2[j]] = init.headers[hk2[j]];
-          }
-        } catch (_e) {}
-      }
-      if (init.body != null) requestBody = init.body;
-    }
-
-    var bodyStr = null;
-    if (requestBody != null) {
-      bodyStr =
-        typeof requestBody === 'string'
-          ? requestBody
-          : typeof requestBody.toString === 'function'
-            ? requestBody.toString()
-            : String(requestBody);
-      if (bodyStr.length > _NETWORK_BODY_LIMIT) bodyStr = bodyStr.substring(0, _NETWORK_BODY_LIMIT);
-    }
-
-    var entry = {
-      id: 0,
-      method: method,
-      url: url,
-      requestHeaders: requestHeaders,
-      requestBody: bodyStr,
-      status: null,
-      statusText: null,
-      responseHeaders: null,
-      responseBody: null,
-      startTime: Date.now(),
-      duration: null,
-      error: null,
-      state: 'pending',
-    };
-
-    return _origFetch.apply(this, arguments).then(
-      function (response) {
-        entry.status = response.status;
-        entry.statusText = response.statusText || null;
-        try {
-          var headerObj = {};
-          if (response.headers && typeof response.headers.forEach === 'function') {
-            response.headers.forEach(function (v, k) {
-              headerObj[k] = v;
-            });
-          }
-          entry.responseHeaders = JSON.stringify(headerObj);
-        } catch (_e) {
-          entry.responseHeaders = null;
-        }
-        entry.duration = Date.now() - entry.startTime;
-        entry.state = 'done';
-
-        // Clone response to read body without consuming it
-        try {
-          var cloned = response.clone();
-          cloned
-            .text()
-            .then(function (text) {
-              entry.responseBody =
-                text && text.length > _NETWORK_BODY_LIMIT
-                  ? text.substring(0, _NETWORK_BODY_LIMIT)
-                  : text || null;
-              _pushNetworkEntry(entry);
-            })
-            .catch(function () {
-              _pushNetworkEntry(entry);
-            });
-        } catch (_e) {
-          _pushNetworkEntry(entry);
-        }
-
-        return response;
-      },
-      function (err) {
-        entry.duration = Date.now() - entry.startTime;
-        entry.error = err && err.message ? err.message : 'Network error';
-        entry.state = 'error';
-        _pushNetworkEntry(entry);
-        throw err;
-      }
-    );
-  };
-})();
-
-var _isDevMode =
-  (typeof __DEV__ !== 'undefined' && __DEV__) ||
-  (typeof process !== 'undefined' &&
-    process.env &&
-    process.env.REACT_NATIVE_MCP_ENABLED === 'true');
-
-if (_isDevMode && typeof console !== 'undefined' && console.warn) {
-  console.warn('[MCP] runtime loaded, __REACT_NATIVE_MCP__ available');
-}
-
-// ─── WebSocket 연결 (__DEV__ 자동 · 릴리즈는 MCP.enable() 호출) ─
-// TODO: wsUrl은 나중에 설정 가능하게 할 예정 (환경/옵션으로 변경 가능).
-
-var wsUrl = 'ws://localhost:12300';
-var ws = null;
-var _reconnectTimer = null;
-var reconnectDelay = 1000;
-var _mcpEnabled = _isDevMode;
-var _heartbeatTimer = null;
-var _pongTimer = null;
-var HEARTBEAT_INTERVAL_MS = 30000;
-var PONG_TIMEOUT_MS = 10000;
-
-function _shouldConnect() {
-  if (_mcpEnabled) return true;
-  if (typeof global !== 'undefined' && global.__REACT_NATIVE_MCP_ENABLED__) return true;
-  if (typeof globalThis !== 'undefined' && globalThis.__REACT_NATIVE_MCP_ENABLED__) return true;
-  return false;
-}
-
-function _stopHeartbeat() {
-  if (_heartbeatTimer != null) {
-    clearInterval(_heartbeatTimer);
-    _heartbeatTimer = null;
   }
-  if (_pongTimer != null) {
-    clearTimeout(_pongTimer);
-    _pongTimer = null;
+  var init_mcp_accessibility = __esmMin(() => {
+    init_fiber_helpers();
+    init_query_selector();
+  });
+
+  //#endregion
+  //#region src/runtime/mcp-object.ts
+  var MCP;
+  var init_mcp_object = __esmMin(() => {
+    init_mcp_registration();
+    init_mcp_introspection();
+    init_mcp_actions();
+    init_mcp_webview();
+    init_mcp_scroll();
+    init_mcp_console();
+    init_mcp_network();
+    init_mcp_state();
+    init_mcp_query();
+    init_mcp_measure();
+    init_mcp_accessibility();
+    MCP = {
+      registerComponent,
+      registerPressHandler,
+      triggerPress,
+      triggerLongPress,
+      getRegisteredPressTestIDs,
+      getClickables,
+      getTextNodes,
+      getComponentTree,
+      pressByLabel,
+      longPressByLabel,
+      typeText,
+      registerWebView,
+      unregisterWebView,
+      getWebViewIdForRef,
+      clickInWebView,
+      evaluateInWebView,
+      evaluateInWebViewAsync,
+      handleWebViewMessage,
+      createWebViewOnMessage,
+      getRegisteredWebViewIds,
+      registerScrollRef,
+      unregisterScrollRef,
+      scrollTo,
+      getRegisteredScrollTestIDs,
+      getConsoleLogs,
+      clearConsoleLogs,
+      getNetworkRequests,
+      clearNetworkRequests,
+      inspectState,
+      getStateChanges,
+      clearStateChanges,
+      querySelector,
+      querySelectorAll,
+      querySelectorWithMeasure,
+      querySelectorAllWithMeasure,
+      getScreenInfo,
+      measureView,
+      measureViewSync: measureViewSync$1,
+      getAccessibilityAudit,
+    };
+    if (typeof global !== 'undefined') global.__REACT_NATIVE_MCP__ = MCP;
+    if (typeof globalThis !== 'undefined') globalThis.__REACT_NATIVE_MCP__ = MCP;
+  });
+
+  //#endregion
+  //#region src/runtime/console-hook.ts
+  var _origNativeLoggingHook;
+  var init_console_hook = __esmMin(() => {
+    init_shared();
+    _origNativeLoggingHook = typeof global !== 'undefined' ? global.nativeLoggingHook : void 0;
+    if (typeof global !== 'undefined')
+      global.nativeLoggingHook = function (msg, level) {
+        pushConsoleLog({
+          id: nextConsoleLogId(),
+          message: msg,
+          level,
+          timestamp: Date.now(),
+        });
+        if (typeof _origNativeLoggingHook === 'function') _origNativeLoggingHook(msg, level);
+      };
+  });
+
+  //#endregion
+  //#region src/runtime/network-helpers.ts
+  function pushNetworkEntry(entry) {
+    entry.id = nextNetworkRequestId();
+    networkRequests.push(entry);
+    if (networkRequests.length > NETWORK_BUFFER_SIZE) networkRequests.shift();
   }
-}
+  function truncateBody(body) {
+    if (body == null) return null;
+    var s = typeof body === 'string' ? body : String(body);
+    return s.length > NETWORK_BODY_LIMIT ? s.substring(0, NETWORK_BODY_LIMIT) : s;
+  }
+  var init_network_helpers = __esmMin(() => {
+    init_shared();
+  });
 
-function _startHeartbeat() {
-  _stopHeartbeat();
-  _heartbeatTimer = setInterval(function () {
-    if (!ws || ws.readyState !== 1) {
-      _stopHeartbeat();
-      return;
-    }
-    try {
-      ws.send(JSON.stringify({ type: 'ping' }));
-    } catch (_e) {
-      return;
-    }
-    _pongTimer = setTimeout(function () {
-      // pong not received — close connection (onclose will trigger reconnect)
-      if (ws)
-        try {
-          ws.close();
-        } catch (_e) {}
-    }, PONG_TIMEOUT_MS);
-  }, HEARTBEAT_INTERVAL_MS);
-}
+  //#endregion
+  //#region src/runtime/xhr-patch.ts
+  var init_xhr_patch = __esmMin(() => {
+    init_network_helpers();
+    (function () {
+      if (typeof XMLHttpRequest === 'undefined') return;
+      var XHR = XMLHttpRequest.prototype;
+      var _origOpen = XHR.open;
+      var _origSend = XHR.send;
+      var _origSetRequestHeader = XHR.setRequestHeader;
+      XHR.open = function (method, url) {
+        this.__mcpNetworkEntry = {
+          id: 0,
+          method: (method || 'GET').toUpperCase(),
+          url: String(url || ''),
+          requestHeaders: {},
+          requestBody: null,
+          status: null,
+          statusText: null,
+          responseHeaders: null,
+          responseBody: null,
+          startTime: Date.now(),
+          duration: null,
+          error: null,
+          state: 'pending',
+        };
+        return _origOpen.apply(this, arguments);
+      };
+      XHR.setRequestHeader = function (name, value) {
+        if (this.__mcpNetworkEntry) this.__mcpNetworkEntry.requestHeaders[name] = value;
+        return _origSetRequestHeader.apply(this, arguments);
+      };
+      XHR.send = function (body) {
+        var entry = this.__mcpNetworkEntry;
+        if (entry) {
+          entry.requestBody = truncateBody(body);
+          var xhr = this;
+          xhr.addEventListener('load', function () {
+            entry.status = xhr.status;
+            entry.statusText = xhr.statusText || null;
+            try {
+              entry.responseHeaders = xhr.getAllResponseHeaders() || null;
+            } catch (_e) {
+              entry.responseHeaders = null;
+            }
+            try {
+              entry.responseBody = truncateBody(xhr.responseText);
+            } catch (_e) {
+              entry.responseBody = null;
+            }
+            entry.duration = Date.now() - entry.startTime;
+            entry.state = 'done';
+            pushNetworkEntry(entry);
+          });
+          xhr.addEventListener('error', function () {
+            entry.duration = Date.now() - entry.startTime;
+            entry.error = 'Network error';
+            entry.state = 'error';
+            pushNetworkEntry(entry);
+          });
+          xhr.addEventListener('timeout', function () {
+            entry.duration = Date.now() - entry.startTime;
+            entry.error = 'Timeout';
+            entry.state = 'error';
+            pushNetworkEntry(entry);
+          });
+        }
+        return _origSend.apply(this, arguments);
+      };
+    })();
+  });
 
-function connect() {
-  if (!_shouldConnect()) return;
-  if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
-  if (ws)
-    try {
-      ws.close();
-    } catch (_e) {}
-  ws = new WebSocket(wsUrl);
-  ws.onopen = function () {
-    if (typeof console !== 'undefined' && console.warn) {
-      console.warn('[MCP] Connected to server', wsUrl);
-    }
-    reconnectDelay = 1000;
-    if (_reconnectTimer != null) clearTimeout(_reconnectTimer);
-    _reconnectTimer = null;
-    // 메타데이터 수집 실패가 init 전송을 막지 않도록 분리
-    var platform = null;
-    var deviceName = null;
-    var origin = null;
-    var pixelRatio = null;
-    try {
-      var rn = require('react-native');
-      platform = rn.Platform && rn.Platform.OS;
-      deviceName = (rn.Platform && rn.Platform.constants && rn.Platform.constants.Model) || null;
-      if (rn.PixelRatio) pixelRatio = rn.PixelRatio.get();
-    } catch (_e) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('[MCP] Failed to read platform info:', _e && _e.message);
-      }
-    }
-    try {
-      var _rn = require('react-native');
-      var scriptURL =
-        _rn.NativeModules && _rn.NativeModules.SourceCode && _rn.NativeModules.SourceCode.scriptURL;
-      if (scriptURL && typeof scriptURL === 'string') {
-        // Hermes(RN 0.74 이하)에서 URL.origin 미구현 → protocol+host 수동 파싱
-        try {
-          origin = new URL(scriptURL).origin;
-        } catch (_ue) {
-          var match = scriptURL.match(/^(https?:\/\/[^/?#]+)/);
-          if (match) origin = match[1];
+  //#endregion
+  //#region src/runtime/fetch-patch.ts
+  var init_fetch_patch = __esmMin(() => {
+    init_shared();
+    init_network_helpers();
+    (function () {
+      var g =
+        typeof globalThis !== 'undefined'
+          ? globalThis
+          : typeof global !== 'undefined'
+            ? global
+            : null;
+      if (!g || typeof g.fetch !== 'function') return;
+      var _origFetch = g.fetch;
+      g.fetch = function (input, init) {
+        var url = '';
+        var method = 'GET';
+        var requestHeaders = {};
+        var requestBody = null;
+        if (typeof input === 'string') url = input;
+        else if (input && typeof input === 'object' && typeof input.url === 'string') {
+          url = input.url;
+          if (input.method) method = input.method.toUpperCase();
+          if (input.headers)
+            try {
+              if (typeof input.headers.forEach === 'function')
+                input.headers.forEach(function (v, k) {
+                  requestHeaders[k] = v;
+                });
+              else if (typeof input.headers === 'object') {
+                var hk = Object.keys(input.headers);
+                for (var i = 0; i < hk.length; i++) requestHeaders[hk[i]] = input.headers[hk[i]];
+              }
+            } catch (_e) {}
+          if (input.body != null) requestBody = input.body;
         }
-      }
-    } catch (_e2) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('[MCP] Failed to read metro URL:', _e2 && _e2.message);
-      }
-    }
-    try {
-      ws.send(
-        JSON.stringify({
-          type: 'init',
-          platform: platform,
-          deviceId: platform ? platform + '-1' : undefined,
-          deviceName: deviceName,
-          metroBaseUrl: origin,
-          pixelRatio: pixelRatio,
-        })
-      );
-    } catch (_e3) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('[MCP] Failed to send init:', _e3 && _e3.message);
-      }
-    }
-    _startHeartbeat();
-  };
-  ws.onmessage = function (ev) {
-    try {
-      var msg = JSON.parse(ev.data);
-      if (msg.type === 'pong') {
-        if (_pongTimer != null) {
-          clearTimeout(_pongTimer);
-          _pongTimer = null;
+        if (init && typeof init === 'object') {
+          if (init.method) method = init.method.toUpperCase();
+          if (init.headers)
+            try {
+              if (typeof init.headers.forEach === 'function')
+                init.headers.forEach(function (v, k) {
+                  requestHeaders[k] = v;
+                });
+              else if (typeof init.headers === 'object') {
+                var hk2 = Object.keys(init.headers);
+                for (var j = 0; j < hk2.length; j++) requestHeaders[hk2[j]] = init.headers[hk2[j]];
+              }
+            } catch (_e) {}
+          if (init.body != null) requestBody = init.body;
         }
+        var bodyStr = null;
+        if (requestBody != null) {
+          bodyStr =
+            typeof requestBody === 'string'
+              ? requestBody
+              : typeof requestBody.toString === 'function'
+                ? requestBody.toString()
+                : String(requestBody);
+          if (bodyStr.length > NETWORK_BODY_LIMIT)
+            bodyStr = bodyStr.substring(0, NETWORK_BODY_LIMIT);
+        }
+        var entry = {
+          id: 0,
+          method,
+          url,
+          requestHeaders,
+          requestBody: bodyStr,
+          status: null,
+          statusText: null,
+          responseHeaders: null,
+          responseBody: null,
+          startTime: Date.now(),
+          duration: null,
+          error: null,
+          state: 'pending',
+        };
+        return _origFetch.apply(this, arguments).then(
+          function (response) {
+            entry.status = response.status;
+            entry.statusText = response.statusText || null;
+            try {
+              var headerObj = {};
+              if (response.headers && typeof response.headers.forEach === 'function')
+                response.headers.forEach(function (v, k) {
+                  headerObj[k] = v;
+                });
+              entry.responseHeaders = JSON.stringify(headerObj);
+            } catch (_e) {
+              entry.responseHeaders = null;
+            }
+            entry.duration = Date.now() - entry.startTime;
+            entry.state = 'done';
+            try {
+              response
+                .clone()
+                .text()
+                .then(function (text) {
+                  entry.responseBody =
+                    text && text.length > NETWORK_BODY_LIMIT
+                      ? text.substring(0, NETWORK_BODY_LIMIT)
+                      : text || null;
+                  pushNetworkEntry(entry);
+                })
+                .catch(function () {
+                  pushNetworkEntry(entry);
+                });
+            } catch (_e) {
+              pushNetworkEntry(entry);
+            }
+            return response;
+          },
+          function (err) {
+            entry.duration = Date.now() - entry.startTime;
+            entry.error = err && err.message ? err.message : 'Network error';
+            entry.state = 'error';
+            pushNetworkEntry(entry);
+            throw err;
+          }
+        );
+      };
+    })();
+  });
+
+  //#endregion
+  //#region src/runtime/connection.ts
+  function _shouldConnect() {
+    if (_mcpEnabled) return true;
+    if (typeof global !== 'undefined' && global.__REACT_NATIVE_MCP_ENABLED__) return true;
+    if (typeof globalThis !== 'undefined' && globalThis.__REACT_NATIVE_MCP_ENABLED__) return true;
+    return false;
+  }
+  function _stopHeartbeat() {
+    if (_heartbeatTimer != null) {
+      clearInterval(_heartbeatTimer);
+      _heartbeatTimer = null;
+    }
+    if (_pongTimer != null) {
+      clearTimeout(_pongTimer);
+      _pongTimer = null;
+    }
+  }
+  function _startHeartbeat() {
+    _stopHeartbeat();
+    _heartbeatTimer = setInterval(function () {
+      if (!ws || ws.readyState !== 1) {
+        _stopHeartbeat();
         return;
       }
-      if (msg.method === 'eval' && msg.id != null) {
-        var result;
-        var errMsg = null;
-        try {
-          // oxlint-disable-next-line no-eval -- MCP evaluate_script 도구용 의도적 사용
-          result = eval(msg.params && msg.params.code != null ? msg.params.code : 'undefined');
-        } catch (e) {
-          errMsg = e && e.message != null ? e.message : String(e);
-        }
-        function sendEvalResponse(res, err) {
-          if (ws && ws.readyState === 1) {
-            ws.send(
-              JSON.stringify(err != null ? { id: msg.id, error: err } : { id: msg.id, result: res })
-            );
-          }
-        }
-        if (errMsg != null) {
-          sendEvalResponse(null, errMsg);
-        } else if (result != null && typeof result.then === 'function') {
-          result.then(
-            function (r) {
-              sendEvalResponse(r, null);
-            },
-            function (e) {
-              sendEvalResponse(null, e && e.message != null ? e.message : String(e));
-            }
-          );
-        } else {
-          sendEvalResponse(result, null);
-        }
+      try {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      } catch (_e) {
+        return;
       }
-    } catch {}
-  };
-  ws.onclose = function () {
-    _stopHeartbeat();
-    ws = null;
-    _reconnectTimer = setTimeout(function () {
-      connect();
-      if (reconnectDelay < 30000) reconnectDelay = Math.min(reconnectDelay * 1.5, 30000);
-    }, reconnectDelay);
-  };
-  ws.onerror = function () {};
-}
-
-/**
- * 릴리즈 빌드에서 MCP WebSocket 연결을 활성화한다.
- * 앱 진입점에서 __REACT_NATIVE_MCP__.enable() 호출.
- */
-MCP.enable = function () {
-  _mcpEnabled = true;
-  connect();
-};
-
-// DEV: 번들 로드 직후 자동 연결
-if (_isDevMode) connect();
-
-// runApplication 시점에 미연결이면 한 번 더 시도
-var _AppRegistry = require('react-native').AppRegistry;
-var _originalRun = _AppRegistry.runApplication;
-_AppRegistry.runApplication = function () {
-  if (_shouldConnect() && (!ws || ws.readyState !== 1)) connect();
-  return _originalRun.apply(this, arguments);
-};
-
-// ─── AppState 연동: 백그라운드 시 heartbeat 중단, 포그라운드 복귀 시 재개 ─
-(function () {
-  try {
-    var rn = require('react-native');
-    if (rn && rn.AppState && typeof rn.AppState.addEventListener === 'function') {
-      rn.AppState.addEventListener('change', function (nextState) {
-        if (nextState === 'active') {
-          if (ws && ws.readyState === 1) _startHeartbeat();
-        } else {
-          _stopHeartbeat();
+      _pongTimer = setTimeout(function () {
+        if (ws)
+          try {
+            ws.close();
+          } catch (_e) {}
+      }, PONG_TIMEOUT_MS);
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+  function connect() {
+    if (!_shouldConnect()) return;
+    if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+    if (ws)
+      try {
+        ws.close();
+      } catch (_e) {}
+    ws = new WebSocket(wsUrl);
+    ws.onopen = function () {
+      if (typeof console !== 'undefined' && console.warn)
+        console.warn('[MCP] Connected to server', wsUrl);
+      reconnectDelay = 1e3;
+      if (_reconnectTimer != null) clearTimeout(_reconnectTimer);
+      _reconnectTimer = null;
+      var platform = null;
+      var deviceName = null;
+      var origin = null;
+      var pixelRatio = null;
+      try {
+        var rn = require('react-native');
+        platform = rn.Platform && rn.Platform.OS;
+        deviceName = (rn.Platform && rn.Platform.constants && rn.Platform.constants.Model) || null;
+        if (rn.PixelRatio) pixelRatio = rn.PixelRatio.get();
+      } catch (_e) {
+        if (typeof console !== 'undefined' && console.warn)
+          console.warn('[MCP] Failed to read platform info:', _e && _e.message);
+      }
+      try {
+        var _rn = require('react-native');
+        var scriptURL =
+          _rn.NativeModules &&
+          _rn.NativeModules.SourceCode &&
+          _rn.NativeModules.SourceCode.scriptURL;
+        if (scriptURL && typeof scriptURL === 'string')
+          try {
+            origin = new URL(scriptURL).origin;
+          } catch (_ue) {
+            var match = scriptURL.match(/^(https?:\/\/[^/?#]+)/);
+            if (match) origin = match[1];
+          }
+      } catch (_e2) {
+        if (typeof console !== 'undefined' && console.warn)
+          console.warn('[MCP] Failed to read metro URL:', _e2 && _e2.message);
+      }
+      try {
+        ws.send(
+          JSON.stringify({
+            type: 'init',
+            platform,
+            deviceId: platform ? platform + '-1' : void 0,
+            deviceName,
+            metroBaseUrl: origin,
+            pixelRatio,
+          })
+        );
+      } catch (_e3) {
+        if (typeof console !== 'undefined' && console.warn)
+          console.warn('[MCP] Failed to send init:', _e3 && _e3.message);
+      }
+      _startHeartbeat();
+    };
+    ws.onmessage = function (ev) {
+      try {
+        var msg = JSON.parse(ev.data);
+        if (msg.type === 'pong') {
+          if (_pongTimer != null) {
+            clearTimeout(_pongTimer);
+            _pongTimer = null;
+          }
+          return;
         }
-      });
-    }
-  } catch (_e) {}
-})();
+        if (msg.method === 'eval' && msg.id != null) {
+          var result;
+          var errMsg = null;
+          try {
+            result = eval(msg.params && msg.params.code != null ? msg.params.code : 'undefined');
+          } catch (e) {
+            errMsg = e && e.message != null ? e.message : String(e);
+          }
+          function sendEvalResponse(res, err) {
+            if (ws && ws.readyState === 1)
+              ws.send(
+                JSON.stringify(
+                  err != null
+                    ? {
+                        id: msg.id,
+                        error: err,
+                      }
+                    : {
+                        id: msg.id,
+                        result: res,
+                      }
+                )
+              );
+          }
+          if (errMsg != null) sendEvalResponse(null, errMsg);
+          else if (result != null && typeof result.then === 'function')
+            result.then(
+              function (r) {
+                sendEvalResponse(r, null);
+              },
+              function (e) {
+                sendEvalResponse(null, e && e.message != null ? e.message : String(e));
+              }
+            );
+          else sendEvalResponse(result, null);
+        }
+      } catch (_unused) {}
+    };
+    ws.onclose = function () {
+      _stopHeartbeat();
+      ws = null;
+      _reconnectTimer = setTimeout(function () {
+        connect();
+        if (reconnectDelay < 3e4) reconnectDelay = Math.min(reconnectDelay * 1.5, 3e4);
+      }, reconnectDelay);
+    };
+    ws.onerror = function () {};
+  }
+  var _isDevMode,
+    wsUrl,
+    ws,
+    _reconnectTimer,
+    reconnectDelay,
+    _mcpEnabled,
+    _heartbeatTimer,
+    _pongTimer,
+    HEARTBEAT_INTERVAL_MS,
+    PONG_TIMEOUT_MS,
+    _AppRegistry,
+    _originalRun,
+    PERIODIC_INTERVAL_MS;
+  var init_connection = __esmMin(() => {
+    init_mcp_object();
+    _isDevMode =
+      (typeof __DEV__ !== 'undefined' && __DEV__) ||
+      (typeof process !== 'undefined' &&
+        process.env &&
+        process.env.REACT_NATIVE_MCP_ENABLED === 'true');
+    if (_isDevMode && typeof console !== 'undefined' && console.warn)
+      console.warn('[MCP] runtime loaded, __REACT_NATIVE_MCP__ available');
+    wsUrl = 'ws://localhost:12300';
+    ws = null;
+    _reconnectTimer = null;
+    reconnectDelay = 1e3;
+    _mcpEnabled = _isDevMode;
+    _heartbeatTimer = null;
+    _pongTimer = null;
+    HEARTBEAT_INTERVAL_MS = 3e4;
+    PONG_TIMEOUT_MS = 1e4;
+    /**
+     * 릴리즈 빌드에서 MCP WebSocket 연결을 활성화한다.
+     * 앱 진입점에서 __REACT_NATIVE_MCP__.enable() 호출.
+     */
+    MCP.enable = function () {
+      _mcpEnabled = true;
+      connect();
+    };
+    if (_isDevMode) connect();
+    _AppRegistry = require('react-native').AppRegistry;
+    _originalRun = _AppRegistry.runApplication;
+    _AppRegistry.runApplication = function () {
+      if (_shouldConnect() && (!ws || ws.readyState !== 1)) connect();
+      return _originalRun.apply(this, arguments);
+    };
+    (function () {
+      try {
+        var rn = require('react-native');
+        if (rn && rn.AppState && typeof rn.AppState.addEventListener === 'function')
+          rn.AppState.addEventListener('change', function (nextState) {
+            if (nextState === 'active') {
+              if (ws && ws.readyState === 1) _startHeartbeat();
+            } else _stopHeartbeat();
+          });
+      } catch (_e) {}
+    })();
+    PERIODIC_INTERVAL_MS = 5e3;
+    setInterval(function () {
+      if (!_shouldConnect()) return;
+      if (ws && ws.readyState === 1) return;
+      connect();
+    }, PERIODIC_INTERVAL_MS);
+  });
 
-// 주기적 재시도: 앱이 먼저 떠 있고 나중에 MCP를 켜도 자동 연결 (순서 무관)
-var PERIODIC_INTERVAL_MS = 5000;
-setInterval(function () {
-  if (!_shouldConnect()) return;
-  if (ws && ws.readyState === 1) return;
-  connect();
-}, PERIODIC_INTERVAL_MS);
+  //#endregion
+  //#region src/runtime/index.ts
+  /**
+   * React Native 앱에 주입되는 MCP 런타임
+   * - __REACT_NATIVE_MCP__.registerComponent → AppRegistry.registerComponent 위임
+   * - __DEV__ 시 WebSocket으로 MCP 서버(12300)에 연결, eval 요청 처리
+   *
+   * Metro transformer가 진입점 상단에 require('@ohah/react-native-mcp-server/runtime') 주입
+   * global은 모듈 로드 직후 최상단에서 설정해 ReferenceError 방지.
+   */
+  var init_runtime = __esmMin(() => {
+    init_devtools_hook();
+    init_fiber_helpers();
+    init_state_hooks();
+    init_state_change_tracking();
+    init_query_selector();
+    init_screen_offset();
+    init_fiber_serialization();
+    init_mcp_registration();
+    init_mcp_introspection();
+    init_mcp_actions();
+    init_mcp_scroll();
+    init_mcp_state();
+    init_mcp_query();
+    init_mcp_measure();
+    init_mcp_accessibility();
+    init_mcp_object();
+    init_console_hook();
+    init_xhr_patch();
+    init_fetch_patch();
+    init_connection();
+  });
+
+  //#endregion
+  init_runtime();
+})();
