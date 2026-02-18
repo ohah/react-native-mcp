@@ -11,28 +11,28 @@ Detox, Maestro와 비교하여 추가 예정인 스텝 및 기능 목록. 구현
 
 새 스텝을 추가하는 패턴: `types.ts` → `parser.ts` → `runner.ts` → (필요 시) `app-client.ts` → (필요 시) 서버 `tools/*.ts`
 
-| 순서 | 기능               | 난이도 | 작업량 | 서버 도구 필요              | 비고                                                       |
-| ---- | ------------------ | ------ | ------ | --------------------------- | ---------------------------------------------------------- |
-| 1    | `back`             | ★☆☆    | 0.5h   | ✗ (press_button 재사용)     | pressButton BACK 래핑                                      |
-| 2    | `home`             | ★☆☆    | 0.5h   | ✗ (press_button 재사용)     | pressButton HOME 래핑                                      |
-| 3    | `hideKeyboard`     | ★☆☆    | 0.5h   | ✗ (press_button / evaluate) | iOS: evaluate로 Keyboard.dismiss(), Android: BACK          |
-| 4    | `longPress`        | ★☆☆    | 0.5h   | ✗ (tap duration 재사용)     | tap + duration 래핑, 가독성 스텝                           |
-| 5    | `clearText`        | ★★☆    | 1h     | ✗ (evaluate 활용)           | evaluate로 TextInput 값 비우기 또는 전체선택+삭제          |
-| 6    | `doubleTap`        | ★★☆    | 1h     | △ (tap 2회 또는 새 도구)    | tap 빠르게 2회. 간격 조정 필요                             |
-| 7    | `${VAR}` 환경 변수 | ★★☆    | 1.5h   | ✗                           | parser에서 문자열 치환. CLI --env 옵션 추가                |
-| 8    | `addMedia`         | ★☆☆    | 0.5h   | ✗ (add_media 이미 존재)     | 서버 도구 있음. runner 연결만                              |
-| 9    | `assertHasText`    | ★☆☆    | 0.5h   | ✗ (assert_text 재사용)      | 기존 assertText에 selector 필수로 래핑                     |
-| 10   | `assertValue`      | ★★☆    | 1h     | △ (새 assert 또는 evaluate) | querySelector로 value prop 읽어서 비교                     |
-| 11   | `repeat`           | ★★☆    | 1.5h   | ✗                           | runner에 재귀 루프. stepSchema 재귀 정의                   |
-| 12   | `runFlow`          | ★★☆    | 2h     | ✗                           | parser에서 YAML include + 상대경로 해석 + 순환참조 방지    |
-| 13   | `if / when`        | ★★★    | 2h     | ✗                           | runner에 조건 평가. visible 조건은 assertVisible 결과 활용 |
-| 14   | `retry`            | ★★☆    | 1.5h   | ✗                           | runner에 try-catch 루프. 중첩 스텝 실행                    |
-| 15   | `clearState`       | ★★☆    | 1h     | ✓ 새 도구                   | iOS: xcrun simctl, Android: adb pm clear                   |
-| 16   | `setLocation`      | ★★☆    | 1.5h   | ✓ 새 도구                   | iOS: simctl location, Android: adb emu geo fix             |
-| 17   | `copyText`         | ★★☆    | 1.5h   | △                           | querySelector로 텍스트 읽어서 내부 변수 저장               |
-| 18   | `pasteText`        | ★★☆    | 1h     | △                           | 저장된 텍스트를 inputText로 입력                           |
-| 19   | `pinch`            | ★★★    | 3h     | ✓ 새 도구                   | 멀티터치. idb 미지원 가능성, adb input 제한                |
-| 20   | `waitForIdle`      | ★★★    | 4h+    | ✗ (runtime.js 수정)         | 애니메이션/네트워크 자동 대기. 아래 별도 섹션 참고         |
+| 순서 | 기능                | 난이도 | 작업량 | 서버 도구 필요              | 비고                                                       |
+| ---- | ------------------- | ------ | ------ | --------------------------- | ---------------------------------------------------------- |
+| 1    | ~~`back`~~          | ★☆☆    | 0.5h   | ✗ (press_button 재사용)     | ✅ 구현 완료. pressButton BACK 래핑                        |
+| 2    | ~~`home`~~          | ★☆☆    | 0.5h   | ✗ (press_button 재사용)     | ✅ 구현 완료. pressButton HOME 래핑                        |
+| 3    | ~~`hideKeyboard`~~  | ★☆☆    | 0.5h   | ✗ (press_button / inputKey) | ✅ 구현 완료. iOS: inputKey(41) Escape, Android: BACK      |
+| 4    | ~~`longPress`~~     | ★☆☆    | 0.5h   | ✗ (tap duration 재사용)     | ✅ 구현 완료. tap + duration 래핑 (기본 800ms)             |
+| 5    | `clearText`         | ★★☆    | 1h     | ✗ (evaluate 활용)           | evaluate로 TextInput 값 비우기 또는 전체선택+삭제          |
+| 6    | `doubleTap`         | ★★☆    | 1h     | △ (tap 2회 또는 새 도구)    | tap 빠르게 2회. 간격 조정 필요                             |
+| 7    | `${VAR}` 환경 변수  | ★★☆    | 1.5h   | ✗                           | parser에서 문자열 치환. CLI --env 옵션 추가                |
+| 8    | ~~`addMedia`~~      | ★☆☆    | 0.5h   | ✗ (add_media 이미 존재)     | ✅ 구현 완료. 서버 도구 있음. runner 연결만                |
+| 9    | ~~`assertHasText`~~ | ★☆☆    | 0.5h   | ✗ (assert_text 재사용)      | ✅ 구현 완료. assertText alias                             |
+| 10   | `assertValue`       | ★★☆    | 1h     | △ (새 assert 또는 evaluate) | querySelector로 value prop 읽어서 비교                     |
+| 11   | `repeat`            | ★★☆    | 1.5h   | ✗                           | runner에 재귀 루프. stepSchema 재귀 정의                   |
+| 12   | `runFlow`           | ★★☆    | 2h     | ✗                           | parser에서 YAML include + 상대경로 해석 + 순환참조 방지    |
+| 13   | `if / when`         | ★★★    | 2h     | ✗                           | runner에 조건 평가. visible 조건은 assertVisible 결과 활용 |
+| 14   | `retry`             | ★★☆    | 1.5h   | ✗                           | runner에 try-catch 루프. 중첩 스텝 실행                    |
+| 15   | `clearState`        | ★★☆    | 1h     | ✓ 새 도구                   | iOS: xcrun simctl, Android: adb pm clear                   |
+| 16   | `setLocation`       | ★★☆    | 1.5h   | ✓ 새 도구                   | iOS: simctl location, Android: adb emu geo fix             |
+| 17   | `copyText`          | ★★☆    | 1.5h   | △                           | querySelector로 텍스트 읽어서 내부 변수 저장               |
+| 18   | `pasteText`         | ★★☆    | 1h     | △                           | 저장된 텍스트를 inputText로 입력                           |
+| 19   | `pinch`             | ★★★    | 3h     | ✓ 새 도구                   | 멀티터치. idb 미지원 가능성, adb input 제한                |
+| 20   | `waitForIdle`       | ★★★    | 4h+    | ✗ (runtime.js 수정)         | 애니메이션/네트워크 자동 대기. 아래 별도 섹션 참고         |
 
 **예상 총 작업량**: ~24h (pinch, waitForIdle 제외 시 ~17h)
 
@@ -40,94 +40,41 @@ Detox, Maestro와 비교하여 추가 예정인 스텝 및 기능 목록. 구현
 
 ## Phase 1 — 기존 도구 래핑 (서버 변경 없음)
 
-### 1. back ★☆☆
+### 1. ~~back~~ ★☆☆ ✅ 구현 완료
 
 기존 `press_button` BACK을 래핑하는 단축 스텝.
 
-**구현 범위**: types.ts + parser.ts + runner.ts (3파일)
-
-```typescript
-// types.ts — TestStep에 추가
-| { back: true }
-
-// parser.ts — stepSchema에 추가
-z.object({ back: z.literal(true) })
-// YAML에서 `- back` 파싱: YAML parser가 bare string을 { back: true }로 읽도록 처리 필요
-// 또는 z.object({ back: z.any().optional() }) + preprocess
-
-// runner.ts — executeStep에 추가
-else if ('back' in step) {
-  await app.pressButton('BACK');
-}
-```
-
 ```yaml
-- back
+- back:
 ```
 
 ---
 
-### 2. home ★☆☆
+### 2. ~~home~~ ★☆☆ ✅ 구현 완료
 
 기존 `press_button` HOME 래핑.
 
-**구현 범위**: types.ts + parser.ts + runner.ts (3파일)
-
-```typescript
-// runner.ts
-else if ('home' in step) {
-  await app.pressButton('HOME');
-}
-```
-
 ```yaml
-- home
+- home:
 ```
 
 ---
 
-### 3. hideKeyboard ★☆☆
+### 3. ~~hideKeyboard~~ ★☆☆ ✅ 구현 완료
 
-iOS: `evaluate`로 `Keyboard.dismiss()` 호출 또는 `idb ui keyboard hide`. Android: BACK 키.
+iOS: `inputKey(41)` (HID Escape → 키보드 닫기). Android: BACK 키.
 
-**구현 범위**: types.ts + parser.ts + runner.ts (3파일). app-client에 `hideKeyboard()` 메서드 추가 권장.
-
-```typescript
-// app-client.ts
-async hideKeyboard(): Promise<void> {
-  if (this.platform === 'ios') {
-    // 방법 1: evaluate
-    await this.evaluate('() => { require("react-native").Keyboard.dismiss(); }');
-    // 방법 2: idb ui keyboard hide (서버에 별도 도구 등록 시)
-  } else {
-    await this.pressButton('BACK');
-  }
-}
-
-// runner.ts
-else if ('hideKeyboard' in step) {
-  await app.hideKeyboard();
-}
-```
+runner의 `StepContext`에 `platform` 추가하여 iOS/Android 분기 처리.
 
 ```yaml
-- hideKeyboard
+- hideKeyboard:
 ```
 
 ---
 
-### 4. longPress ★☆☆
+### 4. ~~longPress~~ ★☆☆ ✅ 구현 완료
 
-`tap` + `duration` 래핑. 기능적으로 동일하지만 YAML 가독성을 위해 별도 스텝.
-
-**구현 범위**: types.ts + parser.ts + runner.ts (3파일)
-
-```typescript
-// runner.ts
-else if ('longPress' in step) {
-  await app.tap(step.longPress.selector, { duration: step.longPress.duration ?? 1000 });
-}
-```
+`tap` + `duration` 래핑. 기본 duration 800ms.
 
 ```yaml
 - longPress:
@@ -201,52 +148,25 @@ async doubleTap(selector: string): Promise<void> {
 
 ---
 
-### 7. addMedia ★☆☆
+### 7. ~~addMedia~~ ★☆☆ ✅ 구현 완료
 
-서버에 `add_media` 도구가 **이미 존재**. runner 연결만 하면 됨.
-
-**구현 범위**: types.ts + parser.ts + runner.ts + app-client.ts (4파일)
-
-```typescript
-// app-client.ts
-async addMedia(filePaths: string[]): Promise<void> {
-  await this.callTool('add_media', { platform: this.platform, filePaths });
-}
-
-// runner.ts
-else if ('addMedia' in step) {
-  const absPath = resolve(ctx.outputDir, step.addMedia.path);
-  await app.addMedia([absPath]);
-}
-```
+서버에 `add_media` 도구가 **이미 존재**. AppClient의 `addMedia(paths)` 메서드 연결.
 
 ```yaml
 - addMedia:
-    path: ./fixtures/photo.jpg
+    paths: ['/tmp/photo.jpg']
 ```
 
 ---
 
-### 8. assertHasText ★☆☆
+### 8. ~~assertHasText~~ ★☆☆ ✅ 구현 완료
 
-기존 `assertText`를 selector 필수로 래핑. 특정 요소가 텍스트를 포함하는지 검증.
-
-**구현 범위**: types.ts + parser.ts + runner.ts (3파일)
-
-```typescript
-// runner.ts — 기존 assertText 재사용
-else if ('assertHasText' in step) {
-  const result = await app.assertText(step.assertHasText.text, {
-    selector: step.assertHasText.selector,
-  });
-  if (!result.pass) throw new Error(result.message);
-}
-```
+기존 `assertText` alias. selector는 선택 필드.
 
 ```yaml
 - assertHasText:
-    selector: '#price-label'
     text: '₩12,000'
+    selector: '#price-label'
 ```
 
 ---
@@ -631,14 +551,14 @@ Phase 4c: 전체 autoWait 통합 — ★★☆ 1h
 
 ```
 Phase 1 (기존 도구 래핑) ─── 예상 6h
- ├─ #1 back              ★☆☆  0.5h
- ├─ #2 home              ★☆☆  0.5h
- ├─ #3 hideKeyboard      ★☆☆  0.5h
- ├─ #4 longPress         ★☆☆  0.5h
+ ├─ #1 back              ★☆☆  0.5h  ✅ 완료
+ ├─ #2 home              ★☆☆  0.5h  ✅ 완료
+ ├─ #3 hideKeyboard      ★☆☆  0.5h  ✅ 완료
+ ├─ #4 longPress         ★☆☆  0.5h  ✅ 완료
  ├─ #5 clearText         ★★☆  1h
  ├─ #6 doubleTap         ★★☆  1h
- ├─ #7 addMedia          ★☆☆  0.5h
- ├─ #8 assertHasText     ★☆☆  0.5h
+ ├─ #7 addMedia          ★☆☆  0.5h  ✅ 완료
+ ├─ #8 assertHasText     ★☆☆  0.5h  ✅ 완료
  └─ #9 assertValue       ★★☆  1h
 
 Phase 2 (흐름 제어) ─────── 예상 8h
@@ -682,13 +602,13 @@ React Native 컴포넌트의 `displayName` (또는 함수 이름)은 웹의 DOM 
 
 ## 현재 지원 vs 추가 예정 요약
 
-| 카테고리      | 현재 지원                                                | 추가 예정                                         |
-| ------------- | -------------------------------------------------------- | ------------------------------------------------- |
-| **탭/제스처** | tap, swipe, scrollUntilVisible                           | doubleTap, longPress, pinch                       |
-| **텍스트**    | typeText, inputText                                      | clearText, copyText, pasteText                    |
-| **대기**      | wait, waitForText, waitForVisible, waitForNotVisible     | waitForIdle (자동 동기화)                         |
-| **검증**      | assertText, assertVisible, assertNotVisible, assertCount | assertHasText, assertValue                        |
-| **흐름 제어** | —                                                        | runFlow, repeat, if/when, ${VAR}, retry           |
-| **디바이스**  | pressButton                                              | back, home, hideKeyboard, setLocation, clearState |
-| **앱 제어**   | launch, terminate, openDeepLink                          | addMedia                                          |
-| **기타**      | screenshot, evaluate, webviewEval                        | —                                                 |
+| 카테고리      | 현재 지원                                                                   | 추가 예정                               |
+| ------------- | --------------------------------------------------------------------------- | --------------------------------------- |
+| **탭/제스처** | tap, swipe, scrollUntilVisible, **longPress**                               | doubleTap, pinch                        |
+| **텍스트**    | typeText, inputText                                                         | clearText, copyText, pasteText          |
+| **대기**      | wait, waitForText, waitForVisible, waitForNotVisible                        | waitForIdle (자동 동기화)               |
+| **검증**      | assertText, assertVisible, assertNotVisible, assertCount, **assertHasText** | assertValue                             |
+| **흐름 제어** | —                                                                           | runFlow, repeat, if/when, ${VAR}, retry |
+| **디바이스**  | pressButton, **back**, **home**, **hideKeyboard**                           | setLocation, clearState                 |
+| **앱 제어**   | launch, terminate, openDeepLink, **addMedia**                               | —                                       |
+| **기타**      | screenshot, evaluate, webviewEval                                           | —                                       |
