@@ -405,6 +405,55 @@ Assert that the text is present (within the element when selector is given). Ali
 
 ---
 
+### clearText
+
+Clear all text from a TextInput.
+
+| Field    | Type   | Required | Description               |
+| -------- | ------ | -------- | ------------------------- |
+| selector | string | ✓        | Target TextInput selector |
+
+```yaml
+- clearText:
+    selector: '#email'
+```
+
+---
+
+### doubleTap
+
+Double-tap the element.
+
+| Field    | Type   | Required | Description                         |
+| -------- | ------ | -------- | ----------------------------------- |
+| selector | string | ✓        | Element selector                    |
+| interval | number |          | Delay between taps (ms). Default 50 |
+
+```yaml
+- doubleTap:
+    selector: '#zoomable-image'
+    interval: 100
+```
+
+---
+
+### assertValue
+
+Assert that the element's `value` prop matches the expected string.
+
+| Field    | Type   | Required | Description      |
+| -------- | ------ | -------- | ---------------- |
+| selector | string | ✓        | Element selector |
+| expected | string | ✓        | Expected value   |
+
+```yaml
+- assertValue:
+    selector: '#quantity-input'
+    expected: '3'
+```
+
+---
+
 ### scrollUntilVisible
 
 Scroll until the element is visible (repeat up to limit).
