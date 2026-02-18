@@ -97,6 +97,8 @@ Once connected, you can use tools such as:
 | App state / location | `clear_state` (clear data / reset permissions), `set_location` (sim/emulator GPS; Android emulator only) |
 | Net mock             | `set_network_mock`, `list_network_mocks`, `remove_network_mock`, `clear_network_mocks`                   |
 | Debug                | `list_console_messages`, `list_network_requests`                                                         |
+| State inspection     | `inspect_state`, `get_state_changes`, `clear_state_changes`                                              |
+| Render profiling     | `start_render_profile`, `get_render_report`, `clear_render_profile`                                      |
 
 Ask the AI to "take a snapshot of the app" or "tap the login button" and it will call these tools.
 
