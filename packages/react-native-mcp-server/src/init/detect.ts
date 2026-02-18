@@ -27,10 +27,14 @@ export function detectProject(cwd: string): ProjectInfo {
   let expoVersion: string | null = null;
 
   if (fs.existsSync(pkgPath)) {
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-    rnVersion = deps['react-native'] ?? null;
-    expoVersion = deps['expo'] ?? null;
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+      rnVersion = deps['react-native'] ?? null;
+      expoVersion = deps['expo'] ?? null;
+    } catch {
+      // corrupted or non-JSON package.json — treat as no project
+    }
   }
 
   const isExpo =

@@ -21,6 +21,13 @@ describe('detectProject', () => {
     expect(info.isExpo).toBe(false);
   });
 
+  it('파손된 package.json이면 rnVersion null 반환', () => {
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), '{not valid json!!');
+    const info = detectProject(tmpDir);
+    expect(info.rnVersion).toBeNull();
+    expect(info.isExpo).toBe(false);
+  });
+
   it('bare RN 프로젝트 감지', () => {
     fs.writeFileSync(
       path.join(tmpDir, 'package.json'),
