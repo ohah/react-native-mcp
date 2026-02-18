@@ -92,6 +92,52 @@ describe('assertHasText', () => {
   });
 });
 
+describe('clearText', () => {
+  it('selector 파싱', () => {
+    const suite = writeAndParse("  - clearText: { selector: '#email' }");
+    expect(suite.steps[0]).toEqual({ clearText: { selector: '#email' } });
+  });
+
+  it('selector 누락 시 에러', () => {
+    expect(() => writeAndParse('  - clearText: {}')).toThrow();
+  });
+});
+
+describe('doubleTap', () => {
+  it('selector + interval', () => {
+    const suite = writeAndParse("  - doubleTap: { selector: '#item', interval: 100 }");
+    expect(suite.steps[0]).toEqual({ doubleTap: { selector: '#item', interval: 100 } });
+  });
+
+  it('interval 생략 가능', () => {
+    const suite = writeAndParse("  - doubleTap: { selector: '#item' }");
+    expect(suite.steps[0]).toEqual({ doubleTap: { selector: '#item' } });
+  });
+
+  it('selector 누락 시 에러', () => {
+    expect(() => writeAndParse('  - doubleTap: { interval: 100 }')).toThrow();
+  });
+});
+
+describe('assertValue', () => {
+  it('selector + expected', () => {
+    const suite = writeAndParse(
+      "  - assertValue: { selector: '#email', expected: 'test@test.com' }"
+    );
+    expect(suite.steps[0]).toEqual({
+      assertValue: { selector: '#email', expected: 'test@test.com' },
+    });
+  });
+
+  it('selector 누락 시 에러', () => {
+    expect(() => writeAndParse("  - assertValue: { expected: 'hello' }")).toThrow();
+  });
+
+  it('expected 누락 시 에러', () => {
+    expect(() => writeAndParse("  - assertValue: { selector: '#email' }")).toThrow();
+  });
+});
+
 describe('기존 스텝과 혼합', () => {
   it('새 스텝과 기존 스텝이 함께 파싱됨', () => {
     const suite = writeAndParse(
