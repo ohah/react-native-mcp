@@ -137,6 +137,13 @@ async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Pr
       selector: step.assertHasText.selector,
     });
     if (!result.pass) throw new Error(result.message);
+  } else if ('clearText' in step) {
+    await app.clearText(step.clearText.selector);
+  } else if ('doubleTap' in step) {
+    await app.doubleTap(step.doubleTap.selector, { interval: step.doubleTap.interval });
+  } else if ('assertValue' in step) {
+    const result = await app.assertValue(step.assertValue.selector, step.assertValue.expected);
+    if (!result.pass) throw new Error(result.message);
   } else {
     throw new Error(`Unknown step type: ${stepKey(step as TestStep)}`);
   }
