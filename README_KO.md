@@ -81,6 +81,8 @@ REACT_NATIVE_MCP_ENABLED=true npx react-native start
 
 `true` 또는 `1`이면 활성화. **미설정 시** Metro transformer와 Babel 프리셋이 MCP 변환을 하지 않아 번들에 MCP 코드가 포함되지 않는다. `__DEV__`(개발 모드)에서는 env 설정 시 자동 연결된다.
 
+> **Expo?** Expo 프로젝트 설정은 [Expo 검증 가이드](./docs/expo-guide.md) 참고 (babel-preset-expo, Expo Router `app/_layout.tsx`, Dev Client vs Expo Go).
+
 ### Claude Desktop
 
 Claude Desktop 설정 파일 편집:

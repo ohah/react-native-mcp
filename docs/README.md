@@ -11,6 +11,12 @@ React Native MCP 프로젝트 문서 목차.
 
 ---
 
+## 가이드
+
+- [**Expo 검증 가이드**](expo-guide.md) — Expo 프로젝트 설정, Dev Client / Expo Go 호환성, 트러블슈팅
+
+---
+
 ## 개요
 
 - [개요 및 주요 기능](overview.md)
