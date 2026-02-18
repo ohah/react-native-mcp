@@ -570,14 +570,14 @@ teardown:
 
 ### 리포터 종류
 
-| 리포터        | 설명 |
-| ------------- | ----- |
-| `console`     | 터미널에 요약·스텝 결과 출력 (기본값). |
-| `junit`       | `output/junit.xml` 생성. CI에서 JUnit 리포트로 사용. |
-| `json`        | `output/results.json` 생성. |
-| `html`        | `output/report.html` 생성. 스크린샷 포함 시각적 리포트. 브라우저에서 열어 실패 스텝·스크린샷 확인. |
-| `slack`       | Slack Incoming Webhook으로 결과 요약 전송. 실패 시 실패 스텝·에러·스크린샷 경로 포함. `--slack-webhook <url>` 또는 `SLACK_WEBHOOK_URL` 필요. `--report-url`로 리포트 링크 추가 가능. |
-| `github-pr`   | GitHub Actions 등에서 `GITHUB_REF`가 `refs/pull/<number>/merge`일 때 `gh pr comment`로 PR에 결과 코멘트 작성. PR이 아니거나 `gh` 미설치 시 `output/pr-comment.md`에 본문 저장. |
+| 리포터      | 설명                                                                                                                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `console`   | 터미널에 요약·스텝 결과 출력 (기본값).                                                                                                                                               |
+| `junit`     | `output/junit.xml` 생성. CI에서 JUnit 리포트로 사용.                                                                                                                                 |
+| `json`      | `output/results.json` 생성.                                                                                                                                                          |
+| `html`      | `output/report.html` 생성. 스크린샷 포함 시각적 리포트. 브라우저에서 열어 실패 스텝·스크린샷 확인.                                                                                   |
+| `slack`     | Slack Incoming Webhook으로 결과 요약 전송. 실패 시 실패 스텝·에러·스크린샷 경로 포함. `--slack-webhook <url>` 또는 `SLACK_WEBHOOK_URL` 필요. `--report-url`로 리포트 링크 추가 가능. |
+| `github-pr` | GitHub Actions 등에서 `GITHUB_REF`가 `refs/pull/<number>/merge`일 때 `gh pr comment`로 PR에 결과 코멘트 작성. PR이 아니거나 `gh` 미설치 시 `output/pr-comment.md`에 본문 저장.       |
 
 ### 리포터 확인 방법(테스트)
 

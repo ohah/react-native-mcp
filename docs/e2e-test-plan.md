@@ -394,14 +394,14 @@ npx react-native-mcp-test run tests/ --reporter junit --output results/
 
 **리포터 종류**:
 
-| 리포터           | 출력             | 용도                       |
-| ---------------- | ---------------- | -------------------------- |
-| `console` (기본) | 터미널 컬러 출력 | 로컬 개발                  |
-| `junit`          | JUnit XML        | GitHub Actions, Jenkins 등 |
-| `json`           | JSON 파일        | 커스텀 대시보드            |
-| `html`           | report.html      | 스크린샷 포함 시각적 리포트, 브라우저 확인 |
-| `slack`          | Slack 웹훅 전송  | 팀 알림 (실패 시 상세·스크린샷 경로)     |
-| `github-pr`      | PR 코멘트 / pr-comment.md | CI에서 PR에 결과 자동 코멘트 |
+| 리포터           | 출력                      | 용도                                       |
+| ---------------- | ------------------------- | ------------------------------------------ |
+| `console` (기본) | 터미널 컬러 출력          | 로컬 개발                                  |
+| `junit`          | JUnit XML                 | GitHub Actions, Jenkins 등                 |
+| `json`           | JSON 파일                 | 커스텀 대시보드                            |
+| `html`           | report.html               | 스크린샷 포함 시각적 리포트, 브라우저 확인 |
+| `slack`          | Slack 웹훅 전송           | 팀 알림 (실패 시 상세·스크린샷 경로)       |
+| `github-pr`      | PR 코멘트 / pr-comment.md | CI에서 PR에 결과 자동 코멘트               |
 
 **리포터 확인 방법**: HTML은 실행 후 `output/report.html` 브라우저로 열기, Slack은 채널 도착 여부 확인, GitHub PR은 PR 코멘트 또는 `output/pr-comment.md` 확인. 자세한 사용법·옵션은 [e2e-yaml-reference.md](e2e-yaml-reference.md)의 CLI·리포터 섹션 참고.
 

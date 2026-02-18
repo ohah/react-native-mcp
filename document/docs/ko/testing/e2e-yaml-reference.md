@@ -555,14 +555,14 @@ teardown:
 
 ### 리포터 종류
 
-| 리포터        | 설명 |
-| ------------- | ----- |
-| `console`     | 터미널 요약·스텝 출력 (기본값). |
-| `junit`       | `output/junit.xml`. CI JUnit 리포트. |
-| `json`        | `output/results.json`. |
-| `html`        | `output/report.html`. 스크린샷 포함 시각적 리포트. |
-| `slack`       | Slack 웹훅으로 결과 전송. `--slack-webhook` 또는 `SLACK_WEBHOOK_URL` 필요. |
-| `github-pr`   | PR일 때 `gh pr comment`로 코멘트 작성. 아니면 `output/pr-comment.md` 저장. |
+| 리포터      | 설명                                                                       |
+| ----------- | -------------------------------------------------------------------------- |
+| `console`   | 터미널 요약·스텝 출력 (기본값).                                            |
+| `junit`     | `output/junit.xml`. CI JUnit 리포트.                                       |
+| `json`      | `output/results.json`.                                                     |
+| `html`      | `output/report.html`. 스크린샷 포함 시각적 리포트.                         |
+| `slack`     | Slack 웹훅으로 결과 전송. `--slack-webhook` 또는 `SLACK_WEBHOOK_URL` 필요. |
+| `github-pr` | PR일 때 `gh pr comment`로 코멘트 작성. 아니면 `output/pr-comment.md` 저장. |
 
 ### 리포터 확인 방법
 

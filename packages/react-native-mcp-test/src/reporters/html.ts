@@ -56,9 +56,7 @@ export class HtmlReporter implements Reporter {
       for (const step of suite.steps) {
         const stepStatus = step.status;
         const err = step.error ? escapeHtml(step.error) : '';
-        const screenshotRel = step.screenshotPath
-          ? basename(step.screenshotPath)
-          : '';
+        const screenshotRel = step.screenshotPath ? basename(step.screenshotPath) : '';
         const imgTag =
           screenshotRel &&
           `<p class="screenshot"><img src="${escapeHtml(screenshotRel)}" alt="Failure screenshot" loading="lazy" /></p>`;

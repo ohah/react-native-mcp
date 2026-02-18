@@ -33,12 +33,9 @@ export function createReporter(
     case 'html':
       return new HtmlReporter(outputDir);
     case 'slack': {
-      const webhook =
-        options.slackWebhook ?? process.env.SLACK_WEBHOOK_URL ?? '';
+      const webhook = options.slackWebhook ?? process.env.SLACK_WEBHOOK_URL ?? '';
       if (!webhook) {
-        throw new Error(
-          'Slack reporter requires --slack-webhook or SLACK_WEBHOOK_URL'
-        );
+        throw new Error('Slack reporter requires --slack-webhook or SLACK_WEBHOOK_URL');
       }
       return new SlackReporter({
         webhookUrl: webhook,
