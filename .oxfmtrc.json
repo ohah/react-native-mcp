@@ -16,6 +16,7 @@
     "**/build/**",
     "**/*.lock",
     "reference/**",
-    "packages/react-native-mcp-server/runtime.js"
+    "packages/react-native-mcp-server/runtime.js",
+    "packages/react-native-mcp-server/babel-plugin-*.cjs"
   ]
 }
