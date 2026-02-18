@@ -40,7 +40,13 @@ export type TestStep =
   | { openDeepLink: { url: string } }
   | { evaluate: { script: string } }
   | { webviewEval: { webViewId: string; script: string } }
-  | { scrollUntilVisible: { selector: string; direction?: string; maxScrolls?: number } };
+  | { scrollUntilVisible: { selector: string; direction?: string; maxScrolls?: number } }
+  | { back: null | Record<string, never> }
+  | { home: null | Record<string, never> }
+  | { hideKeyboard: null | Record<string, never> }
+  | { longPress: { selector: string; duration?: number } }
+  | { addMedia: { paths: string[] } }
+  | { assertHasText: { text: string; selector?: string } };
 
 export interface StepResult {
   step: TestStep;
