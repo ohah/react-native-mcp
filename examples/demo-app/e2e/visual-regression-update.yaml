@@ -1,5 +1,8 @@
 # 비주얼 리그레션 — 베이스라인 생성/갱신용
 # 최초 1회 또는 UI 변경 후 실행: bun e2e examples/demo-app/e2e/visual-regression-update.yaml
+#
+# CI 해상도 일치: 베이스라인은 CI와 같은 기기에서 생성해야 함.
+# iOS: iPhone 16 시뮬레이터 (e2e-ios.yml에서 고정). Android: avd-34 기본 해상도.
 name: 비주얼 리그레션 베이스라인 갱신
 config:
   platform: ios
