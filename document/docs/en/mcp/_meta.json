@@ -2,5 +2,7 @@
   { "type": "file", "name": "index", "label": "Install & connect" },
   { "type": "file", "name": "cli-init", "label": "CLI Init (Quick Setup)" },
   "getting-started",
-  { "type": "file", "name": "mcp-usage", "label": "Cursor / Claude / Copilot" }
+  { "type": "file", "name": "mcp-usage", "label": "Cursor / Claude / Copilot" },
+  { "type": "dir", "name": "tools", "label": "Tool Reference" },
+  { "type": "dir", "name": "cookbook", "label": "Cookbook" }
 ]

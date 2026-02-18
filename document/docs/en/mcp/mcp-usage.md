@@ -83,24 +83,11 @@ Then run your app and use MCP tools in the conversation. Use `claude mcp list` t
 
 ## Available tools overview
 
-Once connected, you can use tools such as:
+Once connected, **42 tools** are available across 12 categories — interaction, assertions, screen capture, network mocking, state inspection, render profiling, and more.
 
-| Purpose              | Tools                                                                                                    |
-| -------------------- | -------------------------------------------------------------------------------------------------------- |
-| View UI              | `take_snapshot`, `take_screenshot`, `query_selector`                                                     |
-| Assert               | `assert_text`, `assert_visible`                                                                          |
-| Interact             | `tap`, `swipe`, `input_text`, `type_text`                                                                |
-| Run                  | `evaluate_script`, `webview_evaluate_script`                                                             |
-| A11y audit           | `accessibility_audit`                                                                                    |
-| Device               | `get_debugger_status`, `list_devices`                                                                    |
-| Deep link            | `open_deeplink`                                                                                          |
-| App state / location | `clear_state` (clear data / reset permissions), `set_location` (sim/emulator GPS; Android emulator only) |
-| Net mock             | `set_network_mock`, `list_network_mocks`, `remove_network_mock`, `clear_network_mocks`                   |
-| Debug                | `list_console_messages`, `list_network_requests`                                                         |
-| State inspection     | `inspect_state`, `get_state_changes`, `clear_state_changes`                                              |
-| Render profiling     | `start_render_profile`, `get_render_report`, `clear_render_profile`                                      |
+Ask the AI to "take a snapshot of the app" or "tap the login button" and it will call these tools automatically.
 
-Ask the AI to "take a snapshot of the app" or "tap the login button" and it will call these tools.
+For detailed parameters, examples, and platform-specific tips for every tool, see the **[Tool Reference](./tools/)**. For real-world usage scenarios, check out the **[Cookbook](./cookbook/)**.
 
 ---
 

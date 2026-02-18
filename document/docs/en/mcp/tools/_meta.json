@@ -1,0 +1,14 @@
+[
+  { "type": "file", "name": "index", "label": "Overview" },
+  { "type": "file", "name": "device", "label": "Device & Status" },
+  { "type": "file", "name": "screen-capture", "label": "Screen Capture" },
+  { "type": "file", "name": "element-query", "label": "Element Query" },
+  { "type": "file", "name": "interaction", "label": "Interaction" },
+  { "type": "file", "name": "assertions", "label": "Assertions" },
+  { "type": "file", "name": "console-network", "label": "Console & Network" },
+  { "type": "file", "name": "network-mocking", "label": "Network Mocking" },
+  { "type": "file", "name": "state-inspection", "label": "State Inspection" },
+  { "type": "file", "name": "render-profiling", "label": "Render Profiling" },
+  { "type": "file", "name": "accessibility", "label": "Accessibility" },
+  { "type": "file", "name": "file-media", "label": "File & Media" }
+]

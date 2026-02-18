@@ -1,0 +1,14 @@
+[
+  { "type": "file", "name": "index", "label": "개요" },
+  { "type": "file", "name": "device", "label": "디바이스 & 상태" },
+  { "type": "file", "name": "screen-capture", "label": "화면 캡처" },
+  { "type": "file", "name": "element-query", "label": "엘리먼트 쿼리" },
+  { "type": "file", "name": "interaction", "label": "인터랙션" },
+  { "type": "file", "name": "assertions", "label": "검증(Assertion)" },
+  { "type": "file", "name": "console-network", "label": "콘솔 & 네트워크" },
+  { "type": "file", "name": "network-mocking", "label": "네트워크 모킹" },
+  { "type": "file", "name": "state-inspection", "label": "상태 인스펙션" },
+  { "type": "file", "name": "render-profiling", "label": "렌더 프로파일링" },
+  { "type": "file", "name": "accessibility", "label": "접근성" },
+  { "type": "file", "name": "file-media", "label": "파일 & 미디어" }
+]
