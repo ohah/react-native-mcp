@@ -9,17 +9,14 @@ import type { AppSession } from '../websocket-server.js';
 import { deviceParam, platformParam } from './device-param.js';
 
 const setSchema = z.object({
-  urlPattern: z.string().describe('URL pattern to match (substring or regex string).'),
-  isRegex: z.boolean().optional().describe('Treat urlPattern as a regular expression.'),
-  method: z
-    .string()
-    .optional()
-    .describe('HTTP method to match (GET, POST, etc.). Null matches all.'),
-  status: z.number().optional().describe('Mock response status code (default 200).'),
-  statusText: z.string().optional().describe('Mock response status text.'),
-  headers: z.record(z.string()).optional().describe('Mock response headers.'),
-  body: z.string().optional().describe('Mock response body string.'),
-  delay: z.number().optional().describe('Delay in ms before returning mock response.'),
+  urlPattern: z.string().describe('URL pattern (substring or regex).'),
+  isRegex: z.boolean().optional().describe('urlPattern is regex.'),
+  method: z.string().optional().describe('HTTP method. Omit to match all.'),
+  status: z.number().optional().describe('Mock status. Default 200.'),
+  statusText: z.string().optional().describe('Mock status text.'),
+  headers: z.record(z.string()).optional().describe('Mock headers.'),
+  body: z.string().optional().describe('Mock body.'),
+  delay: z.number().optional().describe('Delay ms before mock.'),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -35,7 +32,7 @@ const clearSchema = z.object({
 });
 
 const removeSchema = z.object({
-  id: z.number().describe('The mock rule ID to remove.'),
+  id: z.number().describe('Mock rule ID to remove.'),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -66,8 +63,7 @@ export function registerNetworkMock(server: McpServer, appSession: AppSession): 
   s.registerTool(
     'set_network_mock',
     {
-      description:
-        'Add a network mock rule. Matching XHR/fetch requests will return the mock response without hitting the network.',
+      description: 'Add network mock. Matching XHR/fetch return mock without hitting network.',
       inputSchema: setSchema,
     },
     async (args: unknown) => {

@@ -23,14 +23,9 @@ const schema = z.object({
   keycode: z
     .number()
     .describe(
-      'Keycode to send. iOS (HID): 40=Return, 42=Backspace, 43=Tab, 44=Space, 41=Escape. Android: 3=HOME, 4=BACK, 24=VOLUME_UP, 25=VOLUME_DOWN, 26=POWER, 66=ENTER, 67=DEL, 82=MENU, 187=APP_SWITCH.'
+      'Keycode. iOS: 40=Return, 42=Backspace, 44=Space, 41=Escape. Android: 4=BACK, 66=ENTER, 67=DEL.'
     ),
-  deviceId: z
-    .string()
-    .optional()
-    .describe(
-      'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected. Use list_devices to find IDs.'
-    ),
+  deviceId: z.string().optional().describe('Device ID. Auto if single. list_devices to find.'),
 });
 
 export function registerInputKey(server: McpServer): void {
@@ -46,7 +41,7 @@ export function registerInputKey(server: McpServer): void {
     'input_key',
     {
       description:
-        'Send keycode to iOS simulator (HID keycode via idb) or Android device (Android keycode via adb). iOS (HID): 40=Return, 42=Backspace, 43=Tab, 44=Space, 41=Escape. Android: 3=HOME, 4=BACK, 24=VOLUME_UP, 25=VOLUME_DOWN, 26=POWER, 66=ENTER, 67=DEL, 82=MENU, 187=APP_SWITCH.',
+        'Send keycode to simulator/device. iOS: HID. Android: adb. Common: Return, Backspace, ENTER, BACK.',
       inputSchema: schema,
     },
     async (args: unknown) => {

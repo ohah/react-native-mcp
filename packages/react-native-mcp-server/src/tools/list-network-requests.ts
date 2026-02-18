@@ -11,10 +11,10 @@ import { deviceParam, platformParam } from './device-param.js';
 
 const listSchema = z.object({
   url: z.string().optional().describe('URL substring filter.'),
-  method: z.string().optional().describe('HTTP method filter (GET, POST, etc.).'),
-  status: z.number().optional().describe('Status code filter (200, 404, etc.).'),
-  since: z.number().optional().describe('Return only requests after this timestamp (ms).'),
-  limit: z.number().optional().describe('Max number of requests to return (default 50).'),
+  method: z.string().optional().describe('HTTP method filter.'),
+  status: z.number().optional().describe('Status code filter.'),
+  since: z.number().optional().describe('Only requests after timestamp (ms).'),
+  limit: z.number().optional().describe('Max requests. Default 50.'),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -39,7 +39,7 @@ export function registerListNetworkRequests(server: McpServer, appSession: AppSe
     'list_network_requests',
     {
       description:
-        'List network requests captured via XHR/fetch monkey-patch. Filter by URL, method, status, timestamp, or limit. Returns request/response details including headers and body.',
+        'List captured XHR/fetch requests. Filter by url, method, status, since, limit. Returns request/response details.',
       inputSchema: listSchema,
     },
     async (args: unknown) => {

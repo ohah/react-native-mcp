@@ -10,12 +10,9 @@ import type { AppSession } from '../websocket-server.js';
 import { deviceParam, platformParam } from './device-param.js';
 
 const listSchema = z.object({
-  component: z
-    .string()
-    .optional()
-    .describe('Filter by component name (exact match). Omit for all components.'),
-  since: z.number().optional().describe('Return only changes after this timestamp (ms epoch).'),
-  limit: z.number().optional().describe('Max number of changes to return (default 100).'),
+  component: z.string().optional().describe('Filter by component name. Omit for all.'),
+  since: z.number().optional().describe('Only changes after timestamp (ms).'),
+  limit: z.number().optional().describe('Max changes to return. Default 100.'),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -40,7 +37,7 @@ export function registerGetStateChanges(server: McpServer, appSession: AppSessio
     'get_state_changes',
     {
       description:
-        'List React state changes captured via fiber tree diff. Each entry includes timestamp, component name, hook index, previous value, and new value. Filter by component name, timestamp, or limit. Buffer holds up to 300 entries.',
+        'List captured state changes (timestamp, component, hook, prev/next). Filter by component, since, limit. Buffer up to 300.',
       inputSchema: listSchema,
     },
     async (args: unknown) => {

@@ -15,9 +15,9 @@ const listSchema = z.object({
   level: z
     .enum(['log', 'info', 'warn', 'error'])
     .optional()
-    .describe('Filter by log level. Omit for all levels.'),
-  since: z.number().optional().describe('Return only logs after this timestamp (ms).'),
-  limit: z.number().optional().describe('Max number of logs to return (default 100).'),
+    .describe('Filter by level. Omit for all.'),
+  since: z.number().optional().describe('Only logs after timestamp (ms).'),
+  limit: z.number().optional().describe('Max logs. Default 100.'),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -42,7 +42,7 @@ export function registerListConsoleMessages(server: McpServer, appSession: AppSe
     'list_console_messages',
     {
       description:
-        'List console messages captured via nativeLoggingHook. Filter by level, timestamp, or limit. Level mapping: 0=log, 1=info, 2=warn, 3=error.',
+        'List captured console logs. Filter by level, since, limit. Levels: log, info, warn, error.',
       inputSchema: listSchema,
     },
     async (args: unknown) => {

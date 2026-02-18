@@ -24,19 +24,9 @@ const schema = z.object({
   localPath: z.string().describe('Absolute path to the local file to push.'),
   remotePath: z
     .string()
-    .describe(
-      'Destination path. iOS: path inside app container. Android: device path (e.g. /sdcard/Download/file.txt).'
-    ),
-  bundleId: z
-    .string()
-    .optional()
-    .describe('Bundle ID of the target app (iOS only, required). e.g. com.example.myapp.'),
-  deviceId: z
-    .string()
-    .optional()
-    .describe(
-      'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected. Use list_devices to find IDs.'
-    ),
+    .describe('Destination. iOS: in app container. Android: e.g. /sdcard/Download/file.txt.'),
+  bundleId: z.string().optional().describe('Bundle ID. iOS only, required.'),
+  deviceId: z.string().optional().describe('Device ID. Auto if single. list_devices to find.'),
 });
 
 export function registerFilePush(server: McpServer): void {
@@ -51,8 +41,7 @@ export function registerFilePush(server: McpServer): void {
   ).registerTool(
     'file_push',
     {
-      description:
-        'Push a local file to iOS simulator (app container via idb, requires bundleId) or Android device (arbitrary path via adb).',
+      description: 'Push local file to simulator/device. iOS: idb + bundleId. Android: adb path.',
       inputSchema: schema,
     },
     async (args: unknown) => {

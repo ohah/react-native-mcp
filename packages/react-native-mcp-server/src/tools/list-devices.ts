@@ -14,9 +14,7 @@ import {
 } from './adb-utils.js';
 
 const schema = z.object({
-  platform: z
-    .enum(['ios', 'android'])
-    .describe('ios: list iOS simulators via idb. android: list Android devices/emulators via adb.'),
+  platform: z.enum(['ios', 'android']).describe('ios: idb simulators. android: adb devices.'),
 });
 
 export function registerListDevices(server: McpServer): void {
@@ -32,7 +30,7 @@ export function registerListDevices(server: McpServer): void {
     'list_devices',
     {
       description:
-        'List connected devices. iOS (idb): returns name, UDID, state (Booted/Shutdown), OS version. Android (adb): returns serial, state, model. Use to discover device IDs for other tools.',
+        'List connected simulators/devices. Returns deviceId, state, model. Use for other tools.',
       inputSchema: schema,
     },
     async (args: unknown) => {

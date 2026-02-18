@@ -22,29 +22,15 @@ import {
 import { getIOSOrientationInfo, transformForIdb } from './ios-landscape.js';
 
 const schema = z.object({
-  platform: z
-    .enum(['ios', 'android'])
-    .describe(
-      'ios or android. iOS: all 4 orientations supported (Portrait, Portrait180, LandscapeA, LandscapeB); auto-detected or override via iosOrientation. Android: any orientation.'
-    ),
-  x: z.number().describe('X coordinate in points (dp). Auto-converted to pixels on Android.'),
-  y: z.number().describe('Y coordinate in points (dp). Auto-converted to pixels on Android.'),
-  duration: z
-    .number()
-    .optional()
-    .describe('Hold duration in milliseconds for long press. Omit for normal tap.'),
-  deviceId: z
-    .string()
-    .optional()
-    .describe(
-      'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected. Use list_devices to find IDs.'
-    ),
+  platform: z.enum(['ios', 'android']).describe('ios or android.'),
+  x: z.number().describe('X in points (dp). Pixels auto on Android.'),
+  y: z.number().describe('Y in points (dp). Pixels auto on Android.'),
+  duration: z.number().optional().describe('Hold ms for long press. Omit for tap.'),
+  deviceId: z.string().optional().describe('Device ID. Auto if single. list_devices to find.'),
   iosOrientation: z
     .number()
     .optional()
-    .describe(
-      'iOS GraphicsOrientation override (1-4). 1=Portrait, 2=Portrait180, 3=LandscapeA, 4=LandscapeB. Skips auto-detection when set.'
-    ),
+    .describe('iOS orientation 1-4. Portrait=1,2; Landscape=3,4. Skips auto-detect.'),
 });
 
 export function registerTap(server: McpServer, appSession: AppSession): void {
@@ -60,7 +46,7 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
     'tap',
     {
       description:
-        'Tap at (x, y) in points (dp); Android pixels auto-calculated. Long press via duration (ms). Workflow: query_selector → tap; verify with assert_text.',
+        'Tap at (x,y) in points. Long press via duration (ms). Use after query_selector; verify with assert_text.',
       inputSchema: schema,
     },
     async (args: unknown) => {

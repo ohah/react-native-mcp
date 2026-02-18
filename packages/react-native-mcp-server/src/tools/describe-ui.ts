@@ -71,28 +71,15 @@ const schema = z.object({
     .enum(['all', 'point'])
     .optional()
     .default('all')
-    .describe(
-      'iOS only. "all" for full accessibility tree, "point" for element at (x,y). Ignored on Android.'
-    ),
-  x: z
-    .number()
-    .optional()
-    .describe('X coordinate in points (iOS only, required when mode is "point").'),
-  y: z
-    .number()
-    .optional()
-    .describe('Y coordinate in points (iOS only, required when mode is "point").'),
+    .describe('iOS: "all" or "point" at (x,y). Android: ignored.'),
+  x: z.number().optional().describe('X in points. iOS, required for mode=point.'),
+  y: z.number().optional().describe('Y in points. iOS, required for mode=point.'),
   nested: z
     .boolean()
     .optional()
     .default(false)
-    .describe('iOS only. Hierarchical tree instead of flat list. Ignored on Android.'),
-  deviceId: z
-    .string()
-    .optional()
-    .describe(
-      'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected. Use list_devices to find IDs.'
-    ),
+    .describe('iOS: hierarchical tree. Android: ignored.'),
+  deviceId: z.string().optional().describe('Device ID. Auto if single. list_devices to find.'),
 });
 
 export function registerDescribeUi(server: McpServer): void {
@@ -108,7 +95,7 @@ export function registerDescribeUi(server: McpServer): void {
     'describe_ui',
     {
       description:
-        'Query UI hierarchy/accessibility tree. iOS (idb): "all" for full tree, "point" for element at coordinates. Android (adb): uiautomator dump (always full hierarchy). WARNING: Large payload. For RN elements, prefer query_selector instead.',
+        'Query native UI/accessibility tree. Large payload. Prefer query_selector for RN elements.',
       inputSchema: schema,
     },
     async (args: unknown) => {

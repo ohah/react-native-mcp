@@ -29,9 +29,10 @@
 
 도구 버전은 [mise](https://mise.jdx.dev/)로 관리 (`.mise.toml`). `mise exec --`로 프로젝트 bun 사용.
 
-1. `mise exec -- bun run format` 실행
-2. `mise exec -- bun run lint` 실행
-3. 변경 파일 스테이징 후 커밋
+1. **브랜치 먼저 생성** — 새 작업 시 `git checkout -b <branch>`로 브랜치 생성 후 해당 브랜치에서 커밋.
+2. `mise exec -- bun run format` 실행
+3. `mise exec -- bun run lint` 실행
+4. 변경 파일 스테이징 후 커밋
 
 ## 커밋 후 (필수)
 

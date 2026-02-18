@@ -11,13 +11,7 @@ import type { AppSession } from '../websocket-server.js';
 import { deviceParam, platformParam } from './device-param.js';
 
 const schema = z.object({
-  maxDepth: z
-    .number()
-    .int()
-    .min(1)
-    .max(100)
-    .optional()
-    .describe('Max tree depth for audit. Default 999. Reduce for large apps.'),
+  maxDepth: z.number().int().min(1).max(100).optional().describe('Max tree depth. Default 999.'),
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -35,7 +29,7 @@ export function registerAccessibilityAudit(server: McpServer, appSession: AppSes
     'accessibility_audit',
     {
       description:
-        'Run accessibility (a11y) audit on the React Native component tree. Returns list of violations: [{ rule, selector, severity, message }]. Rules: pressable-needs-label, image-needs-alt, touch-target-size, missing-role. text-contrast is not implemented (difficult: RN colors are numeric/processColor, contrast ratio not feasible from Fiber).',
+        'Run a11y audit on RN tree. Returns violations: rule, selector, severity, message. Rules: pressable-needs-label, image-needs-alt, touch-target-size, missing-role.',
       inputSchema: schema,
     },
     async (args) => {

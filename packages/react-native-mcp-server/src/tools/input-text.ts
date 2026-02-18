@@ -26,17 +26,8 @@ function escapeAdbText(text: string): string {
 
 const schema = z.object({
   platform: z.enum(['ios', 'android']).describe('Target platform.'),
-  text: z
-    .string()
-    .describe(
-      'Text to type. ASCII only (English/numbers). For Korean/Unicode, use type_text instead.'
-    ),
-  deviceId: z
-    .string()
-    .optional()
-    .describe(
-      'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected. Use list_devices to find IDs.'
-    ),
+  text: z.string().describe('Text to type. ASCII only. Use type_text for Unicode.'),
+  deviceId: z.string().optional().describe('Device ID. Auto if single. list_devices to find.'),
 });
 
 export function registerInputText(server: McpServer): void {
@@ -51,8 +42,7 @@ export function registerInputText(server: McpServer): void {
   ).registerTool(
     'input_text',
     {
-      description:
-        'Type text into the currently focused input on iOS simulator or Android device. ASCII only (English, numbers, symbols). For Korean/Unicode, use type_text instead.',
+      description: 'Type into focused input. ASCII only. Use type_text for Korean/Unicode.',
       inputSchema: schema,
     },
     async (args: unknown) => {

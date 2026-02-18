@@ -12,18 +12,8 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
 import { deviceParam, platformParam } from './device-param.js';
 
-const selectorDescription = `Selector syntax for React Native Fiber tree:
-- By type: ScrollView, Pressable, Text, View
-- By testID: #product-list
-- By text: :text("Login") (substring match on subtree text)
-- By attribute: [accessibilityLabel="Close"]
-- By displayName: :display-name("Animated.View") (fiber.type.displayName; Reanimated type name is AnimatedComponent)
-- Combined: Pressable:text("Submit"), ScrollView#main
-- Hierarchy: View > ScrollView (direct child), View ScrollView (descendant)
-- Index: :first-of-type (same as :nth-of-type(1)), :nth-of-type(N) (1-based), :last-of-type for last match
-- Capabilities: :has-press (has onPress), :has-scroll (has scrollTo)
-- Union: ScrollView, FlatList (comma = OR)
-See docs/query-selector.md for full syntax reference.`;
+const selectorDescription =
+  'Selector for RN Fiber tree. Read resource docs://guides/query-selector-syntax for full syntax (type, #testID, :text, hierarchy, etc.).';
 
 const schema = z.object({
   selector: z.string().describe(selectorDescription),
@@ -87,7 +77,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
 
   register(
     'query_selector',
-    'Find the first element matching a selector in the Fiber tree. Returns { uid, type, testID?, text?, ... }. Includes measure coordinates ({ x, y, width, height, pageX, pageY }) — no separate measureView call needed. Workflow: query_selector → tap(pageX + width/2, pageY + height/2). You do not know uids in advance — call this first.',
+    'Find first element matching selector in Fiber tree. Returns uid, type, measure (pageX, pageY, width, height). Workflow: query_selector → tap(center); uids unknown until called.',
     async (args: unknown) => {
       const { selector, deviceId, platform } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {
@@ -127,7 +117,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
 
   register(
     'query_selector_all',
-    'Find all elements matching a selector in the Fiber tree. Returns array of { uid, type, testID?, text?, accessibilityLabel?, hasOnPress, hasOnLongPress, hasScrollTo, measure }. Each element includes measure coordinates. WARNING: Can return large payloads. Prefer query_selector for single element. Use this only when you need to enumerate multiple elements.',
+    'Find all elements matching selector. Returns array with measure. Prefer query_selector for one element; use only when enumerating multiple.',
     async (args: unknown) => {
       const { selector, deviceId, platform } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {

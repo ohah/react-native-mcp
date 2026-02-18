@@ -1,16 +1,16 @@
 export const querySelectorGuide = {
   name: 'query-selector-syntax',
   description:
-    'query_selector / query_selector_all 셀렉터 문법 레퍼런스. 타입, testID, 텍스트, 속성, 계층, 기능 셀렉터 및 워크플로우 예시.',
+    'query_selector / query_selector_all selector syntax reference. Type, testID, text, attribute, hierarchy, capability selectors and workflow examples.',
   content: `# query_selector / query_selector_all
 
-React Native Fiber 트리에서 요소를 검색하는 셀렉터 문법. CSS \`querySelector\`와 유사하지만 DOM이 아닌 **React Fiber 트리** 전용.
+Selector syntax for finding elements in the React Native Fiber tree. Similar to CSS \`querySelector\` but for the **React Fiber tree**, not DOM.
 
-## 기본 문법
+## Basic syntax
 
-### 타입 셀렉터
+### Type selector
 
-컴포넌트 타입 이름으로 검색:
+Match by component type name:
 
 \`\`\`
 View
@@ -21,9 +21,9 @@ FlatList
 TextInput
 \`\`\`
 
-### testID 셀렉터
+### testID selector
 
-\`#\`으로 testID 검색:
+\`#\` for testID:
 
 \`\`\`
 #login-btn
@@ -31,145 +31,144 @@ TextInput
 #product-list
 \`\`\`
 
-타입과 결합 가능:
+Combine with type:
 
 \`\`\`
 Pressable#login-btn
 TextInput#email-input
 \`\`\`
 
-### 텍스트 셀렉터
+### Text selector
 
-\`:text("...")\` — 서브트리 텍스트에서 **부분 문자열 매칭**:
+\`:text("...")\` — **substring match** on subtree text:
 
 \`\`\`
-:text("로그인")
+:text("Login")
 :text("Submit")
-Text:text("환영합니다")
-Pressable:text("확인")
+Text:text("Welcome")
+Pressable:text("OK")
 \`\`\`
 
-> 부모 요소의 모든 자식 텍스트를 합쳐서 검색합니다.
-> 예: \`<View><Text>Hello</Text><Text>World</Text></View>\` → \`:text("Hello World")\`로 매칭.
+> Text is concatenated from all children. E.g. \`<View><Text>Hello</Text><Text>World</Text></View>\` matches \`:text("Hello World")\`.
 
-### 속성 셀렉터
+### Attribute selector
 
-\`[attr="value"]\` — props 값으로 검색:
+\`[attr="value"]\` — match by props:
 
 \`\`\`
-[accessibilityLabel="닫기"]
-[placeholder="이메일 입력"]
+[accessibilityLabel="Close"]
+[placeholder="Email"]
 View[accessibilityRole="button"]
 \`\`\`
 
-### displayName 셀렉터
+### displayName selector
 
-\`:display-name("...")\` — \`fiber.type.displayName\`으로 매칭 (타입 이름과 무관):
+\`:display-name("...")\` — match by \`fiber.type.displayName\` (independent of type name):
 
 \`\`\`
-:display-name("Animated.View")   # Reanimated: 컴포넌트 이름은 AnimatedComponent, displayName으로 Animated.View 매칭
+:display-name("Animated.View")   # Reanimated: type is AnimatedComponent, displayName matches Animated.View
 View:display-name("CustomBox")
 \`\`\`
 
-### 인덱스 셀렉터
+### Index selectors
 
-\`:first-of-type\` — 첫 번째 매칭 (\`:nth-of-type(1)\`와 동일). \`:last-of-type\` — 마지막 매칭:
-
-\`\`\`
-Pressable:first-of-type      # 첫 번째 Pressable
-Pressable:last-of-type       # 마지막 Pressable
-View:text("Bottom sheet"):last-of-type   # "Bottom sheet" 포함 View 중 마지막 (예: 하단 시트 패널)
-\`\`\`
-
-\`:nth-of-type(N)\` — N번째 매칭 (1-based):
+\`:first-of-type\` — first match (same as \`:nth-of-type(1)\`). \`:last-of-type\` — last match:
 
 \`\`\`
-Text:nth-of-type(1)          # 첫 번째 Text (= :first-of-type)
-Pressable:nth-of-type(3)     # 세 번째 Pressable
-:text("항목"):nth-of-type(2) # "항목" 텍스트가 포함된 두 번째 요소
+Pressable:first-of-type      # first Pressable
+Pressable:last-of-type       # last Pressable
+View:text("Bottom sheet"):last-of-type   # last View containing "Bottom sheet"
 \`\`\`
 
-### 기능 셀렉터
-
-\`:has-press\` — \`onPress\` 핸들러가 있는 요소:
+\`:nth-of-type(N)\` — Nth match (1-based):
 
 \`\`\`
-:has-press                    # 모든 클릭 가능 요소
-View:has-press                # onPress가 있는 View
-:has-press:text("삭제")       # "삭제" 텍스트를 가진 클릭 가능 요소
+Text:nth-of-type(1)          # first Text (= :first-of-type)
+Pressable:nth-of-type(3)     # third Pressable
+:text("Item"):nth-of-type(2) # second element containing "Item"
 \`\`\`
 
-\`:has-scroll\` — \`scrollTo\` 또는 \`scrollToOffset\`이 있는 요소:
+### Capability selectors
+
+\`:has-press\` — element has \`onPress\` handler:
 
 \`\`\`
-:has-scroll                   # 모든 스크롤 가능 요소
-ScrollView:has-scroll         # 스크롤 가능한 ScrollView
+:has-press                    # all pressable elements
+View:has-press                # View with onPress
+:has-press:text("Delete")     # pressable with "Delete" text
 \`\`\`
 
-## 계층 셀렉터
-
-### 직접 자식 (\`>\`)
+\`:has-scroll\` — element has \`scrollTo\` or \`scrollToOffset\`:
 
 \`\`\`
-View > Text              # View의 직접 자식인 Text
-ScrollView > View > Text # 3단계 계층
+:has-scroll                   # all scrollable elements
+ScrollView:has-scroll         # scrollable ScrollView
 \`\`\`
 
-### 후손 (공백)
+## Hierarchy selectors
+
+### Direct child (\`>\`)
 
 \`\`\`
-View Text                # View 하위 어디든 있는 Text
-ScrollView Pressable     # ScrollView 하위의 모든 Pressable
+View > Text              # Text that is direct child of View
+ScrollView > View > Text # 3-level hierarchy
 \`\`\`
 
-### 결합 예시
+### Descendant (space)
 
 \`\`\`
-View > ScrollView:has-scroll > Pressable:text("추가")
+View Text                # Text anywhere under View
+ScrollView Pressable     # any Pressable under ScrollView
 \`\`\`
 
-## OR (콤마)
-
-콤마로 여러 셀렉터를 결합:
+### Combined example
 
 \`\`\`
-ScrollView, FlatList           # ScrollView 또는 FlatList
-Pressable, TouchableOpacity    # 두 타입 모두 검색
-#btn-a, #btn-b                 # 두 testID 중 하나
+View > ScrollView:has-scroll > Pressable:text("Add")
 \`\`\`
 
-## 복합 예시
+## OR (comma)
+
+Combine multiple selectors with comma:
 
 \`\`\`
-# 로그인 버튼 찾기
-Pressable:text("로그인")
+ScrollView, FlatList           # ScrollView or FlatList
+Pressable, TouchableOpacity    # either type
+#btn-a, #btn-b                 # either testID
+\`\`\`
 
-# testID로 TextInput 찾기
+## Compound examples
+
+\`\`\`
+# Find login button
+Pressable:text("Login")
+
+# TextInput by testID
 TextInput#email-input
 
-# 접근성 라벨로 닫기 버튼 찾기
-[accessibilityLabel="닫기"]:has-press
+# Close button by accessibility label
+[accessibilityLabel="Close"]:has-press
 
-# ScrollView 안의 세 번째 클릭 가능 요소
+# Third pressable inside ScrollView
 ScrollView :has-press:nth-of-type(3)
 
-# FlatList 또는 ScrollView 찾기
+# FlatList or ScrollView
 FlatList, ScrollView
 
-# 특정 View 안의 모든 텍스트
+# All Text inside a specific View
 View#header > Text
 \`\`\`
 
-## 반환값
+## Return value
 
-### query_selector (단일)
+### query_selector (single)
 
 \`\`\`json
 {
   "uid": "login-btn",
   "type": "Pressable",
   "testID": "login-btn",
-  "text": "로그인",
+  "text": "Login",
   "accessibilityLabel": null,
   "hasOnPress": true,
   "hasOnLongPress": false,
@@ -182,64 +181,64 @@ View#header > Text
 }
 \`\`\`
 
-- \`uid\` — testID가 있으면 testID, 없으면 경로 문자열 (예: \`"0.1.2"\`)
-- \`measure\` — 요소의 좌표와 크기 (points). pageX/pageY는 화면 왼쪽 상단 기준 절대 좌표.
-- \`measure\`가 null인 경우 \`evaluate_script(measureView(uid))\`로 별도 획득 가능 (드문 경우).
+- \`uid\` — testID when present, otherwise path string (e.g. \`"0.1.2"\`)
+- \`measure\` — element coordinates and size (points). pageX/pageY are absolute from top-left of screen.
+- If \`measure\` is null, use \`evaluate_script(measureView(uid))\` to get it (rare).
 
-### query_selector_all (복수)
+### query_selector_all (multiple)
 
 \`\`\`json
 [
-  { "uid": "item-0", "type": "Pressable", "text": "항목 1", "hasOnPress": true, "measure": { ... } },
-  { "uid": "item-1", "type": "Pressable", "text": "항목 2", "hasOnPress": true, "measure": { ... } }
+  { "uid": "item-0", "type": "Pressable", "text": "Item 1", "hasOnPress": true, "measure": { ... } },
+  { "uid": "item-1", "type": "Pressable", "text": "Item 2", "hasOnPress": true, "measure": { ... } }
 ]
 \`\`\`
 
-## 워크플로우
+## Workflow
 
-### 요소 찾기 → 네이티브 탭 (2단계)
-
-\`\`\`
-1. query_selector('Pressable:text("로그인")') → uid + measure 획득
-2. tap(platform, measure.pageX + measure.width/2, measure.pageY + measure.height/2) → 중앙 탭
-\`\`\`
-
-> measure가 결과에 포함되므로 별도 measureView 호출이 불필요합니다.
-
-### 텍스트 검증
+### Find element → native tap (2 steps)
 
 \`\`\`
-1. assert_text("환영합니다") → { pass: true }
+1. query_selector('Pressable:text("Login")') → get uid + measure
+2. tap(platform, measure.pageX + measure.width/2, measure.pageY + measure.height/2) → tap center
 \`\`\`
 
-### 클릭 가능 요소 목록
+> measure is included in the result, so a separate measureView call is not needed.
+
+### Assert text
+
+\`\`\`
+assert_text("Welcome") → { pass: true }
+\`\`\`
+
+### List all pressable elements
 
 \`\`\`
 query_selector_all(':has-press')
 \`\`\`
 
-### 모든 텍스트 노드
+### All text nodes
 
 \`\`\`
 query_selector_all('Text')
 \`\`\`
 
-## 문법 요약
+## Syntax summary
 
-| 문법 | 설명 | 예시 |
+| Syntax | Description | Example |
 |---|---|---|
-| \`Type\` | 컴포넌트 타입 | \`View\`, \`Text\`, \`Pressable\` |
+| \`Type\` | Component type | \`View\`, \`Text\`, \`Pressable\` |
 | \`#id\` | testID | \`#login-btn\` |
-| \`[attr="val"]\` | props 속성 | \`[accessibilityLabel="닫기"]\` |
-| \`:text("...")\` | 텍스트 부분 매칭 | \`:text("로그인")\` |
-| \`:display-name("...")\` | fiber.type.displayName 매칭 | \`:display-name("Animated.View")\` |
-| \`:first-of-type\` | 첫 번째 매칭 | \`Pressable:first-of-type\` |
-| \`:last-of-type\` | 마지막 매칭 | \`View:text("Bottom sheet"):last-of-type\` |
-| \`:nth-of-type(N)\` | N번째 매칭 (1-based) | \`:nth-of-type(1)\` |
-| \`:has-press\` | onPress 존재 | \`:has-press\` |
-| \`:has-scroll\` | scrollTo 존재 | \`:has-scroll\` |
-| \`A > B\` | 직접 자식 | \`View > Text\` |
-| \`A B\` | 후손 | \`View Text\` |
+| \`[attr="val"]\` | Props attribute | \`[accessibilityLabel="Close"]\` |
+| \`:text("...")\` | Text substring match | \`:text("Login")\` |
+| \`:display-name("...")\` | fiber.type.displayName match | \`:display-name("Animated.View")\` |
+| \`:first-of-type\` | First match | \`Pressable:first-of-type\` |
+| \`:last-of-type\` | Last match | \`View:text("Bottom sheet"):last-of-type\` |
+| \`:nth-of-type(N)\` | Nth match (1-based) | \`:nth-of-type(1)\` |
+| \`:has-press\` | Has onPress | \`:has-press\` |
+| \`:has-scroll\` | Has scrollTo | \`:has-scroll\` |
+| \`A > B\` | Direct child | \`View > Text\` |
+| \`A B\` | Descendant | \`View Text\` |
 | \`A, B\` | OR | \`ScrollView, FlatList\` |
 `,
 };

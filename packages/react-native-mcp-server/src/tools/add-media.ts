@@ -21,16 +21,8 @@ import {
 
 const schema = z.object({
   platform: z.enum(['ios', 'android']).describe('Target platform.'),
-  filePaths: z
-    .array(z.string())
-    .min(1)
-    .describe('Absolute paths to media files (images, videos) to add to device gallery.'),
-  deviceId: z
-    .string()
-    .optional()
-    .describe(
-      'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected. Use list_devices to find IDs.'
-    ),
+  filePaths: z.array(z.string()).min(1).describe('Absolute paths to images/videos for gallery.'),
+  deviceId: z.string().optional().describe('Device ID. Auto if single. list_devices to find.'),
 });
 
 export function registerAddMedia(server: McpServer): void {
@@ -45,8 +37,7 @@ export function registerAddMedia(server: McpServer): void {
   ).registerTool(
     'add_media',
     {
-      description:
-        'Add media files (images, videos) to iOS simulator photo library (idb) or Android device gallery (adb push + media scanner).',
+      description: 'Add images/videos to simulator photo library or device gallery.',
       inputSchema: schema,
     },
     async (args: unknown) => {

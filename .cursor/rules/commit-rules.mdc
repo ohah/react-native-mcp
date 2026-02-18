@@ -48,6 +48,7 @@ fix(react-native): WebSocket 재연결 처리 수정
 
 ## 커밋 전 (필수)
 
+- **브랜치**: 새 작업 시 **브랜치를 먼저 생성**한 뒤 해당 브랜치에서 커밋.
 - `mise exec -- bun run format` 실행
 - `mise exec -- bun run lint` 실행
 - 통과 후 스테이징·커밋

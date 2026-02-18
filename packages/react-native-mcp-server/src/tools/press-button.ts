@@ -39,18 +39,10 @@ const schema = z.object({
   button: z
     .string()
     .describe(
-      'Button name. Android: HOME, BACK, MENU, APP_SWITCH, POWER, VOLUME_UP, VOLUME_DOWN, ENTER, DEL. iOS: HOME, LOCK, SIDE_BUTTON, SIRI, APPLE_PAY.'
+      'Android: HOME, BACK, MENU, APP_SWITCH, POWER, VOLUME_UP/DOWN, ENTER, DEL. iOS: HOME, LOCK, SIDE_BUTTON.'
     ),
-  duration: z
-    .number()
-    .optional()
-    .describe('Hold duration in seconds (iOS only, ignored on Android).'),
-  deviceId: z
-    .string()
-    .optional()
-    .describe(
-      'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected. Use list_devices to find IDs.'
-    ),
+  duration: z.number().optional().describe('Hold seconds. iOS only.'),
+  deviceId: z.string().optional().describe('Device ID. Auto if single. list_devices to find.'),
 });
 
 export function registerPressButton(server: McpServer): void {
@@ -66,7 +58,7 @@ export function registerPressButton(server: McpServer): void {
     'press_button',
     {
       description:
-        'Press a physical button on iOS simulator or Android device. Android: HOME, BACK, MENU, APP_SWITCH, POWER, VOLUME_UP, VOLUME_DOWN, ENTER, DEL. iOS: HOME, LOCK, SIDE_BUTTON, SIRI, APPLE_PAY. Duration (hold) is iOS only.',
+        'Press physical button. Android: HOME, BACK, MENU, etc. iOS: HOME, LOCK, SIDE_BUTTON. Duration = hold (iOS only).',
       inputSchema: schema,
     },
     async (args: unknown) => {

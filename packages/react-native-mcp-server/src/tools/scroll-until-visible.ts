@@ -17,36 +17,20 @@ import {
 } from './ios-landscape.js';
 
 const schema = z.object({
-  selector: z.string().describe('Selector of the element to find.'),
+  selector: z.string().describe('Selector of element to find.'),
   direction: z
     .enum(['up', 'down', 'left', 'right'])
     .optional()
     .default('down')
-    .describe('Scroll direction (default "down"). "down" scrolls content upward to reveal below.'),
-  maxScrolls: z
-    .number()
-    .optional()
-    .default(10)
-    .describe('Maximum number of scroll attempts (default 10).'),
+    .describe('Scroll direction. Default "down".'),
+  maxScrolls: z.number().optional().default(10).describe('Max scroll attempts. Default 10.'),
   scrollableSelector: z
     .string()
     .optional()
-    .describe(
-      'Optional selector for the scrollable container. If omitted, swipes from screen center.'
-    ),
+    .describe('Selector for scroll container. Omit to use center.'),
   platform: z.enum(['ios', 'android']).describe('Target platform.'),
-  deviceId: z
-    .string()
-    .optional()
-    .describe(
-      'Device identifier. iOS: simulator UDID. Android: device serial. Auto-resolved if only one device is connected.'
-    ),
-  iosOrientation: z
-    .number()
-    .optional()
-    .describe(
-      'iOS GraphicsOrientation override (1-4). 1=Portrait, 2=Portrait180, 3=LandscapeA, 4=LandscapeB. Skips auto-detection when set.'
-    ),
+  deviceId: z.string().optional().describe('Device ID. Auto if single.'),
+  iosOrientation: z.number().optional().describe('iOS orientation 1-4. Skips auto-detect.'),
 });
 
 function sleep(ms: number): Promise<void> {
@@ -66,7 +50,7 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
     'scroll_until_visible',
     {
       description:
-        'Scroll until an element matching the selector becomes visible. Combines querySelector check + swipe in a loop. Returns { pass: boolean, scrollCount: number, element?: object }. Useful for finding items in long FlatList/ScrollView.',
+        'Scroll until selector is visible. querySelector + swipe loop. Returns pass, scrollCount, element. For long lists.',
       inputSchema: schema,
     },
     async (args: unknown) => {
