@@ -72,11 +72,16 @@ jobs:
       - name: MCP 클라이언트 빌드
         run: bun run --filter @ohah/react-native-mcp-client build
 
+      - name: Python 3.12 설정 (fb-idb는 3.14+ 비호환)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: idb 설치
         run: |
           brew tap facebook/fb
           brew install idb-companion
-          pip3 install fb-idb --break-system-packages
+          pip3 install fb-idb
           idb list-targets
 
       - name: Bundler 캐시
