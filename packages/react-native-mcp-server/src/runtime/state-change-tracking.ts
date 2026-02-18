@@ -1,8 +1,10 @@
 import { collectStateChanges } from './state-hooks';
+import { collectRenderEntries } from './render-tracking';
+import { renderProfileActive, incrementRenderCommitCount } from './shared';
 
-// ─── onCommitFiberRoot 래핑 — 상태 변경 추적 ─────────────────────
+// ─── onCommitFiberRoot 래핑 — 상태 변경 + 렌더 프로파일링 ────────
 // DevTools hook의 onCommitFiberRoot를 래핑해 커밋마다 state 변경 수집.
-// MCP가 hook을 설치했든 DevTools가 이미 설치했든 동일하게 동작.
+// renderProfileActive가 true이면 렌더 프로파일링 데이터도 수집.
 (function () {
   var g: any =
     typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : null;
@@ -13,6 +15,12 @@ import { collectStateChanges } from './state-hooks';
     if (typeof orig === 'function') orig.call(hook, rendererID, root);
     try {
       if (root && root.current) collectStateChanges(root.current);
+    } catch (_e) {}
+    try {
+      if (renderProfileActive && root && root.current) {
+        incrementRenderCommitCount();
+        collectRenderEntries(root.current);
+      }
     } catch (_e) {}
   };
 })();

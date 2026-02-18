@@ -65,7 +65,34 @@
 		stateChanges = [];
 		stateChangeId = 0;
 	}
-	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER;
+	function setRenderProfileActive(active) {
+		renderProfileActive = active;
+	}
+	function setRenderProfileStartTime(t) {
+		renderProfileStartTime = t;
+	}
+	function setRenderComponentFilter(components) {
+		renderComponentFilter = components;
+	}
+	function setRenderIgnoreFilter(ignore) {
+		renderIgnoreFilter = ignore;
+	}
+	function incrementRenderCommitCount() {
+		return ++renderCommitCount;
+	}
+	function pushRenderEntry(entry) {
+		renderEntries.push(entry);
+		if (renderEntries.length > RENDER_BUFFER_SIZE) renderEntries.shift();
+	}
+	function resetRenderProfile() {
+		renderProfileActive = false;
+		renderProfileStartTime = 0;
+		renderCommitCount = 0;
+		renderEntries = [];
+		renderComponentFilter = null;
+		renderIgnoreFilter = null;
+	}
+	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER, renderProfileActive, renderProfileStartTime, renderCommitCount, renderEntries, renderComponentFilter, renderIgnoreFilter, RENDER_BUFFER_SIZE;
 	var init_shared = __esmMin(() => {
 		pressHandlers = {};
 		consoleLogs = [];
@@ -79,6 +106,13 @@
 		stateChanges = [];
 		stateChangeId = 0;
 		STATE_CHANGE_BUFFER = 300;
+		renderProfileActive = false;
+		renderProfileStartTime = 0;
+		renderCommitCount = 0;
+		renderEntries = [];
+		renderComponentFilter = null;
+		renderIgnoreFilter = null;
+		RENDER_BUFFER_SIZE = 5e3;
 	});
 
 //#endregion
@@ -299,9 +333,184 @@
 	});
 
 //#endregion
+//#region src/runtime/render-tracking.ts
+/** 접두사 목록에 해당하는 이름인지 (_접두사 변형 포함) */
+	function matchesPrefixList(name, prefixes) {
+		var target = name;
+		if (target.length > 1 && target.charAt(0) === "_") target = target.substring(1);
+		for (var i = 0; i < prefixes.length; i++) if (target.indexOf(prefixes[i]) === 0) return true;
+		return false;
+	}
+	/** 컴포넌트 필터링: whitelist > blacklist > default ignore 순으로 판별 */
+	function shouldSkipComponent(name) {
+		if (renderComponentFilter !== null) return renderComponentFilter.indexOf(name) === -1;
+		if (renderIgnoreFilter !== null && renderIgnoreFilter.indexOf(name) !== -1) return true;
+		return matchesPrefixList(name, DEFAULT_IGNORED_PREFIXES);
+	}
+	/** fiber.return을 올라가며 첫 FunctionComponent/ClassComponent 이름 */
+	function getParentComponentName(fiber) {
+		var p = fiber.return;
+		while (p) {
+			if (p.tag === 0 || p.tag === 1) return getFiberTypeName(p);
+			p = p.return;
+		}
+		return "Root";
+	}
+	/** fiber가 React.memo로 감싸져 있는지 (MemoComponent=14, SimpleMemoComponent=15) */
+	function isMemoWrapped(fiber) {
+		var parent = fiber.return;
+		return parent != null && (parent.tag === 14 || parent.tag === 15);
+	}
+	/** props에서 변경된 key들 추출 */
+	function diffProps(prevProps, nextProps) {
+		if (!prevProps || !nextProps) return void 0;
+		var changes = [];
+		var keys = Object.keys(nextProps);
+		for (var i = 0; i < keys.length; i++) {
+			var key = keys[i];
+			if (key === "children") continue;
+			if (prevProps[key] !== nextProps[key]) changes.push({
+				key,
+				prev: safeClone(prevProps[key], 3),
+				next: safeClone(nextProps[key], 3)
+			});
+		}
+		var prevKeys = Object.keys(prevProps);
+		for (var j = 0; j < prevKeys.length; j++) {
+			var pk = prevKeys[j];
+			if (pk === "children") continue;
+			if (!(pk in nextProps)) changes.push({
+				key: pk,
+				prev: safeClone(prevProps[pk], 3),
+				next: void 0
+			});
+		}
+		return changes.length > 0 ? changes : void 0;
+	}
+	/** state hooks에서 변경된 것들 추출 */
+	function diffStateHooks(prevFiber, nextFiber) {
+		var changes = [];
+		var prevHook = prevFiber.memoizedState;
+		var nextHook = nextFiber.memoizedState;
+		var idx = 0;
+		while (prevHook && nextHook && typeof prevHook === "object" && typeof nextHook === "object") {
+			if (nextHook.queue && !shallowEqual(prevHook.memoizedState, nextHook.memoizedState)) changes.push({
+				hookIndex: idx,
+				prev: safeClone(prevHook.memoizedState, 3),
+				next: safeClone(nextHook.memoizedState, 3)
+			});
+			prevHook = prevHook.next;
+			nextHook = nextHook.next;
+			idx++;
+		}
+		return changes.length > 0 ? changes : void 0;
+	}
+	/** context dependencies에서 변경된 것 추출 */
+	function diffContext(fiber) {
+		var alt = fiber.alternate;
+		if (!alt) return void 0;
+		var deps = fiber.dependencies;
+		if (!deps || !deps.firstContext) return void 0;
+		var changes = [];
+		var ctx = deps.firstContext;
+		var altDeps = alt.dependencies;
+		var altCtx = altDeps ? altDeps.firstContext : null;
+		while (ctx) {
+			var ctxName = "Context";
+			if (ctx.context) {
+				var c = ctx.context;
+				if (c.displayName) ctxName = c.displayName;
+				else if (c._context && c._context.displayName) ctxName = c._context.displayName;
+				else if (c.Provider && c.Provider._context && c.Provider._context.displayName) ctxName = c.Provider._context.displayName;
+			}
+			if (altCtx && ctx.memoizedValue !== altCtx.memoizedValue) changes.push({
+				name: ctxName,
+				prev: safeClone(altCtx.memoizedValue, 3),
+				next: safeClone(ctx.memoizedValue, 3)
+			});
+			ctx = ctx.next;
+			if (altCtx) altCtx = altCtx.next;
+		}
+		return changes.length > 0 ? changes : void 0;
+	}
+	/**
+	* fiber 트리를 순회하며 RenderEntry를 수집.
+	* onCommitFiberRoot에서 호출. commitId는 현재 renderCommitCount.
+	*/
+	function collectRenderEntries(fiber) {
+		if (!fiber || !renderProfileActive) return;
+		if (fiber.tag === 0 || fiber.tag === 1) {
+			var name = getFiberTypeName(fiber);
+			if (shouldSkipComponent(name)) {
+				collectRenderEntries(fiber.child);
+				collectRenderEntries(fiber.sibling);
+				return;
+			}
+			var alt = fiber.alternate;
+			if (alt === null) pushRenderEntry({
+				component: name,
+				type: "mount",
+				trigger: "parent",
+				timestamp: Date.now(),
+				commitId: renderCommitCount,
+				parent: getParentComponentName(fiber),
+				isMemoized: isMemoWrapped(fiber)
+			});
+			else {
+				var flags = fiber.flags;
+				if (flags === void 0) flags = fiber.effectTag;
+				if (typeof flags === "number" && (flags & 1) === 0) {} else {
+					var stateChanges = diffStateHooks(alt, fiber);
+					var propChanges = diffProps(alt.memoizedProps, fiber.memoizedProps);
+					var contextChanges = diffContext(fiber);
+					var trigger;
+					if (stateChanges) trigger = "state";
+					else if (propChanges) trigger = "props";
+					else if (contextChanges) trigger = "context";
+					else trigger = "parent";
+					var changes = {};
+					if (stateChanges) changes.state = stateChanges;
+					if (propChanges) changes.props = propChanges;
+					if (contextChanges) changes.context = contextChanges;
+					var hasChanges = stateChanges || propChanges || contextChanges;
+					var updateEntry = {
+						component: name,
+						type: "update",
+						trigger,
+						timestamp: Date.now(),
+						commitId: renderCommitCount,
+						parent: getParentComponentName(fiber),
+						isMemoized: isMemoWrapped(fiber)
+					};
+					if (hasChanges) updateEntry.changes = changes;
+					pushRenderEntry(updateEntry);
+				}
+			}
+		}
+		collectRenderEntries(fiber.child);
+		collectRenderEntries(fiber.sibling);
+	}
+	var DEFAULT_IGNORED_PREFIXES;
+	var init_render_tracking = __esmMin(() => {
+		init_fiber_helpers();
+		init_state_hooks();
+		init_shared();
+		DEFAULT_IGNORED_PREFIXES = [
+			"LogBox",
+			"Pressability",
+			"YellowBox",
+			"RCT",
+			"Debugging",
+			"AppContainer"
+		];
+	});
+
+//#endregion
 //#region src/runtime/state-change-tracking.ts
 	var init_state_change_tracking = __esmMin(() => {
 		init_state_hooks();
+		init_render_tracking();
+		init_shared();
 		(function() {
 			var g = typeof globalThis !== "undefined" ? globalThis : typeof global !== "undefined" ? global : null;
 			if (!g || !g.__REACT_DEVTOOLS_GLOBAL_HOOK__) return;
@@ -311,6 +520,12 @@
 				if (typeof orig === "function") orig.call(hook, rendererID, root);
 				try {
 					if (root && root.current) collectStateChanges(root.current);
+				} catch (_e) {}
+				try {
+					if (renderProfileActive && root && root.current) {
+						incrementRenderCommitCount();
+						collectRenderEntries(root.current);
+					}
 				} catch (_e) {}
 			};
 		})();
@@ -1451,6 +1666,96 @@
 	});
 
 //#endregion
+//#region src/runtime/mcp-render.ts
+/** 프로파일링 시작 */
+	function startRenderProfile(options) {
+		var opts = typeof options === "object" && options !== null ? options : {};
+		resetRenderProfile();
+		setRenderProfileActive(true);
+		setRenderProfileStartTime(Date.now());
+		if (Array.isArray(opts.components) && opts.components.length > 0) setRenderComponentFilter(opts.components);
+		if (Array.isArray(opts.ignore) && opts.ignore.length > 0) setRenderIgnoreFilter(opts.ignore);
+		return { started: true };
+	}
+	/** 수집된 데이터 집계 리포트 반환 */
+	function getRenderReport() {
+		var now = Date.now();
+		var durationStr = ((renderProfileStartTime > 0 ? now - renderProfileStartTime : 0) / 1e3).toFixed(1) + "s";
+		var commitIds = {};
+		for (var i = 0; i < renderEntries.length; i++) commitIds[renderEntries[i].commitId] = true;
+		var totalCommits = Object.keys(commitIds).length;
+		var componentMap = {};
+		for (var j = 0; j < renderEntries.length; j++) {
+			var entry = renderEntries[j];
+			var comp = componentMap[entry.component];
+			if (!comp) {
+				comp = {
+					name: entry.component,
+					renders: 0,
+					mounts: 0,
+					unnecessaryRenders: 0,
+					triggers: {},
+					isMemoized: entry.isMemoized,
+					recentRenders: []
+				};
+				componentMap[entry.component] = comp;
+			}
+			comp.renders++;
+			if (entry.type === "mount") comp.mounts++;
+			else {
+				comp.triggers[entry.trigger] = (comp.triggers[entry.trigger] || 0) + 1;
+				if (entry.trigger === "parent") comp.unnecessaryRenders++;
+			}
+			if (entry.isMemoized) comp.isMemoized = true;
+			comp.recentRenders.push(entry);
+			if (comp.recentRenders.length > 5) comp.recentRenders.shift();
+		}
+		var components = [];
+		for (var key in componentMap) if (componentMap.hasOwnProperty(key)) components.push(componentMap[key]);
+		components.sort(function(a, b) {
+			return b.renders - a.renders;
+		});
+		if (components.length > 20) components = components.slice(0, 20);
+		var hotComponents = components.map(function(c) {
+			return {
+				name: c.name,
+				renders: c.renders,
+				mounts: c.mounts,
+				unnecessaryRenders: c.unnecessaryRenders,
+				triggers: c.triggers,
+				isMemoized: c.isMemoized,
+				recentRenders: c.recentRenders.map(function(r) {
+					var recent = {
+						timestamp: r.timestamp,
+						trigger: r.trigger,
+						commitId: r.commitId,
+						parent: r.parent
+					};
+					if (r.changes) recent.changes = r.changes;
+					return recent;
+				})
+			};
+		});
+		return {
+			profiling: renderProfileActive,
+			startTime: renderProfileStartTime,
+			endTime: now,
+			duration: durationStr,
+			totalCommits,
+			totalRenders: renderEntries.length,
+			hotComponents
+		};
+	}
+	/** 프로파일링 중지 + 데이터 초기화 */
+	function clearRenderProfile() {
+		resetRenderProfile();
+		return { cleared: true };
+	}
+	var init_mcp_render = __esmMin(() => {
+		init_shared();
+	});
+
+//#endregion
 //#region src/runtime/mcp-query.ts
 /**
 	* querySelectorAll(selector) → 매칭되는 모든 fiber 정보 배열.
@@ -1775,6 +2080,7 @@
 		init_mcp_network();
 		init_network_mock();
 		init_mcp_state();
+		init_mcp_render();
 		init_mcp_query();
 		init_mcp_measure();
 		init_mcp_accessibility();
@@ -1821,7 +2127,10 @@
 			getScreenInfo,
 			measureView,
 			measureViewSync,
-			getAccessibilityAudit
+			getAccessibilityAudit,
+			startRenderProfile,
+			getRenderReport,
+			clearRenderProfile
 		};
 		if (typeof global !== "undefined") global.__REACT_NATIVE_MCP__ = MCP;
 		if (typeof globalThis !== "undefined") globalThis.__REACT_NATIVE_MCP__ = MCP;
@@ -2326,6 +2635,7 @@
 		init_devtools_hook();
 		init_fiber_helpers();
 		init_state_hooks();
+		init_render_tracking();
 		init_state_change_tracking();
 		init_query_selector();
 		init_fiber_serialization();

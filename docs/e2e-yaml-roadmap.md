@@ -27,10 +27,10 @@ Detox, Maestro와 비교하여 추가 예정인 스텝 및 기능 목록. 구현
 | 12   | ~~`runFlow`~~          | ★★☆    | 2h     | ✗                           | ✅ 구현 완료. 상대경로 해석 + Set 순환참조 방지           |
 | 13   | ~~`if / when`~~        | ★★★    | 2h     | ✗                           | ✅ 구현 완료. platform/visible 조건. assertVisible 활용   |
 | 14   | ~~`retry`~~            | ★★☆    | 1.5h   | ✗                           | ✅ 구현 완료. try-catch 루프. 중첩 스텝 실행              |
-| 15   | `clearState`           | ★★☆    | 1h     | ✓ 새 도구                   | iOS: xcrun simctl, Android: adb pm clear                  |
-| 16   | `setLocation`          | ★★☆    | 1.5h   | ✓ 새 도구                   | iOS: simctl location, Android: adb emu geo fix            |
-| 17   | `copyText`             | ★★☆    | 1.5h   | △                           | querySelector로 텍스트 읽어서 내부 변수 저장              |
-| 18   | `pasteText`            | ★★☆    | 1h     | △                           | 저장된 텍스트를 inputText로 입력                          |
+| 15   | ~~`clearState`~~       | ★★☆    | 1h     | ✓ 새 도구                   | ✅ 구현 완료. iOS: xcrun simctl, Android: adb pm clear    |
+| 16   | ~~`setLocation`~~      | ★★☆    | 1.5h   | ✓ 새 도구                   | ✅ 구현 완료. iOS: simctl location, Android: adb emu geo  |
+| 17   | ~~`copyText`~~         | ★★☆    | 1.5h   | △                           | ✅ 구현 완료. querySelector → 내부 변수 저장              |
+| 18   | ~~`pasteText`~~        | ★★☆    | 1h     | △                           | ✅ 구현 완료. 저장된 텍스트를 inputText로 입력            |
 | 19   | `pinch`                | ★★★    | 3h     | ✓ 새 도구                   | 멀티터치. idb 미지원 가능성, adb input 제한               |
 | 20   | `waitForIdle`          | ★★★    | 4h+    | ✗ (runtime.js 수정)         | 애니메이션/네트워크 자동 대기. 아래 별도 섹션 참고        |
 
@@ -317,9 +317,9 @@ else if ('retry' in step) {
 
 ---
 
-## Phase 3 — 새 서버 도구 필요
+## Phase 3 — 새 서버 도구 필요 ✅ 전체 구현 완료
 
-### 15. clearState ★★☆ ✅ 구현 완료
+### 15. ~~clearState~~ ★★☆ ✅ 구현 완료
 
 **구현 범위**: 서버 `tools/clear-state.ts` 신규 + tools/index.ts + app-client.ts + types/parser/runner
 
@@ -338,7 +338,7 @@ else if ('retry' in step) {
 
 ---
 
-### 16. setLocation ★★☆ ✅ 구현 완료
+### 16. ~~setLocation~~ ★★☆ ✅ 구현 완료
 
 **구현 범위**: 서버 `tools/set-location.ts` 신규 + tools/index.ts + app-client.ts + types/parser/runner
 
@@ -359,7 +359,7 @@ else if ('retry' in step) {
 
 ---
 
-### 17-18. copyText / pasteText ★★☆ ✅ 구현 완료
+### 17-18. ~~copyText / pasteText~~ ★★☆ ✅ 구현 완료
 
 **구현 범위**: app-client.ts에 내부 클립보드 변수 + types/parser/runner
 
@@ -514,10 +514,10 @@ Phase 2 (흐름 제어) ─────── 예상 8h
  ├─ #13 if/when          ★★★  2h    ✅ 완료
  └─ #14 retry            ★★☆  1.5h  ✅ 완료
 
-Phase 3 (새 서버 도구) ──── 예상 7h
- ├─ #15 clearState       ★★☆  1h
- ├─ #16 setLocation      ★★☆  1.5h
- ├─ #17-18 copy/paste    ★★☆  2.5h
+Phase 3 (새 서버 도구) ──── ✅ 완료 (pinch 제외)
+ ├─ #15 clearState       ★★☆  1h    ✅ 완료
+ ├─ #16 setLocation      ★★☆  1.5h  ✅ 완료
+ ├─ #17-18 copy/paste    ★★☆  2.5h  ✅ 완료
  └─ #19 pinch            ★★★  3h   (멀티터치 한계로 보류 가능)
 
 Phase 4 (자동 동기화) ───── 예상 5.5h
@@ -548,15 +548,15 @@ React Native 컴포넌트의 `displayName` (또는 함수 이름)은 웹의 DOM 
 
 ## 현재 지원 vs 추가 예정 요약
 
-| 카테고리          | 현재 지원                                                                                    | 추가 예정                 |
-| ----------------- | -------------------------------------------------------------------------------------------- | ------------------------- |
-| **탭/제스처**     | tap, swipe, scrollUntilVisible, **longPress**, **doubleTap**                                 | pinch                     |
-| **텍스트**        | typeText, inputText, **clearText**                                                           | copyText, pasteText       |
-| **대기**          | wait, waitForText, waitForVisible, waitForNotVisible                                         | waitForIdle (자동 동기화) |
-| **검증**          | assertText, assertVisible, assertNotVisible, assertCount, **assertHasText**, **assertValue** | —                         |
-| **비주얼 비교**   | **compareScreenshot** (전체 화면 + 컴포넌트 크롭, pixelmatch)                                | —                         |
-| **흐름 제어**     | **runFlow**, **repeat**, **if/when**, **${VAR}**, **retry**                                  | —                         |
-| **네트워크 모킹** | **mockNetwork**, **clearNetworkMocks**                                                       | —                         |
-| **디바이스**      | pressButton, **back**, **home**, **hideKeyboard**                                            | setLocation, clearState   |
-| **앱 제어**       | launch, terminate, openDeepLink, **addMedia**                                                | —                         |
-| **기타**          | screenshot, evaluate, webviewEval                                                            | —                         |
+| 카테고리          | 현재 지원                                                                            | 추가 예정                 |
+| ----------------- | ------------------------------------------------------------------------------------ | ------------------------- |
+| **탭/제스처**     | tap, swipe, scrollUntilVisible, longPress, doubleTap                                 | pinch                     |
+| **텍스트**        | typeText, inputText, clearText, **copyText**, **pasteText**                          | —                         |
+| **대기**          | wait, waitForText, waitForVisible, waitForNotVisible                                 | waitForIdle (자동 동기화) |
+| **검증**          | assertText, assertVisible, assertNotVisible, assertCount, assertHasText, assertValue | —                         |
+| **비주얼 비교**   | compareScreenshot (전체 화면 + 컴포넌트 크롭, pixelmatch)                            | —                         |
+| **흐름 제어**     | runFlow, repeat, if/when, ${VAR}, retry                                              | —                         |
+| **네트워크 모킹** | mockNetwork, clearNetworkMocks                                                       | —                         |
+| **디바이스**      | pressButton, back, home, hideKeyboard, **setLocation**, **clearState**               | —                         |
+| **앱 제어**       | launch, terminate, openDeepLink, addMedia                                            | —                         |
+| **기타**          | screenshot, evaluate, webviewEval                                                    | —                         |

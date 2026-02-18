@@ -79,6 +79,9 @@ const REQUIRED_MCP_METHODS = [
   'clearStateChanges',
   'enable',
   'triggerLongPress',
+  'startRenderProfile',
+  'getRenderReport',
+  'clearRenderProfile',
 ] as const;
 
 type MCPApi = {
