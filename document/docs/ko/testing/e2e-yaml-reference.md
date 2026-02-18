@@ -532,8 +532,10 @@ teardown:
 ### Options
 
 - `-p, --platform <ios|android>`: YAML의 `config.platform`을 덮어쓴다.
-- `-r, --reporter <type>`: 리포터 타입. `console` | `junit` | `json` (기본값: `console`)
+- `-r, --reporter <type>`: 리포터 타입. `console` | `junit` | `json` | `html` | `slack` | `github-pr` (기본값: `console`)
 - `-o, --output <dir>`: 결과 출력 디렉터리 (기본값: `./results`)
+- `--slack-webhook <url>`: Slack 웹훅 URL (`-r slack` 사용 시. 또는 `SLACK_WEBHOOK_URL`)
+- `--report-url <url>`: Slack 메시지용 리포트 링크 (예: CI 아티팩트 URL)
 - `-t, --timeout <ms>`: 글로벌 타임아웃(연결 대기 등) 덮어쓰기
 - `-d, --device <id>`: 디바이스 ID(idb/adb)
 - `--no-bail`: 스위트 실패 후에도 다음 스위트를 계속 실행한다 (기본값: 실패 시 중단)
@@ -547,3 +549,23 @@ teardown:
 - 결과 경로 지정: `npx react-native-mcp-test run e2e/ -o e2e-artifacts/yaml-results`
 - 실패해도 계속 실행: `npx react-native-mcp-test run e2e/ --no-bail`
 - CI(빌드 산출물) 실행: `node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch`
+- HTML 리포트: `npx react-native-mcp-test run e2e/ -r html -o results`
+- Slack: `npx react-native-mcp-test run e2e/ -r slack --slack-webhook $SLACK_WEBHOOK`
+- GitHub PR 코멘트: CI에서 `-r github-pr -o results`
+
+### 리포터 종류
+
+| 리포터        | 설명 |
+| ------------- | ----- |
+| `console`     | 터미널 요약·스텝 출력 (기본값). |
+| `junit`       | `output/junit.xml`. CI JUnit 리포트. |
+| `json`        | `output/results.json`. |
+| `html`        | `output/report.html`. 스크린샷 포함 시각적 리포트. |
+| `slack`       | Slack 웹훅으로 결과 전송. `--slack-webhook` 또는 `SLACK_WEBHOOK_URL` 필요. |
+| `github-pr`   | PR일 때 `gh pr comment`로 코멘트 작성. 아니면 `output/pr-comment.md` 저장. |
+
+### 리포터 확인 방법
+
+- **HTML**: 실행 후 `output/report.html`을 브라우저에서 열어 스위트·스텝·실패 스크린샷 확인.
+- **Slack**: `-r slack` 실행 후 해당 채널에 요약 메시지·실패 시 상세 내용 도착 여부 확인.
+- **GitHub PR**: PR에서 `-r github-pr` 실행 후 PR 코멘트 또는 `output/pr-comment.md` 본문 확인.

@@ -532,8 +532,10 @@ teardown:
 ### Options
 
 - `-p, --platform <ios|android>`: Override `config.platform` from YAML.
-- `-r, --reporter <type>`: Reporter type. `console` | `junit` | `json` (default: `console`)
+- `-r, --reporter <type>`: Reporter type. `console` | `junit` | `json` | `html` | `slack` | `github-pr` (default: `console`)
 - `-o, --output <dir>`: Output directory (default: `./results`)
+- `--slack-webhook <url>`: Slack webhook URL (for `-r slack`; or set `SLACK_WEBHOOK_URL`)
+- `--report-url <url>`: Report link for Slack message (e.g. CI artifact URL)
 - `-t, --timeout <ms>`: Global timeout override (connection wait, etc.)
 - `-d, --device <id>`: Device ID (idb/adb)
 - `--no-bail`: Continue running next suites after a failure (default: bail on first suite failure)
@@ -547,3 +549,23 @@ teardown:
 - Custom output dir: `npx react-native-mcp-test run e2e/ -o e2e-artifacts/yaml-results`
 - Keep going after failure: `npx react-native-mcp-test run e2e/ --no-bail`
 - CI (built artifact): `node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch`
+- HTML report: `npx react-native-mcp-test run e2e/ -r html -o results`
+- Slack: `npx react-native-mcp-test run e2e/ -r slack --slack-webhook $SLACK_WEBHOOK`
+- GitHub PR comment: In CI, `-r github-pr -o results`
+
+### Reporter types
+
+| Reporter      | Description |
+| ------------- | ----------- |
+| `console`     | Terminal summary and step output (default). |
+| `junit`       | `output/junit.xml`. CI JUnit report. |
+| `json`        | `output/results.json`. |
+| `html`        | `output/report.html`. Visual report with screenshots. |
+| `slack`       | Send results to Slack webhook. Requires `--slack-webhook` or `SLACK_WEBHOOK_URL`. |
+| `github-pr`   | Post comment on PR via `gh pr comment` when in a PR; otherwise writes `output/pr-comment.md`. |
+
+### How to verify reporters
+
+- **HTML**: After running, open `output/report.html` in a browser and check suite/step summary and failure screenshots.
+- **Slack**: Run with `-r slack` and confirm the channel receives the summary and failure details.
+- **GitHub PR**: Run with `-r github-pr` on a PR and confirm the PR comment or `output/pr-comment.md` body.

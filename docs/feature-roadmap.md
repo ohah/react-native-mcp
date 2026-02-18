@@ -595,16 +595,16 @@ Parallel (목표):
 
 ### 11. 리포팅 개선
 
-**현재**: console, json, junit 3가지 리포터.
+**현재**: console, json, junit, **html**, **slack**, **github-pr** 6가지 리포터. (HTML/Slack/GitHub PR 구현 완료 ✓)
 
 **추가할 리포터**:
 
-| 리포터                | 설명                                           | 난이도 |
-| --------------------- | ---------------------------------------------- | ------ |
-| **HTML**              | 스크린샷 포함 시각적 리포트. 브라우저에서 열기 | ★★☆    |
-| **Slack/Discord**     | 웹훅으로 결과 요약 전송. 실패 시 스크린샷 첨부 | ★★☆    |
-| **GitHub PR Comment** | `gh` CLI로 PR에 결과 코멘트 자동 작성          | ★☆☆    |
-| **Dashboard**         | 시간별 추이, flaky 테스트 감지, 통계           | ★★★    |
+| 리포터                | 설명                                           | 난이도 | 상태   |
+| --------------------- | ---------------------------------------------- | ------ | ------ |
+| **HTML**              | 스크린샷 포함 시각적 리포트. 브라우저에서 열기 | ★★☆    | ✓ 완료 |
+| **Slack/Discord**     | 웹훅으로 결과 요약 전송. 실패 시 스크린샷 경로 | ★★☆    | ✓ 완료 |
+| **GitHub PR Comment** | `gh` CLI로 PR에 결과 코멘트 자동 작성          | ★☆☆    | ✓ 완료 |
+| **Dashboard**         | 시간별 추이, flaky 테스트 감지, 통계           | ★★★    | 미구현 |
 
 **HTML 리포트 예시**:
 
@@ -630,6 +630,8 @@ npx react-native-mcp-test run e2e/ -p ios -r slack --slack-webhook $SLACK_WEBHOO
 ```
 
 **난이도**: HTML ★★☆, Slack ★★☆, GitHub PR ★☆☆, Dashboard ★★★
+
+**Dashboard 미포함 이유**: 시간별 추이·flaky 감지·통계는 실행 이력 저장, 시계열 데이터, flaky 판정 로직, 전용 UI/서비스가 필요해 범위가 크고(★★★) 별도 이슈/PR로 진행하는 것이 적절함.
 
 ---
 
@@ -726,7 +728,7 @@ npx react-native-mcp init --expo
 중기 (생태계) ───────────────────────────────────────────────
  ├─ 9.  CI/CD 통합                 ★★☆  — GitHub Actions 등 템플릿 + 검증
  ├─ 10. 병렬 테스트                ★★★  — 멀티 디바이스/스위트 동시 실행
- ├─ 11. 리포팅 개선                ★★☆~★★★ — HTML, Slack, GitHub PR
+ ├─ 11. 리포팅 개선                ★★☆~★★★ — HTML/Slack/GitHub PR ✓, Dashboard 별도
  ├─ 12. VS Code 확장               ★★★  — DX
  ├─ 13. 원커맨드 셋업              ★★☆  — 온보딩
  └─ 14. 문서 + 예제                ★★☆  — 채택률
@@ -811,11 +813,11 @@ Week 6: 비주얼 리그레션 + 원커맨드 셋업
          → 실용 기능 + 온보딩 개선
 
 Week 7: CI/CD 통합 (GitHub Actions 템플릿)
-         + 리포팅 개선 (HTML, GitHub PR Comment)
+         + 리포팅 개선 (HTML, Slack, GitHub PR Comment) ✓ 완료
          → CI 파이프라인 즉시 사용 가능
 
-Week 8: 병렬 테스트 + Slack 리포터
-         → 대규모 테스트 스위트 지원 + 팀 알림
+Week 8: 병렬 테스트
+         → 대규모 테스트 스위트 지원 (Slack 리포터 ✓ 완료)
 ```
 
 ---
