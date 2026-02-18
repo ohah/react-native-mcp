@@ -432,6 +432,28 @@ export class AppClient {
     return this.call('type_text', { uid: selectorOrUid, text, ...opts });
   }
 
+  // ─── Convenience: clearText by selector ─────────────────
+
+  async clearText(selector: string, opts?: DeviceOpts): Promise<unknown> {
+    return this.typeText(selector, '', opts);
+  }
+
+  // ─── Convenience: doubleTap by selector ────────────────
+
+  async doubleTap(selector: string, opts?: { interval?: number } & DeviceOpts): Promise<unknown> {
+    const el = await this.querySelector(selector, opts);
+    if (!el) throw new McpToolError('doubleTap', `No element found for selector: ${selector}`);
+    if (!el.measure)
+      throw new McpToolError('doubleTap', `Element "${selector}" has no measure data`);
+    const rawX = el.measure.pageX + el.measure.width / 2;
+    const rawY = el.measure.pageY + el.measure.height / 2;
+    const screen = await this.getScreenBounds();
+    const { cx: x, cy: y } = clampToViewport(rawX, rawY, el.measure, screen);
+    await this.tapXY(x, y, opts);
+    await sleep(opts?.interval ?? 50);
+    return this.tapXY(x, y, opts);
+  }
+
   // ─── Convenience: waitFor (Phase B 선구현) ──────────────
 
   async waitForText(text: string, opts?: { selector?: string } & WaitOpts): Promise<AssertResult> {
