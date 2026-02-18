@@ -10,5 +10,12 @@
   "bracketSpacing": true,
   "arrowParens": "always",
   "endOfLine": "lf",
-  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/*.lock", "reference/**"]
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.lock",
+    "reference/**",
+    "packages/react-native-mcp-server/runtime.js"
+  ]
 }
