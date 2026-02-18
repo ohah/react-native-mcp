@@ -9,6 +9,110 @@ React Native 앱 자동화 및 모니터링을 위한 MCP(Model Context Protocol
 - 📝 콘솔 로그 수집
 - 🤖 AI 기반 디버깅 및 자동화
 
+## 빠른 시작 (CLI init)
+
+프로젝트에 React Native MCP를 설정하는 가장 빠른 방법:
+
+```bash
+npx -y @ohah/react-native-mcp-server init
+```
+
+### 동작 과정
+
+init 명령어는 다음 단계를 순서대로 실행합니다:
+
+**Step 1 — 프로젝트 감지** (자동)
+
+`package.json`, lock 파일, 설정 파일을 읽어 다음을 감지:
+
+- React Native 버전 (`dependencies.react-native`)
+- Expo 여부 (`dependencies.expo`, `app.json`, `app.config.ts`)
+- Babel 설정 위치 (`babel.config.js`, `.babelrc` 등)
+- 패키지 매니저 (`bun.lock` → bun, `yarn.lock` → yarn, `pnpm-lock.yaml` → pnpm, 그 외 npm)
+
+```
+ Detecting project...
+  ✓ React Native 0.83.1
+  ✓ Expo detected (expo@~52.0.0)
+  ✓ Package manager: bun
+```
+
+**Step 2 — MCP 클라이언트 선택** (인터랙티브 프롬프트)
+
+사용 중인 MCP 클라이언트를 선택합니다. 설정 파일 생성 위치가 결정됩니다.
+
+```
+? Which MCP client do you use?
+  1. Cursor
+  2. Claude Code (CLI)
+  3. Claude Desktop
+  4. Windsurf
+  5. Antigravity
+> 1
+```
+
+| 클라이언트     | 설정 경로                                                                 |
+| -------------- | ------------------------------------------------------------------------- |
+| Cursor         | `{project}/.cursor/mcp.json`                                              |
+| Claude Code    | `claude mcp add` CLI 명령어 실행                                          |
+| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
+| Windsurf       | `~/.codeium/windsurf/mcp_config.json`                                     |
+| Antigravity    | `~/.gemini/antigravity/mcp_config.json`                                   |
+
+**Step 3 — 변경 적용** (자동)
+
+1. **babel.config.js** — `presets` 배열에 `@ohah/react-native-mcp-server/babel-preset` 추가. 이미 있으면 건너뜀.
+2. **MCP 설정** — 클라이언트 설정 파일에 서버 항목 생성/병합. 기존 설정은 유지.
+3. **.gitignore** — `/results/`가 없으면 추가.
+
+```
+ Applying changes...
+  ✓ babel.config.js — preset added
+  ✓ MCP config — created .cursor/mcp.json
+  ✓ .gitignore — updated
+```
+
+**Step 4 — 다음 단계 안내**
+
+설정 완료 후 해야 할 일을 안내합니다:
+
+```
+ Done! Next steps:
+  1. Start your app: npx expo start           # Expo
+     Start Metro: REACT_NATIVE_MCP_ENABLED=true npx react-native start  # bare RN
+  2. Open Cursor — MCP tools are ready to use
+```
+
+### 옵션
+
+```bash
+# 비인터랙티브 모드 — 프롬프트 생략, Cursor 기본
+npx -y @ohah/react-native-mcp-server init -y
+
+# 클라이언트 직접 지정 (프롬프트 없음)
+npx -y @ohah/react-native-mcp-server init --client cursor
+npx -y @ohah/react-native-mcp-server init --client claude-code
+npx -y @ohah/react-native-mcp-server init --client claude-desktop
+npx -y @ohah/react-native-mcp-server init --client windsurf
+npx -y @ohah/react-native-mcp-server init --client antigravity
+
+# CI — 둘 다 조합
+npx -y @ohah/react-native-mcp-server init --client cursor -y
+
+# 도움말
+npx -y @ohah/react-native-mcp-server init --help
+```
+
+### 멱등성
+
+`init`을 여러 번 실행해도 안전합니다. 각 단계에서 이미 적용된 변경은 건너뜁니다:
+
+```
+  ✓ babel.config.js — preset already configured
+  ✓ MCP config — already configured
+  ✓ .gitignore — already has results/
+```
+
 ## 설치
 
 **필요 환경:** Node.js 18+ 또는 Bun (예: [mise](https://mise.jdx.dev/) — 이 레포에서 `mise install`, 또는 [Node](https://nodejs.org/) / [Bun](https://bun.sh/) 전역 설치).
@@ -82,6 +186,12 @@ REACT_NATIVE_MCP_ENABLED=true npx react-native start
 `true` 또는 `1`이면 활성화. **미설정 시** Metro transformer와 Babel 프리셋이 MCP 변환을 하지 않아 번들에 MCP 코드가 포함되지 않는다. `__DEV__`(개발 모드)에서는 env 설정 시 자동 연결된다.
 
 > **Expo?** Expo 프로젝트 설정은 [Expo 검증 가이드](./docs/expo-guide.md) 참고 (babel-preset-expo, Expo Router `app/_layout.tsx`, Dev Client vs Expo Go).
+
+### Expo
+
+React Native MCP는 Expo 프로젝트를 지원합니다. CLI init 명령어(`npx -y @ohah/react-native-mcp-server init`)가 Expo를 자동 감지하여 설정합니다.
+
+Expo 상세 설정(babel-preset-expo, Expo Router, Dev Client vs Expo Go)은 [Expo 검증 가이드](./docs/expo-guide.md)를 참고하세요.
 
 ### Claude Desktop
 

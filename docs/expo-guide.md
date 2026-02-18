@@ -2,6 +2,8 @@
 
 React Native MCP는 Expo 프로젝트에서도 동작한다. runtime.js는 순수 JS이며, Expo도 동일한 Hermes 런타임을 사용하기 때문이다.
 
+> **빠른 설정**: `npx -y @ohah/react-native-mcp-server init` 명령어로 Expo 프로젝트를 자동 감지하여 Babel 프리셋 추가 + MCP 클라이언트 설정을 한번에 완료할 수 있다.
+
 ---
 
 ## 호환성 요약
