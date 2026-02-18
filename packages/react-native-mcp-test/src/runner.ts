@@ -191,6 +191,10 @@ async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Pr
         await executeStep(app, s as TestStep, ctx);
       }
     }
+  } else if ('mockNetwork' in step) {
+    await app.setNetworkMock(step.mockNetwork);
+  } else if ('clearNetworkMocks' in step) {
+    await app.clearNetworkMocks();
   } else if ('retry' in step) {
     let lastError: Error | undefined;
     for (let attempt = 0; attempt <= step.retry.times; attempt++) {

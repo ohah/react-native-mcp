@@ -81,6 +81,10 @@ const REQUIRED_MCP_METHODS = [
   'triggerLongPress',
   'longPressByLabel',
   'typeText',
+  'addNetworkMock',
+  'removeNetworkMock',
+  'listNetworkMocks',
+  'clearNetworkMocks',
 ] as const;
 
 type MCPApi = {
@@ -1210,5 +1214,286 @@ describe('제스처 한계 및 RNGH/Reanimated 호환', () => {
     setMockFiberRoot(root);
     expect(MCP.pressByLabel('탭')).toBe(true);
     expect(called).toBe(true);
+  });
+});
+
+// ─── Network Mock ──────────────────────────────────────────────────
+
+describe('addNetworkMock / listNetworkMocks / removeNetworkMock / clearNetworkMocks', () => {
+  beforeEach(() => {
+    MCP.clearNetworkMocks();
+  });
+
+  it('addNetworkMock — 룰 추가 후 id 포함 객체 반환', () => {
+    const rule = MCP.addNetworkMock({ urlPattern: '/api/users', status: 200 }) as {
+      id: number;
+      urlPattern: string;
+      enabled: boolean;
+      hitCount: number;
+    };
+    expect(rule.id).toBeGreaterThan(0);
+    expect(rule.urlPattern).toBe('/api/users');
+    expect(rule.enabled).toBe(true);
+    expect(rule.hitCount).toBe(0);
+  });
+
+  it('addNetworkMock — method 대소문자 정규화', () => {
+    const rule = MCP.addNetworkMock({ urlPattern: '/api', method: 'post' }) as {
+      method: string | null;
+    };
+    expect(rule.method).toBe('POST');
+  });
+
+  it('addNetworkMock — method 미지정 시 null (모든 메서드 매칭)', () => {
+    const rule = MCP.addNetworkMock({ urlPattern: '/api' }) as { method: string | null };
+    expect(rule.method).toBeNull();
+  });
+
+  it('addNetworkMock — 기본값 (status 200, body 빈 문자열, delay 0)', () => {
+    const rule = MCP.addNetworkMock({ urlPattern: '/default' }) as {
+      response: { status: number; body: string; delay: number };
+    };
+    expect(rule.response.status).toBe(200);
+    expect(rule.response.body).toBe('');
+    expect(rule.response.delay).toBe(0);
+  });
+
+  it('listNetworkMocks — 룰 목록 반환', () => {
+    MCP.addNetworkMock({ urlPattern: '/a' });
+    MCP.addNetworkMock({ urlPattern: '/b', method: 'POST' });
+    const list = MCP.listNetworkMocks() as Array<{
+      id: number;
+      urlPattern: string;
+      method: string | null;
+    }>;
+    expect(list).toHaveLength(2);
+    expect(list[0]!.urlPattern).toBe('/a');
+    expect(list[1]!.urlPattern).toBe('/b');
+    expect(list[1]!.method).toBe('POST');
+  });
+
+  it('removeNetworkMock — ID로 제거 성공 시 true', () => {
+    const rule = MCP.addNetworkMock({ urlPattern: '/remove-me' }) as { id: number };
+    const removed = MCP.removeNetworkMock(rule.id) as boolean;
+    expect(removed).toBe(true);
+    const list = MCP.listNetworkMocks() as unknown[];
+    expect(list).toHaveLength(0);
+  });
+
+  it('removeNetworkMock — 존재하지 않는 ID는 false', () => {
+    const removed = MCP.removeNetworkMock(99999) as boolean;
+    expect(removed).toBe(false);
+  });
+
+  it('clearNetworkMocks — 모든 룰 제거', () => {
+    MCP.addNetworkMock({ urlPattern: '/a' });
+    MCP.addNetworkMock({ urlPattern: '/b' });
+    MCP.clearNetworkMocks();
+    const list = MCP.listNetworkMocks() as unknown[];
+    expect(list).toHaveLength(0);
+  });
+
+  it('isRegex: true — 정규식 패턴 매칭', () => {
+    const rule = MCP.addNetworkMock({
+      urlPattern: '^https://api\\.example\\.com/users/\\d+$',
+      isRegex: true,
+      status: 200,
+    }) as { isRegex: boolean };
+    expect(rule.isRegex).toBe(true);
+  });
+});
+
+describe('Network Mock — XHR 인터셉트', () => {
+  function createXHR(): TestXHR {
+    const XHRClass = (globalThis as Record<string, unknown>).XMLHttpRequest as new () => TestXHR;
+    return new XHRClass();
+  }
+
+  beforeEach(() => {
+    MCP.clearNetworkMocks();
+    MCP.clearNetworkRequests();
+  });
+
+  it('mock 룰 매칭 시 실제 요청 없이 mock 응답 반환 + mocked: true', async () => {
+    MCP.addNetworkMock({
+      urlPattern: '/api/mock-test',
+      status: 201,
+      body: '{"mocked":true}',
+    });
+
+    const xhr = createXHR();
+    xhr.open('GET', 'https://example.com/api/mock-test');
+    xhr.send(null);
+
+    // mock은 setTimeout(fn, 0)으로 비동기 전달
+    await new Promise((r) => setTimeout(r, 50));
+
+    const requests = MCP.getNetworkRequests() as Array<{
+      url: string;
+      status: number;
+      state: string;
+      mocked?: boolean;
+      responseBody?: string;
+    }>;
+    const mocked = requests.find((r) => r.url.includes('/api/mock-test'));
+    expect(mocked).toBeDefined();
+    expect(mocked!.status).toBe(201);
+    expect(mocked!.state).toBe('done');
+    expect(mocked!.mocked).toBe(true);
+    expect(mocked!.responseBody).toBe('{"mocked":true}');
+  });
+
+  it('mock 룰 매칭 시 hitCount 증가', async () => {
+    MCP.addNetworkMock({ urlPattern: '/hit-count' });
+
+    const xhr = createXHR();
+    xhr.open('GET', 'https://example.com/hit-count');
+    xhr.send(null);
+    await new Promise((r) => setTimeout(r, 50));
+
+    const list = MCP.listNetworkMocks() as Array<{ hitCount: number }>;
+    expect(list[0]!.hitCount).toBe(1);
+  });
+
+  it('method 필터 — GET만 매칭, POST는 통과', async () => {
+    MCP.addNetworkMock({ urlPattern: '/method-filter', method: 'GET', status: 200 });
+
+    // GET → 매칭
+    const xhr1 = createXHR();
+    xhr1.open('GET', 'https://example.com/method-filter');
+    xhr1.send(null);
+    await new Promise((r) => setTimeout(r, 50));
+
+    // POST → 매칭 안 됨 (실제 XHR send 호출됨)
+    const xhr2 = createXHR();
+    xhr2.open('POST', 'https://example.com/method-filter');
+    xhr2.send(null);
+    // POST는 mock이 아니므로 load 이벤트를 직접 트리거
+    xhr2._fireEvent('load');
+
+    const requests = MCP.getNetworkRequests() as Array<{
+      method: string;
+      mocked?: boolean;
+    }>;
+    const getMocked = requests.find((r) => r.method === 'GET');
+    const postReal = requests.find((r) => r.method === 'POST');
+    expect(getMocked!.mocked).toBe(true);
+    expect(postReal!.mocked).toBeUndefined();
+  });
+
+  it('regex 패턴 매칭', async () => {
+    MCP.addNetworkMock({
+      urlPattern: '/users/\\d+',
+      isRegex: true,
+      status: 200,
+      body: '{"user":"mock"}',
+    });
+
+    const xhr = createXHR();
+    xhr.open('GET', 'https://api.example.com/users/42');
+    xhr.send(null);
+    await new Promise((r) => setTimeout(r, 50));
+
+    const requests = MCP.getNetworkRequests() as Array<{ mocked?: boolean }>;
+    expect(requests[0]!.mocked).toBe(true);
+  });
+
+  it('매칭 없으면 실제 XHR 호출됨', () => {
+    MCP.addNetworkMock({ urlPattern: '/only-this-url' });
+
+    const xhr = createXHR();
+    xhr.open('GET', 'https://example.com/different-url');
+    xhr.send(null);
+    xhr._fireEvent('load');
+
+    const requests = MCP.getNetworkRequests() as Array<{ mocked?: boolean }>;
+    expect(requests[0]!.mocked).toBeUndefined();
+  });
+});
+
+describe('Network Mock — fetch 인터셉트', () => {
+  beforeEach(() => {
+    MCP.clearNetworkMocks();
+    MCP.clearNetworkRequests();
+  });
+
+  it('mock 룰 매칭 시 fake Response 반환 + mocked: true', async () => {
+    MCP.addNetworkMock({
+      urlPattern: '/api/fetch-mock',
+      status: 200,
+      body: '{"fetched":"mock"}',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const fetchFn = (globalThis as Record<string, unknown>).fetch as (
+      url: string,
+      init?: Record<string, unknown>
+    ) => Promise<{ status: number; text(): Promise<string> }>;
+    if (typeof fetchFn !== 'function') return;
+
+    const response = await fetchFn('https://example.com/api/fetch-mock');
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toBe('{"fetched":"mock"}');
+
+    // entry가 버퍼에 추가될 때까지 대기
+    await new Promise((r) => setTimeout(r, 50));
+
+    const requests = MCP.getNetworkRequests() as Array<{
+      url: string;
+      mocked?: boolean;
+      status: number;
+    }>;
+    const mocked = requests.find((r) => r.url.includes('/api/fetch-mock'));
+    expect(mocked).toBeDefined();
+    expect(mocked!.mocked).toBe(true);
+    expect(mocked!.status).toBe(200);
+  });
+
+  it('mock 미매칭 시 실제 fetch 호출', async () => {
+    MCP.addNetworkMock({ urlPattern: '/only-mock-url' });
+
+    const fetchFn = (globalThis as Record<string, unknown>).fetch as (
+      url: string
+    ) => Promise<unknown>;
+    if (typeof fetchFn !== 'function') return;
+
+    try {
+      await fetchFn('https://example.com/real-url');
+    } catch (_e) {
+      // 실제 네트워크 에러는 무시
+    }
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    const requests = MCP.getNetworkRequests() as Array<{
+      url: string;
+      mocked?: boolean;
+    }>;
+    const entry = requests.find((r) => r.url.includes('/real-url'));
+    expect(entry).toBeDefined();
+    expect(entry!.mocked).toBeUndefined();
+  });
+
+  it('delay > 0 시 지연 후 응답', async () => {
+    MCP.addNetworkMock({
+      urlPattern: '/delayed',
+      status: 200,
+      body: 'delayed-response',
+      delay: 100,
+    });
+
+    const fetchFn = (globalThis as Record<string, unknown>).fetch as (
+      url: string
+    ) => Promise<{ text(): Promise<string> }>;
+    if (typeof fetchFn !== 'function') return;
+
+    const start = Date.now();
+    const response = await fetchFn('https://example.com/delayed');
+    const elapsed = Date.now() - start;
+
+    const body = await response.text();
+    expect(body).toBe('delayed-response');
+    expect(elapsed).toBeGreaterThanOrEqual(80); // 약간의 타이머 오차 허용
   });
 });

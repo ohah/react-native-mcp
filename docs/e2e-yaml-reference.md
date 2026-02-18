@@ -454,6 +454,52 @@ TextInput 등의 `value` prop이 기대값과 일치하는지 검증한다.
 
 ---
 
+### mockNetwork
+
+네트워크 응답 모킹 룰을 추가한다. 이후 발생하는 XHR/fetch 요청 중 URL 패턴이 매칭되면 실제 요청 없이 지정한 응답을 반환한다.
+
+| 필드       | 타입                    | 필수 | 설명                                                 |
+| ---------- | ----------------------- | ---- | ---------------------------------------------------- |
+| urlPattern | string                  | ✓    | URL 매칭 패턴 (substring 또는 정규식)                |
+| isRegex    | boolean                 |      | `true`면 urlPattern을 정규식으로 해석. 기본 `false`  |
+| method     | string                  |      | HTTP 메서드 필터 (GET, POST 등). 생략 시 모든 메서드 |
+| status     | number                  |      | 응답 HTTP 상태 코드. 기본 200                        |
+| statusText | string                  |      | 응답 상태 텍스트                                     |
+| headers    | Record\<string, string> |      | 응답 헤더                                            |
+| body       | string                  |      | 응답 본문 (JSON 문자열 등)                           |
+| delay      | number                  |      | 응답 지연 시간(ms). 기본 0                           |
+
+```yaml
+- mockNetwork:
+    urlPattern: 'jsonplaceholder.typicode.com/posts/1'
+    method: GET
+    status: 200
+    body: '{"id":1,"title":"Mocked Post"}'
+    headers:
+      Content-Type: application/json
+
+# 정규식 패턴
+- mockNetwork:
+    urlPattern: "^https://api\\.example\\.com/error"
+    isRegex: true
+    status: 500
+    body: '{"error": "Server Error"}'
+```
+
+---
+
+### clearNetworkMocks
+
+등록된 모든 네트워크 모킹 룰을 제거한다. 이후 요청은 실제 네트워크로 전송된다.
+
+파라미터 없음.
+
+```yaml
+- clearNetworkMocks:
+```
+
+---
+
 ### scrollUntilVisible
 
 스크롤하여 요소가 보일 때까지 반복한다.

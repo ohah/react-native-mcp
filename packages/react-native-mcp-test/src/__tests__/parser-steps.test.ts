@@ -377,6 +377,99 @@ describe('retry', () => {
   });
 });
 
+/* ================================================================== */
+/*  Network Mocking 스텝                                               */
+/* ================================================================== */
+
+describe('mockNetwork', () => {
+  it('전체 옵션 파싱', () => {
+    const suite = writeAndParse(
+      [
+        '  - mockNetwork:',
+        '      urlPattern: "/api/users"',
+        '      method: GET',
+        '      status: 200',
+        '      body: \'{"users": []}\'',
+        '      headers:',
+        '        Content-Type: application/json',
+        '      delay: 100',
+      ].join('\n')
+    );
+    expect(suite.steps[0]).toEqual({
+      mockNetwork: {
+        urlPattern: '/api/users',
+        method: 'GET',
+        status: 200,
+        body: '{"users": []}',
+        headers: { 'Content-Type': 'application/json' },
+        delay: 100,
+      },
+    });
+  });
+
+  it('urlPattern만 필수 — 나머지 생략 가능', () => {
+    const suite = writeAndParse('  - mockNetwork: { urlPattern: "/api/test" }');
+    expect(suite.steps[0]).toEqual({
+      mockNetwork: { urlPattern: '/api/test' },
+    });
+  });
+
+  it('isRegex 옵션', () => {
+    const suite = writeAndParse(
+      [
+        '  - mockNetwork:',
+        '      urlPattern: "^https://api\\\\.example\\\\.com/error"',
+        '      isRegex: true',
+        '      status: 500',
+        '      body: \'{"error": "Server Error"}\'',
+      ].join('\n')
+    );
+    const step = suite.steps[0] as any;
+    expect(step.mockNetwork.isRegex).toBe(true);
+    expect(step.mockNetwork.status).toBe(500);
+  });
+
+  it('urlPattern 누락 시 에러', () => {
+    expect(() => writeAndParse('  - mockNetwork: { status: 200 }')).toThrow();
+  });
+
+  it('statusText 옵션', () => {
+    const suite = writeAndParse(
+      "  - mockNetwork: { urlPattern: '/api', status: 404, statusText: 'Not Found' }"
+    );
+    const step = suite.steps[0] as any;
+    expect(step.mockNetwork.statusText).toBe('Not Found');
+  });
+});
+
+describe('clearNetworkMocks', () => {
+  it('YAML null (- clearNetworkMocks:) → { clearNetworkMocks: null }', () => {
+    const suite = writeAndParse('  - clearNetworkMocks:');
+    expect(suite.steps[0]).toEqual({ clearNetworkMocks: null });
+  });
+
+  it('YAML empty object (- clearNetworkMocks: {}) → { clearNetworkMocks: {} }', () => {
+    const suite = writeAndParse('  - clearNetworkMocks: {}');
+    expect(suite.steps[0]).toEqual({ clearNetworkMocks: {} });
+  });
+});
+
+describe('mockNetwork + clearNetworkMocks 혼합', () => {
+  it('mockNetwork → tap → clearNetworkMocks 순서 파싱', () => {
+    const suite = writeAndParse(
+      [
+        '  - mockNetwork: { urlPattern: "/api/data", status: 200 }',
+        "  - tap: { selector: '#btn' }",
+        '  - clearNetworkMocks:',
+      ].join('\n')
+    );
+    expect(suite.steps).toHaveLength(3);
+    expect('mockNetwork' in suite.steps[0]!).toBe(true);
+    expect('tap' in suite.steps[1]!).toBe(true);
+    expect('clearNetworkMocks' in suite.steps[2]!).toBe(true);
+  });
+});
+
 describe('Phase 2 스텝 혼합', () => {
   it('흐름 제어 + 기존 스텝이 함께 파싱됨', () => {
     const suite = writeAndParse(

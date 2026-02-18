@@ -347,32 +347,47 @@ MCP tool: get_state_changes
 
 ---
 
-### 5. 네트워크 모킹
+### 5. 네트워크 모킹 — 구현 완료 ✓
 
 **왜 중요**: runtime.js에 이미 XHR/fetch 인터셉트 코드가 있음. 응답 모킹까지 확장하면 다른 도구에 없는 기능.
 
-**구현 방식**: 인터셉트 단계에서 URL 패턴 매칭 → 모킹 응답 반환.
+**구현 방식**: XHR.send/fetch 호출 시 URL 패턴 매칭 → 실제 요청을 보내지 않고 가짜 응답 반환 (MSW/nock과 동일).
 
-```
-MCP tool: mock_network
-├─ 입력: { url: string | RegExp, method?: string, response: { status, body, headers } }
-├─ 동작: runtime.js의 XHR/fetch 인터셉터에 룰 추가
-└─ 해제: clear_network_mocks
-```
+**MCP 도구 4개**:
 
-**YAML 스텝 예시**:
+| 도구                  | 설명                                                                                      |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| `set_network_mock`    | 모킹 룰 추가. urlPattern(필수), isRegex, method, status, statusText, headers, body, delay |
+| `list_network_mocks`  | 현재 등록된 룰 목록 + hitCount 조회                                                       |
+| `remove_network_mock` | 특정 룰 제거 (id)                                                                         |
+| `clear_network_mocks` | 모든 룰 초기화                                                                            |
+
+**런타임 구현**:
+
+- `src/runtime/network-mock.ts` — 룰 저장/매칭/CRUD. `findMatchingMock(method, url)` → 첫 매칭 반환, hitCount++
+- `src/runtime/xhr-patch.ts` — `XHR.send()` 전에 mock 체크. 매칭 시 RN XMLHttpRequest 내부 메서드(`__didCreateRequest` → `__didReceiveResponse` → `__didReceiveData` → `__didCompleteResponse`)로 응답 주입. `_origSend` 호출하지 않음
+- `src/runtime/fetch-patch.ts` — `fetch()` 전에 mock 체크. 매칭 시 `new Response(body, {status, headers})` 반환. Response 없는 환경은 fallback 객체 사용
+
+**XHR mock 기술 노트** (RN 환경 특수성):
+
+Hermes에는 global `Event` 생성자가 없고, RN의 `dispatchEvent`는 Event 인스턴스만 허용한다. 따라서 `xhr.dispatchEvent(new Event('load'))` 또는 `xhr.dispatchEvent({type:'load'})` 모두 실패한다. 대신 RN XMLHttpRequest의 내부 메서드를 직접 호출하여 내부 이벤트 파이프라인을 타게 함으로써 `addEventListener('load', ...)` 콜백이 정상 트리거된다.
+
+> **버전 호환성**: `__did*` 내부 메서드는 RN 0.72~0.83에서 안정적으로 동작 확인됨. RN 0.84에서 `XHRInterceptor` API는 deprecated 되었으나, XMLHttpRequest 클래스 자체와 `__did*` 메서드는 변경/제거되지 않았다. 장기적으로 RN이 네트워크 스택을 재구성할 경우 대응이 필요할 수 있다.
+
+**YAML 스텝**:
 
 ```yaml
 - mockNetwork:
-    url: 'https://api.example.com/users'
-    response:
-      status: 200
-      body: [{ name: '홍길동', id: 1 }]
+    urlPattern: 'jsonplaceholder.typicode.com/posts/1'
+    method: GET
+    status: 200
+    body: '{"id":1,"title":"Mocked Post"}'
+    headers:
+      Content-Type: application/json
 
-- tap: { selector: '#load-users' }
-- waitForText: { text: '홍길동', timeout: 3000 }
-
-- clearNetworkMocks
+- tap: { selector: '#fetch-btn' }
+- waitForText: { text: 'Mocked Post', timeout: 5000 }
+- clearNetworkMocks:
 ```
 
 **경쟁 도구 비교**:
@@ -380,10 +395,10 @@ MCP tool: mock_network
 | 기능                 | react-native-mcp | Detox           | Maestro | Appium |
 | -------------------- | ---------------- | --------------- | ------- | ------ |
 | 네트워크 인터셉트    | ✓ (JS 레벨)      | URL blacklist만 | ✗       | ✗      |
-| 응답 모킹            | ✓ (예정)         | ✗               | ✗       | ✗      |
-| 요청 지연 시뮬레이션 | ✓ (예정)         | ✗               | ✗       | ✗      |
+| 응답 모킹            | ✓                | ✗               | ✗       | ✗      |
+| 요청 지연 시뮬레이션 | ✓ (delay)        | ✗               | ✗       | ✗      |
 
-**난이도**: ★★☆ — 인터셉트 인프라 이미 있음. 룰 매칭 + 응답 주입 로직만 추가.
+**난이도**: ★★☆ (완료) — 인터셉트 인프라 이미 있었음. 룰 매칭 + 응답 주입 로직 추가.
 
 ---
 
@@ -720,7 +735,7 @@ npx react-native-mcp init --expo
 단기 (고유 강점) ────────────────────────────────────────────
  ├─ 3. E2E YAML Phase 1            ★☆☆~★★☆ — 기본 스텝 9개 (별도 로드맵)
  ├─ 4. React 상태 인스펙션         ★★☆  — fiber만 가능
- ├─ 5. 네트워크 모킹               ★★☆  — 인터셉트 인프라 있음
+ ├─ ✓ 네트워크 모킹 (구현 완료)    ★★☆  — XHR/fetch 인터셉트 + 응답 주입
  ├─ 6. 접근성 자동 감사            ★★☆  — 규제 트렌드 + fiber 강점
  ├─ 7. E2E YAML Phase 2            ★★☆~★★★ — 흐름 제어 5개
  └─ 8. 비주얼 리그레션             ★★☆  — 스크린샷 이미 있음
@@ -772,7 +787,7 @@ npx react-native-mcp init --expo
 | E2E: `setLocation`         | 서버 도구 신규 + 전체            | simctl location / adb emu geo fix |
 | E2E: `copyText/pasteText`  | client + types + parser + runner | 내부 클립보드 변수                |
 | React 상태 인스펙션        | runtime.js + 서버 도구           | memoizedState 순회                |
-| 네트워크 모킹              | runtime.js + 서버 도구           | 기존 인터셉터에 룰 매칭 추가      |
+| ✓ 네트워크 모킹 (완료)     | runtime.js + 서버 도구           | 기존 인터셉터에 룰 매칭 추가      |
 | 접근성 자동 감사           | runtime.js + 서버 도구           | fiber 순회 + 규칙 체크            |
 | 비주얼 리그레션            | 서버 도구 + runner               | 이미지 크롭 + pixelmatch          |
 | 원커맨드 셋업              | 새 CLI 패키지                    | AST 파싱으로 import 삽입          |
@@ -826,15 +841,15 @@ Week 8: 병렬 테스트
 
 fiber 접근 + MCP 조합으로만 가능한 고유 기능:
 
-| 기능                          | Detox | Maestro | Appium | react-native-mcp        |
-| ----------------------------- | ----- | ------- | ------ | ----------------------- |
-| 컴포넌트 이름으로 셀렉팅      | ✗     | ✗       | ✗      | ✓ `CustomerCard`        |
-| React 상태/Hook 인스펙션      | ✗     | ✗       | ✗      | ✓ `memoizedState`       |
-| 리렌더 추적 + 성능 분석       | ✗     | ✗       | ✗      | ✓ `onCommitFiberRoot`   |
-| 접근성 자동 감사 (props 기반) | ✗     | ✗       | ✗      | ✓ fiber props 직접 검사 |
-| 네트워크 응답 모킹            | ✗     | ✗       | ✗      | ✓ JS 인터셉터 확장      |
-| 컴포넌트 단위 스크린샷        | ✗     | ✗       | ✗      | ✓ fiber measure         |
-| AI 자율 디버깅                | ✗     | ✗       | ✗      | ✓ MCP 프로토콜          |
-| WebView 내부 JS 실행          | ✗     | ✗       | △      | ✓ `webviewEval`         |
+| 기능                          | Detox | Maestro | Appium | react-native-mcp               |
+| ----------------------------- | ----- | ------- | ------ | ------------------------------ |
+| 컴포넌트 이름으로 셀렉팅      | ✗     | ✗       | ✗      | ✓ `CustomerCard`               |
+| React 상태/Hook 인스펙션      | ✗     | ✗       | ✗      | ✓ `memoizedState`              |
+| 리렌더 추적 + 성능 분석       | ✗     | ✗       | ✗      | ✓ `onCommitFiberRoot`          |
+| 접근성 자동 감사 (props 기반) | ✗     | ✗       | ✗      | ✓ fiber props 직접 검사        |
+| 네트워크 응답 모킹            | ✗     | ✗       | ✗      | ✓ JS 인터셉터 확장 (구현 완료) |
+| 컴포넌트 단위 스크린샷        | ✗     | ✗       | ✗      | ✓ fiber measure                |
+| AI 자율 디버깅                | ✗     | ✗       | ✗      | ✓ MCP 프로토콜                 |
+| WebView 내부 JS 실행          | ✗     | ✗       | △      | ✓ `webviewEval`                |
 
 이 기능들이 구현되면 "E2E 테스트 도구"가 아니라 **"React Native 개발 필수 도구"**로 포지셔닝할 수 있다.

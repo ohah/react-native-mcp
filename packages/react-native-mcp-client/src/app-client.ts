@@ -321,6 +321,33 @@ export class AppClient {
     return this.call('clear_network_requests', { ...opts });
   }
 
+  async setNetworkMock(
+    opts: {
+      urlPattern: string;
+      isRegex?: boolean;
+      method?: string;
+      status?: number;
+      statusText?: string;
+      headers?: Record<string, string>;
+      body?: string;
+      delay?: number;
+    } & DeviceOpts
+  ): Promise<unknown> {
+    return this.call('set_network_mock', { ...opts });
+  }
+
+  async listNetworkMocks(opts?: DeviceOpts): Promise<unknown> {
+    return this.call('list_network_mocks', { ...opts });
+  }
+
+  async clearNetworkMocks(opts?: DeviceOpts): Promise<unknown> {
+    return this.call('clear_network_mocks', { ...opts });
+  }
+
+  async removeNetworkMock(id: number, opts?: DeviceOpts): Promise<unknown> {
+    return this.call('remove_network_mock', { id, ...opts });
+  }
+
   // ─── Device ─────────────────────────────────────────────
 
   async listDevices(): Promise<unknown> {

@@ -34,6 +34,25 @@ export function resetNetworkRequests() {
   networkRequestId = 0;
 }
 
+// ─── Network mock rules (network-mock ↔ xhr-patch ↔ fetch-patch) ─
+export interface NetworkMockRule {
+  id: number;
+  urlPattern: string;
+  isRegex: boolean;
+  method: string | null;
+  response: {
+    status: number;
+    statusText: string | null;
+    headers: Record<string, string>;
+    body: string;
+    delay: number;
+  };
+  enabled: boolean;
+  hitCount: number;
+}
+export var networkMockRules: NetworkMockRule[] = [];
+export var networkMockId = 0;
+
 // ─── State change buffer (mcp-state ↔ state-hooks) ─────────────
 export var stateChanges: StateChangeEntry[] = [];
 export var stateChangeId = 0;

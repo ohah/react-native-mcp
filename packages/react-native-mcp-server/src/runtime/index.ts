@@ -40,6 +40,7 @@ import './mcp-object';
 // Phase 5: monkey-patch
 import './console-hook';
 import './network-helpers';
+import './network-mock';
 import './xhr-patch';
 import './fetch-patch';
 

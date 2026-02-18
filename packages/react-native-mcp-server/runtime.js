@@ -65,7 +65,7 @@
 		stateChanges = [];
 		stateChangeId = 0;
 	}
-	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, stateChanges, stateChangeId, STATE_CHANGE_BUFFER;
+	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER;
 	var init_shared = __esmMin(() => {
 		pressHandlers = {};
 		consoleLogs = [];
@@ -75,6 +75,7 @@
 		networkRequestId = 0;
 		NETWORK_BUFFER_SIZE = 200;
 		NETWORK_BODY_LIMIT = 1e4;
+		networkMockRules = [];
 		stateChanges = [];
 		stateChangeId = 0;
 		STATE_CHANGE_BUFFER = 300;
@@ -1723,6 +1724,74 @@
 	});
 
 //#endregion
+//#region src/runtime/network-mock.ts
+	function matchesMockRule(rule, method, url) {
+		if (!rule.enabled) return false;
+		if (rule.method && rule.method !== method) return false;
+		if (rule.isRegex) try {
+			return new RegExp(rule.urlPattern).test(url);
+		} catch (_e) {
+			return false;
+		}
+		return url.indexOf(rule.urlPattern) !== -1;
+	}
+	function findMatchingMock(method, url) {
+		for (var i = 0; i < networkMockRules.length; i++) if (matchesMockRule(networkMockRules[i], method, url)) {
+			networkMockRules[i].hitCount++;
+			return networkMockRules[i];
+		}
+		return null;
+	}
+	function addNetworkMock(opts) {
+		var rule = {
+			id: ++_nextMockId,
+			urlPattern: opts.urlPattern,
+			isRegex: !!opts.isRegex,
+			method: opts.method ? opts.method.toUpperCase() : null,
+			response: {
+				status: opts.status != null ? opts.status : 200,
+				statusText: opts.statusText || null,
+				headers: opts.headers || {},
+				body: opts.body != null ? String(opts.body) : "",
+				delay: opts.delay != null ? opts.delay : 0
+			},
+			enabled: true,
+			hitCount: 0
+		};
+		networkMockRules.push(rule);
+		return rule;
+	}
+	function removeNetworkMock(id) {
+		for (var i = 0; i < networkMockRules.length; i++) if (networkMockRules[i].id === id) {
+			networkMockRules.splice(i, 1);
+			return true;
+		}
+		return false;
+	}
+	function listNetworkMocks() {
+		return networkMockRules.map(function(r) {
+			return {
+				id: r.id,
+				urlPattern: r.urlPattern,
+				isRegex: r.isRegex,
+				method: r.method,
+				status: r.response.status,
+				enabled: r.enabled,
+				hitCount: r.hitCount
+			};
+		});
+	}
+	function clearNetworkMocks() {
+		networkMockRules.length = 0;
+		return true;
+	}
+	var _nextMockId;
+	var init_network_mock = __esmMin(() => {
+		init_shared();
+		_nextMockId = 0;
+	});
+
+//#endregion
 //#region src/runtime/mcp-object.ts
 	var MCP;
 	var init_mcp_object = __esmMin(() => {
@@ -1733,6 +1802,7 @@
 		init_mcp_scroll();
 		init_mcp_console();
 		init_mcp_network();
+		init_network_mock();
 		init_mcp_state();
 		init_mcp_query();
 		init_mcp_measure();
@@ -1766,6 +1836,10 @@
 			clearConsoleLogs,
 			getNetworkRequests,
 			clearNetworkRequests,
+			addNetworkMock,
+			removeNetworkMock,
+			listNetworkMocks,
+			clearNetworkMocks,
 			inspectState,
 			getStateChanges,
 			clearStateChanges,
@@ -1819,6 +1893,7 @@
 //#region src/runtime/xhr-patch.ts
 	var init_xhr_patch = __esmMin(() => {
 		init_network_helpers();
+		init_network_mock();
 		(function() {
 			if (typeof XMLHttpRequest === "undefined") return;
 			var XHR = XMLHttpRequest.prototype;
@@ -1851,6 +1926,30 @@
 				var entry = this.__mcpNetworkEntry;
 				if (entry) {
 					entry.requestBody = truncateBody(body);
+					var mockRule = findMatchingMock(entry.method, entry.url);
+					if (mockRule) {
+						var xhr = this;
+						var mockResp = mockRule.response;
+						var deliverMock = function() {
+							entry.status = mockResp.status;
+							entry.statusText = mockResp.statusText || null;
+							entry.responseHeaders = JSON.stringify(mockResp.headers);
+							entry.responseBody = truncateBody(mockResp.body);
+							entry.duration = Date.now() - entry.startTime;
+							entry.state = "done";
+							entry.mocked = true;
+							pushNetworkEntry(entry);
+							var fakeId = -1 - Date.now();
+							try {
+								xhr.__didCreateRequest(fakeId);
+								xhr.__didReceiveResponse(fakeId, mockResp.status, mockResp.headers || {}, entry.url);
+								if (mockResp.body) xhr.__didReceiveData(fakeId, mockResp.body);
+								xhr.__didCompleteResponse(fakeId, "", false);
+							} catch (_e) {}
+						};
+						setTimeout(deliverMock, mockResp.delay > 0 ? mockResp.delay : 0);
+						return;
+					}
 					var xhr = this;
 					xhr.addEventListener("load", function() {
 						entry.status = xhr.status;
@@ -1892,6 +1991,7 @@
 	var init_fetch_patch = __esmMin(() => {
 		init_shared();
 		init_network_helpers();
+		init_network_mock();
 		(function() {
 			var g = typeof globalThis !== "undefined" ? globalThis : typeof global !== "undefined" ? global : null;
 			if (!g || typeof g.fetch !== "function") return;
@@ -1957,6 +2057,67 @@
 					error: null,
 					state: "pending"
 				};
+				var mockRule = findMatchingMock(method, url);
+				if (mockRule) {
+					var mockResp = mockRule.response;
+					var deliverMock = function() {
+						entry.status = mockResp.status;
+						entry.statusText = mockResp.statusText || null;
+						entry.responseHeaders = JSON.stringify(mockResp.headers);
+						entry.responseBody = truncateBody(mockResp.body);
+						entry.duration = Date.now() - entry.startTime;
+						entry.state = "done";
+						entry.mocked = true;
+						pushNetworkEntry(entry);
+						var fakeResponse;
+						try {
+							fakeResponse = new Response(mockResp.body, {
+								status: mockResp.status,
+								statusText: mockResp.statusText || "",
+								headers: mockResp.headers
+							});
+						} catch (_e) {
+							var _body = mockResp.body;
+							fakeResponse = {
+								ok: mockResp.status >= 200 && mockResp.status < 300,
+								status: mockResp.status,
+								statusText: mockResp.statusText || "",
+								headers: {
+									get: function(k) {
+										return mockResp.headers[k] || null;
+									},
+									forEach: function(cb) {
+										for (var hk in mockResp.headers) cb(mockResp.headers[hk], hk);
+									}
+								},
+								text: function() {
+									return Promise.resolve(_body);
+								},
+								json: function() {
+									return Promise.resolve(JSON.parse(_body));
+								},
+								clone: function() {
+									return fakeResponse;
+								},
+								url,
+								type: "basic",
+								redirected: false,
+								bodyUsed: false
+							};
+						}
+						return fakeResponse;
+					};
+					if (mockResp.delay > 0) return new Promise(function(resolve) {
+						setTimeout(function() {
+							resolve(deliverMock());
+						}, mockResp.delay);
+					});
+					return new Promise(function(resolve) {
+						setTimeout(function() {
+							resolve(deliverMock());
+						}, 0);
+					});
+				}
 				return _origFetch.apply(this, arguments).then(function(response) {
 					entry.status = response.status;
 					entry.statusText = response.statusText || null;

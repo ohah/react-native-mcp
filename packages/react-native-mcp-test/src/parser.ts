@@ -110,6 +110,20 @@ const stepSchema: z.ZodType<unknown> = z.lazy(() =>
         steps: z.array(stepSchema).min(1),
       }),
     }),
+    // Network mocking
+    z.object({
+      mockNetwork: z.object({
+        urlPattern: z.string(),
+        isRegex: z.boolean().optional(),
+        method: z.string().optional(),
+        status: z.number().optional(),
+        statusText: z.string().optional(),
+        headers: z.record(z.string()).optional(),
+        body: z.string().optional(),
+        delay: z.number().optional(),
+      }),
+    }),
+    z.object({ clearNetworkMocks: z.null().or(z.object({})).default(null) }).strict(),
   ])
 );
 
