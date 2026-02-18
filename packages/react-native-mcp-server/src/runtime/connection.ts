@@ -1,0 +1,230 @@
+import { MCP } from './mcp-object';
+
+// ─── WebSocket 연결 (__DEV__ 자동 · 릴리즈는 MCP.enable() 호출) ─
+
+var _isDevMode =
+  (typeof globalThis !== 'undefined' &&
+    typeof (globalThis as any).__DEV__ !== 'undefined' &&
+    (globalThis as any).__DEV__) ||
+  (typeof process !== 'undefined' &&
+    process.env &&
+    (process.env as any).REACT_NATIVE_MCP_ENABLED === 'true');
+
+if (_isDevMode && typeof console !== 'undefined' && console.warn) {
+  console.warn('[MCP] runtime loaded, __REACT_NATIVE_MCP__ available');
+}
+
+var wsUrl = 'ws://localhost:12300';
+var ws: WebSocket | null = null;
+var _reconnectTimer: any = null;
+var reconnectDelay = 1000;
+var _mcpEnabled = _isDevMode;
+var _heartbeatTimer: any = null;
+var _pongTimer: any = null;
+var HEARTBEAT_INTERVAL_MS = 30000;
+var PONG_TIMEOUT_MS = 10000;
+
+function _shouldConnect(): boolean {
+  if (_mcpEnabled) return true;
+  if (typeof global !== 'undefined' && (global as any).__REACT_NATIVE_MCP_ENABLED__) return true;
+  if (typeof globalThis !== 'undefined' && (globalThis as any).__REACT_NATIVE_MCP_ENABLED__)
+    return true;
+  return false;
+}
+
+function _stopHeartbeat(): void {
+  if (_heartbeatTimer != null) {
+    clearInterval(_heartbeatTimer);
+    _heartbeatTimer = null;
+  }
+  if (_pongTimer != null) {
+    clearTimeout(_pongTimer);
+    _pongTimer = null;
+  }
+}
+
+function _startHeartbeat(): void {
+  _stopHeartbeat();
+  _heartbeatTimer = setInterval(function () {
+    if (!ws || ws.readyState !== 1) {
+      _stopHeartbeat();
+      return;
+    }
+    try {
+      ws.send(JSON.stringify({ type: 'ping' }));
+    } catch (_e) {
+      return;
+    }
+    _pongTimer = setTimeout(function () {
+      // pong not received — close connection (onclose will trigger reconnect)
+      if (ws)
+        try {
+          ws.close();
+        } catch (_e) {}
+    }, PONG_TIMEOUT_MS);
+  }, HEARTBEAT_INTERVAL_MS);
+}
+
+function connect(): void {
+  if (!_shouldConnect()) return;
+  if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+  if (ws)
+    try {
+      ws.close();
+    } catch (_e) {}
+  ws = new WebSocket(wsUrl);
+  ws.onopen = function () {
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[MCP] Connected to server', wsUrl);
+    }
+    reconnectDelay = 1000;
+    if (_reconnectTimer != null) clearTimeout(_reconnectTimer);
+    _reconnectTimer = null;
+    // 메타데이터 수집 실패가 init 전송을 막지 않도록 분리
+    var platform: string | null = null;
+    var deviceName: string | null = null;
+    var origin: string | null = null;
+    var pixelRatio: number | null = null;
+    try {
+      var rn = require('react-native');
+      platform = rn.Platform && rn.Platform.OS;
+      deviceName = (rn.Platform && rn.Platform.constants && rn.Platform.constants.Model) || null;
+      if (rn.PixelRatio) pixelRatio = rn.PixelRatio.get();
+    } catch (_e) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[MCP] Failed to read platform info:', _e && (_e as any).message);
+      }
+    }
+    try {
+      var _rn = require('react-native');
+      var scriptURL =
+        _rn.NativeModules && _rn.NativeModules.SourceCode && _rn.NativeModules.SourceCode.scriptURL;
+      if (scriptURL && typeof scriptURL === 'string') {
+        // Hermes(RN 0.74 이하)에서 URL.origin 미구현 → protocol+host 수동 파싱
+        try {
+          origin = new URL(scriptURL).origin;
+        } catch (_ue) {
+          var match = scriptURL.match(/^(https?:\/\/[^/?#]+)/);
+          if (match) origin = match[1];
+        }
+      }
+    } catch (_e2) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[MCP] Failed to read metro URL:', _e2 && (_e2 as any).message);
+      }
+    }
+    try {
+      ws!.send(
+        JSON.stringify({
+          type: 'init',
+          platform: platform,
+          deviceId: platform ? platform + '-1' : undefined,
+          deviceName: deviceName,
+          metroBaseUrl: origin,
+          pixelRatio: pixelRatio,
+        })
+      );
+    } catch (_e3) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[MCP] Failed to send init:', _e3 && (_e3 as any).message);
+      }
+    }
+    _startHeartbeat();
+  };
+  ws.onmessage = function (ev) {
+    try {
+      var msg = JSON.parse(ev.data as string);
+      if (msg.type === 'pong') {
+        if (_pongTimer != null) {
+          clearTimeout(_pongTimer);
+          _pongTimer = null;
+        }
+        return;
+      }
+      if (msg.method === 'eval' && msg.id != null) {
+        var result: any;
+        var errMsg: string | null = null;
+        try {
+          // oxlint-disable-next-line no-eval -- MCP evaluate_script 도구용 의도적 사용
+          result = eval(msg.params && msg.params.code != null ? msg.params.code : 'undefined');
+        } catch (e: any) {
+          errMsg = e && e.message != null ? e.message : String(e);
+        }
+        function sendEvalResponse(res: any, err: string | null) {
+          if (ws && ws.readyState === 1) {
+            ws.send(
+              JSON.stringify(err != null ? { id: msg.id, error: err } : { id: msg.id, result: res })
+            );
+          }
+        }
+        if (errMsg != null) {
+          sendEvalResponse(null, errMsg);
+        } else if (result != null && typeof result.then === 'function') {
+          result.then(
+            function (r: any) {
+              sendEvalResponse(r, null);
+            },
+            function (e: any) {
+              sendEvalResponse(null, e && e.message != null ? e.message : String(e));
+            }
+          );
+        } else {
+          sendEvalResponse(result, null);
+        }
+      }
+    } catch {}
+  };
+  ws.onclose = function () {
+    _stopHeartbeat();
+    ws = null;
+    _reconnectTimer = setTimeout(function () {
+      connect();
+      if (reconnectDelay < 30000) reconnectDelay = Math.min(reconnectDelay * 1.5, 30000);
+    }, reconnectDelay);
+  };
+  ws.onerror = function () {};
+}
+
+/**
+ * 릴리즈 빌드에서 MCP WebSocket 연결을 활성화한다.
+ * 앱 진입점에서 __REACT_NATIVE_MCP__.enable() 호출.
+ */
+MCP.enable = function () {
+  _mcpEnabled = true;
+  connect();
+};
+
+// DEV: 번들 로드 직후 자동 연결
+if (_isDevMode) connect();
+
+// runApplication 시점에 미연결이면 한 번 더 시도
+var _AppRegistry = require('react-native').AppRegistry;
+var _originalRun = _AppRegistry.runApplication;
+_AppRegistry.runApplication = function () {
+  if (_shouldConnect() && (!ws || ws.readyState !== 1)) connect();
+  return _originalRun.apply(this, arguments);
+};
+
+// ─── AppState 연동: 백그라운드 시 heartbeat 중단, 포그라운드 복귀 시 재개 ─
+(function () {
+  try {
+    var rn = require('react-native');
+    if (rn && rn.AppState && typeof rn.AppState.addEventListener === 'function') {
+      rn.AppState.addEventListener('change', function (nextState: string) {
+        if (nextState === 'active') {
+          if (ws && ws.readyState === 1) _startHeartbeat();
+        } else {
+          _stopHeartbeat();
+        }
+      });
+    }
+  } catch (_e) {}
+})();
+
+// 주기적 재시도: 앱이 먼저 떠 있고 나중에 MCP를 켜도 자동 연결 (순서 무관)
+var PERIODIC_INTERVAL_MS = 5000;
+setInterval(function () {
+  if (!_shouldConnect()) return;
+  if (ws && ws.readyState === 1) return;
+  connect();
+}, PERIODIC_INTERVAL_MS);
