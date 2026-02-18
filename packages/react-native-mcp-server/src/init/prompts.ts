@@ -42,12 +42,3 @@ export async function select<T>(
     console.log(`  Please enter a number between 1 and ${items.length}`);
   }
 }
-
-export async function confirm(question: string, defaultYes = true): Promise<boolean> {
-  const r = getRL();
-  const hint = defaultYes ? '[Y/n]' : '[y/N]';
-  const answer = await r.question(`${question} ${hint} `);
-  const trimmed = answer.trim().toLowerCase();
-  if (trimmed === '') return defaultYes;
-  return trimmed === 'y' || trimmed === 'yes';
-}
