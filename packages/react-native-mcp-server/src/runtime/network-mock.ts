@@ -1,7 +1,6 @@
-import { networkMockRules, networkMockId as _mockId } from './shared';
+import { networkMockRules } from './shared';
 import type { NetworkMockRule } from './shared';
 
-// networkMockId는 primitive이므로 모듈 로컬 카운터로 관리
 var _nextMockId = 0;
 
 export function matchesMockRule(rule: NetworkMockRule, method: string, url: string): boolean {

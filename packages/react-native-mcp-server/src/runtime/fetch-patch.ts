@@ -125,7 +125,11 @@ import { findMatchingMock } from './network-mock';
               return Promise.resolve(_body);
             },
             json: function () {
-              return Promise.resolve(JSON.parse(_body));
+              try {
+                return Promise.resolve(JSON.parse(_body));
+              } catch (e) {
+                return Promise.reject(new SyntaxError('Invalid JSON: ' + (e as Error).message));
+              }
             },
             clone: function () {
               return fakeResponse;

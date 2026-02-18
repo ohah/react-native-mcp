@@ -51,7 +51,6 @@ export interface NetworkMockRule {
   hitCount: number;
 }
 export var networkMockRules: NetworkMockRule[] = [];
-export var networkMockId = 0;
 
 // ─── State change buffer (mcp-state ↔ state-hooks) ─────────────
 export var stateChanges: StateChangeEntry[] = [];
