@@ -28,6 +28,8 @@ AppRegistry.registerComponent('App', () => App);`;
     expect(result?.code).toContain('__REACT_NATIVE_MCP__.registerComponent');
     expect(result?.code).toContain('@ohah/react-native-mcp-server/runtime');
     expect(result?.code).not.toContain('AppRegistry.registerComponent');
+    // Release 빌드에서도 런타임 연결되도록 global 플래그 주입 확인
+    expect(result?.code).toContain('global.__REACT_NATIVE_MCP_ENABLED__ = true');
   });
 
   it('플러그인으로 실행 시 node_modules 경로면 변환하지 않는다', () => {
