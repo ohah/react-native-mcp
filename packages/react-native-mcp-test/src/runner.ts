@@ -362,6 +362,7 @@ export async function runAll(
     duration: Date.now() - start,
   };
 
-  reporter.onRunEnd(result);
+  const end = reporter.onRunEnd(result);
+  if (end instanceof Promise) await end;
   return result;
 }

@@ -14,6 +14,8 @@ const { values, positionals } = parseArgs({
     output: { type: 'string', short: 'o', default: './results' },
     timeout: { type: 'string', short: 't' },
     device: { type: 'string', short: 'd' },
+    'slack-webhook': { type: 'string' },
+    'report-url': { type: 'string' },
     'no-bail': { type: 'boolean' },
     'no-auto-launch': { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
@@ -28,10 +30,12 @@ Commands:
 
 Options:
   -p, --platform <ios|android>   Platform override
-  -r, --reporter <type>          Reporter: console, junit, json (default: console)
+  -r, --reporter <type>          Reporter: console, junit, json, html, slack, github-pr (default: console)
   -o, --output <dir>             Output directory (default: ./results)
   -t, --timeout <ms>             Global timeout override
   -d, --device <id>              Device ID
+  --slack-webhook <url>          Slack webhook URL (for -r slack; or set SLACK_WEBHOOK_URL)
+  --report-url <url>             Report link for Slack message (e.g. CI artifact URL)
   --no-bail                      Continue running after suite failure
   --no-auto-launch               Do not launch app in create(); use setup launch step (e.g. CI install-only)
   -h, --help                     Show help`);
@@ -61,7 +65,10 @@ async function main() {
 
   console.log(`Found ${suites.length} test suite(s)\n`);
 
-  const reporter = createReporter(values.reporter!, values.output!);
+  const reporter = createReporter(values.reporter!, values.output!, {
+    slackWebhook: values['slack-webhook'],
+    reportUrl: values['report-url'],
+  });
   const result = await runAll(suites, reporter, {
     platform,
     output: values.output,

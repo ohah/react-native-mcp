@@ -532,8 +532,10 @@ teardown:
 ### Options
 
 - `-p, --platform <ios|android>`: YAML의 `config.platform`을 덮어쓴다.
-- `-r, --reporter <type>`: 리포터 타입. `console` | `junit` | `json` (기본값: `console`)
+- `-r, --reporter <type>`: 리포터 타입. `console` | `junit` | `json` | `html` | `slack` | `github-pr` (기본값: `console`)
 - `-o, --output <dir>`: 결과 출력 디렉터리 (기본값: `./results`)
+- `--slack-webhook <url>`: Slack 웹훅 URL (`-r slack` 사용 시. 또는 환경변수 `SLACK_WEBHOOK_URL`)
+- `--report-url <url>`: Slack 메시지에 넣을 리포트 링크 (예: CI 아티팩트 URL)
 - `-t, --timeout <ms>`: 글로벌 타임아웃(연결 대기 등) 덮어쓰기
 - `-d, --device <id>`: 디바이스 ID(idb/adb)
 - `--no-bail`: 스위트 실패 후에도 다음 스위트를 계속 실행한다 (기본값: 실패 시 중단)
@@ -547,6 +549,9 @@ teardown:
 - 결과 경로 지정: `npx react-native-mcp-test run e2e/ -o e2e-artifacts/yaml-results`
 - 실패해도 계속 실행: `npx react-native-mcp-test run e2e/ --no-bail`
 - CI(빌드 산출물) 실행: `node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch`
+- HTML 리포트: `npx react-native-mcp-test run e2e/ -r html -o results` → `results/report.html` 생성
+- Slack 전송: `npx react-native-mcp-test run e2e/ -r slack --slack-webhook $SLACK_WEBHOOK` 또는 `SLACK_WEBHOOK_URL` 설정 후 `-r slack`
+- GitHub PR 코멘트: CI에서 `GITHUB_REF`가 PR일 때 `npx react-native-mcp-test run e2e/ -r github-pr -o results`
 
 ### 실행 결과 (RunResult)
 
@@ -562,3 +567,20 @@ teardown:
 - **skipped**: 실패 이후 실행되지 않은 스텝 수 (같은 스위트 내).
 
 `-r json` 사용 시 `output` 디렉터리의 `results.json`에 `{ total, passed, failed, skipped, duration, suites }`가 저장된다. CLI 종료 코드는 `failed > 0`이면 1, 아니면 0이다.
+
+### 리포터 종류
+
+| 리포터        | 설명 |
+| ------------- | ----- |
+| `console`     | 터미널에 요약·스텝 결과 출력 (기본값). |
+| `junit`       | `output/junit.xml` 생성. CI에서 JUnit 리포트로 사용. |
+| `json`        | `output/results.json` 생성. |
+| `html`        | `output/report.html` 생성. 스크린샷 포함 시각적 리포트. 브라우저에서 열어 실패 스텝·스크린샷 확인. |
+| `slack`       | Slack Incoming Webhook으로 결과 요약 전송. 실패 시 실패 스텝·에러·스크린샷 경로 포함. `--slack-webhook <url>` 또는 `SLACK_WEBHOOK_URL` 필요. `--report-url`로 리포트 링크 추가 가능. |
+| `github-pr`   | GitHub Actions 등에서 `GITHUB_REF`가 `refs/pull/<number>/merge`일 때 `gh pr comment`로 PR에 결과 코멘트 작성. PR이 아니거나 `gh` 미설치 시 `output/pr-comment.md`에 본문 저장. |
+
+### 리포터 확인 방법(테스트)
+
+- **HTML**: `-r html -o results` 실행 후 `results/report.html`을 브라우저로 연다. 스위트·스텝 요약, 실패 시 에러 메시지·스크린샷 이미지가 포함되어 있는지 확인.
+- **Slack**: 웹훅 URL을 `--slack-webhook` 또는 `SLACK_WEBHOOK_URL`에 넣고 `-r slack`으로 실행. 해당 채널에 요약 메시지가 도착하는지, 실패 시 실패 스텝·에러·스크린샷 경로가 포함되는지 확인.
+- **GitHub PR**: PR 브랜치에서 GitHub Actions 등으로 `-r github-pr -o results` 실행. PR 코멘트에 결과가 붙는지 확인. 로컬이거나 PR이 아니면 `results/pr-comment.md`에 본문이 저장되는지 확인.

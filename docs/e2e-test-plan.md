@@ -386,11 +386,11 @@ npx react-native-mcp-test run tests/ --reporter junit --output results/
 
 ---
 
-### Phase F: 테스트 리포트 & CI 통합 — 미구현
+### Phase F: 테스트 리포트 & CI 통합 — 완료
 
 **목표**: CI 파이프라인에서 사용 가능한 결과 출력.
 
-> **참고**: 현재 CI에서는 bun test + GitHub Actions artifact 업로드 방식으로 기본적인 리포트가 동작하고 있다. 실패 시 스크린샷과 로그(logcat/simulator log)가 자동 수집됨.
+> **참고**: CI에서는 bun test + GitHub Actions artifact 업로드 방식으로 리포트가 동작한다. 실패 시 스크린샷과 로그(logcat/simulator log)가 자동 수집됨.
 
 **리포터 종류**:
 
@@ -399,6 +399,11 @@ npx react-native-mcp-test run tests/ --reporter junit --output results/
 | `console` (기본) | 터미널 컬러 출력 | 로컬 개발                  |
 | `junit`          | JUnit XML        | GitHub Actions, Jenkins 등 |
 | `json`           | JSON 파일        | 커스텀 대시보드            |
+| `html`           | report.html      | 스크린샷 포함 시각적 리포트, 브라우저 확인 |
+| `slack`          | Slack 웹훅 전송  | 팀 알림 (실패 시 상세·스크린샷 경로)     |
+| `github-pr`      | PR 코멘트 / pr-comment.md | CI에서 PR에 결과 자동 코멘트 |
+
+**리포터 확인 방법**: HTML은 실행 후 `output/report.html` 브라우저로 열기, Slack은 채널 도착 여부 확인, GitHub PR은 PR 코멘트 또는 `output/pr-comment.md` 확인. 자세한 사용법·옵션은 [e2e-yaml-reference.md](e2e-yaml-reference.md)의 CLI·리포터 섹션 참고.
 
 **Console 리포터 출력 예시**:
 
@@ -479,7 +484,7 @@ Phase E+F 완료:
   ├── YAML 파싱 + Zod 검증 (parser.ts) ✅
   ├── 실행 엔진 (runner.ts) — setup/steps/teardown, 실패 시 스크린샷 자동 캡처 ✅
   ├── CLI (cli.ts) — run <path> --platform --reporter --output ✅
-  └── 리포터: console, junit, json ✅
+  └── 리포터: console, junit, json, html, slack, github-pr ✅
 ```
 
 ### 의존 관계
@@ -503,7 +508,7 @@ Phase 0: MCP Assertion 강화 ─┐
 | **C** | 추가 Assertions         | 0 + A     | **✅ 완료** | assertCount/assertValue/assertEnabled/assertDisabled 등                           |
 | **D** | 앱 생명주기 관리        | A         | **✅ 완료** | launch/terminate/resetApp + openDeepLink                                          |
 | **E** | YAML 러너 + CLI         | A + B + C | **✅ 완료** | `@ohah/react-native-mcp-test` 패키지                                              |
-| **F** | CI 리포트               | E         | **✅ 완료** | console / junit / json 리포터                                                     |
+| **F** | CI 리포트               | E         | **✅ 완료** | console / junit / json / html / slack / github-pr 리포터                          |
 
 **Phase 0~F 전부 완료** → YAML로 E2E 테스트 작성 + CLI 실행 + CI 리포트 가능.
 
