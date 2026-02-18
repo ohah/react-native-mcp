@@ -62,6 +62,9 @@ const stepSchema = z.union([
   z.object({ longPress: z.object({ selector: z.string(), duration: z.number().optional() }) }),
   z.object({ addMedia: z.object({ paths: z.array(z.string()).min(1) }) }),
   z.object({ assertHasText: z.object({ text: z.string(), selector: z.string().optional() }) }),
+  z.object({ clearText: z.object({ selector: z.string() }) }),
+  z.object({ doubleTap: z.object({ selector: z.string(), interval: z.number().optional() }) }),
+  z.object({ assertValue: z.object({ selector: z.string(), expected: z.string() }) }),
 ]);
 
 const suiteSchema = z.object({
