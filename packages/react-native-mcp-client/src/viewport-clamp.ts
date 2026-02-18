@@ -17,11 +17,23 @@ export interface ScreenBounds {
   height: number;
 }
 
+export class OffScreenError extends Error {
+  constructor(
+    public readonly measure: Measure,
+    public readonly screen: ScreenBounds
+  ) {
+    super(
+      `Element is completely off-screen: element at (${measure.pageX}, ${measure.pageY}) size ${measure.width}×${measure.height}, screen ${screen.width}×${screen.height}`
+    );
+    this.name = 'OffScreenError';
+  }
+}
+
 /**
  * element bounds와 screen bounds의 교차 영역(visible rect)을 구하고,
  * center를 해당 영역 내부로 clamp한다.
  *
- * visible rect가 없으면(완전히 화면 밖) 원래 center를 그대로 반환.
+ * visible rect가 없으면(완전히 화면 밖) OffScreenError를 throw한다.
  */
 export function clampToViewport(
   cx: number,
@@ -49,7 +61,7 @@ export function clampToViewport(
 
   // no intersection — element is completely off-screen
   if (visLeft >= visRight || visTop >= visBottom) {
-    return { cx, cy };
+    throw new OffScreenError(measure, screen);
   }
 
   // center가 visible rect 밖이면 visible rect 중앙으로 보정

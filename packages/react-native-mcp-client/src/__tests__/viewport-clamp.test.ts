@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { clampToViewport, clampCoord } from '../viewport-clamp.js';
+import { clampToViewport, clampCoord, OffScreenError } from '../viewport-clamp.js';
 
 const SCREEN = { width: 390, height: 844 };
 
@@ -72,21 +72,19 @@ describe('clampToViewport', () => {
     expect(result.cy).toBe(150);
   });
 
-  it('element가 완전히 화면 밖일 때 → 원래 center 반환', () => {
+  it('element가 완전히 화면 밖일 때 → OffScreenError throw', () => {
     // completely below screen
     const measure = { pageX: 50, pageY: 900, width: 200, height: 100 };
     const cx = 150;
     const cy = 950;
-    const result = clampToViewport(cx, cy, measure, SCREEN);
-    expect(result).toEqual({ cx: 150, cy: 950 });
+    expect(() => clampToViewport(cx, cy, measure, SCREEN)).toThrow(OffScreenError);
   });
 
-  it('element가 완전히 화면 위에 있을 때 → 원래 center 반환', () => {
+  it('element가 완전히 화면 위에 있을 때 → OffScreenError throw', () => {
     const measure = { pageX: 50, pageY: -200, width: 200, height: 100 };
     const cx = 150;
     const cy = -150;
-    const result = clampToViewport(cx, cy, measure, SCREEN);
-    expect(result).toEqual({ cx: 150, cy: -150 });
+    expect(() => clampToViewport(cx, cy, measure, SCREEN)).toThrow(OffScreenError);
   });
 
   it('element가 화면과 부분 겹침 (아래쪽) → visible rect 중앙으로 clamp', () => {

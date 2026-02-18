@@ -18,7 +18,12 @@ import type {
   WaitOpts,
 } from './types.js';
 import { McpToolError, ConnectionError } from './errors.js';
-import { clampToViewport, clampCoord, type ScreenBounds } from './viewport-clamp.js';
+import {
+  clampToViewport,
+  clampCoord,
+  OffScreenError,
+  type ScreenBounds,
+} from './viewport-clamp.js';
 
 function resolveServerCwd(): string {
   try {
@@ -379,8 +384,15 @@ export class AppClient {
     const rawX = el.measure.pageX + el.measure.width / 2;
     const rawY = el.measure.pageY + el.measure.height / 2;
     const screen = await this.getScreenBounds();
-    const { cx: x, cy: y } = clampToViewport(rawX, rawY, el.measure, screen);
-    return this.tapXY(x, y, opts);
+    try {
+      const { cx: x, cy: y } = clampToViewport(rawX, rawY, el.measure, screen);
+      return this.tapXY(x, y, opts);
+    } catch (e) {
+      if (e instanceof OffScreenError) {
+        throw new McpToolError('tap', `Element "${selector}" is off-screen: ${e.message}`);
+      }
+      throw e;
+    }
   }
 
   // ─── Convenience: swipe by selector + direction ─────────
@@ -399,7 +411,15 @@ export class AppClient {
     const rawCx = el.measure.pageX + el.measure.width / 2;
     const rawCy = el.measure.pageY + el.measure.height / 2;
     const screen = await this.getScreenBounds();
-    const { cx, cy } = clampToViewport(rawCx, rawCy, el.measure, screen);
+    let cx: number, cy: number;
+    try {
+      ({ cx, cy } = clampToViewport(rawCx, rawCy, el.measure, screen));
+    } catch (e) {
+      if (e instanceof OffScreenError) {
+        throw new McpToolError('swipe', `Element "${selector}" is off-screen: ${e.message}`);
+      }
+      throw e;
+    }
     let dist: number;
     if (typeof opts.distance === 'string' && opts.distance.endsWith('%')) {
       const pct = parseFloat(opts.distance) / 100;
@@ -475,7 +495,15 @@ export class AppClient {
     const rawX = el.measure.pageX + el.measure.width / 2;
     const rawY = el.measure.pageY + el.measure.height / 2;
     const screen = await this.getScreenBounds();
-    const { cx: x, cy: y } = clampToViewport(rawX, rawY, el.measure, screen);
+    let x: number, y: number;
+    try {
+      ({ cx: x, cy: y } = clampToViewport(rawX, rawY, el.measure, screen));
+    } catch (e) {
+      if (e instanceof OffScreenError) {
+        throw new McpToolError('doubleTap', `Element "${selector}" is off-screen: ${e.message}`);
+      }
+      throw e;
+    }
     await this.tapXY(x, y, opts);
     await sleep(opts?.interval ?? 50);
     return this.tapXY(x, y, opts);

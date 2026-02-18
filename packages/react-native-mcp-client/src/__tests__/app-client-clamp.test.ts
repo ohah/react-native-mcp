@@ -126,6 +126,13 @@ describe('AppClient.tap() viewport clamping', () => {
     expect(tap!.x).toBe(150); // 50 + 200/2
     expect(tap!.y).toBe(150); // 100 + 100/2
   });
+
+  it('element 완전 화면 밖 → McpToolError throw', async () => {
+    const measure = { pageX: 50, pageY: 900, width: 200, height: 100 };
+    setupMocks(measure);
+    const app = await createTestClient();
+    await expect(app.tap('#off-screen-button')).rejects.toThrow('off-screen');
+  });
 });
 
 describe('AppClient.swipe() viewport clamping', () => {
