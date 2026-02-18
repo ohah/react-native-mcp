@@ -572,29 +572,38 @@
 		if (_screenOffsetResolved) return;
 		_screenOffsetResolved = true;
 		try {
-			var g = typeof globalThis !== "undefined" ? globalThis : global;
-			var Platform = require("react-native").Platform;
+			var rn = typeof require !== "undefined" && require("react-native");
+			if (!rn) return;
+			var Platform = rn.Platform;
 			if (!Platform || Platform.OS !== "android") return;
+			var statusBarHeight = 0;
+			if (rn.StatusBar && typeof rn.StatusBar.currentHeight === "number") statusBarHeight = rn.StatusBar.currentHeight;
+			var g = typeof globalThis !== "undefined" ? globalThis : global;
 			var root = getFiberRoot();
-			if (!root || !g.nativeFabricUIManager) return;
-			var hostFiber = null;
-			(function findHost(f) {
-				if (!f || hostFiber) return;
-				if (f.stateNode && (f.tag === 5 || f.tag === 27)) {
-					hostFiber = f;
-					return;
+			if (root && g.nativeFabricUIManager) {
+				var hostFiber = null;
+				(function findHost(f) {
+					if (!f || hostFiber) return;
+					if (f.stateNode && (f.tag === 5 || f.tag === 27)) {
+						hostFiber = f;
+						return;
+					}
+					findHost(f.child);
+				})(root);
+				if (hostFiber) {
+					var node = hostFiber.stateNode;
+					var shadowNode = node.node || node._internalInstanceHandle && node._internalInstanceHandle.stateNode && node._internalInstanceHandle.stateNode.node;
+					if (shadowNode) {
+						g.nativeFabricUIManager.measureInWindow(shadowNode, function(x, y) {
+							screenOffsetX = -x;
+							screenOffsetY = statusBarHeight - y;
+						});
+						return;
+					}
 				}
-				findHost(f.child);
-			})(root);
-			if (!hostFiber) return;
-			var node = hostFiber.stateNode;
-			var shadowNode = node.node || node._internalInstanceHandle && node._internalInstanceHandle.stateNode && node._internalInstanceHandle.stateNode.node;
-			if (!shadowNode) return;
-			g.nativeFabricUIManager.measureInWindow(shadowNode, function(x, y) {
-				screenOffsetX = -x;
-				screenOffsetY = -y;
-			});
-		} catch (e) {}
+			}
+			if (g.nativeFabricUIManager) screenOffsetY = statusBarHeight;
+		} catch (_unused) {}
 	}
 	var screenOffsetX, screenOffsetY, _screenOffsetResolved;
 	var init_screen_offset = __esmMin(() => {
