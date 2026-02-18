@@ -85,17 +85,18 @@ Then run your app and use MCP tools in the conversation. Use `claude mcp list` t
 
 Once connected, you can use tools such as:
 
-| Purpose    | Tools                                                                                  |
-| ---------- | -------------------------------------------------------------------------------------- |
-| View UI    | `take_snapshot`, `take_screenshot`, `query_selector`                                   |
-| Assert     | `assert_text`, `assert_visible`                                                        |
-| Interact   | `tap`, `swipe`, `input_text`, `type_text`                                              |
-| Run        | `evaluate_script`, `webview_evaluate_script`                                           |
-| A11y audit | `accessibility_audit`                                                                  |
-| Device     | `get_debugger_status`, `list_devices`                                                  |
-| Deep link  | `open_deeplink`                                                                        |
-| Net mock   | `set_network_mock`, `list_network_mocks`, `remove_network_mock`, `clear_network_mocks` |
-| Debug      | `list_console_messages`, `list_network_requests`                                       |
+| Purpose              | Tools                                                                                                    |
+| -------------------- | -------------------------------------------------------------------------------------------------------- |
+| View UI              | `take_snapshot`, `take_screenshot`, `query_selector`                                                     |
+| Assert               | `assert_text`, `assert_visible`                                                                          |
+| Interact             | `tap`, `swipe`, `input_text`, `type_text`                                                                |
+| Run                  | `evaluate_script`, `webview_evaluate_script`                                                             |
+| A11y audit           | `accessibility_audit`                                                                                    |
+| Device               | `get_debugger_status`, `list_devices`                                                                    |
+| Deep link            | `open_deeplink`                                                                                          |
+| App state / location | `clear_state` (clear data / reset permissions), `set_location` (sim/emulator GPS; Android emulator only) |
+| Net mock             | `set_network_mock`, `list_network_mocks`, `remove_network_mock`, `clear_network_mocks`                   |
+| Debug                | `list_console_messages`, `list_network_requests`                                                         |
 
 Ask the AI to "take a snapshot of the app" or "tap the login button" and it will call these tools.
 

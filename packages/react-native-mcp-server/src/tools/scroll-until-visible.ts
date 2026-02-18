@@ -103,14 +103,14 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
 
       async function getScreenBounds(): Promise<{ width: number; height: number }> {
         const screenCode = `(function(){ var M = typeof __REACT_NATIVE_MCP__ !== 'undefined' ? __REACT_NATIVE_MCP__ : null; return M && M.getScreenInfo ? M.getScreenInfo() : null; })();`;
-        const screenRes = await appSession.sendRequest(
+        const screenRes = (await appSession.sendRequest(
           { method: 'eval', params: { code: screenCode } },
           10000,
           deviceId,
           platform
-        );
+        )) as { result?: { window?: { width: number; height: number } } };
         if (screenRes.result?.window) {
-          const w = screenRes.result.window as { width: number; height: number };
+          const w = screenRes.result.window;
           return { width: w.width, height: w.height };
         }
         return { width: 360, height: 800 };
@@ -125,12 +125,14 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
       }> {
         if (scrollableSelector) {
           const scrollCode = buildQuerySelectorEvalCode(scrollableSelector);
-          const res = await appSession.sendRequest(
+          const res = (await appSession.sendRequest(
             { method: 'eval', params: { code: scrollCode } },
             10000,
             deviceId,
             platform
-          );
+          )) as {
+            result?: { measure?: { pageX: number; pageY: number; width: number; height: number } };
+          };
           if (res.result?.measure) {
             const m = res.result.measure;
             return {
@@ -143,12 +145,12 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
         }
         // Fallback: 화면 정보에서 중앙 계산
         const screenCode = `(function(){ var M = typeof __REACT_NATIVE_MCP__ !== 'undefined' ? __REACT_NATIVE_MCP__ : null; return M && M.getScreenInfo ? M.getScreenInfo() : null; })();`;
-        const screenRes = await appSession.sendRequest(
+        const screenRes = (await appSession.sendRequest(
           { method: 'eval', params: { code: screenCode } },
           10000,
           deviceId,
           platform
-        );
+        )) as { result?: { window?: { width: number; height: number } } };
         if (screenRes.result?.window) {
           const w = screenRes.result.window;
           return {

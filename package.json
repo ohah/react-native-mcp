@@ -30,6 +30,7 @@
     "test:e2e": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/all-steps.yaml",
     "test:e2e:phase2": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/phase2-flow-control.yaml",
     "test:e2e:network-mock": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/network-mock.yaml",
+    "test:e2e:phase3": "bun run --filter @ohah/react-native-mcp-test build && node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/phase3-clear-state-set-location-copy-paste.yaml",
     "setup-mcp": "bun run .cursor/scripts/set-mcp-mise-path.ts",
     "test:yaml": "bun run --filter @ohah/react-native-mcp-test run",
     "docs:dev": "bun run --filter document dev",
@@ -43,6 +44,7 @@
     "@ohah/react-native-mcp-server": "workspace:*",
     "@ohah/react-native-mcp-test": "workspace:*",
     "@types/bun": "latest",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
     "oxfmt": "latest",
     "oxlint": "latest"

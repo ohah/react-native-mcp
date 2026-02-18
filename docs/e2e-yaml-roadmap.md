@@ -319,7 +319,7 @@ else if ('retry' in step) {
 
 ## Phase 3 — 새 서버 도구 필요
 
-### 15. clearState ★★☆
+### 15. clearState ★★☆ ✅ 구현 완료
 
 **구현 범위**: 서버 `tools/clear-state.ts` 신규 + tools/index.ts + app-client.ts + types/parser/runner
 
@@ -330,7 +330,7 @@ else if ('retry' in step) {
 // Android: adb shell pm clear <packageName>
 ```
 
-**주의**: iOS는 simctl에 직접적인 "앱 데이터 삭제" 명령이 없음. 앱 제거 후 재설치 또는 NSUserDefaults/Documents 직접 삭제 필요. Android는 `pm clear`로 간단.
+**플랫폼 차이**: iOS는 `simctl privacy reset all`로 **권한/프라이버시만** 리셋(앱 샌드박스 미삭제). Android는 `pm clear`로 **전체 앱 데이터** 삭제. 문서에 명시됨.
 
 ```yaml
 - clearState: com.example.app
@@ -338,7 +338,7 @@ else if ('retry' in step) {
 
 ---
 
-### 16. setLocation ★★☆
+### 16. setLocation ★★☆ ✅ 구현 완료
 
 **구현 범위**: 서버 `tools/set-location.ts` 신규 + tools/index.ts + app-client.ts + types/parser/runner
 
@@ -349,7 +349,7 @@ else if ('retry' in step) {
 //          또는 adb shell am start-service로 mock location provider
 ```
 
-**주의**: Android 실기기에서는 별도 mock location 앱 필요. 에뮬레이터만 `geo fix` 지원.
+**플랫폼 차이**: iOS 시뮬 모두 지원(idb set-location). Android는 **에뮬레이터 전용**; 실기기 미지원. 문서에 명시됨.
 
 ```yaml
 - setLocation:
@@ -359,7 +359,7 @@ else if ('retry' in step) {
 
 ---
 
-### 17-18. copyText / pasteText ★★☆
+### 17-18. copyText / pasteText ★★☆ ✅ 구현 완료
 
 **구현 범위**: app-client.ts에 내부 클립보드 변수 + types/parser/runner
 

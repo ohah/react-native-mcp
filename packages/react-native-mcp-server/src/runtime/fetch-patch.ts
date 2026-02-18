@@ -68,7 +68,9 @@ import { findMatchingMock } from './network-mock';
           : typeof requestBody.toString === 'function'
             ? requestBody.toString()
             : String(requestBody);
-      if (bodyStr.length > NETWORK_BODY_LIMIT) bodyStr = bodyStr.substring(0, NETWORK_BODY_LIMIT);
+      if (bodyStr != null && bodyStr.length > NETWORK_BODY_LIMIT) {
+        bodyStr = bodyStr.substring(0, NETWORK_BODY_LIMIT);
+      }
     }
 
     var entry: any = {

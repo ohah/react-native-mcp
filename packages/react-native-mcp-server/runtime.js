@@ -2049,7 +2049,7 @@
 				var bodyStr = null;
 				if (requestBody != null) {
 					bodyStr = typeof requestBody === "string" ? requestBody : typeof requestBody.toString === "function" ? requestBody.toString() : String(requestBody);
-					if (bodyStr.length > NETWORK_BODY_LIMIT) bodyStr = bodyStr.substring(0, NETWORK_BODY_LIMIT);
+					if (bodyStr != null && bodyStr.length > NETWORK_BODY_LIMIT) bodyStr = bodyStr.substring(0, NETWORK_BODY_LIMIT);
 				}
 				var entry = {
 					id: 0,
@@ -2234,8 +2234,9 @@
 				if (scriptURL && typeof scriptURL === "string") try {
 					origin = new URL(scriptURL).origin;
 				} catch (_ue) {
+					var _match$;
 					var match = scriptURL.match(/^(https?:\/\/[^/?#]+)/);
-					if (match) origin = match[1];
+					if (match) origin = (_match$ = match[1]) !== null && _match$ !== void 0 ? _match$ : null;
 				}
 			} catch (_e2) {
 				if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Failed to read metro URL:", _e2 && _e2.message);

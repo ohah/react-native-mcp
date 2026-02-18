@@ -89,15 +89,7 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
           }
           state.stack.push({ componentName: name ?? 'Anonymous', jsxIndex: 0 });
         },
-        exit(
-          path: {
-            node: t.Function;
-            parent: t.Node | null;
-            parentPath?: { parent: t.Node | null; parentPath?: { parent: t.Node | null } };
-            insertAfter: (n: t.Node) => void;
-          },
-          state: PluginState
-        ) {
+        exit(path: any, state: PluginState) {
           const scope = state.stack[state.stack.length - 1];
           if (
             scope &&
@@ -119,7 +111,7 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
                   t.isExportNamedDeclaration(path.parent))
                   ? path.parentPath
                   : path;
-              target.insertAfter(stmt);
+              (target as any).insertAfter(stmt);
             } else if (path.parentPath && t.isVariableDeclarator(path.parent)) {
               let target = path.parentPath.parentPath;
               if (
@@ -129,7 +121,7 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
               ) {
                 target = target.parentPath;
               }
-              target?.insertAfter(stmt);
+              (target as any)?.insertAfter(stmt);
             }
           }
           state.stack.pop();

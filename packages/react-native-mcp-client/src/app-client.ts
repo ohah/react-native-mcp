@@ -51,6 +51,8 @@ export class AppClient {
   private deviceId?: string;
   private iosOrientation?: number;
   private _screenBounds: ScreenBounds | null = null;
+  /** E2E copyText에서 복사한 텍스트. OS 클립보드가 아닌 앱 클라이언트 내부 변수. */
+  private clipboard = '';
 
   private constructor(
     client: Client,
@@ -373,6 +375,28 @@ export class AppClient {
 
   async openDeepLink(url: string, opts?: DeviceOpts): Promise<unknown> {
     return this.call('open_deeplink', { url, ...opts });
+  }
+
+  /** 앱 데이터/권한 초기화. Android: pm clear(전체). iOS: simctl privacy reset(권한만). */
+  async clearState(appId: string, opts?: DeviceOpts): Promise<unknown> {
+    return this.call('clear_state', { appId, ...opts });
+  }
+
+  /** 시뮬/에뮬에 GPS 위치 설정. Android는 에뮬레이터 전용. */
+  async setLocation(latitude: number, longitude: number, opts?: DeviceOpts): Promise<unknown> {
+    return this.call('set_location', { latitude, longitude, ...opts });
+  }
+
+  /** selector로 요소 텍스트를 읽어 내부 클립보드에 저장. OS 클립보드 미사용. */
+  async copyText(selector: string, opts?: DeviceOpts): Promise<void> {
+    const el = await this.querySelector(selector, opts);
+    if (!el) throw new McpToolError('copyText', `No element found for selector: ${selector}`);
+    this.clipboard = el.text ?? el.value ?? '';
+  }
+
+  /** 내부 클립보드 내용을 input_text로 입력. copyText 후 사용. */
+  async pasteText(opts?: DeviceOpts): Promise<unknown> {
+    return this.inputText(this.clipboard, opts);
   }
 
   // ─── Convenience: tap by selector ───────────────────────

@@ -38,7 +38,8 @@ function getPrNumberFromEnv(): number | undefined {
   const ref = process.env.GITHUB_REF;
   if (!ref || !ref.startsWith('refs/pull/')) return undefined;
   const match = ref.match(/^refs\/pull\/(\d+)\//);
-  return match ? parseInt(match[1], 10) : undefined;
+  const group = match?.[1];
+  return group ? parseInt(group, 10) : undefined;
 }
 
 export class GithubPrReporter implements Reporter {

@@ -6,7 +6,12 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { checkIdbAvailable, listIdbTargets, idbNotInstalledError } from './idb-utils.js';
-import { checkAdbAvailable, listAdbDevices, adbNotInstalledError } from './adb-utils.js';
+import {
+  checkAdbAvailable,
+  listAdbDevices,
+  adbNotInstalledError,
+  isAndroidEmulator,
+} from './adb-utils.js';
 
 const schema = z.object({
   platform: z
@@ -56,18 +61,25 @@ export function registerListDevices(server: McpServer): void {
           if (!(await checkAdbAvailable())) return adbNotInstalledError();
           const devices = await listAdbDevices();
           const online = devices.filter((d) => d.state === 'device');
+          const withEmulatorFlag = await Promise.all(
+            devices.map(async (d) => ({
+              ...d,
+              isEmulator: d.state === 'device' ? await isAndroidEmulator(d.serial) : undefined,
+            }))
+          );
           const summary = [
             `Found ${devices.length} device(s), ${online.length} online.`,
+            '(emulator = AVD, physical = real device. set_location works only on emulator.)',
             '',
-            ...devices.map(
+            ...withEmulatorFlag.map(
               (d) =>
-                `${d.state === 'device' ? '● ' : '○ '}${d.serial} | ${d.state}${d.model ? ` | ${d.model}` : ''}${d.product ? ` | ${d.product}` : ''}`
+                `${d.state === 'device' ? '● ' : '○ '}${d.serial} | ${d.state}${d.isEmulator != null ? ` | ${d.isEmulator ? 'emulator' : 'physical'}` : ''}${d.model ? ` | ${d.model}` : ''}${d.product ? ` | ${d.product}` : ''}`
             ),
           ].join('\n');
           return {
             content: [
               { type: 'text' as const, text: summary },
-              { type: 'text' as const, text: JSON.stringify(devices, null, 2) },
+              { type: 'text' as const, text: JSON.stringify(withEmulatorFlag, null, 2) },
             ],
           };
         }
