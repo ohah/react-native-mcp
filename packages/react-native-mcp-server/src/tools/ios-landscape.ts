@@ -91,12 +91,17 @@ export async function getIOSOrientationInfo(
 /**
  * RN 좌표 → idb portrait 좌표 변환.
  * GraphicsOrientation=1 이면 그대로 반환.
+ * width/height=0 이면 변환 공식이 음수를 만들 수 있으므로 변환 없이 반환.
  */
 export function transformForIdb(
   x: number,
   y: number,
   info: IOSOrientationInfo
 ): { x: number; y: number } {
+  // width/height가 유효하지 않으면 변환 불가 → 그대로 반환 (portrait 가정)
+  if (info.width <= 0 || info.height <= 0) {
+    return { x, y };
+  }
   switch (info.graphicsOrientation) {
     case 2: // Portrait 180°: (W - x, H - y)
       return { x: info.width - x, y: info.height - y };
