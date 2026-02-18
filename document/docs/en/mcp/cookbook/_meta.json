@@ -1,0 +1,8 @@
+[
+  { "type": "file", "name": "index", "label": "Overview" },
+  { "type": "file", "name": "debug-ui", "label": "UI Debugging" },
+  { "type": "file", "name": "network-mocking", "label": "Network Mocking" },
+  { "type": "file", "name": "performance", "label": "Performance Profiling" },
+  { "type": "file", "name": "visual-regression", "label": "Visual Regression" },
+  { "type": "file", "name": "accessibility", "label": "Accessibility Audit" }
+]

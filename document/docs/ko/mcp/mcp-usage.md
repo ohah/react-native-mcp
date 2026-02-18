@@ -83,24 +83,11 @@ claude mcp add --transport stdio react-native-mcp -- npx -y @ohah/react-native-m
 
 ## 사용 가능한 도구 개요
 
-연결이 되면 대략 다음 종류의 도구를 사용할 수 있습니다.
+연결이 되면 12개 카테고리에 걸쳐 **42개 도구**를 사용할 수 있습니다 — 인터랙션, 검증, 화면 캡처, 네트워크 모킹, 상태 인스펙션, 렌더 프로파일링 등.
 
-| 용도            | 도구 예시                                                                              |
-| --------------- | -------------------------------------------------------------------------------------- |
-| 화면 조회       | `take_snapshot`, `take_screenshot`, `query_selector`                                   |
-| 검증            | `assert_text`, `assert_visible`                                                        |
-| 조작            | `tap`, `swipe`, `input_text`, `type_text`                                              |
-| 실행            | `evaluate_script`, `webview_evaluate_script`                                           |
-| 접근성 감사     | `accessibility_audit`                                                                  |
-| 디바이스        | `get_debugger_status`, `list_devices`                                                  |
-| 딥링크          | `open_deeplink`                                                                        |
-| 앱 초기화/위치  | `clear_state` (데이터/권한 초기화), `set_location` (시뮬/에뮬 GPS. Android는 에뮬만)   |
-| 네트워크 모킹   | `set_network_mock`, `list_network_mocks`, `remove_network_mock`, `clear_network_mocks` |
-| 디버깅          | `list_console_messages`, `list_network_requests`                                       |
-| 상태 인스펙션   | `inspect_state`, `get_state_changes`, `clear_state_changes`                            |
-| 렌더 프로파일링 | `start_render_profile`, `get_render_report`, `clear_render_profile`                    |
+AI에게 "지금 앱 화면 스냅샷 찍어줘", "로그인 버튼 눌러줘"처럼 요청하면 해당 도구를 자동으로 호출해 동작합니다.
 
-AI에게 "지금 앱 화면 스냅샷 찍어줘", "로그인 버튼 눌러줘"처럼 요청하면 해당 도구를 호출해 동작합니다.
+모든 도구의 상세 파라미터, 예제, 플랫폼별 팁은 **[도구 레퍼런스](./tools/)** 를 참고하세요. 실전 활용 시나리오는 **[쿡북](./cookbook/)** 에서 확인할 수 있습니다.
 
 ---
 

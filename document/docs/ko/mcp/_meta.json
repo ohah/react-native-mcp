@@ -2,5 +2,7 @@
   { "type": "file", "name": "index", "label": "설치 및 연결" },
   { "type": "file", "name": "cli-init", "label": "CLI Init (빠른 설정)" },
   "getting-started",
-  { "type": "file", "name": "mcp-usage", "label": "Cursor / Claude / Copilot" }
+  { "type": "file", "name": "mcp-usage", "label": "Cursor / Claude / Copilot" },
+  { "type": "dir", "name": "tools", "label": "도구 레퍼런스" },
+  { "type": "dir", "name": "cookbook", "label": "쿡북" }
 ]
