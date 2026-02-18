@@ -33,6 +33,8 @@ interface StepContext {
   didLaunchInCreate: boolean;
   /** config.bundleId를 플랫폼으로 해석한 값. launch: __bundleId__ 치환용 */
   resolvedBundleId?: string;
+  /** hideKeyboard에서 iOS/Android 분기용 */
+  platform: Platform;
 }
 
 async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Promise<void> {
@@ -114,6 +116,25 @@ async function executeStep(app: AppClient, step: TestStep, ctx: StepContext): Pr
     const result = await app.scrollUntilVisible(step.scrollUntilVisible.selector, {
       direction: step.scrollUntilVisible.direction as 'up' | 'down' | 'left' | 'right' | undefined,
       maxScrolls: step.scrollUntilVisible.maxScrolls,
+    });
+    if (!result.pass) throw new Error(result.message);
+  } else if ('back' in step) {
+    await app.pressButton('BACK');
+  } else if ('home' in step) {
+    await app.pressButton('HOME');
+  } else if ('hideKeyboard' in step) {
+    if (ctx.platform === 'ios') {
+      await app.inputKey(41); // HID Escape — dismisses keyboard on iOS simulator
+    } else {
+      await app.pressButton('BACK');
+    }
+  } else if ('longPress' in step) {
+    await app.tap(step.longPress.selector, { duration: step.longPress.duration ?? 800 });
+  } else if ('addMedia' in step) {
+    await app.addMedia(step.addMedia.paths);
+  } else if ('assertHasText' in step) {
+    const result = await app.assertText(step.assertHasText.text, {
+      selector: step.assertHasText.selector,
     });
     if (!result.pass) throw new Error(result.message);
   } else {
@@ -239,6 +260,7 @@ export async function runSuite(
     alreadyLaunchedBundleId: resolvedBundleId,
     didLaunchInCreate: autoLaunch,
     resolvedBundleId,
+    platform,
   };
 
   try {
