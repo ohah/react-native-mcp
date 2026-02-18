@@ -1,4 +1,4 @@
-import type { ConsoleLogEntry, NetworkEntry, StateChangeEntry } from './types';
+import type { ConsoleLogEntry, NetworkEntry, StateChangeEntry, RenderEntry } from './types';
 
 // ─── Press handlers (mcp-registration ↔ mcp-introspection) ──────
 export var pressHandlers: Record<string, Function> = {};
@@ -67,4 +67,41 @@ export function nextStateChangeId() {
 export function resetStateChanges() {
   stateChanges = [];
   stateChangeId = 0;
+}
+
+// ─── Render profile buffer (render-tracking ↔ mcp-render) ───────
+export var renderProfileActive = false;
+export var renderProfileStartTime = 0;
+export var renderCommitCount = 0;
+export var renderEntries: RenderEntry[] = [];
+export var renderComponentFilter: string[] | null = null; // whitelist (null = 전체)
+export var renderIgnoreFilter: string[] | null = null; // blacklist (null = 기본 ignore만)
+export var RENDER_BUFFER_SIZE = 5000;
+
+export function setRenderProfileActive(active: boolean) {
+  renderProfileActive = active;
+}
+export function setRenderProfileStartTime(t: number) {
+  renderProfileStartTime = t;
+}
+export function setRenderComponentFilter(components: string[] | null) {
+  renderComponentFilter = components;
+}
+export function setRenderIgnoreFilter(ignore: string[] | null) {
+  renderIgnoreFilter = ignore;
+}
+export function incrementRenderCommitCount() {
+  return ++renderCommitCount;
+}
+export function pushRenderEntry(entry: RenderEntry) {
+  renderEntries.push(entry);
+  if (renderEntries.length > RENDER_BUFFER_SIZE) renderEntries.shift();
+}
+export function resetRenderProfile() {
+  renderProfileActive = false;
+  renderProfileStartTime = 0;
+  renderCommitCount = 0;
+  renderEntries = [];
+  renderComponentFilter = null;
+  renderIgnoreFilter = null;
 }

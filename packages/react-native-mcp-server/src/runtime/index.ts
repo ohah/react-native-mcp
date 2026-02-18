@@ -16,7 +16,8 @@ import './devtools-hook'; // hook 설치 (최우선)
 import './shared';
 import './fiber-helpers';
 import './state-hooks';
-import './state-change-tracking'; // onCommitFiberRoot 래핑 (state-hooks 이후)
+import './render-tracking'; // 렌더 프로파일링 수집 로직 (state-hooks 이후)
+import './state-change-tracking'; // onCommitFiberRoot 래핑 (state-hooks, render-tracking 이후)
 import './query-selector';
 import './screen-offset';
 import './fiber-serialization';
@@ -30,6 +31,7 @@ import './mcp-scroll';
 import './mcp-console';
 import './mcp-network';
 import './mcp-state';
+import './mcp-render'; // 렌더 프로파일링 API
 import './mcp-query';
 import './mcp-measure';
 import './mcp-accessibility';

@@ -35,6 +35,7 @@ import { registerInspectState } from './inspect-state.js';
 import { registerGetStateChanges } from './get-state-changes.js';
 import { registerNetworkMock } from './network-mock.js';
 import { registerVisualCompare } from './visual-compare.js';
+import { registerRenderTracking } from './render-tracking.js';
 
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
@@ -74,4 +75,6 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerNetworkMock(server, appSession);
   // 비주얼 리그레션 테스트
   registerVisualCompare(server, appSession);
+  // 렌더 프로파일링
+  registerRenderTracking(server, appSession);
 }

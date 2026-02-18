@@ -402,14 +402,15 @@ Hermes에는 global `Event` 생성자가 없고, RN의 `dispatchEvent`는 Event 
 
 ---
 
-### 6. 자동 접근성(a11y) 감사
+### 6. 자동 접근성(a11y) 감사 — 구현 완료 ✓
 
 **왜 중요**: 접근성 규정 강화 추세 (미국 ADA, EU EAA). fiber 트리로 자동 감지 가능.
 
-**구현 방식**: fiber 트리 순회 → 접근성 규칙 위반 검출.
+**구현 내용**: fiber 트리 순회 → 접근성 규칙 위반 검출. `accessibility-audit.ts` + runtime `getAccessibilityAudit()`.
 
 ```
 MCP tool: accessibility_audit
+├─ 입력: { maxDepth?: number }
 ├─ 출력: [
 │    { rule: 'pressable-needs-label', selector: 'Pressable', severity: 'error',
 │      message: 'Pressable에 accessibilityLabel 또는 accessible text가 없습니다' },
@@ -419,56 +420,96 @@ MCP tool: accessibility_audit
 └─ 검사 항목: 아래 참고
 ```
 
-**검사 항목**:
+**검사 항목 (구현 4개)**:
 
-| 규칙                  | 설명                                     | fiber에서 감지 가능한 이유                                   |
-| --------------------- | ---------------------------------------- | ------------------------------------------------------------ |
-| pressable-needs-label | onPress 있는데 accessibilityLabel 없음   | `memoizedProps.onPress` + `memoizedProps.accessibilityLabel` |
-| image-needs-alt       | Image에 alt/accessibilityLabel 없음      | `fiber.type === Image` + props 확인                          |
-| touch-target-size     | 터치 영역 44x44pt 미만                   | `measure()` 좌표로 크기 계산                                 |
-| missing-role          | 인터랙티브 요소에 accessibilityRole 없음 | `memoizedProps.accessibilityRole`                            |
-| text-contrast         | 텍스트/배경 색상 대비 부족               | `memoizedProps.style.color` + 부모 backgroundColor           |
+| 규칙                  | 설명                                     | 상태                                        |
+| --------------------- | ---------------------------------------- | ------------------------------------------- |
+| pressable-needs-label | onPress 있는데 accessibilityLabel 없음   | ✅                                          |
+| image-needs-alt       | Image에 alt/accessibilityLabel 없음      | ✅                                          |
+| touch-target-size     | 터치 영역 44x44pt 미만                   | ✅                                          |
+| missing-role          | 인터랙티브 요소에 accessibilityRole 없음 | ✅                                          |
+| text-contrast         | 텍스트/배경 색상 대비 부족               | ✗ 미구현 (processColor + style 합성 난이도) |
 
 **경쟁 도구 비교**: **어떤 모바일 E2E 도구도 이 기능이 없다.** 웹에서는 axe-core, Lighthouse가 하는 역할.
 
-**난이도**: ★★☆ — fiber 순회 + 규칙 체크. 기본 규칙 5~10개로 시작.
+**난이도**: ★★☆ (완료)
 
 ---
 
-### 7. 리렌더 추적 / 성능 프로파일링
+### 7. 리렌더 추적 / 성능 프로파일링 — 구현 완료 ✓
 
 **왜 중요**: React DevTools Profiler는 GUI 전용. AI가 자동으로 성능 분석해주는 도구는 없음.
 
-**구현 방식**: `onCommitFiberRoot` 훅이 이미 있으므로, 커밋마다 변경된 fiber를 추적.
+**구현 내용**: `onCommitFiberRoot` 훅을 확장하여 커밋마다 fiber 트리를 순회, mount/update/bail-out을 판별하고 trigger를 분석.
 
-```
-MCP tool: get_render_report
-├─ 출력: {
-│    totalCommits: 47,
-│    duration: '5.2s',
-│    hotComponents: [
-│      { name: 'ProductList', renders: 23, avgDuration: '12ms', unnecessaryRenders: 15 },
-│      { name: 'CartBadge', renders: 18, avgDuration: '2ms', unnecessaryRenders: 16 },
-│    ],
-│    recommendation: 'ProductList: React.memo 적용 권장. CartBadge: selector 최적화 권장.'
-│  }
-└─ 동작: 프로파일 시작 → 사용자 조작 → 프로파일 종료 → 리포트
+**MCP 도구 3개**:
+
+| 도구                   | 설명                                                                  |
+| ---------------------- | --------------------------------------------------------------------- |
+| `start_render_profile` | 프로파일링 시작. `components` (whitelist) / `ignore` (blacklist) 옵션 |
+| `get_render_report`    | 수집된 데이터 집계 리포트 — hotComponents top 20, trigger 분석        |
+| `clear_render_profile` | 데이터 초기화 + 프로파일링 중지                                       |
+
+**렌더 감지 기준**:
+
+- **Mount**: `fiber.alternate === null`
+- **Re-render**: `fiber.flags & 1` (PerformedWork) 설정됨
+- **Bail-out**: PerformedWork 없음 → 무시 (React가 스킵한 것)
+
+**Trigger 판정 우선순위**: state hooks 변경 → `'state'`, props 변경 → `'props'`, context 변경 → `'context'`, 모두 아님 → `'parent'` (불필요한 리렌더)
+
+**불필요한 리렌더**: trigger가 `'parent'`인 경우 — props/state/context 변경 없이 부모 리렌더에 의해 강제 렌더된 것. `React.memo`로 방지 가능.
+
+**컴포넌트 필터링**:
+
+- **Whitelist**: `components: ['ProductList', 'CartBadge']` — 지정 컴포넌트만 추적
+- **Blacklist**: `ignore: ['Text', 'Image']` — 지정 컴포넌트 제외 (기본 무시 목록에 추가)
+- **기본 무시**: `LogBox*`, `Pressability*`, `YellowBox*`, `RCT*`, `Debugging*`, `AppContainer*`
+
+**리포트 형식**:
+
+```json
+{
+  "profiling": true,
+  "duration": "5.2s",
+  "totalCommits": 47,
+  "totalRenders": 84,
+  "hotComponents": [
+    {
+      "name": "ProductList",
+      "renders": 23,
+      "mounts": 1,
+      "unnecessaryRenders": 15,
+      "triggers": { "state": 5, "props": 3, "parent": 15 },
+      "isMemoized": false,
+      "recentRenders": [
+        {
+          "timestamp": 1708300003200,
+          "trigger": "state",
+          "commitId": 12,
+          "parent": "ProductPage",
+          "changes": { "state": [{ "hookIndex": 0, "prev": [1, 2], "next": [1, 2, 3] }] }
+        }
+      ]
+    }
+  ]
+}
 ```
 
-**YAML 스텝 예시**:
+**런타임 구현**:
 
-```yaml
-- startProfile
-- tap: { selector: '#products-tab' }
-- swipe: { selector: '#product-list', direction: up }
-- swipe: { selector: '#product-list', direction: up }
-- endProfile:
-    path: ./results/performance-report.json
-```
+| 파일                             | 역할                                                        |
+| -------------------------------- | ----------------------------------------------------------- |
+| `src/runtime/render-tracking.ts` | fiber 트리 순회 + mount/update/bail-out 판별 + trigger 분석 |
+| `src/runtime/mcp-render.ts`      | MCP API 메서드 (start/get/clear)                            |
+| `src/runtime/shared.ts`          | 버퍼 + 상태 변수 (renderEntries, renderProfileActive 등)    |
+| `src/tools/render-tracking.ts`   | MCP 도구 정의 (eval → 런타임 API 호출)                      |
+
+**테스트**: `render-tracking.test.ts` — 35개 테스트 (런타임 함수 + MCP 도구 핸들러)
 
 **경쟁 도구 비교**: **완전히 새로운 카테고리.** Detox/Maestro/Appium 어디에도 없음.
 
-**난이도**: ★★★ — onCommitFiberRoot 활용은 쉬우나, "불필요한 리렌더" 판정 로직과 정확한 duration 측정이 까다로움.
+**난이도**: ★★★ (완료)
 
 ---
 
@@ -511,57 +552,24 @@ MCP tool: get_render_report
 
 ## 중기 — 생태계 확장
 
-### 9. CI/CD 통합
+### 9. CI/CD 통합 — 구현 완료 ✓
 
-**현황**: CI 관련 문서/템플릿 없음.
+**구현 내용**: iOS + Android GitHub Actions 워크플로우 템플릿 제공.
 
-**GitHub Actions 워크플로우 예시**:
+**워크플로우 파일**:
 
-```yaml
-# .github/workflows/e2e-ios.yml
-name: E2E (iOS)
-on: [push, pull_request]
+| 파일                                | 설명                                                  |
+| ----------------------------------- | ----------------------------------------------------- |
+| `.github/workflows/e2e-ios.yml`     | iOS E2E 파이프라인 (macOS runner, simctl, xcodebuild) |
+| `.github/workflows/e2e-android.yml` | Android E2E 파이프라인 (에뮬레이터, Gradle)           |
 
-jobs:
-  e2e:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
+**주요 기능**:
 
-      - name: Install dependencies
-        run: bun install
-
-      - name: Install Pods
-        run: cd ios && pod install
-
-      - name: Build iOS app
-        run: xcodebuild -workspace ios/MyApp.xcworkspace -scheme MyApp -sdk iphonesimulator -configuration Debug -derivedDataPath build
-
-      - name: Boot simulator
-        run: |
-          xcrun simctl boot "iPhone 16"
-          xcrun simctl install booted build/Build/Products/Debug-iphonesimulator/MyApp.app
-
-      - name: Run E2E tests
-        run: npx react-native-mcp-test run e2e/ -p ios -r junit -o e2e-artifacts
-
-      - name: Upload results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-results
-          path: e2e-artifacts/
-```
-
-**지원해야 할 CI 환경**:
-
-| CI 서비스      | 난이도 | 비고                          |
-| -------------- | ------ | ----------------------------- |
-| GitHub Actions | ★☆☆    | macOS runner 기본 제공        |
-| Bitrise        | ★☆☆    | 모바일 특화, 시뮬레이터 내장  |
-| CircleCI       | ★★☆    | macOS executor 유료           |
-| GitLab CI      | ★★☆    | macOS runner 자체 호스팅 필요 |
-| Jenkins        | ★★☆    | 자체 구성                     |
+- push/PR to main/develop 트리거
+- 의존성 캐싱 (Bun, CocoaPods, Gradle)
+- 앱 빌드 → E2E 실행 → 결과 아티팩트 업로드
+- 스마트 변경 감지 (관련 경로 변경 시만 실행)
+- 실패 시 스크린샷/로그 자동 수집
 
 **CI 최적화 옵션**:
 
@@ -576,7 +584,7 @@ npx react-native-mcp-test run e2e/ -r junit -o artifacts
 npx react-native-mcp-test run e2e/ --no-auto-launch
 ```
 
-**난이도**: ★★☆ — 템플릿 작성 + 실제 CI에서 검증.
+**난이도**: ★★☆ (완료)
 
 ---
 
@@ -788,30 +796,29 @@ Phase 4: CodeLens (접근성 감사 인라인 표시)
 
 ---
 
-### 13. 원커맨드 셋업 (CLI init)
+### 13. 원커맨드 셋업 (CLI init) — 구현 완료 ✓
+
+**구현 내용**: `react-native-mcp-server init` 서브커맨드.
 
 ```bash
-npx react-native-mcp init
+npx react-native-mcp-server init
 
 # 자동으로:
-# 1. 패키지 설치
-# 2. App.tsx에 __DEV__ import 추가
-# 3. MCP 클라이언트 설정 파일 생성 (.cursor/mcp.json 등)
-# 4. .gitignore에 결과 디렉토리 추가
+# 1. 프로젝트 감지 (React Native / Expo / 패키지 매니저)
+# 2. MCP 클라이언트 선택 (cursor, claude-code, claude-desktop, windsurf, antigravity)
+# 3. Babel 설정 수정 (MCP 런타임 주입)
+# 4. MCP 클라이언트 설정 파일 생성
+# 5. .gitignore에 /results/ 추가
 ```
 
-**Expo 지원**:
+**옵션**:
 
 ```bash
-npx react-native-mcp init --expo
-
-# 자동으로:
-# 1. npx expo install로 패키지 설치
-# 2. app/_layout.tsx에 __DEV__ import 추가
-# 3. MCP 설정 파일 생성
+npx react-native-mcp-server init --client cursor  # 클라이언트 직접 지정
+npx react-native-mcp-server init --yes             # 프롬프트 스킵
 ```
 
-**난이도**: ★★☆
+**난이도**: ★★☆ (완료)
 
 ---
 
@@ -834,112 +841,82 @@ npx react-native-mcp init --expo
 ### 시기별 정리
 
 ```
-즉시 (안정화) ───────────────────────────────────────────────
- ├─ 1. Expo 검증 + 가이드          ★☆☆  — 코드 변경 없이 문서/검증
- ├─ ✓ 연결 heartbeat (구현 완료)   ★★☆  — 안정성
- └─ ✓  New Architecture            ★☆☆  — 이미 동작 중 (RN 0.83.1 Fabric 확인)
+완료 ✓ ─────────────────────────────────────────────────────
+ ├─ ✓ New Architecture             ★☆☆  — 이미 동작 중 (RN 0.83.1 Fabric 확인)
+ ├─ ✓ 연결 heartbeat              ★★☆  — ping/pong + stale 정리
+ ├─ ✓ E2E YAML Phase 1            ★☆☆~★★☆ — 기본 스텝 9개 전부 구현
+ ├─ ✓ E2E YAML Phase 2            ★★☆~★★★ — 흐름 제어 5개 (${VAR}, repeat, runFlow, if, retry)
+ ├─ ✓ E2E YAML Phase 3            ★★☆  — clearState, setLocation, copyText, pasteText
+ ├─ ✓ React 상태 인스펙션         ★★☆  — inspect_state + get_state_changes + clear_state_changes
+ ├─ ✓ 네트워크 모킹               ★★☆  — XHR/fetch 인터셉트 + 응답 주입
+ ├─ ✓ 접근성 자동 감사            ★★☆  — 4개 규칙 (pressable-label, image-alt, touch-size, role)
+ ├─ ✓ 비주얼 리그레션             ★★☆  — pixelmatch + 컴포넌트 크롭
+ ├─ ✓ 리포팅 (HTML/Slack/GitHub)  ★★☆  — 3개 리포터 추가
+ ├─ ✓ CI/CD 통합                  ★★☆  — iOS + Android GitHub Actions 워크플로우
+ ├─ ✓ 원커맨드 셋업               ★★☆  — react-native-mcp-server init
+ └─ ✓ 리렌더 프로파일링           ★★★  — PerformedWork flag 기반 bail-out 판별 + trigger 분석
 
-단기 (고유 강점) ────────────────────────────────────────────
- ├─ 3. E2E YAML Phase 1            ★☆☆~★★☆ — 기본 스텝 9개 (별도 로드맵)
- ├─ 4. React 상태 인스펙션         ★★☆  — fiber만 가능
- ├─ ✓ 네트워크 모킹 (구현 완료)    ★★☆  — XHR/fetch 인터셉트 + 응답 주입
- ├─ 6. 접근성 자동 감사            ★★☆  — 규제 트렌드 + fiber 강점
- ├─ 7. E2E YAML Phase 2            ★★☆~★★★ — 흐름 제어 5개
- └─ ✓ 비주얼 리그레션 (구현 완료)  ★★☆  — pixelmatch + 컴포넌트 크롭
+미완료 — 즉시 ──────────────────────────────────────────────
+ └─ 2. Expo 검증 + 가이드          ★☆☆  — 가이드 문서 작성됨, 실 검증 미완
 
-중기 (생태계) ───────────────────────────────────────────────
- ├─ 9.  CI/CD 통합                 ★★☆  — GitHub Actions 등 템플릿 + 검증
+미완료 — 중기 ──────────────────────────────────────────────
  ├─ 10. 병렬 테스트                ★★★  — 멀티 디바이스/스위트 동시 실행
- ├─ 11. 리포팅 개선                ★★☆~★★★ — HTML/Slack/GitHub PR ✓, Dashboard 별도
- ├─ 12. VS Code 확장               ★★★  — DX
- ├─ 13. 원커맨드 셋업              ★★☆  — 온보딩
- └─ 14. 문서 + 예제                ★★☆  — 채택률
+ ├─ 11. Dashboard 리포터           ★★★  — 시계열 추이, flaky 감지, 통계
+ ├─ 12. VS Code / Cursor 확장     ★★★  — mcp-ui + mcp-vscode 패키지
+ └─ 14. 문서 + 예제                ★★☆  — 퀵스타트, API docs, 데모 영상
 
-장기 (E2E YAML 고급 + 프로파일링) ──────────────────────────
- ├─ E2E YAML Phase 3-4             ★★☆~★★★ — 서버 도구 + 자동 동기화
- └─ 리렌더 프로파일링              ★★★  — 새로운 카테고리
+미완료 — 장기 ──────────────────────────────────────────────
+ ├─ E2E: pinch                     ★★★  — 멀티터치 — idb/adb 제한으로 보류 가능
+ └─ E2E: waitForIdle               ★★★  — 네트워크 idle + Animated idle 감지
 
 백로그 (먼 미래) ────────────────────────────────────────────
  ├─ ~~에러 복구 전략~~             ★★☆  — 현재 스텝 skip 방식으로 충분
  └─ ~~플러그인/확장 시스템~~       ★★★  — 내장 스텝 성숙 후 고려
 ```
 
-### 난이도별 정리
+### 난이도별 정리 (미완료 항목만)
 
-#### ★☆☆ 쉬움 (0.5~1h, 기존 인프라 재사용)
+#### ★☆☆ 쉬움
 
-| 기능                 | 구현 범위                        | 비고                                    |
-| -------------------- | -------------------------------- | --------------------------------------- |
-| Expo 검증 + 가이드   | 문서 + 테스트                    | 코드 변경 없음. 이미 동작할 가능성 높음 |
-| E2E: `back`          | types + parser + runner          | pressButton BACK 래핑                   |
-| E2E: `home`          | types + parser + runner          | pressButton HOME 래핑                   |
-| E2E: `hideKeyboard`  | types + parser + runner          | iOS: Keyboard.dismiss(), Android: BACK  |
-| E2E: `longPress`     | types + parser + runner          | tap + duration 래핑                     |
-| E2E: `addMedia`      | types + parser + runner + client | 서버 도구 이미 존재                     |
-| E2E: `assertHasText` | types + parser + runner          | 기존 assertText 재사용                  |
+| 기능               | 구현 범위     | 비고                                    |
+| ------------------ | ------------- | --------------------------------------- |
+| Expo 검증 + 가이드 | 문서 + 테스트 | 코드 변경 없음. 이미 동작할 가능성 높음 |
 
-#### ★★☆ 보통 (1~2h, 새 로직 필요하지만 패턴 있음)
+#### ★★☆ 보통
 
-| 기능                       | 구현 범위                        | 비고                              |
-| -------------------------- | -------------------------------- | --------------------------------- |
-| 연결 heartbeat (구현 완료) | runtime.js + websocket-server.ts | ping/pong + stale 정리            |
-| E2E: `clearText`           | types + parser + runner + client | evaluate 활용                     |
-| E2E: `doubleTap`           | types + parser + runner + client | tap 2회, 서버 딜레이 조정 필요    |
-| E2E: `${VAR}` 환경 변수    | parser.ts + cli.ts               | 재귀 문자열 치환                  |
-| E2E: `assertValue`         | types + parser + runner + client | querySelector value prop          |
-| E2E: `repeat`              | types + parser + runner          | z.lazy() 재귀 + 루프              |
-| E2E: `runFlow`             | parser + runner + types          | YAML include + 순환참조 방지      |
-| E2E: `retry`               | types + parser + runner          | try-catch 루프                    |
-| E2E: `clearState`          | 서버 도구 신규 + 전체            | iOS simctl / Android pm clear     |
-| E2E: `setLocation`         | 서버 도구 신규 + 전체            | simctl location / adb emu geo fix |
-| E2E: `copyText/pasteText`  | client + types + parser + runner | 내부 클립보드 변수                |
-| React 상태 인스펙션        | runtime.js + 서버 도구           | memoizedState 순회                |
-| ✓ 네트워크 모킹 (완료)     | runtime.js + 서버 도구           | 기존 인터셉터에 룰 매칭 추가      |
-| 접근성 자동 감사           | runtime.js + 서버 도구           | fiber 순회 + 규칙 체크            |
-| ✓ 비주얼 리그레션 (완료)   | 서버 도구 + runner               | 이미지 크롭 + pixelmatch          |
-| 원커맨드 셋업              | 새 CLI 패키지                    | AST 파싱으로 import 삽입          |
-| 문서 + 예제                | docs/ + examples/                | 기술 난이도 낮음, 시간 소요       |
-| waitForIdle (네트워크)     | runtime.js                       | XHR/fetch 펜딩 카운터             |
+| 기능                   | 구현 범위        | 비고                  |
+| ---------------------- | ---------------- | --------------------- |
+| 문서 + 예제            | docs/ + examples | 기술 난이도 낮음      |
+| waitForIdle (네트워크) | runtime.js       | XHR/fetch 펜딩 카운터 |
 
-#### ★★★ 어려움 (2h+, 새 아키텍처 또는 외부 의존성)
+#### ★★★ 어려움
 
-| 기능                   | 구현 범위               | 비고                        |
-| ---------------------- | ----------------------- | --------------------------- |
-| E2E: `if/when`         | types + parser + runner | 조건 타입 확장성, 재귀 스텝 |
-| E2E: `pinch`           | 서버 도구 신규 + 전체   | 멀티터치 — idb/adb 제한     |
-| waitForIdle (Animated) | runtime.js              | RN 내부 API 버전 호환성     |
-| 리렌더 프로파일링      | runtime.js + 서버 도구  | 불필요 리렌더 판정 로직     |
-| VS Code 확장           | 새 패키지               | VS Code API + 트리 시각화   |
+| 기능                   | 구현 범위             | 비고                       |
+| ---------------------- | --------------------- | -------------------------- |
+| E2E: `pinch`           | 서버 도구 신규 + 전체 | 멀티터치 — idb/adb 제한    |
+| waitForIdle (Animated) | runtime.js            | RN 내부 API 버전 호환성    |
+| 병렬 테스트            | 새 아키텍처           | 포트/디바이스 풀/결과 병합 |
+| Dashboard 리포터       | 새 패키지             | 시계열 DB + UI             |
+| VS Code 확장           | 새 패키지             | VS Code API + 트리 시각화  |
 
-### 추천 구현 순서 (빠른 성과 → 깊은 차별화)
+### 추천 구현 순서 (남은 항목)
 
 ```
-Week 1: E2E Phase 1 쉬운 것 (back, home, hideKeyboard, longPress, addMedia, assertHasText)
-         + Expo 검증/가이드
-         → 6개 스텝 추가 + Expo 공식 지원 선언
+다음: Expo 검증
+      → 실 Expo 프로젝트에서 동작 확인 + 가이드 업데이트. 채택률 직결.
 
-Week 2: E2E Phase 1 나머지 (clearText, doubleTap, assertValue)
-         + ✓ 연결 heartbeat (완료)
-         → 기본기 완성 + 안정성 향상
+이후: 문서 + 예제
+      → 퀵스타트 (bare RN + Expo), API docs 사이트, 데모 영상 30초
+      → 기술 난이도 낮지만 채택률에 가장 큰 영향
 
-Week 3: 환경 변수 (${VAR}) + repeat + runFlow
-         → YAML 시나리오 재사용 가능 (Maestro 수준)
+중기: 병렬 테스트
+      → 워커 풀 + 디바이스 풀 + 포트 관리 + 결과 병합. 대규모 스위트 필수.
 
-Week 4: React 상태 인스펙션 + 네트워크 모킹
-         → "다른 도구가 절대 못 하는" 고유 기능 2개 확보
+장기: VS Code / Cursor 확장
+      → mcp-ui (공유 React UI) + mcp-vscode (thin shell). DX 극대화.
 
-Week 5: 접근성 자동 감사 + if/when + retry
-         → 규제 대응 기능 + 흐름 제어 완성
-
-Week 6: ✓ 비주얼 리그레션 (완료) + 원커맨드 셋업
-         → 실용 기능 + 온보딩 개선
-
-Week 7: CI/CD 통합 (GitHub Actions 템플릿)
-         + 리포팅 개선 (HTML, Slack, GitHub PR Comment) ✓ 완료
-         → CI 파이프라인 즉시 사용 가능
-
-Week 8: 병렬 테스트
-         → 대규모 테스트 스위트 지원 (Slack 리포터 ✓ 완료)
+장기: E2E pinch + waitForIdle
+      → 멀티터치, 자동 동기화. 기술적 한계로 우선순위 낮음.
 ```
 
 ---
@@ -948,15 +925,16 @@ Week 8: 병렬 테스트
 
 fiber 접근 + MCP 조합으로만 가능한 고유 기능:
 
-| 기능                          | Detox | Maestro | Appium | react-native-mcp                         |
-| ----------------------------- | ----- | ------- | ------ | ---------------------------------------- |
-| 컴포넌트 이름으로 셀렉팅      | ✗     | ✗       | ✗      | ✓ `CustomerCard`                         |
-| React 상태/Hook 인스펙션      | ✗     | ✗       | ✗      | ✓ `memoizedState`                        |
-| 리렌더 추적 + 성능 분석       | ✗     | ✗       | ✗      | ✓ `onCommitFiberRoot`                    |
-| 접근성 자동 감사 (props 기반) | ✗     | ✗       | ✗      | ✓ fiber props 직접 검사                  |
-| 네트워크 응답 모킹            | ✗     | ✗       | ✗      | ✓ JS 인터셉터 확장 (구현 완료)           |
-| 컴포넌트 단위 비주얼 비교     | ✗     | ✗       | ✗      | ✓ fiber measure + pixelmatch (구현 완료) |
-| AI 자율 디버깅                | ✗     | ✗       | ✗      | ✓ MCP 프로토콜                           |
-| WebView 내부 JS 실행          | ✗     | ✗       | △      | ✓ `webviewEval`                          |
+| 기능                          | Detox | Maestro | Appium | react-native-mcp                      | 상태 |
+| ----------------------------- | ----- | ------- | ------ | ------------------------------------- | ---- |
+| 컴포넌트 이름으로 셀렉팅      | ✗     | ✗       | ✗      | ✓ `CustomerCard`                      | ✅   |
+| React 상태/Hook 인스펙션      | ✗     | ✗       | ✗      | ✓ `memoizedState`                     | ✅   |
+| 상태 변경 추적                | ✗     | ✗       | ✗      | ✓ `onCommitFiberRoot` diff            | ✅   |
+| 접근성 자동 감사 (props 기반) | ✗     | ✗       | ✗      | ✓ fiber props 직접 검사               | ✅   |
+| 네트워크 응답 모킹            | ✗     | ✗       | ✗      | ✓ JS 인터셉터 확장                    | ✅   |
+| 컴포넌트 단위 비주얼 비교     | ✗     | ✗       | ✗      | ✓ fiber measure + pixelmatch          | ✅   |
+| AI 자율 디버깅                | ✗     | ✗       | ✗      | ✓ MCP 프로토콜                        | ✅   |
+| WebView 내부 JS 실행          | ✗     | ✗       | △      | ✓ `webviewEval`                       | ✅   |
+| 리렌더 추적 + 성능 분석       | ✗     | ✗       | ✗      | ✓ `onCommitFiberRoot` + PerformedWork | ✅   |
 
-이 기능들이 구현되면 "E2E 테스트 도구"가 아니라 **"React Native 개발 필수 도구"**로 포지셔닝할 수 있다.
+**9/9 고유 기능이 구현 완료.** "E2E 테스트 도구"가 아닌 **"React Native 개발 필수 도구"**로 포지셔닝 완성.

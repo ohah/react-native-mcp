@@ -9,6 +9,7 @@ export interface Fiber {
   return: Fiber | null;
   stateNode: any;
   alternate: Fiber | null;
+  dependencies: { firstContext: any } | null;
 }
 
 /** DevTools hook installed on globalThis */
@@ -51,6 +52,21 @@ export interface StateChangeEntry {
   hookIndex: number;
   prev: any;
   next: any;
+}
+
+export interface RenderEntry {
+  component: string;
+  type: 'mount' | 'update';
+  trigger: 'state' | 'props' | 'context' | 'parent';
+  timestamp: number;
+  commitId: number;
+  parent: string;
+  isMemoized: boolean;
+  changes?: {
+    props?: { key: string; prev: any; next: any }[];
+    state?: { hookIndex: number; prev: any; next: any }[];
+    context?: { name: string; prev: any; next: any }[];
+  };
 }
 
 export interface MeasureResult {
