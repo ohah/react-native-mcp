@@ -320,6 +320,91 @@ Run JavaScript in the app context.
 
 ---
 
+### back
+
+Press the back button. Shorthand for `pressButton: { button: BACK }`.
+
+No parameters.
+
+```yaml
+- back:
+```
+
+---
+
+### home
+
+Press the home button. Shorthand for `pressButton: { button: HOME }`.
+
+No parameters.
+
+```yaml
+- home:
+```
+
+---
+
+### hideKeyboard
+
+Dismiss the keyboard. Sends Escape key (HID 41) on iOS and BACK on Android.
+
+No parameters.
+
+```yaml
+- hideKeyboard:
+```
+
+---
+
+### longPress
+
+Long-press an element. Wraps `tap` + `duration` for readability.
+
+| Field    | Type   | Required | Description                      |
+| -------- | ------ | -------- | -------------------------------- |
+| selector | string | ✓        | Element to long-press            |
+| duration | number |          | Press duration (ms). Default 800 |
+
+```yaml
+- longPress:
+    selector: '#item-3'
+    duration: 1000
+```
+
+---
+
+### addMedia
+
+Add media files (images, videos) to the device gallery.
+
+| Field | Type     | Required | Description                            |
+| ----- | -------- | -------- | -------------------------------------- |
+| paths | string[] | ✓        | Array of local file paths (min 1 item) |
+
+```yaml
+- addMedia:
+    paths: ['/tmp/photo.jpg', '/tmp/video.mp4']
+```
+
+---
+
+### assertHasText
+
+Assert that the text is present (within the element when selector is given). Alias for `assertText`.
+
+| Field    | Type   | Required | Description    |
+| -------- | ------ | -------- | -------------- |
+| text     | string | ✓        | Expected text  |
+| selector | string |          | Scope selector |
+
+```yaml
+- assertHasText:
+    text: 'Total: $12.00'
+    selector: '#price-label'
+```
+
+---
+
 ### scrollUntilVisible
 
 Scroll until the element is visible (repeat up to limit).
@@ -359,6 +444,7 @@ steps:
   - typeText:
       selector: '#email'
       text: test@example.com
+  - hideKeyboard:
   - typeText:
       selector: '#password'
       text: secret
@@ -367,8 +453,15 @@ steps:
   - waitForText:
       text: 'Home'
       timeout: 5000
+  - assertHasText:
+      text: 'Welcome'
+      selector: '#greeting'
+  - longPress:
+      selector: '#profile-item'
+      duration: 1000
   - screenshot:
       path: ./results/login-success.png
+  - back:
 
 teardown:
   - terminate: org.example.app

@@ -320,6 +320,91 @@ teardown?: Step[] # 종료 시 실행 (선택)
 
 ---
 
+### back
+
+뒤로가기 버튼을 누른다. `pressButton: { button: BACK }` 의 단축 스텝.
+
+파라미터 없음.
+
+```yaml
+- back:
+```
+
+---
+
+### home
+
+홈 버튼을 누른다. `pressButton: { button: HOME }` 의 단축 스텝.
+
+파라미터 없음.
+
+```yaml
+- home:
+```
+
+---
+
+### hideKeyboard
+
+키보드를 닫는다. iOS에서는 Escape 키(HID 41), Android에서는 BACK 키를 보낸다.
+
+파라미터 없음.
+
+```yaml
+- hideKeyboard:
+```
+
+---
+
+### longPress
+
+요소를 길게 누른다. `tap` + `duration` 래핑으로, YAML 가독성을 위한 별도 스텝.
+
+| 필드     | 타입   | 필수 | 설명                      |
+| -------- | ------ | ---- | ------------------------- |
+| selector | string | ✓    | 길게 누를 요소 셀렉터     |
+| duration | number |      | 누르는 시간(ms). 기본 800 |
+
+```yaml
+- longPress:
+    selector: '#item-3'
+    duration: 1000
+```
+
+---
+
+### addMedia
+
+디바이스 갤러리에 미디어 파일(이미지, 동영상)을 추가한다.
+
+| 필드  | 타입     | 필수 | 설명                                  |
+| ----- | -------- | ---- | ------------------------------------- |
+| paths | string[] | ✓    | 추가할 로컬 파일 경로 배열 (1개 이상) |
+
+```yaml
+- addMedia:
+    paths: ['/tmp/photo.jpg', '/tmp/video.mp4']
+```
+
+---
+
+### assertHasText
+
+텍스트가 (선택 시 해당 요소에) 있는지 검증한다. `assertText`의 별칭(alias).
+
+| 필드     | 타입   | 필수 | 설명             |
+| -------- | ------ | ---- | ---------------- |
+| text     | string | ✓    | 기대하는 텍스트  |
+| selector | string |      | 검사 범위 셀렉터 |
+
+```yaml
+- assertHasText:
+    text: '₩12,000'
+    selector: '#price-label'
+```
+
+---
+
 ### scrollUntilVisible
 
 스크롤하여 요소가 보일 때까지 반복한다.
@@ -359,6 +444,7 @@ steps:
   - typeText:
       selector: '#email'
       text: test@example.com
+  - hideKeyboard:
   - typeText:
       selector: '#password'
       text: secret
@@ -367,8 +453,15 @@ steps:
   - waitForText:
       text: '홈'
       timeout: 5000
+  - assertHasText:
+      text: '환영합니다'
+      selector: '#greeting'
+  - longPress:
+      selector: '#profile-item'
+      duration: 1000
   - screenshot:
       path: ./results/login-success.png
+  - back:
 
 teardown:
   - terminate: org.example.app
