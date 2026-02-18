@@ -92,9 +92,11 @@ export async function runIdbCommand(
 /* ─── 에러 헬퍼 ─── */
 
 export function idbNotInstalledError(): {
+  isError: true;
   content: Array<{ type: 'text'; text: string }>;
 } {
   return {
+    isError: true,
     content: [
       {
         type: 'text' as const,
