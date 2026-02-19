@@ -1,10 +1,10 @@
 ---
-description: react-native-mcp-test 러너용 YAML 시나리오 문법 레퍼런스. 파일 구조, config, steps, teardown 설명.
+description: react-native-mcp-server test 러너용 YAML 시나리오 문법 레퍼런스. 파일 구조, config, steps, teardown 설명.
 ---
 
 # E2E YAML 레퍼런스
 
-`react-native-mcp-test` 러너가 읽는 YAML 시나리오 문법 레퍼런스. 한 파일에 하나의 테스트 스위트를 정의한다.
+`@ohah/react-native-mcp-server test` 러너가 읽는 YAML 시나리오 문법 레퍼런스. 한 파일에 하나의 테스트 스위트를 정의한다.
 
 ## 파일 구조
 
@@ -87,11 +87,11 @@ teardown:
   - terminate: org.example.app
 ```
 
-## E2E CLI (`react-native-mcp-test`)
+## E2E CLI (`@ohah/react-native-mcp-server test`)
 
 ### 사용법
 
-`npx react-native-mcp-test run <path> [options]`
+`npx @ohah/react-native-mcp-server test run <path> [options]`
 
 - `<path>`: YAML 파일 또는 디렉터리
   - 디렉터리는 **해당 디렉터리 바로 아래의** `.yml`/`.yaml` 파일만 실행한다(하위 폴더 재귀 실행 없음).
@@ -115,13 +115,13 @@ teardown:
 
 ### 예시
 
-- 디렉터리 실행: `npx react-native-mcp-test run path/to/e2e/ -p ios`
-- 단일 파일 실행: `npx react-native-mcp-test run path/to/suite.yaml -p android`
-- 결과 경로 지정: `npx react-native-mcp-test run e2e/ -o e2e-artifacts/yaml-results`
-- 실패해도 계속 실행: `npx react-native-mcp-test run e2e/ --no-bail`
-- CI(빌드 산출물) 실행: `node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch`
-- HTML 리포트: `npx react-native-mcp-test run e2e/ -r html -o results`
-- Slack: `npx react-native-mcp-test run e2e/ -r slack --slack-webhook $SLACK_WEBHOOK`
+- 디렉터리 실행: `npx @ohah/react-native-mcp-server test run path/to/e2e/ -p ios`
+- 단일 파일 실행: `npx @ohah/react-native-mcp-server test run path/to/suite.yaml -p android`
+- 결과 경로 지정: `npx @ohah/react-native-mcp-server test run e2e/ -o e2e-artifacts/yaml-results`
+- 실패해도 계속 실행: `npx @ohah/react-native-mcp-server test run e2e/ --no-bail`
+- CI(빌드 산출물) 실행: `node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch`
+- HTML 리포트: `npx @ohah/react-native-mcp-server test run e2e/ -r html -o results`
+- Slack: `npx @ohah/react-native-mcp-server test run e2e/ -r slack --slack-webhook $SLACK_WEBHOOK`
 - GitHub PR 코멘트: CI에서 `-r github-pr -o results`
 
 ### 리포터 종류

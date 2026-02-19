@@ -4,7 +4,7 @@ Define scenarios in **YAML files** and run E2E tests locally or in GitHub Action
 
 ## What is a YAML scenario
 
-A format supported by `@ohah/react-native-mcp-test`: one file with **platform**, **config**, and **setup / steps / teardown**.
+A format supported by `@ohah/react-native-mcp-server/test`: one file with **platform**, **config**, and **setup / steps / teardown**.
 MCP tools (tap, assertText, waitForText, etc.) are run as scenario steps.
 
 ## Basic structure
@@ -99,5 +99,5 @@ teardown:
 bun run test:yaml
 ```
 
-Or use the `run` script of `@ohah/react-native-mcp-test` with your YAML file.
+Or use the `run` script of `@ohah/react-native-mcp-server/test` with your YAML file.
 See [E2E YAML Reference](./e2e-yaml-reference) for full syntax and [E2E on GitHub Actions](./e2e-github-actions) for CI.

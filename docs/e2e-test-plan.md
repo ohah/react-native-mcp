@@ -90,12 +90,12 @@ timeoutMs>0        → 체크 → 실패 시 intervalMs 후 재시도 → timeou
 
 > **참고**: 현재 `e2e/helpers.ts`에 기본적인 `createMcpClient()`, `callTool()` 유틸리티가 구현되어 있으며, 이를 확장하여 SDK로 발전시킬 수 있다.
 
-**패키지**: `packages/react-native-mcp-client` (새 패키지)
+**패키지**: `packages/react-native-mcp-server/src/client`
 
 **핵심 API 설계**:
 
 ```typescript
-import { createApp, type AppClient } from '@ohah/react-native-mcp-client';
+import { createApp, type AppClient } from '@ohah/react-native-mcp-server/client';
 
 // 연결 (MCP 서버 자동 spawn + WebSocket 대기)
 const app = await createApp({
@@ -371,16 +371,16 @@ teardown: # 테스트 후 실행
 
 ```bash
 # 단일 테스트 실행
-npx react-native-mcp-test run tests/login.yaml
+npx react-native-mcp-server test run tests/login.yaml
 
 # 디렉토리 내 전체 실행
-npx react-native-mcp-test run tests/
+npx react-native-mcp-server test run tests/
 
 # 플랫폼 지정
-npx react-native-mcp-test run tests/ --platform android
+npx react-native-mcp-server test run tests/ --platform android
 
 # 리포트 출력
-npx react-native-mcp-test run tests/ --reporter junit --output results/
+npx react-native-mcp-server test run tests/ --reporter junit --output results/
 ```
 
 ---
@@ -434,7 +434,7 @@ Results: 1 passed, 1 failed (8.3s)
 
 ```yaml
 - name: Run E2E Tests
-  run: npx react-native-mcp-test run tests/ --reporter junit --output results/
+  run: npx react-native-mcp-server test run tests/ --reporter junit --output results/
 
 - name: Upload Results
   uses: actions/upload-artifact@v4
@@ -467,7 +467,7 @@ Phase 0 완료:
   └── scroll_until_visible: 신규 도구 ✅
 
 Phase A 완료:
-  ├── @ohah/react-native-mcp-client 패키지 ✅
+  ├── @ohah/react-native-mcp-server/client 패키지 ✅
   ├── AppClient: 28개 MCP 도구 타입 래퍼 ✅
   ├── 편의 메서드: tap/swipe/typeText(selector), waitFor* ✅
   └── createApp() 팩토리 + 서버 자동 spawn ✅
@@ -478,7 +478,7 @@ Phase B~D 완료:
   └── Phase D: launch/terminate/resetApp SDK 래핑 ✅
 
 Phase E+F 완료:
-  ├── @ohah/react-native-mcp-test 패키지 ✅
+  ├── @ohah/react-native-mcp-server/test 패키지 ✅
   ├── YAML 파싱 + Zod 검증 (parser.ts) ✅
   ├── 실행 엔진 (runner.ts) — setup/steps/teardown, 실패 시 스크린샷 자동 캡처 ✅
   ├── CLI (cli.ts) — run <path> --platform --reporter --output ✅
@@ -501,11 +501,11 @@ Phase 0: MCP Assertion 강화 ─┐
 | ----- | ----------------------- | --------- | ----------- | --------------------------------------------------------------------------------- |
 | 기초  | Smoke 테스트 + CI       | 없음      | **완료**    | smoke.test.ts + helpers.ts + CI yml                                               |
 | **0** | MCP Assertion 강화      | 없음      | **✅ 완료** | assert.ts 폴링 + assert_not_visible + assert_element_count + scroll_until_visible |
-| **A** | Programmatic Client SDK | 없음      | **✅ 완료** | `@ohah/react-native-mcp-client` 패키지, ~280줄                                    |
+| **A** | Programmatic Client SDK | 없음      | **✅ 완료** | `@ohah/react-native-mcp-server/client` 패키지, ~280줄                             |
 | **B** | Wait/Retry              | 0 + A     | **✅ 완료** | waitForText/waitForVisible/waitForNotVisible/waitFor                              |
 | **C** | 추가 Assertions         | 0 + A     | **✅ 완료** | assertCount/assertValue/assertEnabled/assertDisabled 등                           |
 | **D** | 앱 생명주기 관리        | A         | **✅ 완료** | launch/terminate/resetApp + openDeepLink                                          |
-| **E** | YAML 러너 + CLI         | A + B + C | **✅ 완료** | `@ohah/react-native-mcp-test` 패키지                                              |
+| **E** | YAML 러너 + CLI         | A + B + C | **✅ 완료** | `@ohah/react-native-mcp-server/test` 패키지                                       |
 | **F** | CI 리포트               | E         | **✅ 완료** | console / junit / json / html / slack / github-pr 리포터                          |
 
 **Phase 0~F 전부 완료** → YAML로 E2E 테스트 작성 + CLI 실행 + CI 리포트 가능.

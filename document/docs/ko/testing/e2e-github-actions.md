@@ -6,12 +6,12 @@ React Native MCP 기반 E2E 테스트를 **GitHub Actions**에서 자동으로 �
 
 - **MCP 서버 빌드**: CI에서 `bun run build`로 서버 빌드
 - **앱 빌드**: iOS는 Xcode/시뮬레이터, Android는 에뮬레이터 또는 실제 기기
-- **테스트 실행**: YAML 시나리오 러너 (예: `npx react-native-mcp-test run e2e/ -p ios`). 이 문서와 저장소 워크플로는 YAML만 사용합니다.
+- **테스트 실행**: YAML 시나리오 러너 (예: `npx react-native-mcp-server test run e2e/ -p ios`). 이 문서와 저장소 워크플로는 YAML만 사용합니다.
 
-## E2E CLI (`react-native-mcp-test`)
+## E2E CLI (`react-native-mcp-server test`)
 
-- **사용법**: `npx react-native-mcp-test run <path> [options]`
-- **CI 권장(빌드 산출물 실행)**: `node packages/react-native-mcp-test/dist/cli.js run <path> [options]`
+- **사용법**: `npx react-native-mcp-server test run <path> [options]`
+- **CI 권장(빌드 산출물 실행)**: `node packages/react-native-mcp-server/dist/test/cli.js run <path> [options]`
 - **자주 쓰는 옵션**
   - `-p, --platform <ios|android>`: 플랫폼 덮어쓰기
   - `-o, --output <dir>`: 결과 디렉터리 (예: `-o e2e-artifacts/yaml-results`)
@@ -103,7 +103,7 @@ jobs:
         run: bun run build
 
       - name: MCP 클라이언트 빌드
-        run: bun run --filter @ohah/react-native-mcp-client build
+        run: bun run --filter @ohah/react-native-mcp-server/client build
 
       - name: Bundler 캐시
         uses: actions/cache@v4
@@ -123,7 +123,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/e2e-app-cache/ios
-          key: ${{ runner.os }}-ios-app-${{ hashFiles('examples/demo-app/ios/Podfile.lock', 'examples/demo-app/ios/**/*.pbxproj', 'examples/demo-app/ios/ReactNativeMcpDemo/**', 'examples/demo-app/package.json', 'examples/demo-app/index.js', 'examples/demo-app/metro.config.js', 'examples/demo-app/babel.config.js', 'examples/demo-app/app.json', 'examples/demo-app/tsconfig.json', 'examples/demo-app/src/**', 'examples/demo-app/react-native.config.js', 'packages/react-native-mcp-client/package.json', 'packages/react-native-mcp-client/src/**') }}
+          key: ${{ runner.os }}-ios-app-${{ hashFiles('examples/demo-app/ios/Podfile.lock', 'examples/demo-app/ios/**/*.pbxproj', 'examples/demo-app/ios/ReactNativeMcpDemo/**', 'examples/demo-app/package.json', 'examples/demo-app/index.js', 'examples/demo-app/metro.config.js', 'examples/demo-app/babel.config.js', 'examples/demo-app/app.json', 'examples/demo-app/tsconfig.json', 'examples/demo-app/src/**', 'examples/demo-app/react-native.config.js', 'packages/react-native-mcp-server/package.json', 'packages/react-native-mcp-server/src/**') }}
           restore-keys: |
             ${{ runner.os }}-ios-app-
 
@@ -191,7 +191,7 @@ jobs:
           xcrun simctl install booted "$APP_PATH"
 
       - name: E2E YAML 테스트 실행
-        run: node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch
+        run: node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
@@ -313,7 +313,7 @@ jobs:
         run: bun run build
 
       - name: MCP 클라이언트 빌드
-        run: bun run --filter @ohah/react-native-mcp-client build
+        run: bun run --filter @ohah/react-native-mcp-server/client build
 
       - name: Gradle 캐시
         uses: gradle/actions/setup-gradle@v4
@@ -336,7 +336,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/e2e-app-cache/android
-          key: ${{ runner.os }}-android-apk-${{ hashFiles('examples/demo-app/android/build.gradle', 'examples/demo-app/android/settings.gradle', 'examples/demo-app/android/app/build.gradle', 'examples/demo-app/android/app/src/**', 'examples/demo-app/package.json', 'examples/demo-app/index.js', 'examples/demo-app/metro.config.js', 'examples/demo-app/babel.config.js', 'examples/demo-app/app.json', 'examples/demo-app/tsconfig.json', 'examples/demo-app/src/**', 'examples/demo-app/react-native.config.js', 'packages/react-native-mcp-client/package.json', 'packages/react-native-mcp-client/src/**') }}
+          key: ${{ runner.os }}-android-apk-${{ hashFiles('examples/demo-app/android/build.gradle', 'examples/demo-app/android/settings.gradle', 'examples/demo-app/android/app/build.gradle', 'examples/demo-app/android/app/src/**', 'examples/demo-app/package.json', 'examples/demo-app/index.js', 'examples/demo-app/metro.config.js', 'examples/demo-app/babel.config.js', 'examples/demo-app/app.json', 'examples/demo-app/tsconfig.json', 'examples/demo-app/src/**', 'examples/demo-app/react-native.config.js', 'packages/react-native-mcp-server/package.json', 'packages/react-native-mcp-server/src/**') }}
           restore-keys: |
             ${{ runner.os }}-android-apk-
 
@@ -396,7 +396,7 @@ jobs:
             ls -la examples/demo-app/android/app/build/outputs/apk/release/app-release.apk
             adb install -r examples/demo-app/android/app/build/outputs/apk/release/app-release.apk
             adb reverse tcp:12300 tcp:12300
-            node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p android -o e2e-artifacts/yaml-results --no-auto-launch
+            node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/ -p android -o e2e-artifacts/yaml-results --no-auto-launch
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
@@ -423,9 +423,9 @@ jobs:
 
 ## 요약
 
-| 항목      | iOS                                                         | Android            |
-| --------- | ----------------------------------------------------------- | ------------------ |
-| Runner    | macos-latest                                                | ubuntu-latest      |
-| 앱 빌드   | Xcode, 시뮬레이터                                           | Gradle, 에뮬레이터 |
-| 실행 예시 | YAML 러너 (예: `npx react-native-mcp-test run e2e/ -p ios`) | 동일               |
-| 경로 필터 | packages, examples, e2e, 워크플로                           | 동일               |
+| 항목      | iOS                                                                | Android            |
+| --------- | ------------------------------------------------------------------ | ------------------ |
+| Runner    | macos-latest                                                       | ubuntu-latest      |
+| 앱 빌드   | Xcode, 시뮬레이터                                                  | Gradle, 에뮬레이터 |
+| 실행 예시 | YAML 러너 (예: `npx react-native-mcp-server test run e2e/ -p ios`) | 동일               |
+| 경로 필터 | packages, examples, e2e, 워크플로                                  | 동일               |
