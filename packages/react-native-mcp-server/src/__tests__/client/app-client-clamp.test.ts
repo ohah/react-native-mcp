@@ -21,7 +21,7 @@ mock.module('@modelcontextprotocol/sdk/client/stdio.js', () => ({
 
 // ─── Import after mocks ─────────────────────────────────────
 
-const { AppClient } = await import('../app-client.js');
+const { AppClient } = await import('../../client/app-client.js');
 
 // ─── Helpers ─────────────────────────────────────────────────
 

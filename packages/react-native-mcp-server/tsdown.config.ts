@@ -23,6 +23,9 @@ export default defineConfig([
     entry: {
       index: './src/index.ts',
       'transformer-entry': './src/transformer-entry.ts',
+      'client/index': './src/client/index.ts',
+      'test/index': './src/test/index.ts',
+      'test/cli': './src/test/cli.ts',
     },
     format: 'es',
     outDir: 'dist',

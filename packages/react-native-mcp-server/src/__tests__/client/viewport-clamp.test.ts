@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { clampToViewport, clampCoord, OffScreenError } from '../viewport-clamp.js';
+import { clampToViewport, clampCoord, OffScreenError } from '../../client/viewport-clamp.js';
 
 const SCREEN = { width: 390, height: 844 };
 

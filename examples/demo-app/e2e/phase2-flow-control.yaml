@@ -1,5 +1,5 @@
 # Phase 2 흐름 제어 기능 통합 테스트
-# 실행: react-native-mcp-test run examples/demo-app/e2e/phase2-flow-control.yaml \
+# 실행: react-native-mcp-server test run examples/demo-app/e2e/phase2-flow-control.yaml \
 #       -p ios -e TEST_INPUT=hello -e COUNTER_TIMES=3
 name: Phase 2 흐름 제어
 config:

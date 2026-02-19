@@ -24,7 +24,7 @@ const { values, positionals } = parseArgs({
 });
 
 if (values.help || positionals.length === 0 || positionals[0] !== 'run') {
-  console.log(`Usage: react-native-mcp-test run <path> [options]
+  console.log(`Usage: react-native-mcp-server test run <path> [options]
 
 Commands:
   run <path>    Run YAML test file or directory

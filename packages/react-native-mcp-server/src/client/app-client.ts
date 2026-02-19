@@ -3,6 +3,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
+import { existsSync } from 'fs';
 
 const execFileAsync = promisify(execFile);
 import type {
@@ -28,13 +29,13 @@ import {
 } from './viewport-clamp.js';
 
 function resolveServerCwd(): string {
-  try {
-    const resolved = require.resolve('@ohah/react-native-mcp-server');
-    // resolved points to dist/index.js, go up to package root
-    return path.resolve(path.dirname(resolved), '..');
-  } catch {
-    return path.resolve(import.meta.dirname, '../../react-native-mcp-server');
+  // tsdown may place chunks at dist/ root or dist/client/ — walk up to find package.json
+  let dir = import.meta.dirname;
+  for (let i = 0; i < 5; i++) {
+    if (existsSync(path.join(dir, 'package.json'))) return dir;
+    dir = path.dirname(dir);
   }
+  return path.resolve(import.meta.dirname, '..');
 }
 
 function sleep(ms: number): Promise<void> {

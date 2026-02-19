@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { AppClient } from '@ohah/react-native-mcp-client';
+import { AppClient } from '../client/index.js';
 import { parseFile } from './parser.js';
 import type { Reporter } from './reporters/index.js';
 import type {
@@ -11,7 +11,7 @@ import type {
   RunResult,
   RunOptions,
 } from './types.js';
-import type { Platform } from '@ohah/react-native-mcp-client';
+import type { Platform } from '../client/types.js';
 
 function stepKey(step: TestStep): string {
   return Object.keys(step)[0]!;

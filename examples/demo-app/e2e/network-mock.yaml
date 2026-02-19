@@ -1,6 +1,6 @@
 # Network Mocking E2E 테스트
 # 실행: bun run test:e2e:network-mock -- -p ios
-#   또는: node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/network-mock.yaml -p ios
+#   또는: node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/network-mock.yaml -p ios
 #
 # 검증 항목:
 #   1. mockNetwork → fetch GET → mock status 반영 확인
