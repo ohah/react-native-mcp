@@ -575,13 +575,13 @@ MCP tool: accessibility_audit
 
 ```bash
 # 실패해도 나머지 스위트 실행 (CI에서 유용)
-npx react-native-mcp-test run e2e/ --no-bail
+npx @ohah/react-native-mcp-server test run e2e/ --no-bail
 
 # JUnit 리포트 (CI 대시보드 연동)
-npx react-native-mcp-test run e2e/ -r junit -o artifacts
+npx @ohah/react-native-mcp-server test run e2e/ -r junit -o artifacts
 
 # 앱 자동 실행 안 함 (CI에서 미리 설치한 경우)
-npx react-native-mcp-test run e2e/ --no-auto-launch
+npx @ohah/react-native-mcp-server test run e2e/ --no-auto-launch
 ```
 
 **난이도**: ★★☆ (완료)
@@ -596,10 +596,10 @@ npx react-native-mcp-test run e2e/ --no-auto-launch
 
 ```bash
 # 멀티 스위트 병렬 실행
-npx react-native-mcp-test run e2e/ -p ios --parallel 3
+npx @ohah/react-native-mcp-server test run e2e/ -p ios --parallel 3
 
 # 멀티 디바이스 병렬 (iOS 시뮬레이터 여러 대)
-npx react-native-mcp-test run e2e/ -p ios --devices "iPhone 16,iPhone SE"
+npx @ohah/react-native-mcp-server test run e2e/ -p ios --devices "iPhone 16,iPhone SE"
 ```
 
 **구현 방식**:
@@ -661,7 +661,7 @@ Parallel (목표):
 **Slack 웹훅 예시**:
 
 ```bash
-npx react-native-mcp-test run e2e/ -p ios -r slack --slack-webhook $SLACK_WEBHOOK
+npx @ohah/react-native-mcp-server test run e2e/ -p ios -r slack --slack-webhook $SLACK_WEBHOOK
 ```
 
 **난이도**: HTML ★★☆, Slack ★★☆, GitHub PR ★☆☆, Dashboard ★★★

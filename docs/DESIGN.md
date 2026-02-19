@@ -734,7 +734,7 @@ await client.callTool({
 1. **YAML 스키마 정의**: 지원 액션 목록 (tap, swipe, type_text, assert, wait, screenshot)
 2. **YAML 파서 → MCP 도구 매핑**: `query_selector`로 요소 좌표 획득 → `tap`/`swipe`/`type_text` 호출
 3. **assert 도구 추가**: `assert_text`/`assert_visible`로 검증
-4. **CLI 엔트리포인트**: `npx react-native-mcp-test run tests/login.yaml`
+4. **CLI 엔트리포인트**: `npx @ohah/react-native-mcp-server test run tests/login.yaml`
 5. **리포트 출력**: 성공/실패 요약, 실패 시 스크린샷 첨부
 
 ---

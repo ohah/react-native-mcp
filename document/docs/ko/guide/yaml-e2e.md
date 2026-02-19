@@ -4,7 +4,7 @@ AI 없이 **YAML 파일**로 시나리오를 정의하고, 로컬이나 GitHub A
 
 ## YAML 시나리오란
 
-`@ohah/react-native-mcp-test` 패키지가 지원하는 형식으로, 한 파일에 **플랫폼**, **설정**, **setup/steps/teardown** 을 적습니다.  
+`@ohah/react-native-mcp-server/test` 패키지가 지원하는 형식으로, 한 파일에 **플랫폼**, **설정**, **setup/steps/teardown** 을 적습니다.  
 MCP 도구(tap, assertText, waitForText 등)를 시나리오 단계로 실행합니다.
 
 ## 기본 구조
@@ -102,7 +102,7 @@ teardown:
 bun run test:yaml
 ```
 
-또는 `@ohah/react-native-mcp-test` 의 `run` 스크립트로 지정한 YAML 파일을 실행합니다.  
+또는 `@ohah/react-native-mcp-server/test` 의 `run` 스크립트로 지정한 YAML 파일을 실행합니다.  
 자세한 옵션은 패키지 README나 [GitHub Actions에서 E2E 실행](./e2e-github-actions) 문서를 참고하세요.
 
 ## GitHub Actions에서 쓰기

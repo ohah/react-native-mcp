@@ -12,14 +12,14 @@
 
 ## 디렉터리 구조
 
-| 경로                               | 설명                                            | npm 배포                           |
-| ---------------------------------- | ----------------------------------------------- | ---------------------------------- |
-| `packages/react-native-mcp-server` | MCP 서버 + CLI + 런타임 + Babel 프리셋/플러그인 | ✅ `@ohah/react-native-mcp-server` |
-| `packages/react-native-mcp-client` | MCP 클라이언트 SDK (E2E 스크립트 등에서 사용)   | ❌                                 |
-| `packages/react-native-mcp-test`   | YAML 기반 E2E 테스트 러너                       | ❌                                 |
-| `editor/vscode`                    | VS Code 확장 (React Native MCP DevTools)        | 마켓플레이스/vsix                  |
-| `examples/demo-app`                | 데모 앱 (E2E 테스트 대상)                       | ❌                                 |
-| `document`                         | Rspress 문서 사이트                             | ❌                                 |
+| 경로                                          | 설명                                            | npm 배포                           |
+| --------------------------------------------- | ----------------------------------------------- | ---------------------------------- |
+| `packages/react-native-mcp-server`            | MCP 서버 + CLI + 런타임 + Babel 프리셋/플러그인 | ✅ `@ohah/react-native-mcp-server` |
+| `packages/react-native-mcp-server/src/client` | MCP 클라이언트 SDK (E2E 스크립트 등에서 사용)   | ❌                                 |
+| `packages/react-native-mcp-server/src/test`   | YAML 기반 E2E 테스트 러너                       | ❌                                 |
+| `editor/vscode`                               | VS Code 확장 (React Native MCP DevTools)        | 마켓플레이스/vsix                  |
+| `examples/demo-app`                           | 데모 앱 (E2E 테스트 대상)                       | ❌                                 |
+| `document`                                    | Rspress 문서 사이트                             | ❌                                 |
 
 ## 배포 (관리자)
 

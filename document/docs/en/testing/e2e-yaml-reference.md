@@ -1,10 +1,10 @@
 ---
-description: Reference for the YAML scenario syntax used by react-native-mcp-test (file structure, config, steps, teardown).
+description: Reference for the YAML scenario syntax used by react-native-mcp-server test (file structure, config, steps, teardown).
 ---
 
 # E2E YAML Reference
 
-Reference for the YAML scenario syntax used by the `react-native-mcp-test` runner. One test suite per file.
+Reference for the YAML scenario syntax used by the `@ohah/react-native-mcp-server test` runner. One test suite per file.
 
 ## File structure
 
@@ -87,11 +87,11 @@ teardown:
   - terminate: org.example.app
 ```
 
-## E2E CLI (`react-native-mcp-test`)
+## E2E CLI (`@ohah/react-native-mcp-server test`)
 
 ### Usage
 
-`npx react-native-mcp-test run <path> [options]`
+`npx @ohah/react-native-mcp-server test run <path> [options]`
 
 - `<path>`: A YAML file or a directory
   - Directory runs only `.yml`/`.yaml` files **directly under** the directory (no recursive traversal).
@@ -115,13 +115,13 @@ teardown:
 
 ### Examples
 
-- Run a directory: `npx react-native-mcp-test run path/to/e2e/ -p ios`
-- Run a single file: `npx react-native-mcp-test run path/to/suite.yaml -p android`
-- Custom output dir: `npx react-native-mcp-test run e2e/ -o e2e-artifacts/yaml-results`
-- Keep going after failure: `npx react-native-mcp-test run e2e/ --no-bail`
-- CI (built artifact): `node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch`
-- HTML report: `npx react-native-mcp-test run e2e/ -r html -o results`
-- Slack: `npx react-native-mcp-test run e2e/ -r slack --slack-webhook $SLACK_WEBHOOK`
+- Run a directory: `npx @ohah/react-native-mcp-server test run path/to/e2e/ -p ios`
+- Run a single file: `npx @ohah/react-native-mcp-server test run path/to/suite.yaml -p android`
+- Custom output dir: `npx @ohah/react-native-mcp-server test run e2e/ -o e2e-artifacts/yaml-results`
+- Keep going after failure: `npx @ohah/react-native-mcp-server test run e2e/ --no-bail`
+- CI (built artifact): `node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch`
+- HTML report: `npx @ohah/react-native-mcp-server test run e2e/ -r html -o results`
+- Slack: `npx @ohah/react-native-mcp-server test run e2e/ -r slack --slack-webhook $SLACK_WEBHOOK`
 - GitHub PR comment: In CI, `-r github-pr -o results`
 
 ### Reporter types
