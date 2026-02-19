@@ -52,6 +52,7 @@ export class AppSession {
   private devices = new Map<string, DeviceConnection>();
   private deviceByWs = new Map<WebSocket, string>();
   private awaitingInit = new Set<WebSocket>();
+  private extensionClients = new Set<WebSocket>();
   private server: WebSocketServer | null = null;
   private staleCheckTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -187,7 +188,20 @@ export class AppSession {
     return `${platform}-${max + 1}`;
   }
 
+  /** Broadcast a message to all connected extension clients. */
+  private broadcastToExtensions(msg: Record<string, unknown>): void {
+    const data = JSON.stringify(msg);
+    for (const ext of this.extensionClients) {
+      if (ext.readyState === WebSocket.OPEN) {
+        ext.send(data);
+      }
+    }
+  }
+
   private removeConnection(ws: WebSocket): void {
+    // Check if it's an extension client
+    if (this.extensionClients.delete(ws)) return;
+
     const deviceId = this.deviceByWs.get(ws);
     if (deviceId) {
       setMetroBaseUrlFromApp(null, deviceId);
@@ -200,6 +214,11 @@ export class AppSession {
       }
       this.devices.delete(deviceId);
       this.deviceByWs.delete(ws);
+      // Notify extension clients about device disconnect
+      this.broadcastToExtensions({
+        type: 'devices-changed',
+        devices: this.getConnectedDevices(),
+      });
     }
     this.awaitingInit.delete(ws);
   }
@@ -233,6 +252,57 @@ export class AppSession {
             return;
           }
 
+          // Extension client handshake
+          if (this.awaitingInit.has(ws) && msg?.type === 'extension-init') {
+            this.awaitingInit.delete(ws);
+            this.extensionClients.add(ws);
+            ws.send(
+              JSON.stringify({
+                type: 'extension-init-ack',
+                devices: this.getConnectedDevices(),
+              })
+            );
+            return;
+          }
+
+          // Extension client eval request → forward to app device
+          if (this.extensionClients.has(ws) && msg?.method === 'eval') {
+            const reqId = typeof msg.id === 'string' ? msg.id : crypto.randomUUID();
+            const params = (msg.params ?? {}) as Record<string, unknown>;
+            const deviceId = typeof params.deviceId === 'string' ? params.deviceId : undefined;
+            const platform = typeof params.platform === 'string' ? params.platform : undefined;
+            const code = typeof params.code === 'string' ? params.code : '';
+            this.sendRequest({ method: 'eval', params: { code } }, 10000, deviceId, platform)
+              .then((res) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ id: reqId, result: res.result, error: res.error }));
+                }
+              })
+              .catch((err) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(
+                    JSON.stringify({
+                      id: reqId,
+                      error: err instanceof Error ? err.message : String(err),
+                    })
+                  );
+                }
+              });
+            return;
+          }
+
+          // Extension client: get connected devices directly
+          if (this.extensionClients.has(ws) && msg?.method === 'getDevices') {
+            const reqId = typeof msg.id === 'string' ? msg.id : crypto.randomUUID();
+            ws.send(
+              JSON.stringify({
+                id: reqId,
+                result: this.getConnectedDevices(),
+              })
+            );
+            return;
+          }
+
           if (this.awaitingInit.has(ws) && msg?.type === 'init') {
             this.awaitingInit.delete(ws);
             const platform = typeof msg.platform === 'string' ? msg.platform : 'unknown';
@@ -255,6 +325,12 @@ export class AppSession {
             this.devices.set(deviceId, conn);
             this.deviceByWs.set(ws, deviceId);
             if (metroBaseUrl) setMetroBaseUrlFromApp(metroBaseUrl, deviceId);
+
+            // Notify extension clients about new device
+            this.broadcastToExtensions({
+              type: 'devices-changed',
+              devices: this.getConnectedDevices(),
+            });
 
             // Android: top inset 감지 (비동기, 연결 차단하지 않음)
             if (platform === 'android') {
@@ -380,6 +456,10 @@ export class AppSession {
       this.server.close();
       this.server = null;
     }
+    for (const ext of this.extensionClients) {
+      ext.close();
+    }
+    this.extensionClients.clear();
     for (const [ws] of this.deviceByWs) {
       this.removeConnection(ws);
     }
