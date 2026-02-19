@@ -1,0 +1,124 @@
+{
+  "name": "react-native-mcp-devtools",
+  "displayName": "React Native MCP DevTools",
+  "version": "0.1.0",
+  "description": "Chrome DevTools-like GUI for React Native MCP — Console, Network, State, Renders, Component Tree",
+  "categories": [
+    "Debuggers",
+    "Other"
+  ],
+  "keywords": [
+    "accessibility",
+    "console",
+    "debugging",
+    "devtools",
+    "mcp",
+    "network",
+    "profiling",
+    "react-native",
+    "render",
+    "state"
+  ],
+  "homepage": "https://github.com/anthropics/react-native-mcp/tree/main/editor/vscode#readme",
+  "bugs": {
+    "url": "https://github.com/anthropics/react-native-mcp/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/react-native-mcp",
+    "directory": "editor/vscode"
+  },
+  "publisher": "react-native-mcp",
+  "main": "./dist/extension.js",
+  "scripts": {
+    "build": "bunx tsdown",
+    "watch": "bunx tsdown --watch",
+    "package": "bun run build && npx @vscode/vsce package --no-dependencies",
+    "publish": "bun run build && npx @vscode/vsce publish --no-dependencies"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.5.10",
+    "@vscode/vsce": "^3.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsdown": "0.20.3",
+    "typescript": "^5.9.3"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "rnMcp.openDevTools",
+        "title": "React Native MCP: Open DevTools"
+      },
+      {
+        "command": "rnMcp.refreshTree",
+        "title": "React Native MCP: Refresh Component Tree",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "rnMcp.runAccessibilityAudit",
+        "title": "React Native MCP: Run Accessibility Audit"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "rnMcp",
+          "title": "React Native MCP",
+          "icon": "resources/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "rnMcp": [
+        {
+          "type": "webview",
+          "id": "rnMcpDevToolsView",
+          "name": "DevTools"
+        },
+        {
+          "id": "rnMcpComponentTree",
+          "name": "Component Tree"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "rnMcp.refreshTree",
+          "when": "view == rnMcpComponentTree",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "React Native MCP",
+      "properties": {
+        "reactNativeMcp.port": {
+          "type": "number",
+          "default": 12300,
+          "description": "WebSocket port for MCP server connection"
+        },
+        "reactNativeMcp.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically connect to MCP server on startup"
+        }
+      }
+    }
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "icon": "resources/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  }
+}
