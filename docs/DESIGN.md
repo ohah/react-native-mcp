@@ -504,7 +504,7 @@ function MyButton({ title, onPress }) {
 - [x] 다중 디바이스 지원 — N대 동시 연결, deviceId/platform 기반 라우팅 ✅
 - [x] 네이티브 터치 도구 — `tap`(+롱프레스), `swipe`, `input_text`, `input_key`, `press_button` ✅
 - [x] type_text — TextInput 텍스트 입력 (onChangeText + setNativeProps) ✅
-- [ ] 성능 모니터링
+- [x] 렌더 프로파일링 — `start_render_profile`, `get_render_report`, `clear_render_profile` (성능 모니터링)
 
 **산출물**: 프로덕션급 완성
 
@@ -729,23 +729,23 @@ await client.callTool({
 | WebView 제어                   | **필요**            | ref 주입은 Babel만 가능                        |
 | 스크린샷                       | 불필요              | adb/simctl 호스트 CLI                          |
 
-### 10.5 구현 계획
+### 10.5 구현 완료
 
-1. **YAML 스키마 정의**: 지원 액션 목록 (tap, swipe, type_text, assert, wait, screenshot)
-2. **YAML 파서 → MCP 도구 매핑**: `query_selector`로 요소 좌표 획득 → `tap`/`swipe`/`type_text` 호출
-3. **assert 도구 추가**: `assert_text`/`assert_visible`로 검증
-4. **CLI 엔트리포인트**: `npx @ohah/react-native-mcp-server test run tests/login.yaml`
-5. **리포트 출력**: 성공/실패 요약, 실패 시 스크린샷 첨부
+1. **YAML 스키마 정의**: 지원 액션 목록 (tap, swipe, type_text, assert, wait, screenshot 등) ✅
+2. **YAML 파서 → MCP 도구 매핑**: `query_selector`로 요소 좌표 획득 → `tap`/`swipe`/`type_text` 호출 ✅
+3. **assert 도구 추가**: `assert_text`/`assert_visible`/`assert_not_visible`/`assert_element_count` (timeoutMs 폴링 지원) ✅
+4. **CLI 엔트리포인트**: `node packages/react-native-mcp-server/dist/test/cli.js run <yaml>` (test run 명령) ✅
+5. **리포트 출력**: 성공/실패 요약, 실패 시 스크린샷 첨부 ✅
 
 ---
 
 ## 11. 다음 단계
 
-1. **CI-ready Assertion 강화** (최우선): assert_text/assert_visible에 polling 추가, assert_not_visible·scroll_until_visible 신규 도구. [상세: 섹션 14]
+1. ~~**CI-ready Assertion 강화**~~: 완료. assert_text/assert_visible에 timeoutMs·intervalMs 폴링, assert_not_visible·assert_element_count·scroll_until_visible 도구 구현됨. [상세: 섹션 14]
 2. **Phase 3 보완**: Dead code elimination 검증
 3. ~~**Phase 5**: 네트워크·콘솔 모니터링 완료 (XHR/fetch monkey-patch + nativeLoggingHook)~~ ✅
 4. **FlatList 가상화 자동 탐색**: 전체 목록 자동 스크롤 + 수집 기능 → `scroll_until_visible` 도구로 부분 해결 예정
-5. **프로그래매틱 테스트 러너**: 섹션 10 구현 (YAML 파서 + MCP Client + assertion)
+5. ~~**프로그래매틱 테스트 러너**~~: 완료. YAML 파서 + runner + CLI (`test run <yaml>`), assert 도구 연동.
 6. ~~**네이티브 제스처 (drag/swipe/pinch)**~~: 완료. `tap`/`swipe` 등 통합 네이티브 도구로 구현됨 (멀티터치 제외)
 7. **안정화**: npm 배포, 문서 정비
 
