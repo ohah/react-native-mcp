@@ -15,8 +15,13 @@ interface BabelApi {
   types: typeof t;
 }
 
+interface PluginOptions {
+  renderHighlight?: boolean;
+}
+
 interface PluginState {
   runtimeInjected: boolean;
+  opts?: PluginOptions;
 }
 
 export default function (babel: BabelApi): { name: string; visitor: Record<string, unknown> } {
@@ -46,13 +51,27 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
             | NodePath<t.Program>
             | undefined;
           if (programPath?.node?.body) {
+            const renderHighlight = state.opts?.renderHighlight === true;
             // 1) MCP 런타임 require
             programPath.node.body.unshift(
               t.expressionStatement(
                 t.callExpression(t.identifier('require'), [t.stringLiteral(RUNTIME_MODULE_ID)])
               )
             );
-            // 2) Release 빌드에서도 런타임이 WebSocket 연결하도록 global 플래그 주입
+            // 2) 렌더 하이라이트 기본 켜기 여부 (Babel preset 옵션 renderHighlight)
+            programPath.node.body.unshift(
+              t.expressionStatement(
+                t.assignmentExpression(
+                  '=',
+                  t.memberExpression(
+                    t.identifier('global'),
+                    t.identifier('__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__')
+                  ),
+                  t.booleanLiteral(renderHighlight)
+                )
+              )
+            );
+            // 3) Release 빌드에서도 런타임이 WebSocket 연결하도록 global 플래그 주입
             programPath.node.body.unshift(
               t.expressionStatement(
                 t.assignmentExpression(

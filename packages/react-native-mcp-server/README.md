@@ -85,6 +85,23 @@ module.exports = {
 };
 ```
 
+### Babel preset options
+
+Pass options as the second element of the preset array:
+
+| Option            | Type    | Default | Description                                 |
+| ----------------- | ------- | ------- | ------------------------------------------- |
+| `renderHighlight` | boolean | `false` | Start render highlight overlay on app load. |
+
+Example — enable render highlight on load:
+
+```js
+presets: [
+  'module:@react-native/babel-preset',
+  ['@ohah/react-native-mcp-server/babel-preset', { renderHighlight: true }],
+],
+```
+
 Then add the MCP server entry to your client config (e.g. `.cursor/mcp.json` or Claude config) as in the Quick Start step 3.
 
 ## Native tools (idb / adb)

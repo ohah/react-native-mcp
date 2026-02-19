@@ -18,6 +18,7 @@
 import type { Fiber } from './types';
 import { getFiberTypeName } from './fiber-helpers';
 import {
+  renderHighlight,
   overlayActive,
   overlayComponentFilter,
   overlayIgnoreFilter,
@@ -461,6 +462,9 @@ export function getOverlayComponent(): any {
         }
       });
       activeRef.current = true;
+      if (renderHighlight) {
+        startRenderHighlight();
+      }
       return function () {
         activeRef.current = false;
         setOverlaySetHighlightsFn(null);
