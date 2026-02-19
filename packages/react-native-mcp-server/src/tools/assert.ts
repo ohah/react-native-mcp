@@ -114,7 +114,7 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
   registerTool(
     server,
     'assert_text',
-    'Assert text exists on screen. Returns { pass, message }. Optional selector; supports timeoutMs/intervalMs polling.',
+    'Assert text exists on RN screen (Fiber tree). Returns { pass, message }. Optional selector; polling via timeoutMs/intervalMs.',
     assertTextSchema,
     async (args: unknown) => {
       const { text, selector, timeoutMs, intervalMs, deviceId, platform } =
@@ -170,7 +170,7 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
   registerTool(
     server,
     'assert_visible',
-    'Assert element matching selector is visible. Returns { pass, message }. Supports polling.',
+    'Assert element matching selector is visible on RN screen (Fiber tree). Returns { pass, message }. Polling supported.',
     assertVisibleSchema,
     async (args: unknown) => {
       const { selector, timeoutMs, intervalMs, deviceId, platform } =
@@ -221,7 +221,7 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
   registerTool(
     server,
     'assert_not_visible',
-    'Assert element matching selector is NOT visible. Returns { pass, message }. Polling until gone.',
+    'Assert element matching selector is NOT visible on RN screen (Fiber tree). Returns { pass, message }. Poll until gone.',
     assertNotVisibleSchema,
     async (args: unknown) => {
       const { selector, timeoutMs, intervalMs, deviceId, platform } =
@@ -273,7 +273,7 @@ export function registerAssert(server: McpServer, appSession: AppSession): void 
   registerTool(
     server,
     'assert_element_count',
-    'Assert count of elements matching selector. expectedCount or minCount/maxCount. Returns { pass, actualCount, message }.',
+    'Assert count of elements matching selector on RN screen (Fiber tree). expectedCount or minCount/maxCount. Returns { pass, actualCount, message }.',
     assertElementCountSchema,
     async (args: unknown) => {
       const {

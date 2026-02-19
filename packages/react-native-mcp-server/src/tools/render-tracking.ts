@@ -49,7 +49,7 @@ export function registerRenderTracking(server: McpServer, appSession: AppSession
     'start_render_profile',
     {
       description:
-        'Start render profiling. Tracks component mounts, re-renders, and unnecessary renders caused by parent re-renders. Optional `components` filter.',
+        'Start React component render profiling (not JS/GPU engine). Tracks mounts, re-renders, and unnecessary renders. Optional `components` filter.',
       inputSchema: startSchema,
     },
     async (args: unknown) => {
@@ -114,7 +114,7 @@ export function registerRenderTracking(server: McpServer, appSession: AppSession
     'get_render_report',
     {
       description:
-        'Get render profiling report. Shows hot components sorted by render count, unnecessary renders (preventable with React.memo), and recent render details with trigger analysis.',
+        'Get React component render report (not engine perf). Hot components by render count, unnecessary renders (React.memo), recent details with trigger analysis.',
       inputSchema: reportSchema,
     },
     async (args: unknown) => {
@@ -172,7 +172,8 @@ export function registerRenderTracking(server: McpServer, appSession: AppSession
   s.registerTool(
     'clear_render_profile',
     {
-      description: 'Stop render profiling and clear all collected data.',
+      description:
+        'Stop React component render profiling and clear collected data (not engine perf).',
       inputSchema: clearSchema,
     },
     async (args: unknown) => {
