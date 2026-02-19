@@ -83,6 +83,23 @@ module.exports = {
 };
 ```
 
+### Babel 프리셋 옵션
+
+프리셋을 배열로 넣고 두 번째 요소에 옵션 객체를 줄 수 있습니다.
+
+| 옵션              | 타입    | 기본값  | 설명                                     |
+| ----------------- | ------- | ------- | ---------------------------------------- |
+| `renderHighlight` | boolean | `false` | 앱 로드 시 렌더 하이라이트 오버레이 켜기 |
+
+예: 렌더 하이라이트 켜기
+
+```js
+presets: [
+  'module:@react-native/babel-preset',
+  ['@ohah/react-native-mcp-server/babel-preset', { renderHighlight: true }],
+],
+```
+
 그 다음 Quick Start 3단계처럼 MCP 클라이언트 설정(예: `.cursor/mcp.json` 또는 Claude 설정)에 서버 항목을 추가하세요.
 
 ## 네이티브 도구 (idb / adb)

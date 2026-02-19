@@ -122,7 +122,7 @@
 		overlayMaxHighlights = 100;
 		overlayRenderCounts = {};
 	}
-	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER, renderProfileActive, renderProfileStartTime, renderCommitCount, renderEntries, renderComponentFilter, renderIgnoreFilter, RENDER_BUFFER_SIZE, overlayActive, overlayComponentFilter, overlayIgnoreFilter, overlayShowLabels, overlayFadeTimeout, overlayMaxHighlights, overlaySetHighlights, overlayRenderCounts;
+	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER, renderProfileActive, renderProfileStartTime, renderCommitCount, renderEntries, renderComponentFilter, renderIgnoreFilter, RENDER_BUFFER_SIZE, renderHighlight, overlayActive, overlayComponentFilter, overlayIgnoreFilter, overlayShowLabels, overlayFadeTimeout, overlayMaxHighlights, overlaySetHighlights, overlayRenderCounts;
 	var init_shared = __esmMin(() => {
 		pressHandlers = {};
 		consoleLogs = [];
@@ -143,6 +143,7 @@
 		renderComponentFilter = null;
 		renderIgnoreFilter = null;
 		RENDER_BUFFER_SIZE = 5e3;
+		renderHighlight = typeof global !== "undefined" && global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ === true;
 		overlayActive = false;
 		overlayComponentFilter = null;
 		overlayIgnoreFilter = null;
@@ -850,6 +851,7 @@
 					if (activeRef.current) setHighlights(h);
 				});
 				activeRef.current = true;
+				if (renderHighlight) startRenderHighlight();
 				return function() {
 					activeRef.current = false;
 					setOverlaySetHighlights(null);
@@ -3109,6 +3111,7 @@
 	*/
 	var init_runtime = __esmMin(() => {
 		init_devtools_hook();
+		init_shared();
 		init_fiber_helpers();
 		init_state_hooks();
 		init_render_tracking();
@@ -3120,12 +3123,17 @@
 		init_mcp_introspection();
 		init_mcp_actions();
 		init_mcp_scroll();
+		init_mcp_console();
+		init_mcp_network();
 		init_mcp_state();
+		init_mcp_render();
 		init_mcp_query();
 		init_mcp_measure();
 		init_mcp_accessibility();
 		init_mcp_object();
 		init_console_hook();
+		init_network_helpers();
+		init_network_mock();
 		init_xhr_patch();
 		init_fetch_patch();
 		init_connection();

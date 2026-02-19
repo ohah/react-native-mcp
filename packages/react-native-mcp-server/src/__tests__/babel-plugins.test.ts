@@ -30,6 +30,28 @@ AppRegistry.registerComponent('App', () => App);`;
     expect(result?.code).not.toContain('AppRegistry.registerComponent');
     // Release 빌드에서도 런타임 연결되도록 global 플래그 주입 확인
     expect(result?.code).toContain('global.__REACT_NATIVE_MCP_ENABLED__ = true');
+    // 옵션 없으면 renderHighlight 플래그는 false
+    expect(result?.code).toContain('global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ = false');
+  });
+
+  it('renderHighlight: true 옵션 시 __REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ = true 주입', () => {
+    const code = `AppRegistry.registerComponent('App', () => App);`;
+    const result = transformSync(code, {
+      ...babelOpts,
+      plugins: [[appRegistryPlugin, { renderHighlight: true }]],
+      filename: 'entry.js',
+    });
+    expect(result?.code).toContain('global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ = true');
+  });
+
+  it('renderHighlight: false 옵션 시 __REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ = false 주입', () => {
+    const code = `AppRegistry.registerComponent('App', () => App);`;
+    const result = transformSync(code, {
+      ...babelOpts,
+      plugins: [[appRegistryPlugin, { renderHighlight: false }]],
+      filename: 'entry.js',
+    });
+    expect(result?.code).toContain('global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ = false');
   });
 
   it('플러그인으로 실행 시 node_modules 경로면 변환하지 않는다', () => {

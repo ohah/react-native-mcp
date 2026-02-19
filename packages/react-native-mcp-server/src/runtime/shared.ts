@@ -106,6 +106,12 @@ export function resetRenderProfile() {
   renderIgnoreFilter = null;
 }
 
+// ─── Render highlight (Babel preset: renderHighlight) ─
+// Babel이 주입한 global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ 를 모듈 로드 시점에 읽음.
+export var renderHighlight =
+  typeof global !== 'undefined' &&
+  (global as Record<string, unknown>).__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ === true;
+
 // ─── Render overlay (render-overlay ↔ state-change-tracking) ───
 export var overlayActive = false;
 export var overlayComponentFilter: string[] | null = null;
