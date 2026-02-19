@@ -2,6 +2,15 @@
 
 React 컴포넌트 렌더링을 프로파일링하는 도구입니다. 핫 컴포넌트, 불필요한 리렌더, 최적화 기회를 식별할 수 있습니다.
 
+## 렌더 하이라이트 (시각 오버레이)
+
+**`start_render_highlight`**와 **`stop_render_highlight`**는 리렌더되는 컴포넌트 주변에 디바이스 화면에 색상 사각형을 그립니다(react-scan 스타일). 앱과 상호작용할 때 UI의 어느 부분이 갱신되는지 확인할 수 있습니다.
+
+- **시작:** `start_render_highlight` (선택 인자: `whitelist`, `showLabels`, `fadeAfterMs`, `maxHighlights`). 앱 로드 시 Babel 프리셋 옵션 `renderHighlight: true`(기본 스타일 `react-mcp`) 또는 `renderHighlight: { style: 'react-scan' }`로 켤 수도 있습니다 — [설치 및 연결](../#렌더-하이라이트-선택) 참고.
+- **중지:** `stop_render_highlight`로 모든 오버레이 사각형 제거.
+
+VS Code [DevTools Renders 패널](../vscode-extension)의 "Highlight" 버튼으로도 이 도구를 호출할 수 있습니다.
+
 ## start_render_profile
 
 렌더 프로파일링을 시작합니다. 컴포넌트의 마운트, 리렌더, 부모 리렌더로 인한 불필요한 렌더를 추적합니다.

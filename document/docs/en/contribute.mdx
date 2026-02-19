@@ -86,6 +86,25 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ---
 
+## VS Code extension development
+
+The DevTools extension lives in `editor/vscode`.
+
+**Build:**
+
+```bash
+cd editor/vscode
+bun install
+bun run build    # dist/extension.js + dist/webview.js
+bun run watch    # Auto-rebuild on file changes
+```
+
+**Debug (Extension Development Host):** Open `editor/vscode` in VS Code → press `F5` → new window with extension loaded.
+
+**Architecture:** Extension connects to MCP server at `ws://localhost:12300` as an `extension-init` client (same server as Cursor/Claude via stdio). Flow: VS Code Extension → WebSocket → MCP Server → eval → RN App.
+
+---
+
 # Architecture
 
 How React Native MCP works under the hood.

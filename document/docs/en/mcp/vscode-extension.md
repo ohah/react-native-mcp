@@ -132,28 +132,4 @@ Configure in `settings.json`:
 | `reactNativeMcp.port`        | `12300` | MCP server WebSocket port       |
 | `reactNativeMcp.autoConnect` | `true`  | Auto-connect on VS Code startup |
 
-## Development
-
-### Build
-
-```bash
-cd editor/vscode
-bun install
-bun run build    # dist/extension.js + dist/webview.js
-bun run watch    # Auto-rebuild on file changes
-```
-
-### Debugging (Extension Development Host)
-
-1. Open `editor/vscode` folder in VS Code
-2. Press `F5` → Extension Development Host launches
-3. Extension loads in the new VS Code window
-
-### Architecture
-
-```
-VS Code Extension ──ws://localhost:12300──▶ MCP Server ──eval──▶ RN App
-Cursor/Claude ────────stdio────────────────▶ (same server)
-```
-
-The extension connects to the MCP server's WebSocket as an `extension-init` client. It coexists with existing MCP stdio clients (Cursor, etc.).
+For extension development (build, debug, architecture), see [Contribute](/contribute).

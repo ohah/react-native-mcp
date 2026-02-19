@@ -87,16 +87,21 @@ module.exports = {
 
 프리셋을 배열로 넣고 두 번째 요소에 옵션 객체를 줄 수 있습니다.
 
-| 옵션              | 타입    | 기본값  | 설명                                     |
-| ----------------- | ------- | ------- | ---------------------------------------- |
-| `renderHighlight` | boolean | `false` | 앱 로드 시 렌더 하이라이트 오버레이 켜기 |
+| 옵션              | 타입                                                    | 기본값  | 설명                                                                  |
+| ----------------- | ------------------------------------------------------- | ------- | --------------------------------------------------------------------- |
+| `renderHighlight` | `boolean` 또는 `{ style: 'react-scan' \| 'react-mcp' }` | `false` | 앱 로드 시 렌더 하이라이트 켜기. `true` = 스타일 `'react-mcp'`(기본). |
 
-예: 렌더 하이라이트 켜기
+- **`true`** — 켜기, 스타일 `'react-mcp'` (시안 #61dafb, 기본, DevTools 아이콘 톤).
+- **`{ style: 'react-mcp' }`** — `true`와 동일.
+- **`{ style: 'react-scan' }`** — 보라색, react-scan 스타일.
+
+예:
 
 ```js
 presets: [
   'module:@react-native/babel-preset',
   ['@ohah/react-native-mcp-server/babel-preset', { renderHighlight: true }],
+  // 또는: { renderHighlight: { style: 'react-scan' } }  로 보라색
 ],
 ```
 

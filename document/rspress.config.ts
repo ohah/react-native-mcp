@@ -9,27 +9,27 @@ const config: UserConfig = {
   base,
   globalStyles: path.join(__dirname, 'styles/global.css'),
   plugins: [pluginMermaid() as any],
-  title: 'React-Native-mcp-server',
+  title: 'React Native MCP Server',
   description:
     'MCP server for React Native app automation and monitoring. Use with Cursor, Claude Desktop, and GitHub Actions.',
   logo: `${base}logo.svg`,
   lang: 'en',
   head: [
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:site_name', content: 'React-Native-mcp-server' }],
+    ['meta', { property: 'og:site_name', content: 'React Native MCP Server' }],
   ],
   locales: [
     {
       lang: 'en',
       label: 'English',
-      title: 'React-Native-mcp-server',
+      title: 'React Native MCP Server',
       description:
         'MCP server for React Native app automation and monitoring. Use with Cursor, Claude Desktop, and GitHub Actions.',
     },
     {
       lang: 'ko',
       label: '한국어',
-      title: 'React-Native-mcp-server',
+      title: 'React Native MCP Server',
       description:
         'React Native 앱 자동화·모니터링을 위한 MCP 서버. Cursor, Claude Desktop, GitHub Actions에서 사용할 수 있습니다.',
     },

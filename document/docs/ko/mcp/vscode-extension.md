@@ -132,28 +132,4 @@ cd your-rn-project && npx react-native start
 | `reactNativeMcp.port`        | `12300` | MCP 서버 WebSocket 포트   |
 | `reactNativeMcp.autoConnect` | `true`  | VS Code 시작 시 자동 연결 |
 
-## 개발
-
-### 빌드
-
-```bash
-cd editor/vscode
-bun install
-bun run build    # dist/extension.js + dist/webview.js 생성
-bun run watch    # 파일 변경 시 자동 재빌드
-```
-
-### 디버깅 (Extension Development Host)
-
-1. VS Code에서 `editor/vscode` 폴더 열기
-2. `F5` → Extension Development Host 실행
-3. 새 VS Code 창에서 확장이 로드됨
-
-### 아키텍처
-
-```
-VS Code Extension ──ws://localhost:12300──▶ MCP Server ──eval──▶ RN App
-Cursor/Claude ────────stdio────────────────▶ (동일 서버)
-```
-
-확장은 MCP 서버의 WebSocket에 `extension-init` 타입으로 연결합니다. 기존 MCP stdio 클라이언트(Cursor 등)와 동시에 사용 가능합니다.
+확장 개발(빌드, 디버깅, 아키텍처)은 [기여](/contribute) 문서를 참고하세요.
