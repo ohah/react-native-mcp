@@ -98,6 +98,18 @@ function normalizeBundleUrl(bundleUrl: string): string {
   return bundleUrl.replace(/\/\/&/, '?&');
 }
 
+/** 요청 시 소스맵을 받도록 inlineSourceMap=true 로 통일 (앱이 false 로 로드한 URL도 덮어씀). */
+function ensureInlineSourceMap(url: string): string {
+  if (url.includes('inlineSourceMap=false')) {
+    url = url.replace(/inlineSourceMap=false/g, 'inlineSourceMap=true');
+  }
+  if (!url.includes('inlineSourceMap=true')) {
+    const sep = url.includes('?') ? '&' : '?';
+    url = `${url}${sep}inlineSourceMap=true`;
+  }
+  return url;
+}
+
 export async function getSourcePosition(
   bundleUrl: string,
   line: number,
@@ -105,11 +117,7 @@ export async function getSourcePosition(
   options: { useCache?: boolean } = {}
 ): Promise<SourcePosition | SourcePositionError> {
   const useCache = options.useCache !== false;
-  let url = normalizeBundleUrl(bundleUrl);
-  if (!url.includes('inlineSourceMap=true')) {
-    const sep = url.includes('?') ? '&' : '?';
-    url = `${url}${sep}inlineSourceMap=true`;
-  }
+  let url = ensureInlineSourceMap(normalizeBundleUrl(bundleUrl));
 
   let rawMap: unknown = null;
 

@@ -143,7 +143,9 @@ export function registerGetComponentSource(server: McpServer, appSession: AppSes
 
       try {
         const isAppSource = (source: string) =>
-          !source.includes('node_modules/react') && !source.includes('node_modules/react-native');
+          !source.includes('node_modules/react') &&
+          !source.includes('node_modules/react-native') &&
+          !source.includes('runtime.js');
         let firstOk: {
           source: string;
           line: number | null;
