@@ -19,7 +19,7 @@
 | `packages/react-native-mcp-test`   | YAML 기반 E2E 테스트 러너                       | ❌                                 |
 | `editor/vscode`                    | VS Code 확장 (React Native MCP DevTools)        | 마켓플레이스/vsix                  |
 | `examples/demo-app`                | 데모 앱 (E2E 테스트 대상)                       | ❌                                 |
-| `document`                         | Docusaurus 문서 사이트                          | ❌                                 |
+| `document`                         | Rspress 문서 사이트                             | ❌                                 |
 
 ## 배포 (관리자)
 
