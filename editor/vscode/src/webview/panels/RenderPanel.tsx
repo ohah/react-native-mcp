@@ -261,6 +261,7 @@ export function RenderPanel() {
   const [loading, setLoading] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [highlightedIdx, setHighlightedIdx] = useState<number | null>(null);
+  const [highlighting, setHighlighting] = useState(false);
 
   // Clear data on disconnect
   useEffect(() => {
@@ -268,6 +269,7 @@ export function RenderPanel() {
       setReport(null);
       setProfiling(false);
       setExpandedIdx(null);
+      setHighlighting(false);
     }
   }, [disconnectGeneration]);
 
@@ -310,6 +312,20 @@ export function RenderPanel() {
       // ignore
     }
   }, []);
+
+  const toggleHighlight = useCallback(async () => {
+    try {
+      if (highlighting) {
+        await sendRequest('stopRenderHighlight');
+        setHighlighting(false);
+      } else {
+        await sendRequest('startRenderHighlight', { showLabels: true });
+        setHighlighting(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, [highlighting]);
 
   const refreshReport = useCallback(async () => {
     try {
@@ -373,6 +389,17 @@ export function RenderPanel() {
         </button>
         {profiling && (
           <span style={{ fontSize: 11, opacity: 0.7, color: '#f44747' }}>Recording...</span>
+        )}
+        <span style={{ borderLeft: '1px solid #444', height: 16, margin: '0 8px' }} />
+        <button
+          className={highlighting ? 'btn-danger' : 'btn-secondary'}
+          onClick={toggleHighlight}
+          disabled={!connected}
+        >
+          {highlighting ? 'Stop Highlight' : 'Highlight'}
+        </button>
+        {highlighting && (
+          <span style={{ fontSize: 11, opacity: 0.7, color: '#4ec9b0' }}>Highlighting...</span>
         )}
         {report && (
           <span style={{ fontSize: 11, opacity: 0.5, marginLeft: 'auto' }}>

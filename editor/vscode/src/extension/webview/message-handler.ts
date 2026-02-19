@@ -102,6 +102,30 @@ export function createMessageHandler(client: WsClient): Handler {
           result = true;
           break;
 
+        case 'startRenderHighlight':
+          result = await client.startRenderHighlight(
+            payload as
+              | {
+                  components?: string[];
+                  ignore?: string[];
+                  showLabels?: boolean;
+                  fadeTimeout?: number;
+                  maxHighlights?: number;
+                }
+              | undefined,
+            payload?.deviceId as string | undefined,
+            payload?.platform as string | undefined
+          );
+          break;
+
+        case 'stopRenderHighlight':
+          await client.stopRenderHighlight(
+            payload?.deviceId as string | undefined,
+            payload?.platform as string | undefined
+          );
+          result = true;
+          break;
+
         case 'getComponentTree':
           result = await client.getComponentTree(
             payload as { maxDepth?: number } | undefined,
