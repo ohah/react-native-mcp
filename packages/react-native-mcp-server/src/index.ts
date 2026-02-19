@@ -4,6 +4,7 @@
  * Stdio transport (Cursor 연동) + WebSocket 서버 (앱 연동)
  *
  * `init` 서브커맨드: 프로젝트 셋업 CLI
+ * `test` 서브커맨드: YAML E2E 테스트 실행
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -35,7 +36,13 @@ async function main() {
   console.error('[react-native-mcp-server] Running on stdio');
 }
 
-if (process.argv[2] === 'init') {
+const subcommand = process.argv[2];
+
+if (subcommand === 'test') {
+  // 'test' 토큰 제거 → test CLI가 "run <path> ..." 를 argv[2]로 받도록
+  process.argv = [process.argv[0], process.argv[1], ...process.argv.slice(3)];
+  await import('./test/cli.js');
+} else if (subcommand === 'init') {
   const { parseArgs } = await import('node:util');
   const { runInit } = await import('./init/index.js');
   type McpClient = import('./init/mcp-config.js').McpClient;

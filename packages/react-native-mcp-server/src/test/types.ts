@@ -1,4 +1,4 @@
-import type { Platform } from '@ohah/react-native-mcp-client';
+import type { Platform } from '../client/types.js';
 
 export interface TestConfig {
   platform: Platform;

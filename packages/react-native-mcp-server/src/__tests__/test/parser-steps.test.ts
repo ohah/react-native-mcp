@@ -2,7 +2,7 @@ import { writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, it, afterEach } from 'bun:test';
-import { parseFile } from '../parser.js';
+import { parseFile } from '../../test/parser.js';
 
 const tmpFile = join(tmpdir(), `parser-steps-test-${Date.now()}.yaml`);
 

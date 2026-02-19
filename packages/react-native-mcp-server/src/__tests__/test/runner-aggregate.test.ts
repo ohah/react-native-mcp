@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { aggregateStepCounts } from '../runner.js';
-import type { SuiteResult, StepResult } from '../types.js';
+import { aggregateStepCounts } from '../../test/runner.js';
+import type { SuiteResult, StepResult } from '../../test/types.js';
 
 function stepResult(
   status: StepResult['status'],

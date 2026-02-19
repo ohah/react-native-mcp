@@ -1,6 +1,6 @@
 # Phase 3: clearState, setLocation, copyText, pasteText E2E 테스트
-# 실행: react-native-mcp-test run examples/demo-app/e2e/phase3-clear-state-set-location-copy-paste.yaml -p ios
-#       react-native-mcp-test run examples/demo-app/e2e/phase3-clear-state-set-location-copy-paste.yaml -p android
+# 실행: react-native-mcp-server test run examples/demo-app/e2e/phase3-clear-state-set-location-copy-paste.yaml -p ios
+#       react-native-mcp-server test run examples/demo-app/e2e/phase3-clear-state-set-location-copy-paste.yaml -p android
 # 주의: setLocation은 Android 에뮬레이터에서만 동작. 실기기면 해당 스텝에서 실패할 수 있음.
 name: Phase 3 clearState / setLocation / copyText·pasteText
 config:

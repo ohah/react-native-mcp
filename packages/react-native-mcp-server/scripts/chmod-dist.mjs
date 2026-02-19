@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const pkgRoot = path.join(__dirname, '..');
 const distIndex = path.join(pkgRoot, 'dist', 'index.js');
+const testCli = path.join(pkgRoot, 'dist', 'test', 'cli.js');
 const runScript = path.join(pkgRoot, 'run-mcp-server.sh');
 
 if (!fs.existsSync(distIndex)) {
@@ -16,5 +17,6 @@ if (!fs.existsSync(distIndex)) {
   process.exitCode = 1;
 } else if (process.platform !== 'win32') {
   fs.chmodSync(distIndex, 0o755);
+  if (fs.existsSync(testCli)) fs.chmodSync(testCli, 0o755);
   if (fs.existsSync(runScript)) fs.chmodSync(runScript, 0o755);
 }
