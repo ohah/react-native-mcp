@@ -29,6 +29,11 @@ npx -y @ohah/react-native-mcp-server init
     <div className="terminal-line success"> ✓ Expo detected (expo@~52.0.0)</div>
     <div className="terminal-line success"> ✓ Package manager: bun</div>
     <br />
+    <div className="terminal-line"> Checking external tools...</div>
+    <div className="terminal-line success"> ✓ adb — found</div>
+    <div className="terminal-line success"> ✓ idb — found</div>
+    <div className="terminal-line success"> All tools ready!</div>
+    <br />
     <div className="terminal-line">? Which MCP client do you use?</div>
     <div className="terminal-line dim"> 1. Cursor</div>
     <div className="terminal-line dim"> 2. Claude Code (CLI)</div>
@@ -124,6 +129,17 @@ npx -y @ohah/react-native-mcp-server init
 
 `package.json`에 `react-native`가 없으면 에러와 함께 종료됩니다.
 
+### Step 1.5 — 외부 도구 확인
+
+`adb`(Android)와 `idb`(iOS, macOS만)의 설치 여부를 자동으로 확인합니다.
+
+| 도구 | 용도                                    | 설치 방법                                                       |
+| ---- | --------------------------------------- | --------------------------------------------------------------- |
+| adb  | Android 에뮬레이터 탭/스와이프/스크린샷 | Android Studio 포함, 또는 `brew install android-platform-tools` |
+| idb  | iOS 시뮬레이터 탭/스와이프/스크린샷     | `brew tap facebook/fb && brew install idb-companion`            |
+
+설치되어 있지 않으면 경고와 설치 안내를 표시하지만, 셋업은 계속 진행됩니다. 상세 안내는 [설치 및 연결 — 네이티브 도구](./#4-네이티브-도구-idb--adb)를 참고하세요.
+
 ### Step 2 — MCP 클라이언트 선택
 
 사용하는 MCP 클라이언트를 선택합니다. 설정 파일 생성 위치가 결정됩니다.
@@ -153,7 +169,7 @@ npx -y @ohah/react-native-mcp-server init
 
 ### Step 3 — 변경 적용
 
-세 파일이 수정됩니다:
+네 단계가 적용됩니다:
 
 1. **babel.config.js** — `presets` 배열에 `@ohah/react-native-mcp-server/babel-preset` 추가.
 2. **MCP 클라이언트 설정** — 위에서 설명한 경로에 생성/병합.

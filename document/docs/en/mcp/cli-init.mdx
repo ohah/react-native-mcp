@@ -29,6 +29,11 @@ This replaces all manual steps (babel config, client config, gitignore) with one
     <div className="terminal-line success"> ✓ Expo detected (expo@~52.0.0)</div>
     <div className="terminal-line success"> ✓ Package manager: bun</div>
     <br />
+    <div className="terminal-line"> Checking external tools...</div>
+    <div className="terminal-line success"> ✓ adb — found</div>
+    <div className="terminal-line success"> ✓ idb — found</div>
+    <div className="terminal-line success"> All tools ready!</div>
+    <br />
     <div className="terminal-line">? Which MCP client do you use?</div>
     <div className="terminal-line dim"> 1. Cursor</div>
     <div className="terminal-line dim"> 2. Claude Code (CLI)</div>
@@ -124,6 +129,17 @@ The init command reads your project directory and automatically detects:
 
 If `react-native` is not found in `package.json`, the command exits with an error.
 
+### Step 1.5 — External Tool Check
+
+Automatically checks whether `adb` (Android) and `idb` (iOS, macOS only) are installed.
+
+| Tool | Purpose                               | Install                                                                |
+| ---- | ------------------------------------- | ---------------------------------------------------------------------- |
+| adb  | Android emulator tap/swipe/screenshot | Included with Android Studio, or `brew install android-platform-tools` |
+| idb  | iOS simulator tap/swipe/screenshot    | `brew tap facebook/fb && brew install idb-companion`                   |
+
+If a tool is missing, a warning with install instructions is shown, but setup continues. For detailed instructions see [Install & connect — Native tools](./#4-native-tools-idb--adb).
+
 ### Step 2 — MCP Client Selection
 
 You are prompted to choose your MCP client. This determines where the config file is created.
@@ -153,7 +169,7 @@ If the file already exists, the `react-native-mcp` entry is merged in — existi
 
 ### Step 3 — Apply Changes
 
-Three files are modified:
+Three files are modified (after the tool check):
 
 1. **babel.config.js** — Appends `@ohah/react-native-mcp-server/babel-preset` to the `presets` array.
 2. **MCP client config** — Created or merged as described above.
