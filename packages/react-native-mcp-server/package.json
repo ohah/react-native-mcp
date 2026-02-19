@@ -69,6 +69,7 @@
     "fast-xml-parser": "^5.3.6",
     "pixelmatch": "^7.1.0",
     "sharp": "^0.34.5",
+    "source-map": "^0.7.6",
     "ws": "^8.18.0",
     "yaml": "^2.8.0",
     "zod": "^3.25.0"

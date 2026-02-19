@@ -1661,6 +1661,63 @@
 //#endregion
 //#region src/runtime/mcp-introspection.ts
 /**
+	* _debugStack.stack 문자열에서 모든 (url:line:column) 프레임 추출.
+	* 예: " at fn (http://...:25822:77)\n at App (http://...:7284:69)" → [{ bundleUrl, line, column }, ...]
+	* 첫 프레임이 React 내부인 경우가 많으므로 서버에서 순서대로 심볼리케이트해 앱 소스 프레임을 고름.
+	*/
+	function getSourceRefFromStack(stack) {
+		if (typeof stack !== "string" || !stack) return [];
+		var out = [];
+		var re = /\(([^)]+):(\d+):(\d+)\)/g;
+		var m;
+		while ((m = re.exec(stack)) !== null) {
+			var line = parseInt(m[2], 10);
+			var column = parseInt(m[3], 10);
+			if (!isNaN(line)) out.push({
+				bundleUrl: m[1],
+				line,
+				column
+			});
+		}
+		return out;
+	}
+	/**
+	* uid(경로 "0.1.2" 또는 testID)로 Fiber 찾기.
+	*/
+	function findFiberByUid(root, uid) {
+		if (!root || typeof uid !== "string") return null;
+		var u = uid.trim();
+		if (isPathUid(u)) return getFiberByPath(root, u);
+		var found = null;
+		(function visit(f) {
+			if (!f || found) return;
+			var props = f.memoizedProps;
+			if (props && typeof props.testID === "string" && props.testID.trim() === u) {
+				found = f;
+				return;
+			}
+			visit(f.child);
+			visit(f.sibling);
+		})(root);
+		return found;
+	}
+	/**
+	* uid에 해당하는 컴포넌트의 소스 위치 ref 목록 (번들 URL + 라인/컬럼). 서버에서 소스맵으로 원본 파일 추론용.
+	* _debugStack이 없으면 빈 배열. 여러 프레임을 반환하므로 서버에서 앱 소스에 해당하는 첫 프레임을 선택할 수 있음.
+	*/
+	function getSourceRefForUid(uid) {
+		try {
+			var root = getFiberRoot();
+			if (!root) return [];
+			var fiber = findFiberByUid(root, uid);
+			var debugStack = fiber && fiber._debugStack;
+			if (!debugStack || typeof debugStack.stack !== "string") return [];
+			return getSourceRefFromStack(debugStack.stack);
+		} catch (e) {
+			return [];
+		}
+	}
+	/**
 	* 클릭 가능 요소 목록 (uid + label). Fiber 트리에서 onPress 있는 모든 노드 수집.
 	* _pressHandlers 레지스트리가 있으면 우선 사용, 없으면 Fiber 순회.
 	*/
@@ -1791,6 +1848,7 @@
 	}
 	var init_mcp_introspection = __esmMin(() => {
 		init_fiber_helpers();
+		init_query_selector();
 		init_shared();
 	});
 
@@ -2577,6 +2635,7 @@
 			getClickables,
 			getTextNodes,
 			getComponentTree,
+			getSourceRefForUid,
 			pressByLabel,
 			longPressByLabel,
 			typeText,

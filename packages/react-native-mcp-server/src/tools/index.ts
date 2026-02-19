@@ -37,6 +37,7 @@ import { registerNetworkMock } from './network-mock.js';
 import { registerVisualCompare } from './visual-compare.js';
 import { registerRenderTracking } from './render-tracking.js';
 import { registerRenderOverlay } from './render-overlay.js';
+import { registerGetComponentSource } from './get-component-source.js';
 
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
@@ -46,6 +47,7 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerWebviewEvaluateScript(server, appSession);
   registerTypeText(server, appSession);
   registerQuerySelector(server, appSession);
+  registerGetComponentSource(server, appSession);
   registerAssert(server, appSession);
   registerGetDebuggerStatus(server, appSession);
   registerListConsoleMessages(server, appSession);

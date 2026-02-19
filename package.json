@@ -47,7 +47,8 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
     "oxfmt": "latest",
-    "oxlint": "latest"
+    "oxlint": "latest",
+    "source-map": "^0.7.6"
   },
   "peerDependencies": {
     "typescript": "^5"
