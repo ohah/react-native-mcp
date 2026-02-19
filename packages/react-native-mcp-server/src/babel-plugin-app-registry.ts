@@ -16,7 +16,7 @@ interface BabelApi {
 }
 
 interface PluginOptions {
-  renderHighlight?: boolean;
+  renderHighlight?: boolean | { enabled?: boolean; style?: 'react-scan' | 'react-mcp' };
 }
 
 interface PluginState {
@@ -51,14 +51,37 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
             | NodePath<t.Program>
             | undefined;
           if (programPath?.node?.body) {
-            const renderHighlight = state.opts?.renderHighlight === true;
+            const rh = state.opts?.renderHighlight;
+            const renderHighlightEnabled =
+              rh === true || (typeof rh === 'object' && rh !== null && rh.enabled === true);
+            const renderHighlightStyle =
+              rh === true
+                ? 'react-mcp'
+                : typeof rh === 'object' &&
+                    rh !== null &&
+                    (rh.style === 'react-scan' || rh.style === 'react-mcp')
+                  ? rh.style
+                  : 'react-mcp';
             // 1) MCP 런타임 require
             programPath.node.body.unshift(
               t.expressionStatement(
                 t.callExpression(t.identifier('require'), [t.stringLiteral(RUNTIME_MODULE_ID)])
               )
             );
-            // 2) 렌더 하이라이트 기본 켜기 여부 (Babel preset 옵션 renderHighlight)
+            // 2) 렌더 하이라이트 스타일 (react-mcp 기본)
+            programPath.node.body.unshift(
+              t.expressionStatement(
+                t.assignmentExpression(
+                  '=',
+                  t.memberExpression(
+                    t.identifier('global'),
+                    t.identifier('__REACT_NATIVE_MCP_RENDER_HIGHLIGHT_STYLE__')
+                  ),
+                  t.stringLiteral(renderHighlightStyle)
+                )
+              )
+            );
+            // 3) 렌더 하이라이트 기본 켜기 여부
             programPath.node.body.unshift(
               t.expressionStatement(
                 t.assignmentExpression(
@@ -67,11 +90,11 @@ export default function (babel: BabelApi): { name: string; visitor: Record<strin
                     t.identifier('global'),
                     t.identifier('__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__')
                   ),
-                  t.booleanLiteral(renderHighlight)
+                  t.booleanLiteral(renderHighlightEnabled)
                 )
               )
             );
-            // 3) Release 빌드에서도 런타임이 WebSocket 연결하도록 global 플래그 주입
+            // 4) Release 빌드에서도 런타임이 WebSocket 연결하도록 global 플래그 주입
             programPath.node.body.unshift(
               t.expressionStatement(
                 t.assignmentExpression(

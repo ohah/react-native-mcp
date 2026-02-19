@@ -107,17 +107,22 @@ export function resetRenderProfile() {
 }
 
 // ─── Render highlight (Babel preset: renderHighlight) ─
-// Babel이 주입한 global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ 를 모듈 로드 시점에 읽음.
+// Babel이 주입한 global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ / __REACT_NATIVE_MCP_RENDER_HIGHLIGHT_STYLE__ 를 모듈 로드 시점에 읽음.
 export var renderHighlight =
   typeof global !== 'undefined' &&
   (global as Record<string, unknown>).__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ === true;
+export var renderHighlightStyle: 'react-scan' | 'react-mcp' =
+  typeof global !== 'undefined' &&
+  (global as Record<string, unknown>).__REACT_NATIVE_MCP_RENDER_HIGHLIGHT_STYLE__ === 'react-scan'
+    ? 'react-scan'
+    : 'react-mcp';
 
 // ─── Render overlay (render-overlay ↔ state-change-tracking) ───
 export var overlayActive = false;
 export var overlayComponentFilter: string[] | null = null;
 export var overlayIgnoreFilter: string[] | null = null;
 export var overlayShowLabels = false;
-export var overlayFadeTimeout = 750;
+export var overlayFadeTimeout = 500;
 export var overlayMaxHighlights = 100;
 export var overlaySetHighlights: ((highlights: any[]) => void) | null = null;
 export var overlayRenderCounts: Record<string, number> = {};
@@ -148,7 +153,7 @@ export function resetOverlay() {
   overlayComponentFilter = null;
   overlayIgnoreFilter = null;
   overlayShowLabels = false;
-  overlayFadeTimeout = 1500;
+  overlayFadeTimeout = 500;
   overlayMaxHighlights = 100;
   // overlaySetHighlights는 React 컴포넌트 lifecycle이 관리 — 여기서 초기화하지 않음
   overlayRenderCounts = {};
