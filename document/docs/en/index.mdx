@@ -10,25 +10,75 @@ hero:
   tagline: Use with Cursor, Claude Desktop, and GitHub Actions — or run E2E tests with YAML scenarios.
   actions:
     - theme: brand
-      text: Getting started
-      link: /en/mcp/
+      text: Quick Start
+      link: /en/mcp/getting-started
     - theme: alt
-      text: testing
+      text: Tool Reference
+      link: /en/mcp/tools/
+    - theme: alt
+      text: E2E Testing
       link: /en/testing/
-    - theme: alt
-      text: mcp
-      link: /en/mcp/
 
 features:
-  - title: MCP with AI
-    details: Connect the server to Cursor, Claude Desktop, or Copilot CLI. Control and inspect your app with natural language and tools (snapshot, tap, assert).
-    icon: 🤖
-    link: /en/mcp/
-  - title: Testing (YAML)
-    details: Write scenarios in YAML — tap, assert, wait — and run them locally or in GitHub Actions without AI.
+  - title: React Fiber Access
+    details: Query and inspect components via the React Fiber tree — no DOM needed. Use testID, text, or hierarchy selectors.
+    icon: 🌳
+    link: /en/mcp/tools/
+  - title: State Inspection
+    details: Inspect React state hooks (useState, Zustand, etc.) of any component. Track state changes in real time.
+    icon: 🔍
+    link: /en/mcp/tools/state
+  - title: Render Profiling
+    details: Track component mounts, re-renders, and unnecessary renders. Find performance bottlenecks without React DevTools.
+    icon: ⚡
+    link: /en/mcp/tools/render
+  - title: Network Mocking
+    details: Intercept XHR/fetch requests and inject mock responses. Test edge cases without a backend.
+    icon: 🌐
+    link: /en/mcp/tools/network
+  - title: 42 MCP Tools
+    details: Tap, swipe, screenshot, assert, eval, and more — 42 tools across 12 categories, all callable by AI.
+    icon: 🛠️
+    link: /en/mcp/tools/
+  - title: YAML E2E Testing
+    details: Write scenarios in YAML — tap, assert, wait — and run them locally or in CI without AI.
     icon: 📋
     link: /en/testing/
-  - title: iOS & Android
-    details: Uses idb for iOS simulator and adb for Android. Tap, swipe, screenshots, and more.
-    icon: 📱
+  - title: Zero Native Module
+    details: Pure JavaScript runtime + host CLI tools (adb/idb). No native module to install, no linking, works with any RN project.
+    icon: 📦
+    link: /en/mcp/architecture
+  - title: Any MCP Client
+    details: Cursor, Claude Desktop, Claude Code, GitHub Copilot, Windsurf, Antigravity — works with any MCP-compatible client.
+    icon: 🤖
+    link: /en/mcp/mcp-usage
 ---
+
+## Why React Native MCP?
+
+React Native MCP gives AI full access to your running app — not just screenshots, but the actual component tree, state, network, and touch controls.
+
+| Feature                      | Detox   | Maestro | Appium | **React Native MCP** |
+| ---------------------------- | ------- | ------- | ------ | -------------------- |
+| Fiber tree access            | No      | No      | No     | **Yes**              |
+| State inspection             | No      | No      | No     | **Yes**              |
+| AI-driven (natural language) | No      | No      | No     | **Yes**              |
+| Network mocking              | Limited | No      | No     | **Yes**              |
+| Render profiling             | No      | No      | No     | **Yes**              |
+| No native module             | No      | Yes     | Yes    | **Yes**              |
+| YAML E2E                     | No      | Yes     | No     | **Yes**              |
+| Requires test code           | Yes     | No      | Yes    | **No**               |
+
+## Quick Start
+
+```bash
+# 1. Install and configure (30 seconds)
+npx -y @ohah/react-native-mcp-server init
+
+# 2. Run your app
+npx react-native start    # or: npx expo start
+
+# 3. Ask the AI: "Take a snapshot of the app"
+```
+
+[Get started in 5 minutes →](/en/mcp/getting-started)

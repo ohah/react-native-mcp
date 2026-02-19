@@ -111,8 +111,4 @@ For the app to connect to the MCP server (WebSocket 12300), enable it at **build
 
 ## When connection fails
 
-- **App not connected**: Check that Metro is running, the app uses the Babel preset, and Metro was started with `REACT_NATIVE_MCP_ENABLED=true`
-- **Tap/screenshot not working**: Ensure idb (iOS) or adb (Android) is installed and the device is listed (`idb list-targets`, `adb devices`)
-- **Single tool failing**: Check arguments (selector, timeout, etc.) and that the app UI is loaded
-
-See the repo `docs/` folder for more troubleshooting.
+If you see "No app connected" or tools aren't working, check the **[Troubleshooting](./troubleshooting)** page for step-by-step diagnosis — covering duplicate processes, port conflicts, localhost issues, and missing runtime injection.

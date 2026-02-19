@@ -111,8 +111,4 @@ AI에게 "지금 앱 화면 스냅샷 찍어줘", "로그인 버튼 눌러줘"�
 
 ## 연결이 안 될 때
 
-- **앱이 연결되지 않음**: Metro가 실행 중인지, 앱에 Babel 프리셋 적용 여부, MCP 활성화용 환경변수(`REACT_NATIVE_MCP_ENABLED=true`)로 Metro를 실행했는지 확인
-- **tap/스크린샷이 안 됨**: iOS는 idb, Android는 adb가 설치되어 있고 디바이스가 잡히는지 확인 (`idb list-targets`, `adb devices`)
-- **특정 도구만 실패**: 해당 도구의 인자(selector, timeout 등)가 올바른지, 앱 UI가 로드된 상태인지 확인
-
-저장소의 `docs/` 폴더에 트러블슈팅 문서가 있으면 참고하세요.
+"No app connected"가 나오거나 도구가 동작하지 않을 때는 **[문제 해결](./troubleshooting)** 페이지에서 단계별 진단을 확인하세요 — 중복 프로세스, 포트 충돌, localhost 문제, 런타임 미주입 등을 다룹니다.

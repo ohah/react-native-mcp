@@ -1,8 +1,95 @@
-# Getting started
+# Getting Started
 
-1. **Install** the MCP server and set up your app — see [Install & connect](./).
-2. **Register** the server in your client (Cursor / Claude / Copilot) — see [Using MCP](./mcp-usage).
-3. **Run** Metro and the app in the simulator or emulator.
-4. In your AI client, use MCP tools (e.g. take_snapshot, tap, assert_text) to control and verify the app.
+Set up React Native MCP in your project in under 5 minutes.
 
-For detailed client setup, go to [Using MCP — Cursor, Claude Desktop, Copilot](./mcp-usage).
+## Prerequisites
+
+- **React Native** 0.72 or higher
+- **Node.js** 18+ (or Bun)
+- **idb** (iOS simulator) or **adb** (Android) — see [Install & connect](./)
+- An **MCP client**: Cursor, Claude Desktop, Claude Code, or GitHub Copilot CLI
+
+---
+
+## Step 1: Install and configure (30 seconds)
+
+Run the CLI init command in your project root:
+
+```bash
+npx -y @ohah/react-native-mcp-server init
+```
+
+This auto-detects your project (React Native version, Expo, package manager) and:
+
+1. Adds the Babel preset to `babel.config.js`
+2. Creates the MCP server config for your client (Cursor, Claude, etc.)
+3. Updates `.gitignore`
+
+> Already set up manually? See [Install & connect](./) and [CLI Init](./cli-init) for details.
+
+---
+
+## Step 2: Run the app
+
+import { Tab, Tabs } from 'rspress/theme';
+
+<Tabs>
+  <Tab label="Bare RN">
+```bash
+# Start Metro
+npx react-native start
+
+# In another terminal, run on simulator/emulator
+
+npx react-native run-ios
+
+# or
+
+npx react-native run-android
+
+````
+  </Tab>
+  <Tab label="Expo">
+```bash
+# Dev Client (recommended)
+npx expo start --dev-client
+
+# Or Expo Go (limited — see Expo Guide)
+npx expo start
+````
+
+For Expo-specific details, see the [Expo Guide](./expo-guide).
+
+  </Tab>
+</Tabs>
+
+For Android emulator, set up port forwarding:
+
+```bash
+adb reverse tcp:12300 tcp:12300
+```
+
+---
+
+## Step 3: Verify the connection
+
+Open your MCP client and try:
+
+> "Take a snapshot of the app"
+
+If the AI returns a component tree, the connection is working. You can also verify with:
+
+> "What's the debugger status?"
+
+This calls `get_debugger_status` and should show `appConnected: true` with your device listed.
+
+---
+
+## What's next?
+
+- **[Tool Reference](./tools/)** — All 42 tools with parameters and examples
+- **[Cookbook](./cookbook/)** — Real-world usage scenarios
+- **[Expo Guide](./expo-guide)** — Expo-specific setup and limitations
+- **[Architecture](./architecture)** — How it works under the hood
+- **[Cursor / Claude / Copilot](./mcp-usage)** — Client-specific configuration
+- **[Troubleshooting](./troubleshooting)** — Connection issues and fixes
