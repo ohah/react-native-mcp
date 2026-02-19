@@ -11,8 +11,8 @@ API 응답을 모킹하고, 에러 상황을 시뮬레이션하며, 앱이 이�
 기존 모킹 설정과 네트워크 로그를 지워 깨끗한 상태에서 시작합니다.
 
 ```json
-{ "tool": "clear_network_mocks" }
-{ "tool": "clear_network_requests" }
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
+{ "tool": "clear", "arguments": { "target": "network_requests" } }
 ```
 
 ## 2단계: 성공 응답 모킹
@@ -43,7 +43,7 @@ API 응답을 모킹하고, 에러 상황을 시뮬레이션하며, 앱이 이�
 성공 모킹을 제거하고 에러 모킹을 추가합니다.
 
 ```json
-{ "tool": "clear_network_mocks" }
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
 
 {
   "tool": "set_network_mock",
@@ -67,7 +67,7 @@ API 응답을 모킹하고, 에러 상황을 시뮬레이션하며, 앱이 이�
 지연 시간을 추가하여 로딩 상태를 테스트합니다.
 
 ```json
-{ "tool": "clear_network_mocks" }
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
 
 {
   "tool": "set_network_mock",
@@ -123,17 +123,17 @@ API 응답을 모킹하고, 에러 상황을 시뮬레이션하며, 앱이 이�
 테스트가 끝나면 반드시 모킹을 정리합니다.
 
 ```json
-{ "tool": "clear_network_mocks" }
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
 ```
 
 ## 요약
 
 | 단계 | 도구                            | 목적                     |
 | ---- | ------------------------------- | ------------------------ |
-| 1    | `clear_network_mocks`           | 초기 상태로 시작         |
+| 1    | `clear` (target: network_mocks) | 초기 상태로 시작         |
 | 2    | `set_network_mock`              | 성공 응답 모킹           |
 | 3    | `set_network_mock` (status 500) | 에러 시뮬레이션          |
 | 4    | `set_network_mock` (delay)      | 느린 네트워크 시뮬레이션 |
 | 5    | `list_network_mocks`            | 모킹 히트 횟수 확인      |
 | 6    | `list_network_requests`         | 실제 트래픽 확인         |
-| 7    | `clear_network_mocks`           | 정리                     |
+| 7    | `clear` (target: network_mocks) | 정리                     |

@@ -97,7 +97,7 @@ React 컴포넌트 렌더링을 프로파일링하고, 불필요한 리렌더를
 `Header`와 `PriceLabel`에 `React.memo`를 적용한 후, 다시 프로파일링합니다:
 
 ```json
-{ "tool": "clear_render_profile" }
+{ "tool": "clear", "arguments": { "target": "render_profile" } }
 { "tool": "start_render_profile" }
 ```
 
@@ -112,16 +112,16 @@ React 컴포넌트 렌더링을 프로파일링하고, 불필요한 리렌더를
 ## Step 6: 정리
 
 ```json
-{ "tool": "clear_render_profile" }
+{ "tool": "clear", "arguments": { "target": "render_profile" } }
 ```
 
 ## 요약
 
-| 단계 | 도구                                            | 목적                        |
-| ---- | ----------------------------------------------- | --------------------------- |
-| 1    | `start_render_profile`                          | 렌더 추적 시작              |
-| 2    | `swipe`                                         | 문제 상황 재현              |
-| 3    | `get_render_report`                             | 렌더 패턴 분석              |
-| 4    | —                                               | `React.memo` 적용 대상 식별 |
-| 5    | `clear_render_profile` + `start_render_profile` | 최적화 후 재프로파일링      |
-| 6    | `clear_render_profile`                          | 정리                        |
+| 단계 | 도구                                                      | 목적                        |
+| ---- | --------------------------------------------------------- | --------------------------- |
+| 1    | `start_render_profile`                                    | 렌더 추적 시작              |
+| 2    | `swipe`                                                   | 문제 상황 재현              |
+| 3    | `get_render_report`                                       | 렌더 패턴 분석              |
+| 4    | —                                                         | `React.memo` 적용 대상 식별 |
+| 5    | `clear` (target: render_profile) + `start_render_profile` | 최적화 후 재프로파일링      |
+| 6    | `clear` (target: render_profile)                          | 정리                        |

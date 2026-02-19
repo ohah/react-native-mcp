@@ -26,16 +26,16 @@ AI 에이전트는 이 프로토콜을 자동으로 처리하지만, 일반 테�
 - **딥링크 도구** (`open_deeplink`): MCP 도구로 구현 완료
   **현재 구현된 MCP 도구 (27개):**
 
-| 카테고리      | 도구                                                                                                 |
-| ------------- | ---------------------------------------------------------------------------------------------------- |
-| 조회          | `take_snapshot`, `query_selector`, `query_selector_all`, `take_screenshot`, `describe_ui`            |
-| Assertion     | `assert_text`, `assert_visible`                                                                      |
-| 입력          | `tap`, `swipe`, `input_text`, `type_text`, `input_key`, `press_button`                               |
-| 실행          | `evaluate_script`, `webview_evaluate_script`                                                         |
-| 디바이스      | `get_debugger_status`, `list_devices`, `switch_keyboard`                                             |
-| 딥링크        | `open_deeplink`                                                                                      |
-| 네트워크/콘솔 | `list_console_messages`, `clear_console_messages`, `list_network_requests`, `clear_network_requests` |
-| 파일/미디어   | `file_push`, `add_media`                                                                             |
+| 카테고리      | 도구                                                                                           |
+| ------------- | ---------------------------------------------------------------------------------------------- |
+| 조회          | `take_snapshot`, `query_selector`, `query_selector_all`, `take_screenshot`, `describe_ui`      |
+| Assertion     | `assert_text`, `assert_visible`                                                                |
+| 입력          | `tap`, `swipe`, `input_text`, `type_text`, `input_key`, `press_button`                         |
+| 실행          | `evaluate_script`, `webview_evaluate_script`                                                   |
+| 디바이스      | `get_debugger_status`, `list_devices`, `switch_keyboard`                                       |
+| 딥링크        | `open_deeplink`                                                                                |
+| 네트워크/콘솔 | `list_console_messages`, `list_network_requests`, `clear`(target: console/network_requests 등) |
+| 파일/미디어   | `file_push`, `add_media`                                                                       |
 
 ### 1.2 목표
 

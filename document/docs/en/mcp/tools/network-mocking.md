@@ -128,25 +128,10 @@ Remove a specific network mock rule by its ID.
 { "tool": "remove_network_mock", "arguments": { "id": 1 } }
 ```
 
----
-
-## clear_network_mocks
-
-Remove all active network mock rules at once.
-
-#### Parameters
-
-| Parameter  | Type                 | Required | Description     |
-| ---------- | -------------------- | -------- | --------------- |
-| `platform` | `"ios" \| "android"` | No       | Target platform |
-| `deviceId` | `string`             | No       | Target device   |
-
-#### Example
+To remove all mock rules at once, use the unified **clear** tool with `target: "network_mocks"`:
 
 ```json
-{ "tool": "clear_network_mocks" }
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
 ```
 
-#### Tips
-
-- Call after a test scenario to ensure mocks don't leak into subsequent tests.
+Call after a test scenario to ensure mocks don't leak into subsequent tests.

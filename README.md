@@ -13,7 +13,7 @@ MCP(Model Context Protocol) server for React Native app automation and monitorin
 - **State inspection** — Read React hooks (useState, Zustand, etc.) of any component in real time
 - **Render profiling** — Track mounts, re-renders, and unnecessary renders without React DevTools
 - **Network mocking** — Intercept XHR/fetch and inject mock responses at runtime
-- **42 MCP tools** — Tap, swipe, screenshot, assert, eval, and more across 12 categories
+- **38 MCP tools** — Tap, swipe, screenshot, assert, eval, clear(target), and more across 12 categories
 - **Zero native module** — Pure JS runtime + host CLI tools (adb/idb). No linking, no native code
 - **YAML E2E testing** — Write scenarios in YAML and run in CI without AI
 

@@ -128,25 +128,10 @@ ID로 특정 네트워크 모킹 규칙을 제거합니다.
 { "tool": "remove_network_mock", "arguments": { "id": 1 } }
 ```
 
----
-
-## clear_network_mocks
-
-활성화된 모든 네트워크 모킹 규칙을 한번에 제거합니다.
-
-#### Parameters
-
-| Parameter  | Type                 | Required | Description   |
-| ---------- | -------------------- | -------- | ------------- |
-| `platform` | `"ios" \| "android"` | No       | 대상 플랫폼   |
-| `deviceId` | `string`             | No       | 대상 디바이스 |
-
-#### Example
+모든 모킹 규칙을 한 번에 제거하려면 통합 **clear** 도구에 `target: "network_mocks"`를 사용하세요.
 
 ```json
-{ "tool": "clear_network_mocks" }
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
 ```
 
-#### Tips
-
-- 테스트 시나리오 종료 후 호출하여 모킹이 다음 테스트에 영향을 주지 않도록 하세요.
+테스트 시나리오 종료 후 호출하여 모킹이 다음 테스트에 영향을 주지 않도록 하세요.

@@ -92,7 +92,7 @@ Found it — hook index 1 shows `"out_of_stock"`, which likely disables the butt
 Monitor state changes while interacting with the app to understand the flow.
 
 ```json
-{ "tool": "clear_state_changes" }
+{ "tool": "clear", "arguments": { "target": "state_changes" } }
 ```
 
 Now interact with the app (navigate, tap, etc.), then check what changed:

@@ -1,5 +1,5 @@
 ---
-description: Reference for all 42 MCP tools (tap, snapshot, assert, etc.) with selector syntax and common parameters.
+description: Reference for all 38 MCP tools (tap, snapshot, assert, etc.) with selector syntax and common parameters.
 ---
 
 # Tool Reference
