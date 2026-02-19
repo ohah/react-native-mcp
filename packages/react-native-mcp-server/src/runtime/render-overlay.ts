@@ -106,8 +106,8 @@ function shouldSkipOverlay(name: string): boolean {
 
 // ─── Highlight data ───────────────────────────────────────────────
 
-/** 스타일별 RGB (쉼표 구분). react-scan: purple, react-mcp: DevTools 아이콘 #61dafb */
-var PRIMARY_COLOR = renderHighlightStyle === 'react-mcp' ? '97,218,251' : '115,97,230';
+/** 스타일별 RGB (쉼표 구분). react-scan: purple, react-mcp: 시안 명도 낮춤(눈 덜 피로) */
+var PRIMARY_COLOR = renderHighlightStyle === 'react-mcp' ? '72,160,195' : '115,97,230';
 
 export interface HighlightData {
   x: number;

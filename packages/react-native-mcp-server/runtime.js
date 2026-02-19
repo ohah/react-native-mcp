@@ -966,7 +966,7 @@
 			"TextAncestor",
 			"CellRenderer"
 		];
-		PRIMARY_COLOR = renderHighlightStyle === "react-mcp" ? "97,218,251" : "115,97,230";
+		PRIMARY_COLOR = renderHighlightStyle === "react-mcp" ? "72,160,195" : "115,97,230";
 		_pendingMeasurements = [];
 		_flushScheduled = false;
 		_activeHighlights = [];
