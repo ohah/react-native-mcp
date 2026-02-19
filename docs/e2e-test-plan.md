@@ -157,9 +157,11 @@ AppClient
 
 ---
 
-### Phase B: Wait / Retry 메커니즘 — 미구현
+### Phase B: Wait / Retry 메커니즘
 
 **목표**: 비동기 UI 변화를 안정적으로 기다리는 유틸리티.
+
+**현황**: MCP 도구 레벨에서는 `assert_text`/`assert_visible`/`assert_not_visible`에 `timeoutMs`/`intervalMs` polling 지원 완료. SDK 래퍼 API(`waitForText`, `waitForVisible` 등)는 미구현.
 
 **왜 필요한가**: AI는 실패하면 스크린샷을 보고 판단 후 재시도하지만, 자동화에서는 "이 텍스트가 나올 때까지 기다려" 같은 명시적 대기 조건이 필수다. 이게 없으면 테스트가 타이밍에 따라 성공/실패가 갈린다 (flaky test).
 
@@ -209,9 +211,11 @@ function waitFor(predicate, { timeout, interval }) {
 
 ---
 
-### Phase C: 추가 Assertion 도구 — 미구현
+### Phase C: 추가 Assertion 도구
 
 **목표**: 테스트 표현력을 높이는 assertion 확장.
+
+**현황**: MCP 도구 `assert_not_visible`, `assert_element_count` 구현 완료. YAML 스텝 `assertValue` 지원. SDK 래퍼 메서드(`assertNotVisible`, `assertCount` 등)는 미구현.
 
 **왜 필요한가**: 현재 `assert_text`와 `assert_visible` 2개뿐이다. "이 요소가 없어야 한다", "TextInput 값이 뭔지", "요소가 몇 개인지" 같은 검증은 할 수 없다.
 
@@ -271,7 +275,7 @@ await app.assertDisabled('#submit-btn');
 
 > **결정 사항**: launch/terminate는 MCP 도구 없이 Bash로 실행. clear는 `clear_state` 도구 사용. 프로그래매틱 SDK(Phase A)에서는 `child_process.exec`으로 직접 래핑.
 
-**API (SDK에서 구현 예정)**:
+**API** (MCP 도구는 구현 완료. SDK 래퍼는 예정):
 
 ```typescript
 // 딥링크 (MCP 도구 — 이미 구현됨)
@@ -299,9 +303,11 @@ await app.resetApp('com.example.myapp');
 
 ---
 
-### Phase E: YAML 테스트 러너 + CLI — 미구현
+### Phase E: YAML 테스트 러너 + CLI — 구현 완료 ✅
 
 **목표**: 코드 작성 없이 YAML로 E2E 테스트 정의 및 실행.
+
+**현황**: `npx @ohah/react-native-mcp-server test run <path>` CLI 및 YAML 파서/러너 구현 완료. runFlow, repeat, if/retry, 환경 변수 등 지원.
 
 **YAML 스키마**:
 
