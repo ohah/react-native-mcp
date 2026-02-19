@@ -26,6 +26,8 @@ Metro 실행 중에만 동작하는 스크립트들. `get_component_source` / �
 | `node scripts/symbolicate-stack.mjs [번들URL] [스택파일]`   | 스택 트레이스 파일을 심볼리케이트.                                                   |
 | `node scripts/find-app-position.mjs [번들URL] [원본파일명]` | 번들에서 특정 소스 파일로 매핑되는 (line,col) 하나 찾기.                             |
 
+**MCP 도구 호출 테스트** (서버 패키지에서): `node scripts/test-get-component-source-mcp.mjs [--selector 'Text' | --uid '0.1']` — 서버를 stdio로 띄우고 `take_snapshot` / `get_component_source` 호출. 앱 미연결 시 "No React Native app connected" 수신.
+
 공통 라이브러리: `scripts/symbolicate-lib.mjs` (캐시 포함 `getSourcePosition`). 서버 심볼리케이트는 `packages/react-native-mcp-server/src/symbolicate.ts` 에서 사용.
 
 ## 이 레포 PR·push (ohah 전용)
