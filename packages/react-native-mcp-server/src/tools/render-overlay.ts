@@ -54,7 +54,7 @@ export function registerRenderOverlay(server: McpServer, appSession: AppSession)
     'start_render_highlight',
     {
       description:
-        'Start visual render highlighting on the device screen. Shows react-scan style overlay rects on components that re-render, with render count badges (x2, x3...). Color shifts from teal to gold as render count increases. Highlights auto-fade after timeout.',
+        'Start visual React component re-render overlay on device (not engine). Overlay rects on re-rendering components, count badges, auto-fade. react-scan style.',
       inputSchema: startSchema,
     },
     async (args: unknown) => {
@@ -121,7 +121,7 @@ export function registerRenderOverlay(server: McpServer, appSession: AppSession)
     'stop_render_highlight',
     {
       description:
-        'Stop visual render highlighting. Removes all highlight rects from the device screen and resets render counts.',
+        'Stop React component render overlay. Removes highlight rects and resets counts.',
       inputSchema: stopSchema,
     },
     async (args: unknown) => {
