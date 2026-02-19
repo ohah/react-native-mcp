@@ -41,30 +41,7 @@ List captured `console.log/info/warn/error` messages from the app.
 #### Tips
 
 - Console messages are buffered in the MCP server. Use `since` to get only new messages since your last check.
-- Combine with `clear_console_messages` to reset the buffer before a test scenario.
-
----
-
-## clear_console_messages
-
-Clear all captured console messages from the buffer.
-
-#### Parameters
-
-| Parameter  | Type                 | Required | Description     |
-| ---------- | -------------------- | -------- | --------------- |
-| `platform` | `"ios" \| "android"` | No       | Target platform |
-| `deviceId` | `string`             | No       | Target device   |
-
-#### Example
-
-```json
-{ "tool": "clear_console_messages" }
-```
-
-#### Tips
-
-- Call before starting a test scenario to get a clean slate.
+- Combine with `clear` (target: `console`) to reset the buffer before a test scenario.
 
 ---
 
@@ -121,25 +98,4 @@ List captured XHR/fetch requests with request and response details.
 - Use `url` filter to narrow down results — it matches as a substring.
 - `responseBody` is captured as a string. Large responses may be truncated.
 
----
-
-## clear_network_requests
-
-Clear all captured network requests from the buffer.
-
-#### Parameters
-
-| Parameter  | Type                 | Required | Description     |
-| ---------- | -------------------- | -------- | --------------- |
-| `platform` | `"ios" \| "android"` | No       | Target platform |
-| `deviceId` | `string`             | No       | Target device   |
-
-#### Example
-
-```json
-{ "tool": "clear_network_requests" }
-```
-
-#### Tips
-
-- Call before a test scenario to isolate network traffic from that scenario.
+- Use `clear` (target: `network_requests`) to empty the buffer before a test scenario.

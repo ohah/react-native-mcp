@@ -98,26 +98,10 @@ Get the render profiling report. Shows hot components, unnecessary renders, and 
 - `unnecessaryRenders` identifies components that re-rendered without prop changes — wrapping them in `React.memo` can prevent this.
 - `trigger: "parent"` means the component re-rendered because its parent re-rendered, not because its own props changed.
 
----
-
-## clear_render_profile
-
-Stop render profiling and clear all collected data.
-
-#### Parameters
-
-| Parameter  | Type                 | Required | Description     |
-| ---------- | -------------------- | -------- | --------------- |
-| `platform` | `"ios" \| "android"` | No       | Target platform |
-| `deviceId` | `string`             | No       | Target device   |
-
-#### Example
+To stop profiling and clear data, use the unified **clear** tool with `target: "render_profile"`:
 
 ```json
-{ "tool": "clear_render_profile" }
+{ "tool": "clear", "arguments": { "target": "render_profile" } }
 ```
 
-#### Tips
-
-- Call when you're done profiling to stop the overhead.
-- Data is lost after clearing — save the `get_render_report` output first.
+Call when you're done profiling to stop the overhead. Data is lost after clearing — save the `get_render_report` output first.

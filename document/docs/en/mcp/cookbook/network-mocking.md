@@ -11,8 +11,8 @@ You want to test how your app behaves when the API returns errors or slow respon
 Start clean by clearing any existing mocks and network logs.
 
 ```json
-{ "tool": "clear_network_mocks" }
-{ "tool": "clear_network_requests" }
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
+{ "tool": "clear", "arguments": { "target": "network_requests" } }
 ```
 
 ## Step 2: Mock a successful response
@@ -43,7 +43,7 @@ Navigate to the profile screen and verify the mock data is displayed:
 Remove the success mock and add an error mock.
 
 ```json
-{ "tool": "clear_network_mocks" }
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
 
 {
   "tool": "set_network_mock",
@@ -67,7 +67,7 @@ Trigger a refresh and verify error handling:
 Test loading states by adding a delay.
 
 ```json
-{ "tool": "clear_network_mocks" }
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
 
 {
   "tool": "set_network_mock",
@@ -123,17 +123,17 @@ Check the captured network requests for debugging.
 Always clean up mocks after testing.
 
 ```json
-{ "tool": "clear_network_mocks" }
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
 ```
 
 ## Summary
 
 | Step | Tool                            | Purpose                |
 | ---- | ------------------------------- | ---------------------- |
-| 1    | `clear_network_mocks`           | Start clean            |
+| 1    | `clear` (target: network_mocks) | Start clean            |
 | 2    | `set_network_mock`              | Mock success response  |
 | 3    | `set_network_mock` (status 500) | Simulate error         |
 | 4    | `set_network_mock` (delay)      | Simulate slow network  |
 | 5    | `list_network_mocks`            | Verify mock hit counts |
 | 6    | `list_network_requests`         | Inspect actual traffic |
-| 7    | `clear_network_mocks`           | Clean up               |
+| 7    | `clear` (target: network_mocks) | Clean up               |

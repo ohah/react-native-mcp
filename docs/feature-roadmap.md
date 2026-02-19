@@ -327,11 +327,11 @@ MCP tool: get_state_changes
 
 **MCP 도구 3개 추가**:
 
-| 도구                  | 설명                                          | 파일                   |
-| --------------------- | --------------------------------------------- | ---------------------- |
-| `inspect_state`       | 셀렉터로 찾은 컴포넌트의 state Hook 목록 반환 | `inspect-state.ts`     |
-| `get_state_changes`   | 상태 변경 이력 조회 (component/since/limit)   | `get-state-changes.ts` |
-| `clear_state_changes` | 상태 변경 버퍼 초기화                         | `get-state-changes.ts` |
+| 도구                            | 설명                                          | 파일                   |
+| ------------------------------- | --------------------------------------------- | ---------------------- |
+| `inspect_state`                 | 셀렉터로 찾은 컴포넌트의 state Hook 목록 반환 | `inspect-state.ts`     |
+| `get_state_changes`             | 상태 변경 이력 조회 (component/since/limit)   | `get-state-changes.ts` |
+| `clear` (target: state_changes) | 상태 변경 버퍼 초기화                         | `clear-buffers.ts`     |
 
 **runtime.js 변경**:
 
@@ -355,12 +355,12 @@ MCP tool: get_state_changes
 
 **MCP 도구 4개**:
 
-| 도구                  | 설명                                                                                      |
-| --------------------- | ----------------------------------------------------------------------------------------- |
-| `set_network_mock`    | 모킹 룰 추가. urlPattern(필수), isRegex, method, status, statusText, headers, body, delay |
-| `list_network_mocks`  | 현재 등록된 룰 목록 + hitCount 조회                                                       |
-| `remove_network_mock` | 특정 룰 제거 (id)                                                                         |
-| `clear_network_mocks` | 모든 룰 초기화                                                                            |
+| 도구                            | 설명                                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------------------- |
+| `set_network_mock`              | 모킹 룰 추가. urlPattern(필수), isRegex, method, status, statusText, headers, body, delay |
+| `list_network_mocks`            | 현재 등록된 룰 목록 + hitCount 조회                                                       |
+| `remove_network_mock`           | 특정 룰 제거 (id)                                                                         |
+| `clear` (target: network_mocks) | 모든 룰 초기화                                                                            |
 
 **런타임 구현**:
 
@@ -444,11 +444,11 @@ MCP tool: accessibility_audit
 
 **MCP 도구 3개**:
 
-| 도구                   | 설명                                                                  |
-| ---------------------- | --------------------------------------------------------------------- |
-| `start_render_profile` | 프로파일링 시작. `components` (whitelist) / `ignore` (blacklist) 옵션 |
-| `get_render_report`    | 수집된 데이터 집계 리포트 — hotComponents top 20, trigger 분석        |
-| `clear_render_profile` | 데이터 초기화 + 프로파일링 중지                                       |
+| 도구                             | 설명                                                                  |
+| -------------------------------- | --------------------------------------------------------------------- |
+| `start_render_profile`           | 프로파일링 시작. `components` (whitelist) / `ignore` (blacklist) 옵션 |
+| `get_render_report`              | 수집된 데이터 집계 리포트 — hotComponents top 20, trigger 분석        |
+| `clear` (target: render_profile) | 데이터 초기화 + 프로파일링 중지                                       |
 
 **렌더 감지 기준**:
 
@@ -827,7 +827,7 @@ npx react-native-mcp-server init --yes             # 프롬프트 스킵
  ├─ ✓ E2E YAML Phase 1            ★☆☆~★★☆ — 기본 스텝 9개 전부 구현
  ├─ ✓ E2E YAML Phase 2            ★★☆~★★★ — 흐름 제어 5개 (${VAR}, repeat, runFlow, if, retry)
  ├─ ✓ E2E YAML Phase 3            ★★☆  — clearState, setLocation, copyText, pasteText
- ├─ ✓ React 상태 인스펙션         ★★☆  — inspect_state + get_state_changes + clear_state_changes
+ ├─ ✓ React 상태 인스펙션         ★★☆  — inspect_state + get_state_changes + clear(target: state_changes)
  ├─ ✓ 네트워크 모킹               ★★☆  — XHR/fetch 인터셉트 + 응답 주입
  ├─ ✓ 접근성 자동 감사            ★★☆  — 4개 규칙 (pressable-label, image-alt, touch-size, role)
  ├─ ✓ 비주얼 리그레션             ★★☆  — pixelmatch + 컴포넌트 크롭

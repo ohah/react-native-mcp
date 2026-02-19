@@ -97,7 +97,7 @@ From the report:
 After applying `React.memo` to `Header` and `PriceLabel`, profile again:
 
 ```json
-{ "tool": "clear_render_profile" }
+{ "tool": "clear", "arguments": { "target": "render_profile" } }
 { "tool": "start_render_profile" }
 ```
 
@@ -112,16 +112,16 @@ The `unnecessaryRenders` section should now be empty or significantly reduced fo
 ## Step 6: Clean up
 
 ```json
-{ "tool": "clear_render_profile" }
+{ "tool": "clear", "arguments": { "target": "render_profile" } }
 ```
 
 ## Summary
 
-| Step | Tool                                            | Purpose                             |
-| ---- | ----------------------------------------------- | ----------------------------------- |
-| 1    | `start_render_profile`                          | Begin tracking renders              |
-| 2    | `swipe`                                         | Trigger the problematic interaction |
-| 3    | `get_render_report`                             | Analyze render patterns             |
-| 4    | —                                               | Identify `React.memo` candidates    |
-| 5    | `clear_render_profile` + `start_render_profile` | Re-profile after optimization       |
-| 6    | `clear_render_profile`                          | Clean up                            |
+| Step | Tool                                                      | Purpose                             |
+| ---- | --------------------------------------------------------- | ----------------------------------- |
+| 1    | `start_render_profile`                                    | Begin tracking renders              |
+| 2    | `swipe`                                                   | Trigger the problematic interaction |
+| 3    | `get_render_report`                                       | Analyze render patterns             |
+| 4    | —                                                         | Identify `React.memo` candidates    |
+| 5    | `clear` (target: render_profile) + `start_render_profile` | Re-profile after optimization       |
+| 6    | `clear` (target: render_profile)                          | Clean up                            |

@@ -92,7 +92,7 @@
 앱과 상호작용하면서 상태 변화를 모니터링하여 흐름을 파악합니다.
 
 ```json
-{ "tool": "clear_state_changes" }
+{ "tool": "clear", "arguments": { "target": "state_changes" } }
 ```
 
 이제 앱과 상호작용(화면 이동, 탭 등)한 후 변경 사항을 확인합니다:

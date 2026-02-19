@@ -92,29 +92,14 @@ selector로 찾은 React 컴포넌트의 state hook을 검사합니다. `useStat
 
 #### Tips
 
-- 버퍼는 최대 **300**개의 상태 변경을 저장합니다. `clear_state_changes`로 초기화할 수 있습니다.
+- 버퍼는 최대 **300**개의 상태 변경을 저장합니다. `clear`(target: `state_changes`)로 초기화할 수 있습니다.
 - `since`를 사용하면 마지막 확인 이후의 새로운 변경만 가져올 수 있습니다.
 - `inspect_state`와 함께 사용하면 현재 상태와 변경 이력을 종합적으로 파악할 수 있습니다.
 
----
-
-## clear_state_changes
-
-버퍼에 캡처된 모든 상태 변경 항목을 삭제합니다.
-
-#### Parameters
-
-| Parameter  | Type                 | Required | Description   |
-| ---------- | -------------------- | -------- | ------------- |
-| `platform` | `"ios" \| "android"` | No       | 대상 플랫폼   |
-| `deviceId` | `string`             | No       | 대상 디바이스 |
-
-#### Example
+상태 변경 버퍼를 비우려면 통합 **clear** 도구에 `target: "state_changes"`를 사용하세요.
 
 ```json
-{ "tool": "clear_state_changes" }
+{ "tool": "clear", "arguments": { "target": "state_changes" } }
 ```
 
-#### Tips
-
-- 테스트 시나리오 시작 전에 호출하면 깨끗한 상태 변경 이력을 얻을 수 있습니다.
+테스트 시나리오 시작 전에 호출하면 깨끗한 이력을 얻을 수 있습니다.

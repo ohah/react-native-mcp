@@ -31,7 +31,7 @@ React Native MCP enables AI tools (Cursor, Claude Desktop, Copilot) to control a
                       │ stdio (MCP protocol)
 ┌─────────────────────▼────────────────────────┐
 │  MCP Server (Node.js)                        │
-│  - 42 MCP tools                              │
+│  - 38 MCP tools                              │
 │  - WebSocket server (ws://localhost:12300)    │
 │  - Native CLI bridge (adb / idb)             │
 └──────┬──────────────────────────┬────────────┘
@@ -50,7 +50,7 @@ The AI client (Cursor, Claude Desktop, Copilot CLI) communicates with the MCP se
 
 A Node.js process that:
 
-- Exposes **42 MCP tools** across 12 categories (interaction, assertions, screen capture, network mocking, state inspection, render profiling, etc.)
+- Exposes **38 MCP tools** across 12 categories (interaction, assertions, screen capture, network mocking, state inspection, render profiling, etc.)
 - Runs a **WebSocket server** on port 12300 for bidirectional communication with the app
 - Executes **native CLI commands** (adb for Android, idb for iOS simulator) for screenshots, tap, swipe, and text input
 

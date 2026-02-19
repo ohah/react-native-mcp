@@ -92,29 +92,14 @@ List captured state changes over time. Shows previous and next values for each c
 
 #### Tips
 
-- The buffer stores up to **300** state changes. Use `clear_state_changes` to reset.
+- The buffer stores up to **300** state changes. Use `clear` (target: `state_changes`) to reset.
 - Use `since` to get only new changes since your last check.
 - Combine with `inspect_state` for a complete picture: current state + change history.
 
----
-
-## clear_state_changes
-
-Clear all captured state change entries from the buffer.
-
-#### Parameters
-
-| Parameter  | Type                 | Required | Description     |
-| ---------- | -------------------- | -------- | --------------- |
-| `platform` | `"ios" \| "android"` | No       | Target platform |
-| `deviceId` | `string`             | No       | Target device   |
-
-#### Example
+To clear the state change buffer, use the unified **clear** tool with `target: "state_changes"`:
 
 ```json
-{ "tool": "clear_state_changes" }
+{ "tool": "clear", "arguments": { "target": "state_changes" } }
 ```
 
-#### Tips
-
-- Call before a test scenario to get a clean history of state changes.
+Call before a test scenario to get a clean history.

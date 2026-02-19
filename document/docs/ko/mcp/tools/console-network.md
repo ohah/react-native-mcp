@@ -41,30 +41,7 @@
 #### Tips
 
 - 콘솔 메시지는 MCP 서버에 버퍼링됩니다. `since`를 사용하면 마지막 조회 이후의 새로운 메시지만 가져올 수 있습니다.
-- 테스트 시나리오 시작 전에 `clear_console_messages`와 함께 사용하면 버퍼를 초기화할 수 있습니다.
-
----
-
-## clear_console_messages
-
-버퍼에 캡처된 모든 콘솔 메시지를 삭제합니다.
-
-#### Parameters
-
-| Parameter  | Type                 | Required | Description   |
-| ---------- | -------------------- | -------- | ------------- |
-| `platform` | `"ios" \| "android"` | No       | 대상 플랫폼   |
-| `deviceId` | `string`             | No       | 대상 디바이스 |
-
-#### Example
-
-```json
-{ "tool": "clear_console_messages" }
-```
-
-#### Tips
-
-- 테스트 시나리오를 시작하기 전에 호출하면 깨끗한 상태에서 시작할 수 있습니다.
+- 테스트 시나리오 시작 전에 `clear`(target: `console`)로 버퍼를 초기화할 수 있습니다.
 
 ---
 
@@ -121,25 +98,4 @@
 - `url` 필터는 부분 문자열로 매칭되므로, 결과를 좁히는 데 유용합니다.
 - `responseBody`는 문자열로 캡처됩니다. 큰 응답은 잘릴 수 있습니다.
 
----
-
-## clear_network_requests
-
-버퍼에 캡처된 모든 네트워크 요청을 삭제합니다.
-
-#### Parameters
-
-| Parameter  | Type                 | Required | Description   |
-| ---------- | -------------------- | -------- | ------------- |
-| `platform` | `"ios" \| "android"` | No       | 대상 플랫폼   |
-| `deviceId` | `string`             | No       | 대상 디바이스 |
-
-#### Example
-
-```json
-{ "tool": "clear_network_requests" }
-```
-
-#### Tips
-
-- 테스트 시나리오 전에 호출하면 해당 시나리오의 네트워크 트래픽만 격리하여 확인할 수 있습니다.
+- 테스트 시나리오 전에 `clear`(target: `network_requests`)로 버퍼를 비울 수 있습니다.
