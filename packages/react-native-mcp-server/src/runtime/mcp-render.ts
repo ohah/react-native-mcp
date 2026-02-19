@@ -48,6 +48,7 @@ export function getRenderReport(): any {
     string,
     {
       name: string;
+      nativeType?: string;
       renders: number;
       mounts: number;
       unnecessaryRenders: number;
@@ -70,6 +71,7 @@ export function getRenderReport(): any {
         isMemoized: entry.isMemoized,
         recentRenders: [],
       };
+      if (entry.nativeType) comp.nativeType = entry.nativeType;
       componentMap[entry.component] = comp;
     }
     comp.renders++;
@@ -102,24 +104,26 @@ export function getRenderReport(): any {
 
   // recentRenders 형식 정리
   var hotComponents = components.map(function (c) {
-    return {
+    var result: any = {
       name: c.name,
       renders: c.renders,
       mounts: c.mounts,
       unnecessaryRenders: c.unnecessaryRenders,
       triggers: c.triggers,
       isMemoized: c.isMemoized,
-      recentRenders: c.recentRenders.map(function (r) {
-        var recent: any = {
-          timestamp: r.timestamp,
-          trigger: r.trigger,
-          commitId: r.commitId,
-          parent: r.parent,
-        };
-        if (r.changes) recent.changes = r.changes;
-        return recent;
-      }),
     };
+    if (c.nativeType) result.nativeType = c.nativeType;
+    result.recentRenders = c.recentRenders.map(function (r) {
+      var recent: any = {
+        timestamp: r.timestamp,
+        trigger: r.trigger,
+        commitId: r.commitId,
+        parent: r.parent,
+      };
+      if (r.changes) recent.changes = r.changes;
+      return recent;
+    });
+    return result;
   });
 
   return {

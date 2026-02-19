@@ -23,6 +23,32 @@ var DEFAULT_IGNORED_PREFIXES = [
   'RCT', // RCTView 등 native bridge wrapper
   'Debugging', // DebuggingOverlay
   'AppContainer', // RN root wrapper
+  'TextAncestor', // RN Text context provider
+  'VirtualizedList', // internal list component
+  'CellRenderer', // FlatList internal
+];
+
+/** RN 빌트인 컴포넌트 — 무시하지 않고, 가장 가까운 사용자 컴포넌트 이름을 붙여서 구분 */
+var BUILTIN_COMPONENTS = [
+  'Text',
+  'View',
+  'Image',
+  'Pressable',
+  'TouchableOpacity',
+  'TouchableHighlight',
+  'TouchableWithoutFeedback',
+  'TouchableNativeFeedback',
+  'ScrollView',
+  'FlatList',
+  'SectionList',
+  'TextInput',
+  'ActivityIndicator',
+  'Switch',
+  'SafeAreaView',
+  'KeyboardAvoidingView',
+  'StatusBar',
+  'Modal',
+  'RefreshControl',
 ];
 
 /** 접두사 목록에 해당하는 이름인지 (_접두사 변형 포함) */
@@ -46,8 +72,28 @@ function shouldSkipComponent(name: string): boolean {
   if (renderIgnoreFilter !== null && renderIgnoreFilter.indexOf(name) !== -1) {
     return true;
   }
-  // 기본 ignore 접두사 체크
+  // 기본 ignore 접두사 체크 (RN 내부 전용 — 빌트인은 무시하지 않고 부모로 구분)
   return matchesPrefixList(name, DEFAULT_IGNORED_PREFIXES);
+}
+
+/** 빌트인 컴포넌트인지 판별 */
+function isBuiltinComponent(name: string): boolean {
+  return BUILTIN_COMPONENTS.indexOf(name) !== -1;
+}
+
+/** fiber.return을 올라가며 빌트인이 아닌 첫 사용자 컴포넌트 이름 */
+function getNearestUserParent(fiber: Fiber): string {
+  var p = fiber.return;
+  while (p) {
+    if (p.tag === 0 || p.tag === 1) {
+      var pName = getFiberTypeName(p);
+      if (!isBuiltinComponent(pName) && !matchesPrefixList(pName, DEFAULT_IGNORED_PREFIXES)) {
+        return pName;
+      }
+    }
+    p = p.return;
+  }
+  return 'Root';
 }
 
 /** fiber.return을 올라가며 첫 FunctionComponent/ClassComponent 이름 */
@@ -64,6 +110,21 @@ function getParentComponentName(fiber: Fiber): string {
 function isMemoWrapped(fiber: Fiber): boolean {
   var parent = fiber.return;
   return parent != null && (parent.tag === 14 || parent.tag === 15);
+}
+
+/** child를 탐색하여 첫 HostComponent(tag=5)의 type 이름 반환 (View, Text, Pressable 등) */
+function getFirstHostType(fiber: Fiber): string | undefined {
+  var child = fiber.child;
+  // 최대 깊이 5까지만 탐색 (성능)
+  return _findHostType(child, 5);
+}
+
+function _findHostType(fiber: Fiber | null, depth: number): string | undefined {
+  if (!fiber || depth <= 0) return undefined;
+  if (fiber.tag === 5 && typeof fiber.type === 'string') return fiber.type;
+  var found = _findHostType(fiber.child, depth - 1);
+  if (found) return found;
+  return _findHostType(fiber.sibling, depth - 1);
 }
 
 /** props에서 변경된 key들 추출 */
@@ -171,19 +232,28 @@ export function collectRenderEntries(fiber: Fiber | null): void {
       return;
     }
 
+    // 빌트인 컴포넌트는 가장 가까운 사용자 컴포넌트로 구분: "MyHeader > Text"
+    var isBuiltin = isBuiltinComponent(name);
+    var componentKey = isBuiltin ? getNearestUserParent(fiber) + ' > ' + name : name;
+
     var alt = fiber.alternate;
+    var parentName = getParentComponentName(fiber);
+
+    // nativeType은 커스텀 컴포넌트에만 (빌트인은 자기 자신이 네이티브 타입이라 중복)
+    var hostType = isBuiltin ? undefined : getFirstHostType(fiber);
 
     if (alt === null) {
       // Mount
       var entry: RenderEntry = {
-        component: name,
+        component: componentKey,
         type: 'mount',
         trigger: 'parent',
         timestamp: Date.now(),
         commitId: renderCommitCount,
-        parent: getParentComponentName(fiber),
+        parent: parentName,
         isMemoized: isMemoWrapped(fiber),
       };
+      if (hostType) entry.nativeType = hostType;
       pushRenderEntry(entry);
     } else {
       // bail-out 체크: PerformedWork flag (=1) 로 실제 렌더 여부 판별.
@@ -216,14 +286,15 @@ export function collectRenderEntries(fiber: Fiber | null): void {
         var hasChanges = stateChanges || propChanges || contextChanges;
 
         var updateEntry: RenderEntry = {
-          component: name,
+          component: componentKey,
           type: 'update',
           trigger: trigger,
           timestamp: Date.now(),
           commitId: renderCommitCount,
-          parent: getParentComponentName(fiber),
+          parent: parentName,
           isMemoized: isMemoWrapped(fiber),
         };
+        if (hostType) updateEntry.nativeType = hostType;
         if (hasChanges) updateEntry.changes = changes;
         pushRenderEntry(updateEntry);
       }
