@@ -19,8 +19,8 @@ AI 에이전트는 이 프로토콜을 자동으로 처리하지만, 일반 테�
 
 **이미 구현된 것:**
 
-- **Smoke 테스트** (`e2e/smoke.test.ts`): 7개 MCP 도구 기본 동작 검증 (bun test 기반)
-- **테스트 헬퍼** (`e2e/helpers.ts`): `createMcpClient()`, `waitForAppConnection()`, `callTool()` 유틸리티
+- **E2E YAML 테스트**: `examples/demo-app/e2e/` 디렉터리의 YAML 스텝으로 실행. CI에서 `test run examples/demo-app/e2e/` 호출.
+- **SDK (client)**: `createApp()`, `AppClient`로 MCP 도구 래핑. YAML 러너(`packages/react-native-mcp-server/src/test/runner.ts`)가 이 SDK를 사용해 스텝 실행.
 - **CI 워크플로우**: GitHub Actions에서 iOS/Android 자동 E2E (`.github/workflows/e2e-ios.yml`, `e2e-android.yml`)
 - **데모앱** (`examples/demo-app/`): 테스트용 다양한 화면 (Scroll, Input, WebView, Gesture 등)
 - **딥링크 도구** (`open_deeplink`): MCP 도구로 구현 완료
@@ -50,6 +50,18 @@ await app.waitForText('환영합니다', { timeout: 5000 });
 ---
 
 ## 2. 구현 단계
+
+### Phase B·C·D 현황 요약
+
+| Phase | MCP 도구 / 인프라                                                                              | SDK 래퍼 (client 패키지)                                                                                        |
+| ----- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **B** | ✅ `assert_text`/`assert_visible`/`assert_not_visible`에 `timeoutMs`/`intervalMs` polling 완료 | ✅ `waitForText`, `waitForVisible`, `waitForNotVisible`, `waitFor` 구현 완료                                    |
+| **C** | ✅ `assert_not_visible`, `assert_element_count` 구현. YAML `assertValue` 지원                  | ✅ `assertNotVisible`, `assertCount`, `assertValue`, `assertNoText`, `assertEnabled`/`assertDisabled` 구현 완료 |
+| **D** | ✅ `open_deeplink`, `clear_state` MCP 도구 완료. launch/terminate는 MCP 없이 Bash 사용         | ✅ `launch`, `terminate`, `clearState`, `resetApp` 구현 완료 (YAML 러너에서 사용)                               |
+
+SDK(client 패키지)는 위 MCP 도구/인프라를 **동일한 기능으로 래핑**하여 `app.waitForText()`, `app.assertCount()` 등 타입 있는 메서드로 제공한다. YAML 러너는 이 SDK 메서드를 호출해 스텝을 실행한다.
+
+---
 
 ### Phase 0: MCP 도구 레벨 Assertion 강화 (선행 조건) — ✅ 구현 완료
 
@@ -88,7 +100,7 @@ timeoutMs>0        → 체크 → 실패 시 intervalMs 후 재시도 → timeou
 
 **왜 필요한가**: 현재 도구를 호출하려면 MCP 클라이언트를 직접 생성하고, `client.callTool({ name: '...', arguments: {...} })` 형태로 호출해야 한다. SDK는 이 과정을 `app.tap('#btn')` 한 줄로 줄여준다.
 
-> **참고**: 현재 `e2e/helpers.ts`에 기본적인 `createMcpClient()`, `callTool()` 유틸리티가 구현되어 있으며, 이를 확장하여 SDK로 발전시킬 수 있다.
+> **참고**: SDK(client 패키지)가 MCP 호출을 `app.tap()`, `app.querySelector()` 등 타입 있는 메서드로 래핑하여 제공한다. YAML 러너는 이 SDK를 사용한다.
 
 **패키지**: `packages/react-native-mcp-server/src/client`
 
@@ -157,11 +169,11 @@ AppClient
 
 ---
 
-### Phase B: Wait / Retry 메커니즘
+### Phase B: Wait / Retry 메커니즘 — ✅ 구현 완료
 
 **목표**: 비동기 UI 변화를 안정적으로 기다리는 유틸리티.
 
-**현황**: MCP 도구 레벨에서는 `assert_text`/`assert_visible`/`assert_not_visible`에 `timeoutMs`/`intervalMs` polling 지원 완료. SDK 래퍼 API(`waitForText`, `waitForVisible` 등)는 미구현.
+**현황**: MCP 도구 레벨에서 `assert_text`/`assert_visible`/`assert_not_visible`에 `timeoutMs`/`intervalMs` polling 지원 완료. **SDK 래퍼**(`waitForText`, `waitForVisible`, `waitForNotVisible`, `waitFor`)도 client 패키지에 구현되어 있으며, YAML 러너가 이를 호출한다.
 
 **왜 필요한가**: AI는 실패하면 스크린샷을 보고 판단 후 재시도하지만, 자동화에서는 "이 텍스트가 나올 때까지 기다려" 같은 명시적 대기 조건이 필수다. 이게 없으면 테스트가 타이밍에 따라 성공/실패가 갈린다 (flaky test).
 
@@ -211,11 +223,11 @@ function waitFor(predicate, { timeout, interval }) {
 
 ---
 
-### Phase C: 추가 Assertion 도구
+### Phase C: 추가 Assertion 도구 — ✅ 구현 완료
 
 **목표**: 테스트 표현력을 높이는 assertion 확장.
 
-**현황**: MCP 도구 `assert_not_visible`, `assert_element_count` 구현 완료. YAML 스텝 `assertValue` 지원. SDK 래퍼 메서드(`assertNotVisible`, `assertCount` 등)는 미구현.
+**현황**: MCP 도구 `assert_not_visible`, `assert_element_count` 구현 완료. YAML 스텝 `assertValue` 지원. **SDK 래퍼**(`assertNotVisible`, `assertCount`, `assertValue`, `assertNoText`, `assertEnabled`/`assertDisabled`)도 client 패키지에 구현되어 있으며, YAML 러너가 이를 호출한다.
 
 **왜 필요한가**: 현재 `assert_text`와 `assert_visible` 2개뿐이다. "이 요소가 없어야 한다", "TextInput 값이 뭔지", "요소가 몇 개인지" 같은 검증은 할 수 없다.
 
@@ -259,7 +271,7 @@ await app.assertDisabled('#submit-btn');
 
 ---
 
-### Phase D: 앱 생명주기 관리 — 부분 구현
+### Phase D: 앱 생명주기 관리 — ✅ 구현 완료
 
 **목표**: 테스트 간 앱 상태 격리.
 
@@ -267,15 +279,16 @@ await app.assertDisabled('#submit-btn');
 
 **현재 구현 상태:**
 
-| 기능                   | 상태          | 구현 방식                     |
-| ---------------------- | ------------- | ----------------------------- |
-| `open_deeplink`        | **구현 완료** | MCP 도구 (`open-deeplink.ts`) |
-| `launch` / `terminate` | MCP 도구 없음 | Bash(adb/simctl) 직접 사용    |
-| `clearData`            | **구현 완료** | MCP 도구 `clear_state`        |
+| 기능                       | 상태          | 구현 방식                                                                  |
+| -------------------------- | ------------- | -------------------------------------------------------------------------- |
+| `open_deeplink`            | **구현 완료** | MCP 도구 (`open-deeplink.ts`)                                              |
+| `clearState` (상태 초기화) | **구현 완료** | MCP 도구 `clear_state` + SDK `app.clearState()`                            |
+| `launch` / `terminate`     | **구현 완료** | MCP 도구 없음. SDK에서 adb/simctl 래핑 (`app.launch()`, `app.terminate()`) |
+| `resetApp`                 | **구현 완료** | SDK `app.resetApp()` (terminate → clearState → launch)                     |
 
-> **결정 사항**: launch/terminate는 MCP 도구 없이 Bash로 실행. clear는 `clear_state` 도구 사용. 프로그래매틱 SDK(Phase A)에서는 `child_process.exec`으로 직접 래핑.
+> **결정 사항**: launch/terminate는 MCP 도구 없이 Bash(simctl/adb)로 실행. SDK 래퍼 `launch`, `terminate`, `clearState`, `resetApp`은 client 패키지에 구현되어 있으며, YAML 러너에서 사용 가능하다.
 
-**API** (MCP 도구는 구현 완료. SDK 래퍼는 예정):
+**API**:
 
 ```typescript
 // 딥링크 (MCP 도구 — 이미 구현됨)
@@ -292,12 +305,10 @@ await app.terminate('com.example.myapp');
 // Android: adb shell am force-stop com.example.myapp
 // iOS: xcrun simctl terminate booted com.example.myapp
 
-// 앱 데이터 초기화 (SDK에서 adb/simctl 래핑)
-await app.clearData('com.example.myapp');
-// Android: adb shell pm clear com.example.myapp
-// iOS: xcrun simctl uninstall + reinstall
+// 앱 데이터 초기화 (MCP clear_state 도구 호출)
+await app.clearState('com.example.myapp');
 
-// 상태 리셋 (종료 → 데이터 초기화 → 재실행)
+// 상태 리셋 (종료 → clearState → 재실행)
 await app.resetApp('com.example.myapp');
 ```
 
@@ -458,13 +469,15 @@ Results: 1 passed, 1 failed (8.3s)
 
 ```
 기초 인프라 (완료):
-  ├── Smoke 테스트 (e2e/smoke.test.ts) — 7개 도구 검증
+  ├── E2E YAML 테스트 (examples/demo-app/e2e/) — CI에서 test run으로 실행
   ├── CI 워크플로우 (iOS + Android GitHub Actions)
-  ├── 테스트 헬퍼 (e2e/helpers.ts)
+  ├── SDK (client) + YAML 러너 (test/runner.ts)
   └── 데모앱 (examples/demo-app/)
 
-Phase D 부분 완료:
-  └── open_deeplink MCP 도구 ✅
+Phase D 완료:
+  ├── open_deeplink MCP 도구 ✅
+  ├── clear_state MCP 도구 ✅
+  └── SDK: launch/terminate/clearState/resetApp ✅
 
 Phase 0 완료:
   ├── assert_text / assert_visible: timeoutMs/intervalMs 폴링 추가 ✅
@@ -505,7 +518,7 @@ Phase 0: MCP Assertion 강화 ─┐
 
 | Phase | 이름                    | 선행 조건 | 상태        | 예상 규모                                                                         |
 | ----- | ----------------------- | --------- | ----------- | --------------------------------------------------------------------------------- |
-| 기초  | Smoke 테스트 + CI       | 없음      | **완료**    | smoke.test.ts + helpers.ts + CI yml                                               |
+| 기초  | E2E YAML + CI           | 없음      | **완료**    | examples/demo-app/e2e/ + test run + CI yml                                        |
 | **0** | MCP Assertion 강화      | 없음      | **✅ 완료** | assert.ts 폴링 + assert_not_visible + assert_element_count + scroll_until_visible |
 | **A** | Programmatic Client SDK | 없음      | **✅ 완료** | `@ohah/react-native-mcp-server/client` 패키지, ~280줄                             |
 | **B** | Wait/Retry              | 0 + A     | **✅ 완료** | waitForText/waitForVisible/waitForNotVisible/waitFor                              |

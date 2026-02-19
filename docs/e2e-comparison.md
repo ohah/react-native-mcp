@@ -91,25 +91,25 @@ Appium은 WebView 컨텍스트 전환을 지원하지만, 설정이 복잡하다
 
 ## E2E 테스트 기능 (Detox/Maestro가 앞서는 영역)
 
-| 기능                                   | react-native-mcp | Detox                       | Maestro            | Appium             |
-| -------------------------------------- | ---------------- | --------------------------- | ------------------ | ------------------ |
-| 자동 동기화 (애니메이션/네트워크 대기) | ✗ (수동 wait)    | **✓** (핵심 강점)           | ✗ (수동 wait)      | ✗ (수동 wait)      |
-| 반복 (repeat/loop)                     | 예정 (P1)        | JS 코드                     | `repeat`           | JS/Python 코드     |
-| 조건 분기 (if/when)                    | 예정 (P1)        | JS 코드                     | `runFlow` + `when` | JS/Python 코드     |
-| 서브플로우 include                     | 예정 (P0)        | JS import                   | `runFlow`          | 코드 모듈화        |
-| 환경 변수                              | 예정 (P0)        | JS 환경 변수                | `${VAR}`           | 코드 레벨          |
-| clearText                              | 예정 (P0)        | `clearText()`               | `eraseText`        | `clear()`          |
-| back (Android)                         | 예정 (P0)        | `device.pressBack()`        | `pressKey: back`   | `driver.back()`    |
-| 더블탭                                 | 예정 (P0)        | `multiTap(2)`               | `doubleTapOn`      | `doubleTap()`      |
-| 핀치/줌                                | 예정 (P2)        | `pinch()`                   | ✗                  | `pinch()`          |
-| GPS 모킹                               | 예정 (P2)        | `device.setLocation()`      | `setLocation`      | `setLocation()`    |
-| 권한 다이얼로그                        | ✗                | `permissions` 옵션          | 자동 처리          | caps 설정          |
-| 앱 상태 초기화                         | 예정 (P2)        | `launchApp({delete: true})` | `clearState`       | `removeApp()`      |
-| 비디오 녹화                            | ✗                | `artifacts` 설정            | `startRecording`   | `startRecording()` |
-| 네트워크 모킹                          | 예정             | URL blacklist               | ✗                  | ✗                  |
-| 재시도 (retry)                         | 예정 (P2)        | ✗                           | 자동 재시도        | 코드 레벨          |
+| 기능                                   | react-native-mcp      | Detox                       | Maestro            | Appium             |
+| -------------------------------------- | --------------------- | --------------------------- | ------------------ | ------------------ |
+| 자동 동기화 (애니메이션/네트워크 대기) | ✗ (수동 wait)         | **✓** (핵심 강점)           | ✗ (수동 wait)      | ✗ (수동 wait)      |
+| 반복 (repeat/loop)                     | ✓ `repeat`            | JS 코드                     | `repeat`           | JS/Python 코드     |
+| 조건 분기 (if/when)                    | ✓ `runFlow` + `if`    | JS 코드                     | `runFlow` + `when` | JS/Python 코드     |
+| 서브플로우 include                     | ✓ `runFlow`           | JS import                   | `runFlow`          | 코드 모듈화        |
+| 환경 변수                              | ✓ `${VAR}`            | JS 환경 변수                | `${VAR}`           | 코드 레벨          |
+| clearText                              | ✓ `clearText`         | `clearText()`               | `eraseText`        | `clear()`          |
+| back (Android)                         | ✓ `pressButton: BACK` | `device.pressBack()`        | `pressKey: back`   | `driver.back()`    |
+| 더블탭                                 | ✓ `doubleTap`         | `multiTap(2)`               | `doubleTapOn`      | `doubleTap()`      |
+| 핀치/줌                                | ✗ (보류)              | `pinch()`                   | ✗                  | `pinch()`          |
+| GPS 모킹                               | ✓ `setLocation`       | `device.setLocation()`      | `setLocation`      | `setLocation()`    |
+| 권한 다이얼로그                        | ✗                     | `permissions` 옵션          | 자동 처리          | caps 설정          |
+| 앱 상태 초기화                         | ✓ `clearState`        | `launchApp({delete: true})` | `clearState`       | `removeApp()`      |
+| 비디오 녹화                            | ✗                     | `artifacts` 설정            | `startRecording`   | `startRecording()` |
+| 네트워크 모킹                          | ✓ `set_network_mock`  | URL blacklist               | ✗                  | ✗                  |
+| 재시도 (retry)                         | ✓ `retry`             | ✗                           | 자동 재시도        | 코드 레벨          |
 
-> 예정 항목의 우선순위와 구현 계획은 [e2e-yaml-roadmap.md](e2e-yaml-roadmap.md) 참고.
+> 남은 미구현: 자동 동기화(waitForIdle), 핀치. 우선순위·계획은 [e2e-yaml-roadmap.md](e2e-yaml-roadmap.md) 참고.
 
 ---
 
