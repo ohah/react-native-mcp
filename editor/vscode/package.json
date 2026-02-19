@@ -1,7 +1,7 @@
 {
   "name": "react-native-mcp-devtools",
   "displayName": "React Native MCP DevTools",
-  "version": "0.1.0",
+  "version": "0.1.0-rc.1",
   "description": "Chrome DevTools-like GUI for React Native MCP — Console, Network, State, Renders, Component Tree",
   "categories": [
     "Debuggers",
@@ -29,7 +29,7 @@
     "url": "https://github.com/anthropics/react-native-mcp",
     "directory": "editor/vscode"
   },
-  "publisher": "react-native-mcp",
+  "publisher": "ohah",
   "main": "./dist/extension.js",
   "scripts": {
     "build": "bunx tsdown",

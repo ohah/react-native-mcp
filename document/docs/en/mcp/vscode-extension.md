@@ -73,7 +73,7 @@ bun run package   # Creates react-native-mcp-devtools-x.x.x.vsix
 Install the `.vsix` file:
 
 ```bash
-code --install-extension react-native-mcp-devtools-0.1.0.vsix
+code --install-extension react-native-mcp-devtools-0.1.0-rc.1.vsix
 ```
 
 Or in VS Code → Extensions → `...` menu → `Install from VSIX...`.
@@ -143,7 +143,7 @@ Configure in `settings.json`:
    - Save the generated token securely
 
 3. **Publisher registration**: Register at [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage)
-   - Publisher ID must match the `"publisher"` field in `package.json` (currently: `react-native-mcp`)
+   - Publisher ID must match the `"publisher"` field in `package.json` (currently: `ohah`)
 
 ### Publish Commands
 
@@ -151,7 +151,7 @@ Configure in `settings.json`:
 cd editor/vscode
 
 # 1. Login to vsce (one-time)
-npx @vscode/vsce login react-native-mcp
+npx @vscode/vsce login ohah
 # Enter PAT when prompted
 
 # 2. Build + publish
