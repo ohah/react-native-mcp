@@ -5,6 +5,7 @@
   "workspaces": [
     "packages/*",
     "examples/*",
+    "editor/*",
     "document"
   ],
   "scripts": {
@@ -37,7 +38,8 @@
     "test:yaml": "bun run --filter @ohah/react-native-mcp-test run",
     "docs:dev": "bun run --filter document dev",
     "docs:build": "bun run --filter document build",
-    "docs:preview": "bun run --filter document preview"
+    "docs:preview": "bun run --filter document preview",
+    "build:vscode": "bun run --filter react-native-mcp-devtools build"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.0.11",
