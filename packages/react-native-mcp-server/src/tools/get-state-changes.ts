@@ -1,7 +1,6 @@
 /**
- * MCP 도구: get_state_changes, clear_state_changes
- * onCommitFiberRoot에서 수집된 상태 변경 이력을 조회/초기화.
- * runtime.js의 getStateChanges / clearStateChanges를 eval로 호출.
+ * MCP 도구: get_state_changes
+ * 상태 변경 이력 조회. 비우기는 clear(target: 'state_changes').
  */
 
 import { z } from 'zod';
@@ -13,11 +12,6 @@ const listSchema = z.object({
   component: z.string().optional().describe('Filter by component name. Omit for all.'),
   since: z.number().optional().describe('Only changes after timestamp (ms).'),
   limit: z.number().optional().describe('Max changes to return. Default 100.'),
-  deviceId: deviceParam,
-  platform: platformParam,
-});
-
-const clearSchema = z.object({
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -105,51 +99,6 @@ export function registerGetStateChanges(server: McpServer, appSession: AppSessio
         return {
           isError: true,
           content: [{ type: 'text' as const, text: `get_state_changes failed: ${message}` }],
-        };
-      }
-    }
-  );
-
-  s.registerTool(
-    'clear_state_changes',
-    {
-      description: 'Clear all captured state change entries from the buffer.',
-      inputSchema: clearSchema,
-    },
-    async (args: unknown) => {
-      const parsed = clearSchema.safeParse(args ?? {});
-      const deviceId = parsed.success ? parsed.data.deviceId : undefined;
-      const platform = parsed.success ? parsed.data.platform : undefined;
-
-      if (!appSession.isConnected(deviceId, platform)) {
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: 'No React Native app connected. Start the app with Metro and ensure the MCP runtime is loaded.',
-            },
-          ],
-        };
-      }
-
-      const code = `(function(){ if (typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.clearStateChanges) { __REACT_NATIVE_MCP__.clearStateChanges(); return true; } return false; })();`;
-
-      try {
-        const res = await appSession.sendRequest(
-          { method: 'eval', params: { code } },
-          10000,
-          deviceId,
-          platform
-        );
-        if (res.error != null) {
-          return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
-        }
-        return { content: [{ type: 'text' as const, text: 'State changes cleared.' }] };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        return {
-          isError: true,
-          content: [{ type: 'text' as const, text: `clear_state_changes failed: ${message}` }],
         };
       }
     }

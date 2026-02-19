@@ -1,7 +1,6 @@
 /**
- * MCP 도구: list_network_requests, clear_network_requests
- * XHR/fetch monkey-patch를 통해 캡처된 네트워크 요청을 조회/초기화.
- * runtime.js의 getNetworkRequests / clearNetworkRequests를 eval로 호출.
+ * MCP 도구: list_network_requests
+ * XHR/fetch 캡처된 네트워크 요청 조회. 비우기는 clear(target: 'network_requests').
  */
 
 import { z } from 'zod';
@@ -15,11 +14,6 @@ const listSchema = z.object({
   status: z.number().optional().describe('Status code filter.'),
   since: z.number().optional().describe('Only requests after timestamp (ms).'),
   limit: z.number().optional().describe('Max requests. Default 50.'),
-  deviceId: deviceParam,
-  platform: platformParam,
-});
-
-const clearSchema = z.object({
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -112,51 +106,6 @@ export function registerListNetworkRequests(server: McpServer, appSession: AppSe
         return {
           isError: true,
           content: [{ type: 'text' as const, text: `list_network_requests failed: ${message}` }],
-        };
-      }
-    }
-  );
-
-  s.registerTool(
-    'clear_network_requests',
-    {
-      description: 'Clear all captured network requests from the buffer.',
-      inputSchema: clearSchema,
-    },
-    async (args: unknown) => {
-      const parsed = clearSchema.safeParse(args ?? {});
-      const deviceId = parsed.success ? parsed.data.deviceId : undefined;
-      const platform = parsed.success ? parsed.data.platform : undefined;
-
-      if (!appSession.isConnected(deviceId, platform)) {
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: 'No React Native app connected. Start the app with Metro and ensure the MCP runtime is loaded.',
-            },
-          ],
-        };
-      }
-
-      const code = `(function(){ if (typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.clearNetworkRequests) { __REACT_NATIVE_MCP__.clearNetworkRequests(); return true; } return false; })();`;
-
-      try {
-        const res = await appSession.sendRequest(
-          { method: 'eval', params: { code } },
-          10000,
-          deviceId,
-          platform
-        );
-        if (res.error != null) {
-          return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
-        }
-        return { content: [{ type: 'text' as const, text: 'Network requests cleared.' }] };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        return {
-          isError: true,
-          content: [{ type: 'text' as const, text: `clear_network_requests failed: ${message}` }],
         };
       }
     }
