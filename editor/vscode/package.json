@@ -19,14 +19,14 @@
     "render",
     "state"
   ],
-  "homepage": "https://github.com/anthropics/react-native-mcp/tree/main/editor/vscode#readme",
+  "homepage": "https://github.com/ohah/react-native-mcp/tree/main/editor/vscode#readme",
   "bugs": {
-    "url": "https://github.com/anthropics/react-native-mcp/issues"
+    "url": "https://github.com/ohah/react-native-mcp/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anthropics/react-native-mcp",
+    "url": "https://github.com/ohah/react-native-mcp",
     "directory": "editor/vscode"
   },
   "publisher": "ohah",
