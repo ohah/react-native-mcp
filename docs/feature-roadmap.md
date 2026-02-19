@@ -315,7 +315,7 @@ MCP tool: get_state_changes
 ```
 콘솔 로그      ← nativeLoggingHook 체이닝 (이미 구현)
 네트워크 로그  ← XHR/fetch monkey-patch (이미 구현)
-상태 변경 로그 ← onCommitFiberRoot diff (추가 예정) ← 인프라 이미 있음
+상태 변경 로그 ← onCommitFiberRoot diff (구현 완료: get_state_changes)
 리렌더 로그    ← onCommitFiberRoot count (섹션 7 참고)
 ```
 

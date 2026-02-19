@@ -254,11 +254,11 @@ packages/react-native-mcp-server/
 - `query_selector` - Fiber 셀렉터로 첫 번째 매칭 요소 검색 (CSS querySelector 유사) ✅
 - `query_selector_all` - Fiber 셀렉터로 모든 매칭 요소 검색 ✅
 - `accessibility_audit` - Fiber 트리 순회로 접근성 규칙 위반 검출 (pressable-needs-label, image-needs-alt, touch-target-size, missing-role) ✅
-- `assert_text` - 텍스트 존재 여부 확인 ({ pass, message } 반환). `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 ✅ (polling: 예정)
-- `assert_visible` - 셀렉터 매칭 요소 존재 여부 확인 ({ pass, message } 반환). `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 ✅ (polling: 예정)
-- `assert_not_visible` - 셀렉터 매칭 요소가 사라졌는지 확인. `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 (예정)
-- `assert_element_count` - 셀렉터 매칭 요소 개수 확인. `expected_count`/`min_count`/`max_count` 지원 (예정)
-- `scroll_until_visible` - 요소가 보일 때까지 자동 스크롤. `direction`/`max_scrolls`/`scrollable_selector` 지원 (예정)
+- `assert_text` - 텍스트 존재 여부 확인 ({ pass, message } 반환). `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 ✅
+- `assert_visible` - 셀렉터 매칭 요소 존재 여부 확인 ({ pass, message } 반환). `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 ✅
+- `assert_not_visible` - 셀렉터 매칭 요소가 사라졌는지 확인. `timeoutMs`/`intervalMs` 옵션으로 polling 대기 지원 ✅
+- `assert_element_count` - 셀렉터 매칭 요소 개수 확인. `expected_count`/`min_count`/`max_count` 지원 ✅
+- `scroll_until_visible` - 요소가 보일 때까지 자동 스크롤. `direction`/`max_scrolls`/`scrollable_selector` 지원 ✅
 - `get_debugger_status` - 앱 연결 상태 + 디바이스 목록 ✅
 - `list_console_messages` - nativeLoggingHook 기반 콘솔 로그 조회 (level/since/limit 필터) ✅
 - `clear_console_messages` - 콘솔 로그 버퍼 초기화 ✅
@@ -495,7 +495,7 @@ function MyButton({ title, onPress }) {
 **구현**:
 
 - [x] Modal — React Fiber 트리에 포함되므로 기존 도구(take_snapshot, query_selector, tap 등)로 별도 처리 없이 동작
-- [x] FlatList/ScrollView — 네이티브 `swipe` 도구로 수동 스크롤 후 `query_selector_all`로 조회·탭 가능 (자동화된 가상화 탐색은 미구현)
+- [x] FlatList/ScrollView — 네이티브 `swipe` 도구로 수동 스크롤 후 `query_selector_all`로 조회·탭 가능. `scroll_until_visible` 도구로 요소가 보일 때까지 자동 스크롤 후 탐색 가능 ✅
 - [x] 네트워크 모니터링 — XHR/fetch monkey-patch로 네트워크 요청 캡처 (`list_network_requests`, `clear_network_requests`) ✅
 - [x] 네트워크 모킹 — URL 패턴 매칭으로 XHR/fetch 요청을 실제 전송 없이 가짜 응답 반환 (`set_network_mock`, `list_network_mocks`, `remove_network_mock`, `clear_network_mocks`) ✅
 - [x] 콘솔 모니터링 — `nativeLoggingHook` 체이닝으로 콘솔 로그 캡처 (`list_console_messages`, `clear_console_messages`) ✅
@@ -610,7 +610,7 @@ const INJECT_SCROLL_REF = true; // false → true
 ### 8.2 기능적 제약
 
 1. **iOS 실기기 스크린샷** - simctl은 시뮬레이터 전용이라 실기기에서는 미지원
-2. **가상화 목록 한계** - FlatList 미렌더링 아이템은 네이티브 `swipe` 도구로 수동 스크롤 후 조회 가능하지만, 에이전트가 자동으로 전체 목록을 탐색하는 기능은 미구현
+2. **가상화 목록 한계** - FlatList 미렌더링 아이템은 `scroll_until_visible` 도구로 요소가 보일 때까지 자동 스크롤 후 조회 가능 ✅ (수동 swipe도 가능)
 3. **서드파티 네이티브 컴포넌트** - 제어 어려움
 
 ### 8.3 현실적 접근
@@ -744,7 +744,7 @@ await client.callTool({
 1. **CI-ready Assertion 강화** (최우선): assert_text/assert_visible에 polling 추가, assert_not_visible·scroll_until_visible 신규 도구. [상세: 섹션 14]
 2. **Phase 3 보완**: Dead code elimination 검증
 3. ~~**Phase 5**: 네트워크·콘솔 모니터링 완료 (XHR/fetch monkey-patch + nativeLoggingHook)~~ ✅
-4. **FlatList 가상화 자동 탐색**: 전체 목록 자동 스크롤 + 수집 기능 → `scroll_until_visible` 도구로 부분 해결 예정
+4. **FlatList 가상화 자동 탐색**: 전체 목록 자동 스크롤 + 수집 기능 → `scroll_until_visible` 도구로 구현 완료 ✅
 5. **프로그래매틱 테스트 러너**: 섹션 10 구현 (YAML 파서 + MCP Client + assertion)
 6. ~~**네이티브 제스처 (drag/swipe/pinch)**~~: 완료. `tap`/`swipe` 등 통합 네이티브 도구로 구현됨 (멀티터치 제외)
 7. **안정화**: npm 배포, 문서 정비
@@ -1071,15 +1071,15 @@ RN의 내부 이벤트 시스템을 활용.
 > flutter-skill 등 유사 프로젝트 비교 분석 결과, GitHub Actions CI에서 안정적 자동화를 위해 MCP 도구 레벨에서 polling/wait 메커니즘이 필수.
 > e2e-test-plan.md의 Phase B (SDK 레벨 waitFor)와는 별개로, **MCP 도구 자체**에 polling을 내장해야 AI 에이전트와 프로그래매틱 테스트 러너 모두 활용 가능.
 
-### 14.1 현재 문제
+### 14.1 현재 문제 (2025 반영: Step 2~4 구현 완료)
 
-| 항목                   | 현재 상태                                  | 문제                                              |
-| ---------------------- | ------------------------------------------ | ------------------------------------------------- |
-| `assert_text`          | 단발성(single-shot), 10s 하드코딩 타임아웃 | 요소 미렌더링 시 즉시 FAIL → CI에서 flaky test    |
-| `assert_visible`       | 단발성, 10s 하드코딩 타임아웃              | 동일                                              |
-| `assert_not_visible`   | 미존재                                     | 모달 닫힘, 로딩 완료 검증 불가                    |
-| `scroll_until_visible` | 미존재                                     | 긴 리스트에서 요소 찾기 위해 수동 swipe 반복 필요 |
-| `assert_element_count` | 미존재                                     | 리스트 아이템 개수 검증 불가                      |
+| 항목                   | 현재 상태                                      | 비고                                         |
+| ---------------------- | ---------------------------------------------- | -------------------------------------------- |
+| `assert_text`          | ✅ 구현. `timeoutMs`/`intervalMs` polling 지원 | 단발성 기본값(0) 시 기존 동작 유지           |
+| `assert_visible`       | ✅ 구현. `timeoutMs`/`intervalMs` polling 지원 | 동일                                         |
+| `assert_not_visible`   | ✅ 구현 완료                                   | 모달 닫힘, 로딩 완료 검증 가능               |
+| `scroll_until_visible` | ✅ 구현 완료                                   | 긴 리스트에서 요소가 보일 때까지 자동 스크롤 |
+| `assert_element_count` | ✅ 구현 완료                                   | 리스트 아이템 개수 검증 가능                 |
 
 CI 환경에서는 AI가 "실패했네, 다시 해볼까" 판단을 못 하므로, 도구 자체에 재시도 메커니즘이 필수.
 
@@ -1124,9 +1124,9 @@ flutter-skill에서 참고할 만한 도구와 불필요한 도구:
 
 ### 14.3 구현 계획
 
-#### Step 1: 기존 도구에 polling 추가 (필수)
+#### Step 1: 기존 도구에 polling 추가 (필수) ✅ 구현 완료
 
-`assert_text`, `assert_visible`에 `timeoutMs`/`intervalMs` 파라미터 추가:
+`assert_text`, `assert_visible`에 `timeoutMs`/`intervalMs` 파라미터 추가 (구현됨):
 
 ```typescript
 // MCP 도구 파라미터 (기존 + 신규)
@@ -1166,7 +1166,7 @@ function waitForCondition(checkFn, timeoutMs, intervalMs) {
 }
 ```
 
-#### Step 2: assert_not_visible 신규 도구 (필수)
+#### Step 2: assert_not_visible 신규 도구 (필수) ✅ 구현 완료
 
 ```typescript
 // MCP 도구: assert_not_visible
@@ -1180,7 +1180,7 @@ function waitForCondition(checkFn, timeoutMs, intervalMs) {
 
 사용 예시: 로딩 스피너 사라짐 확인, 모달 닫힘 확인, 삭제된 아이템 부재 확인.
 
-#### Step 3: scroll_until_visible 신규 도구 (높음)
+#### Step 3: scroll_until_visible 신규 도구 (높음) ✅ 구현 완료
 
 ```typescript
 // MCP 도구: scroll_until_visible
@@ -1203,7 +1203,7 @@ function waitForCondition(checkFn, timeoutMs, intervalMs) {
 
 이 도구는 FlatList 가상화 문제를 자연스럽게 해결 — 미렌더링 아이템도 스크롤하면 나타남.
 
-#### Step 4: assert_element_count 신규 도구 (선택)
+#### Step 4: assert_element_count 신규 도구 (선택) ✅ 구현 완료
 
 ```typescript
 // MCP 도구: assert_element_count
@@ -1218,21 +1218,21 @@ function waitForCondition(checkFn, timeoutMs, intervalMs) {
 // 반환: { pass: boolean, actualCount: number, message: string }
 ```
 
-### 14.4 구현 우선순위
+### 14.4 구현 우선순위 (Step 1~4 완료)
 
 ```
 Step 1: assert_text/assert_visible polling ──┐
-Step 2: assert_not_visible                   ├→ CI 안정적 자동화 가능
+Step 2: assert_not_visible                   ├→ ✅ 모두 구현 완료. CI 안정적 자동화 가능.
 Step 3: scroll_until_visible                 │
 Step 4: assert_element_count (선택)          ┘
 ```
 
-| Step | 도구                                 | 구현 범위                                      | 우선순위 |
-| ---- | ------------------------------------ | ---------------------------------------------- | -------- |
-| 1    | assert_text/assert_visible + polling | runtime.js (~30줄) + assert.ts 파라미터 추가   | **필수** |
-| 2    | assert_not_visible                   | runtime.js (~20줄) + 신규 도구 등록            | **필수** |
-| 3    | scroll_until_visible                 | 신규 도구 (~80줄, query_selector + swipe 조합) | **높음** |
-| 4    | assert_element_count                 | runtime.js (~15줄) + 신규 도구 등록            | 선택     |
+| Step | 도구                                 | 구현 범위                                        | 상태    |
+| ---- | ------------------------------------ | ------------------------------------------------ | ------- |
+| 1    | assert_text/assert_visible + polling | runtime.js + assert.ts 파라미터                  | ✅ 완료 |
+| 2    | assert_not_visible                   | assert.ts (assert_not_visible)                   | ✅ 완료 |
+| 3    | scroll_until_visible                 | scroll-until-visible.ts (query_selector + swipe) | ✅ 완료 |
+| 4    | assert_element_count                 | assert.ts (assert_element_count)                 | ✅ 완료 |
 
 **Step 1~2 완료 시**: AI 에이전트 + 프로그래매틱 테스트에서 flaky test 문제 해결.
 **Step 3 완료 시**: 긴 리스트 자동 탐색 가능 (FlatList 가상화 문제 부분 해결).
