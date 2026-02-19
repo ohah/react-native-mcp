@@ -1,4 +1,5 @@
 [
-  { "text": "testing", "link": "/testing/", "activeMatch": "^/ko/testing/" },
-  { "text": "mcp", "link": "/mcp/", "activeMatch": "^/ko/mcp/" }
+  { "text": "mcp", "link": "/mcp/", "activeMatch": "^/ko/mcp/" },
+  { "text": "test", "link": "/testing/", "activeMatch": "^/ko/testing/" },
+  { "text": "Contribute", "link": "/contribute", "activeMatch": "^/ko/contribute" }
 ]

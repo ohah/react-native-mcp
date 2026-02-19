@@ -2,7 +2,6 @@
   { "type": "file", "name": "index", "label": "Install & connect" },
   { "type": "file", "name": "cli-init", "label": "CLI Init (Quick Setup)" },
   "getting-started",
-  { "type": "file", "name": "architecture", "label": "Architecture" },
   { "type": "file", "name": "mcp-usage", "label": "Cursor / Claude / Copilot" },
   { "type": "file", "name": "expo-guide", "label": "Expo Guide" },
   { "type": "file", "name": "vscode-extension", "label": "VS Code Extension" },

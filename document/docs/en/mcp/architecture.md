@@ -6,18 +6,18 @@ How React Native MCP works under the hood.
 
 ## Overview
 
-React Native MCP enables AI tools (Cursor, Claude Desktop, Copilot) to control and inspect React Native apps. Unlike Chrome DevTools MCP which uses the DOM, React Native has no DOM — so this project uses **React Fiber tree**, **Babel code injection**, and **native CLI tools** (adb/idb) instead.
+React Native MCP enables AI tools (Cursor, Claude Desktop, Copilot) to control and inspect React Native apps. React Native has no DOM — so this project uses **React Fiber tree**, **Babel code injection**, and **native CLI tools** (adb/idb).
 
-### Comparison with Chrome DevTools MCP
+### Comparison with browser-based MCP
 
-| Aspect         | Chrome DevTools MCP   | React Native MCP                                |
+| Aspect         | Browser (DOM) MCP     | React Native MCP                                |
 | -------------- | --------------------- | ----------------------------------------------- |
 | Tree           | DOM tree              | React Fiber tree                                |
 | Selectors      | CSS selectors         | testID, querySelector (Fiber selectors)         |
 | Interaction    | querySelector + click | Fiber + native touch injection (tap/swipe)      |
 | Snapshot       | HTML snapshot         | Component tree JSON                             |
-| Screenshot     | CDP screenshot        | adb / xcrun simctl (host CLI, no native module) |
-| Communication  | CDP (WebSocket)       | WebSocket + eval                                |
+| Screenshot     | Browser DevTools API  | adb / xcrun simctl (host CLI, no native module) |
+| Communication  | WebSocket (DevTools)  | WebSocket + eval                                |
 | Code injection | Not needed            | Babel/Metro required                            |
 
 ---

@@ -6,18 +6,18 @@ React Native MCP의 내부 동작 원리를 설명합니다.
 
 ## 개요
 
-React Native MCP는 AI 도구(Cursor, Claude Desktop, Copilot)가 React Native 앱을 제어하고 검사할 수 있게 합니다. Chrome DevTools MCP는 DOM을 사용하지만, React Native에는 DOM이 없으므로 **React Fiber 트리**, **Babel 코드 주입**, **네이티브 CLI 도구**(adb/idb)를 활용합니다.
+React Native MCP는 AI 도구(Cursor, Claude Desktop, Copilot)가 React Native 앱을 제어하고 검사할 수 있게 합니다. React Native에는 DOM이 없으므로 **React Fiber 트리**, **Babel 코드 주입**, **네이티브 CLI 도구**(adb/idb)를 활용합니다.
 
-### Chrome DevTools MCP와의 비교
+### 브라우저(DOM) MCP와의 비교
 
-| 항목      | Chrome DevTools MCP   | React Native MCP                                    |
+| 항목      | 브라우저(DOM) MCP     | React Native MCP                                    |
 | --------- | --------------------- | --------------------------------------------------- |
 | 트리      | DOM tree              | React Fiber tree                                    |
 | 선택자    | CSS selector          | testID, querySelector (Fiber 셀렉터)                |
 | 조작      | querySelector + click | Fiber + 네이티브 터치 주입 (tap/swipe)              |
 | 스냅샷    | HTML snapshot         | 컴포넌트 트리 JSON                                  |
-| 스크린샷  | CDP screenshot        | adb / xcrun simctl (호스트 CLI, 네이티브 모듈 없음) |
-| 통신      | CDP (WebSocket)       | WebSocket + eval                                    |
+| 스크린샷  | 브라우저 DevTools API | adb / xcrun simctl (호스트 CLI, 네이티브 모듈 없음) |
+| 통신      | WebSocket (DevTools)  | WebSocket + eval                                    |
 | 코드 주입 | 불필요                | Babel/Metro 필수                                    |
 
 ---

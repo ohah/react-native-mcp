@@ -1,0 +1,12 @@
+/* Hero: remove gradient, use solid title and plain background */
+:where(html:not(.rp-dark)) {
+  --rp-home-hero-title-color: var(--rp-c-brand-dark);
+  --rp-home-hero-title-bg: none;
+  --rp-home-background-bg: #fff;
+}
+
+:where(html.rp-dark) {
+  --rp-home-hero-title-color: var(--rp-c-brand-light);
+  --rp-home-hero-title-bg: none;
+  --rp-home-background-bg: #121212;
+}
