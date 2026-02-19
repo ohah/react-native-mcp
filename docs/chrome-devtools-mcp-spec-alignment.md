@@ -67,7 +67,7 @@ React Native MCP 서버는 [Chrome DevTools MCP](https://github.com/ChromeDevToo
 
 ## 3. 공통 규칙
 
-- **includeSnapshot**: 스냅샷 포함 여부. RN에서는 take_snapshot 미구현 시 무시 가능.
+- **includeSnapshot**: 스냅샷 포함 여부. RN은 take_snapshot 구현됨. 스펙상 미지원 시 무시 가능.
 - **uid**: Chrome은 a11y 스냅샷의 uid. RN은 **testID** 또는 컴포넌트 스냅샷의 uid로 매핑.
 - **pageId**: RN은 단일 앱이므로 `pageId` 개념 없음. `list_pages`는 제거됨.
 
@@ -75,7 +75,7 @@ React Native MCP 서버는 [Chrome DevTools MCP](https://github.com/ChromeDevToo
 
 ## 4. 데이터 소스
 
-- **콘솔/네트워크**: `list_console_messages`, `list_network_requests` 도구는 현재 미등록(stub).
+- **콘솔/네트워크**: `list_console_messages`, `list_network_requests` 도구 구현 완료 (runtime.js 훅 + MCP 도구).
 - **Metro base URL**: 환경 변수 `METRO_BASE_URL` (기본값 `http://localhost:8230`).
 
 ---
