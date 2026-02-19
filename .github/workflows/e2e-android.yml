@@ -88,9 +88,6 @@ jobs:
       - name: MCP 서버 빌드
         run: bun run build
 
-      - name: MCP 클라이언트 빌드
-        run: bun run --filter @ohah/react-native-mcp-client build
-
       - name: Gradle 캐시
         uses: gradle/actions/setup-gradle@v4
 
@@ -112,7 +109,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/e2e-app-cache/android
-          key: ${{ runner.os }}-android-apk-${{ hashFiles('examples/demo-app/android/build.gradle', 'examples/demo-app/android/settings.gradle', 'examples/demo-app/android/app/build.gradle', 'examples/demo-app/android/app/src/**', 'examples/demo-app/package.json', 'examples/demo-app/index.js', 'examples/demo-app/metro.config.js', 'examples/demo-app/babel.config.js', 'examples/demo-app/app.json', 'examples/demo-app/tsconfig.json', 'examples/demo-app/src/**', 'examples/demo-app/react-native.config.js', 'packages/react-native-mcp-client/package.json', 'packages/react-native-mcp-client/src/**') }}
+          key: ${{ runner.os }}-android-apk-${{ hashFiles('examples/demo-app/android/build.gradle', 'examples/demo-app/android/settings.gradle', 'examples/demo-app/android/app/build.gradle', 'examples/demo-app/android/app/src/**', 'examples/demo-app/package.json', 'examples/demo-app/index.js', 'examples/demo-app/metro.config.js', 'examples/demo-app/babel.config.js', 'examples/demo-app/app.json', 'examples/demo-app/tsconfig.json', 'examples/demo-app/src/**', 'examples/demo-app/react-native.config.js', 'packages/react-native-mcp-server/package.json', 'packages/react-native-mcp-server/src/**') }}
           restore-keys: |
             ${{ runner.os }}-android-apk-
 
@@ -177,7 +174,7 @@ jobs:
             adb reverse tcp:12300 tcp:12300
 
             # E2E YAML 시나리오 실행 (press-counter.yaml 등)
-            node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p android -o e2e-artifacts/yaml-results --no-auto-launch
+            node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/ -p android -o e2e-artifacts/yaml-results --no-auto-launch
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()

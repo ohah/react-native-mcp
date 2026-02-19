@@ -69,9 +69,6 @@ jobs:
       - name: MCP 서버 빌드
         run: bun run build
 
-      - name: MCP 클라이언트 빌드
-        run: bun run --filter @ohah/react-native-mcp-client build
-
       - name: Python 3.12 설정 (fb-idb는 3.14+ 비호환)
         uses: actions/setup-python@v5
         with:
@@ -102,7 +99,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/e2e-app-cache/ios
-          key: ${{ runner.os }}-ios-app-${{ hashFiles('examples/demo-app/ios/Podfile.lock', 'examples/demo-app/ios/**/*.pbxproj', 'examples/demo-app/ios/ReactNativeMcpDemo/**', 'examples/demo-app/package.json', 'examples/demo-app/index.js', 'examples/demo-app/metro.config.js', 'examples/demo-app/babel.config.js', 'examples/demo-app/app.json', 'examples/demo-app/tsconfig.json', 'examples/demo-app/src/**', 'examples/demo-app/react-native.config.js', 'packages/react-native-mcp-client/package.json', 'packages/react-native-mcp-client/src/**') }}
+          key: ${{ runner.os }}-ios-app-${{ hashFiles('examples/demo-app/ios/Podfile.lock', 'examples/demo-app/ios/**/*.pbxproj', 'examples/demo-app/ios/ReactNativeMcpDemo/**', 'examples/demo-app/package.json', 'examples/demo-app/index.js', 'examples/demo-app/metro.config.js', 'examples/demo-app/babel.config.js', 'examples/demo-app/app.json', 'examples/demo-app/tsconfig.json', 'examples/demo-app/src/**', 'examples/demo-app/react-native.config.js', 'packages/react-native-mcp-server/package.json', 'packages/react-native-mcp-server/src/**') }}
           restore-keys: |
             ${{ runner.os }}-ios-app-
 
@@ -178,7 +175,7 @@ jobs:
           xcrun simctl install booted "$APP_PATH"
 
       - name: E2E YAML 테스트 실행
-        run: node packages/react-native-mcp-test/dist/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch
+        run: node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
