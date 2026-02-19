@@ -5,7 +5,12 @@ import {
   triggerLongPress,
   getRegisteredPressTestIDs,
 } from './mcp-registration';
-import { getClickables, getTextNodes, getComponentTree } from './mcp-introspection';
+import {
+  getClickables,
+  getTextNodes,
+  getComponentTree,
+  getSourceRefForUid,
+} from './mcp-introspection';
 import { pressByLabel, longPressByLabel, typeText } from './mcp-actions';
 import {
   registerWebView,
@@ -55,6 +60,7 @@ var MCP: any = {
   getClickables: getClickables,
   getTextNodes: getTextNodes,
   getComponentTree: getComponentTree,
+  getSourceRefForUid: getSourceRefForUid,
   pressByLabel: pressByLabel,
   longPressByLabel: longPressByLabel,
   typeText: typeText,

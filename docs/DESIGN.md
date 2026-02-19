@@ -447,6 +447,12 @@ function MyButton({ title, onPress }) {
 - [ ] Metro Plugin 확장
   - [ ] 컴포넌트 메타데이터 수집
   - [ ] 소스맵 연동
+  - **소스 위치 추론 (\_debugStack + 소스맵)**: React 19에서 `_debugSource` 제거됨. 대안: Fiber `_debugStack.stack`에서 `(bundleUrl, line, column)` 파싱 → Metro에 `inlineSourceMap=true`로 번들 요청 → 소스맵으로 `originalPositionFor` → 원본 `(source, line, column)` 반환. 스크립트: `scripts/symbolicate-stack.mjs`.
+  - **캐시 및 핫 리로드**: 번들이 바뀌면(핫 리로드) 소스맵도 바뀌므로 캐시 무효화 필요. Metro는 `X-Metro-Delta-ID` 헤더를 내려줌(ETag 없음). 전략: **캐시 키 = bundleUrl + X-Metro-Delta-ID**. 요청 시 먼저 **HEAD**로 Delta-ID만 조회 → 캐시에 같은 Delta-ID가 있으면 캐시된 소스맵 사용(lookup만 ~2.5ms). 없거나 다르면 GET으로 번들 받아 소스맵 추출 후 캐시 갱신. HEAD 미지원 시 **TTL 캐시**(예: 30초) 폴백.
+  - **대용량 번들(20~30MB 실앱)**: 데모(~5MB) Cold 약 750ms, Warm 약 300ms. 번들 크기에 비례해 Cold는 선형 증가 예상(20MB → 약 3초, 30MB → 약 4.5초). **캐시가 필수**: 같은 세션에서는 Warm만 타므로 ~300ms 수준 유지. 선택적으로 **Range 요청**(`Range: bytes=-N`, N=4MB 등)으로 번들 **끝부분만** 받아 `//# sourceMappingURL=...` 추출 시도 → 서버가 206 응답 시 대용량 번들에서도 Cold 단축 가능. Metro dev 서버는 Range 미지원 가능성 있음(미지원 시 200 + 전체 본문으로 폴백). **Range 동작 여부 확인**: Metro 실행 중 `node scripts/check-range-support.mjs` 실행 → 206이면 동작, 200이면 미지원.
+  - **Metro 옵션으로 Range 켜기 없음**: 공식 설정(server.port, server.enhanceMiddleware, server.rewriteRequestUrl 등)에 Range/206 관련 옵션 없음. `enhanceMiddleware`로 요청을 가로채도, 206을 내려주려면 번들 **일부**를 넘겨줄 수 있어야 하는데 Metro는 전체 스트림만 제공하므로 미들웨어만으로는 구현 불가. Range 지원하려면 Metro 쪽 구현 변경(이슈/PR) 필요.
+  - **비슷한 케이스도 동일한 방식**: dev 서버에서 (번들 line/col → 원본 파일) 조회가 필요한 경우, Metro는 "소스맵만 주는" 별도 엔드포인트가 없어 **inlineSourceMap=true로 전체 번들 받아 끝의 인라인 소스맵 추출**이 유일한 일반적 방법. metro-symbolicate는 **로컬 .map 파일** 경로로만 동작(dev 서버 URL 아님). Bugsnag/Sentry 등은 dev는 "Metro가 처리" 또는 빌드 산출물 .map 업로드 위주. 따라서 우리처럼 dev 세션 중 소스 위치만 따로 필요하면 전부 같은 제약(전체 번들 GET)을 받는 구조.
+  - **React Native 디버거(DevTools) 프론트엔드**: Hermes CDP `Debugger.scriptParsed`에서 `sourceMapURL`을 넘김(`getSourceMappingUrl(fileId)` — 번들 로드 시점의 소스맵 URL). 프론트엔드(Chrome DevTools 기반)는 원본 소스 표시 시 이 URL을 **fetch**함. 해당 URL이 Metro 번들 URL이면(인라인 소스맵) **전체 번들을 받아서** 인라인 소스맵을 쓰는 구조라, 우리와 동일한 방식. 스크립트 소스 자체는 `Debugger.getScriptSource`로 엔진이 이미 보유한 내용을 주므로 fetch 불필요.
 
 **산출물**: AI가 렌더링된 컴포넌트 목록 조회 ✅
 
