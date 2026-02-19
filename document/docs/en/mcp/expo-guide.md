@@ -64,43 +64,17 @@ module.exports = function (api) {
 };
 ```
 
-### 3. Enable the MCP runtime
+### 3. Enable the MCP runtime (no app code required)
 
-The entry point differs depending on your project structure.
+Once the Babel preset is applied, the MCP runtime loads automatically. **You do not need to call `enable()` in your app entry.**
 
-#### Expo Router projects (`app/` directory)
+- **Development (`__DEV__`)**: Connects to port 12300 automatically when running with Metro.
+- **Release/non-dev builds**: Run Metro with `REACT_NATIVE_MCP_ENABLED=true` so the transformer injects the enable flag.
 
-Enable in `app/_layout.tsx`:
-
-```tsx
-// app/_layout.tsx
-import { Stack } from 'expo-router';
-
-if (__DEV__) {
-  // @ts-ignore — injected globally by babel-preset
-  global.__REACT_NATIVE_MCP__?.enable();
-}
-
-export default function RootLayout() {
-  return <Stack />;
-}
+```bash
+# Example: using MCP in release
+REACT_NATIVE_MCP_ENABLED=true npx expo start --dev-client
 ```
-
-#### Traditional structure (`App.tsx` / `index.js`)
-
-Enable at the top of `index.js` or `App.tsx`:
-
-```js
-// index.js (or App.tsx)
-import { registerRootComponent } from 'expo';
-import App from './App';
-
-global.__REACT_NATIVE_MCP__?.enable();
-
-registerRootComponent(App);
-```
-
-> `__REACT_NATIVE_MCP__` is a global object injected by the Babel preset. Without the preset it's `undefined`, so use optional chaining (`?.`) for safe calls.
 
 ### 4. Configure the MCP server
 
@@ -158,7 +132,7 @@ npx expo start --dev-client
 ### MCP connection not working
 
 1. Check that the MCP server is running (port 12300)
-2. Verify `__REACT_NATIVE_MCP__?.enable()` is called — check with `console.log(typeof __REACT_NATIVE_MCP__)`
+2. Verify the runtime is loaded — e.g. `console.log(typeof __REACT_NATIVE_MCP__)` (dev builds connect automatically; for release, run Metro with `REACT_NATIVE_MCP_ENABLED=true`)
 3. Verify the Babel preset is applied — clear Metro cache and restart:
    ```bash
    npx expo start --clear
