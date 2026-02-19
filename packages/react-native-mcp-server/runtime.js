@@ -1671,10 +1671,14 @@
 		var re = /\(([^)]+):(\d+):(\d+)\)/g;
 		var m;
 		while ((m = re.exec(stack)) !== null) {
-			var line = parseInt(m[2], 10);
-			var column = parseInt(m[3], 10);
+			var url = m[1];
+			var lineStr = m[2];
+			var colStr = m[3];
+			if (url == null || lineStr == null || colStr == null) continue;
+			var line = parseInt(lineStr, 10);
+			var column = parseInt(colStr, 10);
 			if (!isNaN(line)) out.push({
-				bundleUrl: m[1],
+				bundleUrl: url,
 				line,
 				column
 			});

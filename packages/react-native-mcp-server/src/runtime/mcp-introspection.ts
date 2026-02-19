@@ -24,9 +24,14 @@ export function getSourceRefFromStack(
   var re = /\(([^)]+):(\d+):(\d+)\)/g;
   var m: RegExpExecArray | null;
   while ((m = re.exec(stack)) !== null) {
-    var line = parseInt(m[2], 10);
-    var column = parseInt(m[3], 10);
-    if (!isNaN(line)) out.push({ bundleUrl: m[1], line, column });
+    var url = m[1];
+    var lineStr = m[2];
+    var colStr = m[3];
+    // == null 은 null·undefined 둘 다 걸러냄 (null == undefined)
+    if (url == null || lineStr == null || colStr == null) continue;
+    var line = parseInt(lineStr, 10);
+    var column = parseInt(colStr, 10);
+    if (!isNaN(line)) out.push({ bundleUrl: url, line, column });
   }
   return out;
 }
