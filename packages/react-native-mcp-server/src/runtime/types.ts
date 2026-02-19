@@ -56,6 +56,7 @@ export interface StateChangeEntry {
 
 export interface RenderEntry {
   component: string;
+  nativeType?: string;
   type: 'mount' | 'update';
   trigger: 'state' | 'props' | 'context' | 'parent';
   timestamp: number;

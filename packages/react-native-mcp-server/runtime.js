@@ -347,6 +347,22 @@
 		if (renderIgnoreFilter !== null && renderIgnoreFilter.indexOf(name) !== -1) return true;
 		return matchesPrefixList(name, DEFAULT_IGNORED_PREFIXES);
 	}
+	/** 빌트인 컴포넌트인지 판별 */
+	function isBuiltinComponent(name) {
+		return BUILTIN_COMPONENTS.indexOf(name) !== -1;
+	}
+	/** fiber.return을 올라가며 빌트인이 아닌 첫 사용자 컴포넌트 이름 */
+	function getNearestUserParent(fiber) {
+		var p = fiber.return;
+		while (p) {
+			if (p.tag === 0 || p.tag === 1) {
+				var pName = getFiberTypeName(p);
+				if (!isBuiltinComponent(pName) && !matchesPrefixList(pName, DEFAULT_IGNORED_PREFIXES)) return pName;
+			}
+			p = p.return;
+		}
+		return "Root";
+	}
 	/** fiber.return을 올라가며 첫 FunctionComponent/ClassComponent 이름 */
 	function getParentComponentName(fiber) {
 		var p = fiber.return;
@@ -360,6 +376,18 @@
 	function isMemoWrapped(fiber) {
 		var parent = fiber.return;
 		return parent != null && (parent.tag === 14 || parent.tag === 15);
+	}
+	/** child를 탐색하여 첫 HostComponent(tag=5)의 type 이름 반환 (View, Text, Pressable 등) */
+	function getFirstHostType(fiber) {
+		var child = fiber.child;
+		return _findHostType(child, 5);
+	}
+	function _findHostType(fiber, depth) {
+		if (!fiber || depth <= 0) return void 0;
+		if (fiber.tag === 5 && typeof fiber.type === "string") return fiber.type;
+		var found = _findHostType(fiber.child, depth - 1);
+		if (found) return found;
+		return _findHostType(fiber.sibling, depth - 1);
 	}
 	/** props에서 변경된 key들 추출 */
 	function diffProps(prevProps, nextProps) {
@@ -446,17 +474,24 @@
 				collectRenderEntries(fiber.sibling);
 				return;
 			}
+			var isBuiltin = isBuiltinComponent(name);
+			var componentKey = isBuiltin ? getNearestUserParent(fiber) + " > " + name : name;
 			var alt = fiber.alternate;
-			if (alt === null) pushRenderEntry({
-				component: name,
-				type: "mount",
-				trigger: "parent",
-				timestamp: Date.now(),
-				commitId: renderCommitCount,
-				parent: getParentComponentName(fiber),
-				isMemoized: isMemoWrapped(fiber)
-			});
-			else {
+			var parentName = getParentComponentName(fiber);
+			var hostType = isBuiltin ? void 0 : getFirstHostType(fiber);
+			if (alt === null) {
+				var entry = {
+					component: componentKey,
+					type: "mount",
+					trigger: "parent",
+					timestamp: Date.now(),
+					commitId: renderCommitCount,
+					parent: parentName,
+					isMemoized: isMemoWrapped(fiber)
+				};
+				if (hostType) entry.nativeType = hostType;
+				pushRenderEntry(entry);
+			} else {
 				var flags = fiber.flags;
 				if (flags === void 0) flags = fiber.effectTag;
 				if (typeof flags === "number" && (flags & 1) === 0) {} else {
@@ -474,14 +509,15 @@
 					if (contextChanges) changes.context = contextChanges;
 					var hasChanges = stateChanges || propChanges || contextChanges;
 					var updateEntry = {
-						component: name,
+						component: componentKey,
 						type: "update",
 						trigger,
 						timestamp: Date.now(),
 						commitId: renderCommitCount,
-						parent: getParentComponentName(fiber),
+						parent: parentName,
 						isMemoized: isMemoWrapped(fiber)
 					};
+					if (hostType) updateEntry.nativeType = hostType;
 					if (hasChanges) updateEntry.changes = changes;
 					pushRenderEntry(updateEntry);
 				}
@@ -490,7 +526,7 @@
 		collectRenderEntries(fiber.child);
 		collectRenderEntries(fiber.sibling);
 	}
-	var DEFAULT_IGNORED_PREFIXES;
+	var DEFAULT_IGNORED_PREFIXES, BUILTIN_COMPONENTS;
 	var init_render_tracking = __esmMin(() => {
 		init_fiber_helpers();
 		init_state_hooks();
@@ -501,7 +537,31 @@
 			"YellowBox",
 			"RCT",
 			"Debugging",
-			"AppContainer"
+			"AppContainer",
+			"TextAncestor",
+			"VirtualizedList",
+			"CellRenderer"
+		];
+		BUILTIN_COMPONENTS = [
+			"Text",
+			"View",
+			"Image",
+			"Pressable",
+			"TouchableOpacity",
+			"TouchableHighlight",
+			"TouchableWithoutFeedback",
+			"TouchableNativeFeedback",
+			"ScrollView",
+			"FlatList",
+			"SectionList",
+			"TextInput",
+			"ActivityIndicator",
+			"Switch",
+			"SafeAreaView",
+			"KeyboardAvoidingView",
+			"StatusBar",
+			"Modal",
+			"RefreshControl"
 		];
 	});
 
@@ -1698,6 +1758,7 @@
 					isMemoized: entry.isMemoized,
 					recentRenders: []
 				};
+				if (entry.nativeType) comp.nativeType = entry.nativeType;
 				componentMap[entry.component] = comp;
 			}
 			comp.renders++;
@@ -1717,24 +1778,26 @@
 		});
 		if (components.length > 20) components = components.slice(0, 20);
 		var hotComponents = components.map(function(c) {
-			return {
+			var result = {
 				name: c.name,
 				renders: c.renders,
 				mounts: c.mounts,
 				unnecessaryRenders: c.unnecessaryRenders,
 				triggers: c.triggers,
-				isMemoized: c.isMemoized,
-				recentRenders: c.recentRenders.map(function(r) {
-					var recent = {
-						timestamp: r.timestamp,
-						trigger: r.trigger,
-						commitId: r.commitId,
-						parent: r.parent
-					};
-					if (r.changes) recent.changes = r.changes;
-					return recent;
-				})
+				isMemoized: c.isMemoized
 			};
+			if (c.nativeType) result.nativeType = c.nativeType;
+			result.recentRenders = c.recentRenders.map(function(r) {
+				var recent = {
+					timestamp: r.timestamp,
+					trigger: r.trigger,
+					commitId: r.commitId,
+					parent: r.parent
+				};
+				if (r.changes) recent.changes = r.changes;
+				return recent;
+			});
+			return result;
 		});
 		return {
 			profiling: renderProfileActive,
