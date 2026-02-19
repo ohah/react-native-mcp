@@ -726,12 +726,16 @@ editor/vscode/
 ├── src/
 │   ├── extension/                 ← Extension Host (Node.js, CJS)
 │   │   ├── extension.ts           ← activate/deactivate
-│   │   ├── ws-client.ts           ← WS 클라이언트 (12300 포트)
+│   │   ├── ws-client.ts           ← WS 클라이언트 (12300, extension-init/getDevices/eval)
 │   │   ├── status-bar.ts          ← 연결 상태 표시
-│   │   └── webview/
-│   │       ├── panel-manager.ts   ← WebviewPanel (에디터 탭)
-│   │       ├── sidebar-view-provider.ts ← WebviewViewProvider (Activity Bar)
-│   │       └── message-handler.ts ← webview ↔ extension 메시지 라우팅
+│   │   ├── webview/
+│   │   │   ├── panel-manager.ts   ← WebviewPanel (에디터 탭)
+│   │   │   ├── sidebar-view-provider.ts ← WebviewViewProvider (Activity Bar)
+│   │   │   └── message-handler.ts ← webview ↔ extension 메시지 라우팅
+│   │   ├── tree-view/
+│   │   │   └── component-tree-provider.ts
+│   │   └── codelens/
+│   │       └── accessibility-diagnostics.ts
 │   └── webview/                   ← Webview (React IIFE, 브라우저)
 │       ├── App.tsx                ← 전역 상태 (useReducer + Context)
 │       ├── panels/
