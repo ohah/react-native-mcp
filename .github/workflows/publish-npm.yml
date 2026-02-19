@@ -35,6 +35,7 @@ jobs:
       package-name: ${{ steps.detect.outputs.package-name }}
       version: ${{ steps.detect.outputs.version }}
       should-publish: ${{ steps.detect.outputs.should-publish }}
+      npm-tag: ${{ steps.detect.outputs.npm-tag }}
     steps:
       - name: 체크아웃
         uses: actions/checkout@v4
@@ -60,6 +61,11 @@ jobs:
             echo "package-name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
             echo "version=$VERSION_INPUT" >> $GITHUB_OUTPUT
             echo "should-publish=true" >> $GITHUB_OUTPUT
+            if [[ "$VERSION_INPUT" == *-rc* ]] || [[ "$VERSION_INPUT" == *-alpha* ]] || [[ "$VERSION_INPUT" == *-beta* ]]; then
+              echo "npm-tag=rc" >> $GITHUB_OUTPUT
+            else
+              echo "npm-tag=latest" >> $GITHUB_OUTPUT
+            fi
           else
             # 태그 푸시 이벤트
             TAG_NAME="${{ github.ref_name }}"
@@ -78,6 +84,11 @@ jobs:
             echo "package-name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "should-publish=true" >> $GITHUB_OUTPUT
+            if [[ "$VERSION" == *-rc* ]] || [[ "$VERSION" == *-alpha* ]] || [[ "$VERSION" == *-beta* ]]; then
+              echo "npm-tag=rc" >> $GITHUB_OUTPUT
+            else
+              echo "npm-tag=latest" >> $GITHUB_OUTPUT
+            fi
           fi
 
   publish-server:
@@ -107,7 +118,7 @@ jobs:
 
       - name: 빌드 결과 검증
         working-directory: packages/react-native-mcp-server
-        run: bun dist/index.js --help || true
+        run: bun dist/index.js init --help || true
 
       - name: Node.js 설정
         uses: actions/setup-node@v4
@@ -117,7 +128,7 @@ jobs:
 
       - name: npm에 배포
         working-directory: packages/react-native-mcp-server
-        run: npm publish --tag latest --provenance
+        run: npm publish --tag ${{ needs.detect-package.outputs.npm-tag }} --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -151,6 +162,6 @@ jobs:
 
       - name: npm에 배포
         working-directory: packages/react-native
-        run: npm publish --tag latest --provenance
+        run: npm publish --tag ${{ needs.detect-package.outputs.npm-tag }} --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
