@@ -86,6 +86,25 @@ bun run format
 
 ---
 
+## VS Code 확장 개발
+
+DevTools 확장은 `editor/vscode`에 있습니다.
+
+**빌드:**
+
+```bash
+cd editor/vscode
+bun install
+bun run build    # dist/extension.js + dist/webview.js
+bun run watch    # 파일 변경 시 자동 재빌드
+```
+
+**디버깅 (Extension Development Host):** VS Code에서 `editor/vscode` 폴더 열기 → `F5` → 확장이 로드된 새 창이 열림.
+
+**아키텍처:** 확장은 `ws://localhost:12300`으로 MCP 서버에 `extension-init` 클라이언트로 연결 (Cursor/Claude와 동일 서버, stdio 사용). 흐름: VS Code 확장 → WebSocket → MCP 서버 → eval → RN 앱.
+
+---
+
 # 아키텍처
 
 React Native MCP의 내부 동작 원리입니다.

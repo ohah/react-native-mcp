@@ -50,6 +50,28 @@ module.exports = {
 };
 ```
 
+### Render highlight (optional)
+
+Visual re-render highlighting draws colored overlays on components when they re-render. You can enable it at app load via the Babel preset option. Default style is `'react-mcp'` (cyan #61dafb, matches DevTools icon).
+
+| Option                                     | Description                                                                                                   |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `renderHighlight: true`                    | Enable on load, style `'react-mcp'` (cyan, default).                                                          |
+| `renderHighlight: { style: 'react-mcp' }`  | Same as above.                                                                                                |
+| `renderHighlight: { style: 'react-scan' }` | Enable on load, style `'react-scan'` (purple).                                                                |
+| Omitted or `false`                         | Off by default. You can still start it via MCP tools or [VS Code DevTools](./vscode-extension) Renders panel. |
+
+Example:
+
+```js
+module.exports = {
+  presets: [
+    'module:@react-native/babel-preset',
+    ['@ohah/react-native-mcp-server/babel-preset', { renderHighlight: true }],
+  ],
+};
+```
+
 ## 4. Native tools (idb / adb)
 
 Tap, swipe, screenshots, etc. use **idb** (iOS) and **adb** (Android). You must install them.

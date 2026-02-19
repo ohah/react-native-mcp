@@ -89,16 +89,21 @@ module.exports = {
 
 Pass options as the second element of the preset array:
 
-| Option            | Type    | Default | Description                                 |
-| ----------------- | ------- | ------- | ------------------------------------------- |
-| `renderHighlight` | boolean | `false` | Start render highlight overlay on app load. |
+| Option            | Type                                                  | Default | Description                                                             |
+| ----------------- | ----------------------------------------------------- | ------- | ----------------------------------------------------------------------- |
+| `renderHighlight` | `boolean` or `{ style: 'react-scan' \| 'react-mcp' }` | `false` | Start render highlight on load. `true` = style `'react-mcp'` (default). |
 
-Example — enable render highlight on load:
+- **`true`** — enable with style `'react-mcp'` (cyan #61dafb, default, matches DevTools icon).
+- **`{ style: 'react-mcp' }`** — same as `true`.
+- **`{ style: 'react-scan' }`** — purple, react-scan style.
+
+Example:
 
 ```js
 presets: [
   'module:@react-native/babel-preset',
   ['@ohah/react-native-mcp-server/babel-preset', { renderHighlight: true }],
+  // or: { renderHighlight: { style: 'react-scan' } }  for purple
 ],
 ```
 
