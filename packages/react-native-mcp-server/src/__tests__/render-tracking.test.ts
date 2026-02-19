@@ -2,7 +2,7 @@
  * render-tracking: 런타임 함수 + MCP 도구 핸들러 단위 테스트
  * - collectRenderEntries (mount/update/bail-out 판별, trigger 분류, 컴포넌트 필터)
  * - startRenderProfile / getRenderReport / clearRenderProfile (MCP API)
- * - start_render_profile / get_render_report / clear_render_profile (MCP 도구 핸들러)
+ * - start_render_profile / get_render_report (MCP 도구 핸들러). clear는 clear(target: 'render_profile').
  */
 
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
@@ -551,7 +551,7 @@ describe('getRenderReport — 집계 로직', () => {
 
 // ─── MCP 도구 핸들러 테스트 ──────────────────────────────────────
 
-describe('MCP 도구: start_render_profile / get_render_report / clear_render_profile', () => {
+describe('MCP 도구: start_render_profile / get_render_report', () => {
   let handlers: Record<string, (args: unknown) => Promise<unknown>>;
   let appSession: {
     isConnected: (deviceId?: string, platform?: string) => boolean;
@@ -573,10 +573,9 @@ describe('MCP 도구: start_render_profile / get_render_report / clear_render_pr
     registerRenderTracking(mockServer as never, appSession as never);
   });
 
-  it('세 도구 모두 등록됨', () => {
+  it('두 도구 모두 등록됨', () => {
     expect(handlers['start_render_profile']).toBeDefined();
     expect(handlers['get_render_report']).toBeDefined();
-    expect(handlers['clear_render_profile']).toBeDefined();
   });
 
   it('start_render_profile — 연결 시 시작 메시지 반환', async () => {
@@ -634,22 +633,10 @@ describe('MCP 도구: start_render_profile / get_render_report / clear_render_pr
     expect(result.content[0].text).toContain('start_render_profile first');
   });
 
-  it('clear_render_profile — 성공 메시지 반환', async () => {
-    (appSession.sendRequest as ReturnType<typeof mock>).mockResolvedValueOnce({
-      error: null,
-      result: true,
-    });
-
-    const result = (await handlers['clear_render_profile']({})) as {
-      content: Array<{ type: string; text: string }>;
-    };
-    expect(result.content[0].text).toContain('stopped and data cleared');
-  });
-
   it('연결 안 됐을 때 에러 메시지 반환', async () => {
     appSession.isConnected = () => false;
 
-    for (const tool of ['start_render_profile', 'get_render_report', 'clear_render_profile']) {
+    for (const tool of ['start_render_profile', 'get_render_report']) {
       const result = (await handlers[tool]({})) as {
         content: Array<{ type: string; text: string }>;
       };

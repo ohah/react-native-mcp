@@ -607,9 +607,9 @@ describe('inspect_state 도구', () => {
   });
 });
 
-// ─── MCP 도구 get_state_changes / clear_state_changes 핸들러 테스트 ──
+// ─── MCP 도구 get_state_changes 핸들러 테스트 (clear는 clear(target: 'state_changes')) ──
 
-describe('get_state_changes / clear_state_changes 도구', () => {
+describe('get_state_changes 도구', () => {
   let handlers: Record<string, (args: unknown) => Promise<unknown>>;
   let appSession: {
     isConnected: (deviceId?: string, platform?: string) => boolean;
@@ -645,9 +645,8 @@ describe('get_state_changes / clear_state_changes 도구', () => {
     registerGetStateChanges(mockServer as never, appSession as never);
   });
 
-  it('get_state_changes, clear_state_changes 두 도구 모두 등록', () => {
+  it('get_state_changes 도구 등록', () => {
     expect(handlers['get_state_changes']).toBeDefined();
-    expect(handlers['clear_state_changes']).toBeDefined();
   });
 
   it('get_state_changes — 연결됐을 때 변경 목록 포맷팅 반환', async () => {
@@ -684,25 +683,6 @@ describe('get_state_changes / clear_state_changes 도구', () => {
   it('get_state_changes — 연결 안 됐을 때 에러 메시지', async () => {
     appSession.isConnected = () => false;
     const result = (await handlers['get_state_changes']({})) as {
-      content: Array<{ type: string; text: string }>;
-    };
-    expect(result.content[0].text).toContain('No React Native app connected');
-  });
-
-  it('clear_state_changes — 성공 메시지 반환', async () => {
-    (appSession.sendRequest as ReturnType<typeof mock>).mockResolvedValueOnce({
-      error: null,
-      result: true,
-    });
-    const result = (await handlers['clear_state_changes']({})) as {
-      content: Array<{ type: string; text: string }>;
-    };
-    expect(result.content[0].text).toContain('State changes cleared');
-  });
-
-  it('clear_state_changes — 연결 안 됐을 때 에러 메시지', async () => {
-    appSession.isConnected = () => false;
-    const result = (await handlers['clear_state_changes']({})) as {
       content: Array<{ type: string; text: string }>;
     };
     expect(result.content[0].text).toContain('No React Native app connected');

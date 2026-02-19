@@ -1,6 +1,6 @@
 /**
- * MCP 도구: set_network_mock, list_network_mocks, clear_network_mocks, remove_network_mock
- * runtime.js의 addNetworkMock / listNetworkMocks / clearNetworkMocks / removeNetworkMock를 eval로 호출.
+ * MCP 도구: set_network_mock, list_network_mocks, remove_network_mock
+ * 비우기는 clear(target: 'network_mocks').
  */
 
 import { z } from 'zod';
@@ -22,11 +22,6 @@ const setSchema = z.object({
 });
 
 const listSchema = z.object({
-  deviceId: deviceParam,
-  platform: platformParam,
-});
-
-const clearSchema = z.object({
   deviceId: deviceParam,
   platform: platformParam,
 });
@@ -170,43 +165,6 @@ export function registerNetworkMock(server: McpServer, appSession: AppSession): 
         return {
           isError: true,
           content: [{ type: 'text' as const, text: `list_network_mocks failed: ${message}` }],
-        };
-      }
-    }
-  );
-
-  // clear_network_mocks
-  s.registerTool(
-    'clear_network_mocks',
-    {
-      description: 'Clear all network mock rules.',
-      inputSchema: clearSchema,
-    },
-    async (args: unknown) => {
-      const parsed = clearSchema.safeParse(args ?? {});
-      const deviceId = parsed.success ? parsed.data.deviceId : undefined;
-      const platform = parsed.success ? parsed.data.platform : undefined;
-
-      if (!appSession.isConnected(deviceId, platform)) return notConnectedResponse();
-
-      const code = `(function(){ if (typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.clearNetworkMocks) { __REACT_NATIVE_MCP__.clearNetworkMocks(); return true; } return false; })();`;
-
-      try {
-        const res = await appSession.sendRequest(
-          { method: 'eval', params: { code } },
-          10000,
-          deviceId,
-          platform
-        );
-        if (res.error != null) {
-          return { content: [{ type: 'text' as const, text: `Error: ${res.error}` }] };
-        }
-        return { content: [{ type: 'text' as const, text: 'Network mock rules cleared.' }] };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        return {
-          isError: true,
-          content: [{ type: 'text' as const, text: `clear_network_mocks failed: ${message}` }],
         };
       }
     }

@@ -28,6 +28,7 @@ import { registerFilePush } from './file-push.js';
 import { registerAddMedia } from './add-media.js';
 import { registerListDevices } from './list-devices.js';
 import { registerOpenDeeplink } from './open-deeplink.js';
+import { registerClearBuffers } from './clear-buffers.js';
 import { registerClearState } from './clear-state.js';
 import { registerSetLocation } from './set-location.js';
 import { registerScrollUntilVisible } from './scroll-until-visible.js';
@@ -52,6 +53,7 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerGetDebuggerStatus(server, appSession);
   registerListConsoleMessages(server, appSession);
   registerListNetworkRequests(server, appSession);
+  registerClearBuffers(server, appSession);
   // 통합 네이티브 도구 — 좌표 탭/스와이프, 텍스트 입력, 키코드, 버튼, UI 트리, 파일, 미디어
   registerTap(server, appSession);
   registerSwipe(server, appSession);

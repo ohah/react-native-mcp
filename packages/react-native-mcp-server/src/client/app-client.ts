@@ -312,7 +312,7 @@ export class AppClient {
   }
 
   async clearConsoleLogs(opts?: DeviceOpts): Promise<unknown> {
-    return this.call('clear_console_messages', { ...opts });
+    return this.call('clear', { target: 'console', ...opts });
   }
 
   async networkRequests(
@@ -328,7 +328,7 @@ export class AppClient {
   }
 
   async clearNetworkRequests(opts?: DeviceOpts): Promise<unknown> {
-    return this.call('clear_network_requests', { ...opts });
+    return this.call('clear', { target: 'network_requests', ...opts });
   }
 
   async setNetworkMock(
@@ -351,7 +351,7 @@ export class AppClient {
   }
 
   async clearNetworkMocks(opts?: DeviceOpts): Promise<unknown> {
-    return this.call('clear_network_mocks', { ...opts });
+    return this.call('clear', { target: 'network_mocks', ...opts });
   }
 
   async removeNetworkMock(id: number, opts?: DeviceOpts): Promise<unknown> {
