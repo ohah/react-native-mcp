@@ -105,3 +105,45 @@ export function resetRenderProfile() {
   renderComponentFilter = null;
   renderIgnoreFilter = null;
 }
+
+// ─── Render overlay (render-overlay ↔ state-change-tracking) ───
+export var overlayActive = false;
+export var overlayComponentFilter: string[] | null = null;
+export var overlayIgnoreFilter: string[] | null = null;
+export var overlayShowLabels = false;
+export var overlayFadeTimeout = 750;
+export var overlayMaxHighlights = 100;
+export var overlaySetHighlights: ((highlights: any[]) => void) | null = null;
+export var overlayRenderCounts: Record<string, number> = {};
+
+export function setOverlayActive(active: boolean) {
+  overlayActive = active;
+}
+export function setOverlayComponentFilter(components: string[] | null) {
+  overlayComponentFilter = components;
+}
+export function setOverlayIgnoreFilter(ignore: string[] | null) {
+  overlayIgnoreFilter = ignore;
+}
+export function setOverlayShowLabels(show: boolean) {
+  overlayShowLabels = show;
+}
+export function setOverlayFadeTimeout(ms: number) {
+  overlayFadeTimeout = ms;
+}
+export function setOverlayMaxHighlights(max: number) {
+  overlayMaxHighlights = max;
+}
+export function setOverlaySetHighlights(fn: ((highlights: any[]) => void) | null) {
+  overlaySetHighlights = fn;
+}
+export function resetOverlay() {
+  overlayActive = false;
+  overlayComponentFilter = null;
+  overlayIgnoreFilter = null;
+  overlayShowLabels = false;
+  overlayFadeTimeout = 1500;
+  overlayMaxHighlights = 100;
+  // overlaySetHighlights는 React 컴포넌트 lifecycle이 관리 — 여기서 초기화하지 않음
+  overlayRenderCounts = {};
+}

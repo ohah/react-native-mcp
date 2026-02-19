@@ -34,6 +34,7 @@ import {
 } from './network-mock';
 import { inspectState, getStateChanges, clearStateChanges } from './mcp-state';
 import { startRenderProfile, getRenderReport, clearRenderProfile } from './mcp-render';
+import { startRenderHighlight, stopRenderHighlight } from './render-overlay';
 import {
   querySelector,
   querySelectorAll,
@@ -92,6 +93,8 @@ var MCP: any = {
   startRenderProfile: startRenderProfile,
   getRenderReport: getRenderReport,
   clearRenderProfile: clearRenderProfile,
+  startRenderHighlight: startRenderHighlight,
+  stopRenderHighlight: stopRenderHighlight,
 };
 
 if (typeof global !== 'undefined') (global as any).__REACT_NATIVE_MCP__ = MCP;

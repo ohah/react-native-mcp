@@ -111,3 +111,4 @@ metro-*.log
 # 브랜치/커밋 요약 (PR 바디에만 사용, 커밋하지 않음)
 branch-summary.md
 commit-summary.md
+.react-scan-ref/

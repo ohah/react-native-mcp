@@ -1,9 +1,26 @@
 import type { Fiber } from './types';
 import { getFiberRoot } from './fiber-helpers';
 import { pressHandlers } from './shared';
+import { getOverlayComponent } from './render-overlay';
 
 export function registerComponent(name: string, component: () => any): any {
-  return require('react-native').AppRegistry.registerComponent(name, component);
+  var wrappedFactory = function () {
+    var Orig = component();
+    var React = require('react');
+    var RN = require('react-native');
+    var Overlay = getOverlayComponent();
+    function MCPRoot(props: any) {
+      return React.createElement(
+        RN.View,
+        { style: { flex: 1 } },
+        React.createElement(Orig, props),
+        React.createElement(Overlay, null)
+      );
+    }
+    MCPRoot.displayName = 'MCPRoot';
+    return MCPRoot;
+  };
+  return require('react-native').AppRegistry.registerComponent(name, wrappedFactory);
 }
 
 export function registerPressHandler(testID: string, handler: Function): void {
