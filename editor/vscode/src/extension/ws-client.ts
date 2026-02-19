@@ -306,6 +306,26 @@ export class WsClient extends EventEmitter {
     await this.eval(code, deviceId, platform);
   }
 
+  async startRenderHighlight(
+    opts: {
+      components?: string[];
+      ignore?: string[];
+      showLabels?: boolean;
+      fadeTimeout?: number;
+      maxHighlights?: number;
+    } = {},
+    deviceId?: string,
+    platform?: string
+  ): Promise<unknown> {
+    const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.startRenderHighlight ? __REACT_NATIVE_MCP__.startRenderHighlight(${JSON.stringify(opts)}) : null; })();`;
+    return this.eval(code, deviceId, platform);
+  }
+
+  async stopRenderHighlight(deviceId?: string, platform?: string): Promise<void> {
+    const code = `(function(){ if (typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.stopRenderHighlight) { __REACT_NATIVE_MCP__.stopRenderHighlight(); return true; } return false; })();`;
+    await this.eval(code, deviceId, platform);
+  }
+
   async getAccessibilityAudit(
     opts: { maxDepth?: number } = {},
     deviceId?: string,
