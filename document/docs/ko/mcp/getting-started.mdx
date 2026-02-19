@@ -1,8 +1,95 @@
 # 시작하기
 
-1. **설치** — MCP 서버 설치 및 앱 설정: [설치 및 연결](./) 참고.
-2. **등록** — 클라이언트(Cursor / Claude / Copilot)에 서버 등록: [MCP 사용법](./mcp-usage) 참고.
-3. **실행** — Metro와 앱을 시뮬레이터/에뮬레이터에서 실행.
-4. AI 클라이언트에서 MCP 도구(take_snapshot, tap, assert_text 등)로 앱을 제어·검증.
+5분 안에 프로젝트에 React Native MCP를 설정하세요.
 
-클라이언트별 상세 설정은 [MCP 사용법 — Cursor, Claude Desktop, Copilot](./mcp-usage)를 보세요.
+## 사전 요구 사항
+
+- **React Native** 0.72 이상
+- **Node.js** 18+ (또는 Bun)
+- **idb** (iOS 시뮬레이터) 또는 **adb** (Android) — [설치 및 연결](./) 참고
+- **MCP 클라이언트**: Cursor, Claude Desktop, Claude Code, 또는 GitHub Copilot CLI
+
+---
+
+## Step 1: 설치 및 설정 (30초)
+
+프로젝트 루트에서 CLI init 명령어를 실행합니다:
+
+```bash
+npx -y @ohah/react-native-mcp-server init
+```
+
+프로젝트를 자동 감지(React Native 버전, Expo 여부, 패키지 매니저)하고:
+
+1. `babel.config.js`에 Babel 프리셋 추가
+2. MCP 클라이언트(Cursor, Claude 등) 설정 파일 생성
+3. `.gitignore` 업데이트
+
+> 이미 수동으로 설정하셨나요? [설치 및 연결](./)과 [CLI Init](./cli-init)에서 자세한 내용을 확인하세요.
+
+---
+
+## Step 2: 앱 실행
+
+import { Tab, Tabs } from 'rspress/theme';
+
+<Tabs>
+  <Tab label="Bare RN">
+```bash
+# Metro 시작
+npx react-native start
+
+# 다른 터미널에서 시뮬레이터/에뮬레이터 실행
+
+npx react-native run-ios
+
+# 또는
+
+npx react-native run-android
+
+````
+  </Tab>
+  <Tab label="Expo">
+```bash
+# Dev Client (권장)
+npx expo start --dev-client
+
+# 또는 Expo Go (제한 있음 — Expo 가이드 참고)
+npx expo start
+````
+
+Expo 관련 자세한 내용은 [Expo 가이드](./expo-guide)를 참고하세요.
+
+  </Tab>
+</Tabs>
+
+Android 에뮬레이터에서는 포트 포워딩을 설정하세요:
+
+```bash
+adb reverse tcp:12300 tcp:12300
+```
+
+---
+
+## Step 3: 연결 확인
+
+MCP 클라이언트를 열고 다음을 시도하세요:
+
+> "앱 화면 스냅샷 찍어줘"
+
+AI가 컴포넌트 트리를 반환하면 연결이 정상입니다. 다음으로도 확인할 수 있습니다:
+
+> "디버거 상태 확인해줘"
+
+이 명령은 `get_debugger_status`를 호출하며, `appConnected: true`와 디바이스 목록이 표시되어야 합니다.
+
+---
+
+## 다음 단계
+
+- **[도구 레퍼런스](./tools/)** — 42개 도구의 파라미터와 예제
+- **[쿡북](./cookbook/)** — 실전 활용 시나리오
+- **[Expo 가이드](./expo-guide)** — Expo 전용 설정과 제한 사항
+- **[아키텍처](./architecture)** — 내부 동작 원리
+- **[Cursor / Claude / Copilot](./mcp-usage)** — 클라이언트별 설정
+- **[문제 해결](./troubleshooting)** — 연결 문제와 해결 방법
