@@ -3,7 +3,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { detectProject } from './detect.js';
+import { detectProject, checkExternalTools } from './detect.js';
 import { updateBabelConfig } from './babel-config.js';
 import { setupMcpConfig, MCP_CLIENTS, type McpClient } from './mcp-config.js';
 import { select, closeRL } from './prompts.js';
@@ -40,6 +40,24 @@ export async function runInit(options: InitOptions = {}): Promise<void> {
     );
   }
   console.log(`  \x1b[32m✓\x1b[0m Package manager: ${info.packageManager}`);
+
+  // 1.5. 외부 도구 확인 (adb, idb)
+  console.log();
+  console.log(' Checking external tools...');
+  const tools = checkExternalTools();
+  let hasWarning = false;
+  for (const tool of tools) {
+    if (tool.installed) {
+      console.log(`  \x1b[32m✓\x1b[0m ${tool.name} — found`);
+    } else {
+      hasWarning = true;
+      console.log(`  \x1b[33m⚠\x1b[0m ${tool.name} — not found`);
+      console.log(`    Install: ${tool.hint}`);
+    }
+  }
+  if (!hasWarning) {
+    console.log('  All tools ready!');
+  }
 
   // 2. MCP 클라이언트 선택
   let client: McpClient;

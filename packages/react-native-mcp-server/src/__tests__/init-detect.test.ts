@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { detectProject } from '../init/detect.js';
+import { detectProject, checkExternalTools } from '../init/detect.js';
 
 describe('detectProject', () => {
   let tmpDir: string;
@@ -134,5 +134,38 @@ describe('detectProject', () => {
       fs.writeFileSync(path.join(tmpDir, 'package.json'), '{}');
       expect(detectProject(tmpDir).packageManager).toBe('npm');
     });
+  });
+});
+
+describe('checkExternalTools', () => {
+  it('returns array of tool statuses', () => {
+    const tools = checkExternalTools();
+    expect(Array.isArray(tools)).toBe(true);
+    expect(tools.length).toBeGreaterThanOrEqual(1);
+
+    // adb should always be checked
+    const adb = tools.find((t) => t.name === 'adb');
+    expect(adb).toBeDefined();
+    expect(typeof adb!.installed).toBe('boolean');
+    expect(typeof adb!.hint).toBe('string');
+  });
+
+  it('checks idb on macOS', () => {
+    const tools = checkExternalTools();
+    if (process.platform === 'darwin') {
+      const idb = tools.find((t) => t.name === 'idb');
+      expect(idb).toBeDefined();
+      expect(typeof idb!.installed).toBe('boolean');
+    }
+  });
+
+  it('each tool has required fields', () => {
+    const tools = checkExternalTools();
+    for (const tool of tools) {
+      expect(tool).toHaveProperty('name');
+      expect(tool).toHaveProperty('installed');
+      expect(tool).toHaveProperty('version');
+      expect(tool).toHaveProperty('hint');
+    }
   });
 });

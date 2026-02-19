@@ -3,6 +3,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 
 export interface ProjectInfo {
   isExpo: boolean;
@@ -68,4 +69,63 @@ function detectPackageManager(cwd: string): ProjectInfo['packageManager'] {
   if (fs.existsSync(path.join(cwd, 'yarn.lock'))) return 'yarn';
   if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) return 'pnpm';
   return 'npm';
+}
+
+// ─── External tool detection ───
+
+export interface ToolStatus {
+  name: string;
+  installed: boolean;
+  version: string | null;
+  hint: string;
+}
+
+function checkCommand(
+  cmd: string,
+  versionFlag = '--version'
+): { installed: boolean; version: string | null } {
+  try {
+    const output = execSync(`${cmd} ${versionFlag}`, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 5000,
+    })
+      .toString()
+      .trim();
+    // Extract first line, strip common prefixes
+    const firstLine = output.split('\n')[0];
+    return { installed: true, version: firstLine };
+  } catch {
+    return { installed: false, version: null };
+  }
+}
+
+export function checkExternalTools(): ToolStatus[] {
+  const isMac = process.platform === 'darwin';
+  const tools: ToolStatus[] = [];
+
+  const docsBase = 'https://ohah.github.io/react-native-mcp/mcp/#4-native-tools-idb--adb';
+
+  // adb — needed for Android
+  const adb = checkCommand('adb');
+  tools.push({
+    name: 'adb',
+    installed: adb.installed,
+    version: adb.version,
+    hint: isMac
+      ? `brew install android-platform-tools  or  install Android Studio\n    Docs: ${docsBase}`
+      : `Install Android Studio (includes adb)  or  sudo apt install adb\n    Docs: ${docsBase}`,
+  });
+
+  // idb — needed for iOS (macOS only)
+  if (isMac) {
+    const idb = checkCommand('idb');
+    tools.push({
+      name: 'idb',
+      installed: idb.installed,
+      version: idb.version,
+      hint: `brew tap facebook/fb && brew install idb-companion\n    Docs: ${docsBase}`,
+    });
+  }
+
+  return tools;
 }
