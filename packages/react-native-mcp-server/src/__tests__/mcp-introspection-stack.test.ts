@@ -43,6 +43,29 @@ describe('getSourceRefFromStack', () => {
     expect(getSourceRefFromStack(' at fn (no-colon-here)')).toEqual([]);
   });
 
+  it('매칭되는 줄만 추출하고 나머지는 스킵 (수정 감지)', () => {
+    const stack = [
+      ' at A (http://host/a.js:1:2)',
+      ' at B (no-colon-no-line-column)', // 패턴 불일치 → 스킵
+      ' at C (http://host/c.js:3:4)',
+    ].join('\n');
+    expect(getSourceRefFromStack(stack)).toEqual([
+      { bundleUrl: 'http://host/a.js', line: 1, column: 2 },
+      { bundleUrl: 'http://host/c.js', line: 3, column: 4 },
+    ]);
+  });
+
+  it('동일 deltaId처럼 유효한 프레임만 수집 (수정 감지 안 한 건 그대로 반환)', () => {
+    const stack = ' at App (http://localhost:8081/index.bundle:10:20)';
+    const out = getSourceRefFromStack(stack);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toEqual({
+      bundleUrl: 'http://localhost:8081/index.bundle',
+      line: 10,
+      column: 20,
+    });
+  });
+
   it('non-string 입력은 빈 배열 반환 (타입 가드)', () => {
     // @ts-expect-error 테스트용 비문자열
     expect(getSourceRefFromStack(null)).toEqual([]);
