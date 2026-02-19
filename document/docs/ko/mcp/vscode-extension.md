@@ -73,7 +73,7 @@ bun run package   # react-native-mcp-devtools-x.x.x.vsix 생성
 생성된 `.vsix` 파일을 VS Code에서 설치:
 
 ```bash
-code --install-extension react-native-mcp-devtools-0.1.0-rc.1.vsix
+code --install-extension react-native-mcp-devtools-0.1.0.vsix
 ```
 
 또는 VS Code → Extensions → `...` 메뉴 → `Install from VSIX...` 선택.
@@ -131,92 +131,6 @@ cd your-rn-project && npx react-native start
 | ---------------------------- | ------- | ------------------------- |
 | `reactNativeMcp.port`        | `12300` | MCP 서버 WebSocket 포트   |
 | `reactNativeMcp.autoConnect` | `true`  | VS Code 시작 시 자동 연결 |
-
-## 배포
-
-### 사전 준비
-
-1. **Azure DevOps 계정**: [dev.azure.com](https://dev.azure.com)에서 조직(Organization) 생성
-2. **Personal Access Token (PAT)**: Azure DevOps → User Settings → Personal Access Tokens → New Token
-   - **Organization**: `All accessible organizations`
-   - **Scopes**: `Marketplace` → `Manage` 체크
-   - 생성된 토큰을 안전하게 보관
-
-3. **Publisher 등록**: [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage)에서 publisher 생성
-   - Publisher ID는 `package.json`의 `"publisher"` 필드와 일치해야 함 (현재: `ohah`)
-
-### 배포 명령
-
-```bash
-cd editor/vscode
-
-# 1. vsce에 로그인 (처음 한 번만)
-npx @vscode/vsce login ohah
-# PAT 입력 프롬프트 → 위에서 생성한 토큰 입력
-
-# 2. 빌드 + 배포
-bun run publish
-```
-
-`bun run publish`는 내부적으로 `bun run build && npx @vscode/vsce publish --no-dependencies`를 실행합니다.
-
-### 버전 올리기
-
-```bash
-# patch 버전 올리고 배포 (0.1.0 → 0.1.1)
-npx @vscode/vsce publish patch --no-dependencies
-
-# minor 버전 올리고 배포 (0.1.0 → 0.2.0)
-npx @vscode/vsce publish minor --no-dependencies
-
-# 특정 버전으로 배포
-npx @vscode/vsce publish 1.0.0 --no-dependencies
-```
-
-### .vsix 파일만 생성 (배포 없이)
-
-```bash
-bun run package
-# → react-native-mcp-devtools-x.x.x.vsix 생성
-```
-
-이 파일을 GitHub Release에 첨부하거나, `code --install-extension` 명령으로 수동 설치할 수 있습니다.
-
-### CI에서 자동 배포
-
-GitHub Actions 예시:
-
-```yaml
-name: Publish VS Code Extension
-on:
-  push:
-    tags: ['vscode-v*']
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install
-        working-directory: editor/vscode
-      - run: bun run build
-        working-directory: editor/vscode
-      - run: npx @vscode/vsce publish --no-dependencies -p ${{ secrets.VSCE_PAT }}
-        working-directory: editor/vscode
-```
-
-`VSCE_PAT` 시크릿에 Personal Access Token을 등록하세요.
-
-### 배포 체크리스트
-
-- [ ] `package.json`의 `version` 업데이트
-- [ ] `publisher` 필드가 마켓플레이스 publisher ID와 일치
-- [ ] `icon` 필드의 PNG 파일 존재 (128x128 이상)
-- [ ] `repository`, `homepage` URL 정확
-- [ ] `bun run build` 성공 확인
-- [ ] `.vscodeignore`에 불필요한 파일 제외 확인
-- [ ] `bun run package`로 .vsix 생성 후 로컬 테스트
 
 ## 개발
 
