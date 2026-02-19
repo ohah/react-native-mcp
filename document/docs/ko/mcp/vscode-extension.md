@@ -73,7 +73,7 @@ bun run package   # react-native-mcp-devtools-x.x.x.vsix 생성
 생성된 `.vsix` 파일을 VS Code에서 설치:
 
 ```bash
-code --install-extension react-native-mcp-devtools-0.1.0.vsix
+code --install-extension react-native-mcp-devtools-0.1.0-rc.1.vsix
 ```
 
 또는 VS Code → Extensions → `...` 메뉴 → `Install from VSIX...` 선택.
@@ -143,7 +143,7 @@ cd your-rn-project && npx react-native start
    - 생성된 토큰을 안전하게 보관
 
 3. **Publisher 등록**: [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage)에서 publisher 생성
-   - Publisher ID는 `package.json`의 `"publisher"` 필드와 일치해야 함 (현재: `react-native-mcp`)
+   - Publisher ID는 `package.json`의 `"publisher"` 필드와 일치해야 함 (현재: `ohah`)
 
 ### 배포 명령
 
@@ -151,7 +151,7 @@ cd your-rn-project && npx react-native start
 cd editor/vscode
 
 # 1. vsce에 로그인 (처음 한 번만)
-npx @vscode/vsce login react-native-mcp
+npx @vscode/vsce login ohah
 # PAT 입력 프롬프트 → 위에서 생성한 토큰 입력
 
 # 2. 빌드 + 배포
