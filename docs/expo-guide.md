@@ -64,43 +64,17 @@ module.exports = function (api) {
 };
 ```
 
-### 3. MCP 런타임 활성화
+### 3. MCP 런타임 활성화 (앱 코드 불필요)
 
-프로젝트 구조에 따라 진입점이 다르다.
+Babel 프리셋만 적용하면 MCP 런타임이 자동으로 로드된다. **앱 진입점에 `enable()` 호출을 넣을 필요가 없다.**
 
-#### Expo Router 프로젝트 (`app/` 디렉토리)
+- **개발 빌드(`__DEV__`)**: Metro로 실행 시 자동으로 포트 12300에 연결된다.
+- **릴리즈/비개발 빌드**: Metro를 `REACT_NATIVE_MCP_ENABLED=true`로 실행하면 transformer가 활성화 플래그를 주입해 연결된다.
 
-`app/_layout.tsx`에서 활성화:
-
-```tsx
-// app/_layout.tsx
-import { Stack } from 'expo-router';
-
-if (__DEV__) {
-  // @ts-ignore — babel-plugin-app-registry가 전역에 주입
-  global.__REACT_NATIVE_MCP__?.enable();
-}
-
-export default function RootLayout() {
-  return <Stack />;
-}
+```bash
+# 예: 릴리즈에서 MCP 사용 시
+REACT_NATIVE_MCP_ENABLED=true npx expo start --dev-client
 ```
-
-#### 기존 구조 (`App.tsx` / `index.js`)
-
-`index.js` 또는 `App.tsx` 상단에서 활성화:
-
-```js
-// index.js (또는 App.tsx)
-import { registerRootComponent } from 'expo';
-import App from './App';
-
-global.__REACT_NATIVE_MCP__?.enable();
-
-registerRootComponent(App);
-```
-
-> `__REACT_NATIVE_MCP__`는 Babel 프리셋이 주입하는 전역 객체다. 프리셋 없이는 `undefined`이므로 옵셔널 체이닝(`?.`)으로 안전하게 호출한다.
 
 ### 4. MCP 서버 설정
 
@@ -158,7 +132,7 @@ npx expo start --dev-client
 ### MCP 연결이 안 될 때
 
 1. MCP 서버가 실행 중인지 확인 (포트 12300)
-2. `__REACT_NATIVE_MCP__?.enable()` 호출이 되는지 확인 — `console.log(typeof __REACT_NATIVE_MCP__)` 로 체크
+2. 런타임 로드 여부 확인 — `console.log(typeof __REACT_NATIVE_MCP__)` 로 체크 (개발 빌드는 자동, 릴리즈는 Metro를 `REACT_NATIVE_MCP_ENABLED=true`로 실행)
 3. Babel 프리셋이 적용되었는지 확인 — Metro 캐시 초기화 후 재시작:
    ```bash
    npx expo start --clear

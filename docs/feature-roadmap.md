@@ -60,12 +60,12 @@ E2E 기능을 Detox/Maestro 수준으로 맞추는 것보다, **fiber 접근 + M
 
 **해야 할 것**:
 
-| 항목                          | 설명                                                   |
-| ----------------------------- | ------------------------------------------------------ |
-| Expo Dev Client에서 동작 검증 | `npx expo start --dev-client` 환경에서 MCP 연결 테스트 |
-| Expo Go 확인                  | 샌드박스 환경에서 localhost WebSocket 연결 가능 여부   |
-| Expo Router 가이드            | `app/_layout.tsx`에서 `__DEV__` import 예시            |
-| `npx expo install` 호환 확인  | 패키지 설치 흐름 검증                                  |
+| 항목                          | 설명                                                                |
+| ----------------------------- | ------------------------------------------------------------------- |
+| Expo Dev Client에서 동작 검증 | `npx expo start --dev-client` 환경에서 MCP 연결 테스트              |
+| Expo Go 확인                  | 샌드박스 환경에서 localhost WebSocket 연결 가능 여부                |
+| Expo Router 가이드            | Babel 프리셋만으로 활성화, `app/_layout.tsx` 등 앱 코드 수정 불필요 |
+| `npx expo install` 호환 확인  | 패키지 설치 흐름 검증                                               |
 
 **난이도**: ★☆☆ — 코드 변경 없이 문서 + 검증 위주.
 
