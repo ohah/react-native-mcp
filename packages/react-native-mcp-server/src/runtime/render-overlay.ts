@@ -6,7 +6,7 @@
  * - PerformedWork flag (bit 0x1) 로 실제 렌더 여부 판별
  * - getNearestHostFibers DFS로 모든 최근접 host fiber 수집 → rect 병합
  * - 색상: purple rgb(115,97,230), fill 10%
- * - 페이드: ~750ms
+ * - 페이드: 500ms (react-scan native withTiming duration 동일)
  * - 배지: "ComponentName xN" (rect 위에, 11px 모노스페이스)
  *
  * RN 차이점:
@@ -19,6 +19,7 @@ import type { Fiber } from './types';
 import { getFiberTypeName } from './fiber-helpers';
 import {
   renderHighlight,
+  renderHighlightStyle,
   overlayActive,
   overlayComponentFilter,
   overlayIgnoreFilter,
@@ -105,8 +106,8 @@ function shouldSkipOverlay(name: string): boolean {
 
 // ─── Highlight data ───────────────────────────────────────────────
 
-/** react-scan 기본 색상: purple */
-var PRIMARY_COLOR = '115,97,230';
+/** 스타일별 RGB (쉼표 구분). react-scan: purple, react-mcp: DevTools 아이콘 #61dafb */
+var PRIMARY_COLOR = renderHighlightStyle === 'react-mcp' ? '97,218,251' : '115,97,230';
 
 export interface HighlightData {
   x: number;
@@ -118,6 +119,7 @@ export interface HighlightData {
   alpha: number; // 현재 alpha (fade 중)
   timestamp: number;
   _posKey: string; // react-scan 스타일 위치 기반 키
+  _fadeTimerId?: ReturnType<typeof setInterval>; // 머지 시 재페이드용
 }
 
 // ─── getNearestHostFibers (react-scan/bippy 동일 로직) ────────────
@@ -320,15 +322,20 @@ function _processMeasurements(measurements: PendingMeasurement[]): void {
       var posKey =
         Math.round(bx) + '-' + Math.round(by) + '-' + Math.round(bw) + '-' + Math.round(bh);
 
-      // 1) 기존 활성 하이라이트에서 merge
+      // 1) 기존 활성 하이라이트에서 merge (react-scan: 같은 위치면 count만 증가, 페이드 재시작)
       var merged = false;
       for (var j = 0; j < _activeHighlights.length; j++) {
         var existing = _activeHighlights[j]!;
         if (existing._posKey === posKey) {
+          if (existing._fadeTimerId != null) {
+            clearInterval(existing._fadeTimerId);
+            existing._fadeTimerId = undefined;
+          }
           existing.count++;
           existing.alpha = 1;
           existing.timestamp = Date.now();
           merged = true;
+          _scheduleFade(existing);
           break;
         }
       }
@@ -414,8 +421,7 @@ function _commitHighlights(newHighlights: HighlightData[]): void {
 }
 
 function _scheduleFade(highlight: HighlightData): void {
-  // react-scan: 45프레임에 걸쳐 alpha 감소 (1 → 0)
-  // overlayFadeTimeout으로 총 지속 시간 조절 (기본 750ms)
+  // react-scan native: withTiming(0, { duration: 500 }). 45프레임에 걸쳐 alpha 1→0.
   var frame = 0;
   var frameInterval = overlayFadeTimeout / TOTAL_FRAMES;
   var interval = setInterval(function () {
@@ -423,6 +429,7 @@ function _scheduleFade(highlight: HighlightData): void {
     highlight.alpha = 1 - frame / TOTAL_FRAMES;
     if (frame >= TOTAL_FRAMES) {
       clearInterval(interval);
+      highlight._fadeTimerId = undefined;
       var idx = _activeHighlights.indexOf(highlight);
       if (idx !== -1) {
         _activeHighlights.splice(idx, 1);
@@ -430,11 +437,11 @@ function _scheduleFade(highlight: HighlightData): void {
       var tIdx = _fadeTimers.indexOf(interval);
       if (tIdx !== -1) _fadeTimers.splice(tIdx, 1);
     }
-    // alpha 변경 시 UI 업데이트
     if (overlaySetHighlights) {
       overlaySetHighlights(_activeHighlights.slice());
     }
   }, frameInterval);
+  highlight._fadeTimerId = interval;
   _fadeTimers.push(interval);
 }
 

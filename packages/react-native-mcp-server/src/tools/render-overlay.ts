@@ -24,7 +24,7 @@ const startSchema = z.object({
   fadeTimeout: z
     .number()
     .optional()
-    .describe('Milliseconds before highlights fade out. Default: 1500.'),
+    .describe('Milliseconds before highlights fade out. Default: 500 (react-scan native align).'),
   maxHighlights: z
     .number()
     .optional()

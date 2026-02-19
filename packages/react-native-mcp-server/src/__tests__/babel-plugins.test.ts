@@ -30,11 +30,14 @@ AppRegistry.registerComponent('App', () => App);`;
     expect(result?.code).not.toContain('AppRegistry.registerComponent');
     // Release 빌드에서도 런타임 연결되도록 global 플래그 주입 확인
     expect(result?.code).toContain('global.__REACT_NATIVE_MCP_ENABLED__ = true');
-    // 옵션 없으면 renderHighlight 플래그는 false
+    // 옵션 없으면 renderHighlight false, style react-mcp
     expect(result?.code).toContain('global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ = false');
+    expect(result?.code).toContain(
+      'global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT_STYLE__ = "react-mcp"'
+    );
   });
 
-  it('renderHighlight: true 옵션 시 __REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ = true 주입', () => {
+  it('renderHighlight: true 옵션 시 RENDER_HIGHLIGHT true + STYLE react-mcp 주입', () => {
     const code = `AppRegistry.registerComponent('App', () => App);`;
     const result = transformSync(code, {
       ...babelOpts,
@@ -42,16 +45,55 @@ AppRegistry.registerComponent('App', () => App);`;
       filename: 'entry.js',
     });
     expect(result?.code).toContain('global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ = true');
+    expect(result?.code).toContain(
+      'global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT_STYLE__ = "react-mcp"'
+    );
   });
 
-  it('renderHighlight: false 옵션 시 __REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ = false 주입', () => {
+  it('renderHighlight: { enabled: true, style: "react-mcp" } 시 스타일 react-mcp 주입', () => {
     const code = `AppRegistry.registerComponent('App', () => App);`;
     const result = transformSync(code, {
       ...babelOpts,
-      plugins: [[appRegistryPlugin, { renderHighlight: false }]],
+      plugins: [[appRegistryPlugin, { renderHighlight: { enabled: true, style: 'react-mcp' } }]],
+      filename: 'entry.js',
+    });
+    expect(result?.code).toContain(
+      'global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT_STYLE__ = "react-mcp"'
+    );
+  });
+
+  it('renderHighlight: { enabled: true, style: "react-scan" } 시 스타일 react-scan 주입', () => {
+    const code = `AppRegistry.registerComponent('App', () => App);`;
+    const result = transformSync(code, {
+      ...babelOpts,
+      plugins: [[appRegistryPlugin, { renderHighlight: { enabled: true, style: 'react-scan' } }]],
+      filename: 'entry.js',
+    });
+    expect(result?.code).toContain('global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ = true');
+    expect(result?.code).toContain('"react-scan"');
+  });
+
+  it('renderHighlight: { enabled: false } 시 RENDER_HIGHLIGHT false 주입', () => {
+    const code = `AppRegistry.registerComponent('App', () => App);`;
+    const result = transformSync(code, {
+      ...babelOpts,
+      plugins: [[appRegistryPlugin, { renderHighlight: { enabled: false, style: 'react-mcp' } }]],
       filename: 'entry.js',
     });
     expect(result?.code).toContain('global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ = false');
+    expect(result?.code).toContain('"react-mcp"');
+  });
+
+  it('renderHighlight 객체에 style 없으면 STYLE react-mcp', () => {
+    const code = `AppRegistry.registerComponent('App', () => App);`;
+    const result = transformSync(code, {
+      ...babelOpts,
+      plugins: [[appRegistryPlugin, { renderHighlight: { enabled: true } }]],
+      filename: 'entry.js',
+    });
+    expect(result?.code).toContain(
+      'global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT_STYLE__ = "react-mcp"'
+    );
   });
 
   it('플러그인으로 실행 시 node_modules 경로면 변환하지 않는다', () => {

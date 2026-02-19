@@ -118,11 +118,11 @@
 		overlayComponentFilter = null;
 		overlayIgnoreFilter = null;
 		overlayShowLabels = false;
-		overlayFadeTimeout = 1500;
+		overlayFadeTimeout = 500;
 		overlayMaxHighlights = 100;
 		overlayRenderCounts = {};
 	}
-	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER, renderProfileActive, renderProfileStartTime, renderCommitCount, renderEntries, renderComponentFilter, renderIgnoreFilter, RENDER_BUFFER_SIZE, renderHighlight, overlayActive, overlayComponentFilter, overlayIgnoreFilter, overlayShowLabels, overlayFadeTimeout, overlayMaxHighlights, overlaySetHighlights, overlayRenderCounts;
+	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER, renderProfileActive, renderProfileStartTime, renderCommitCount, renderEntries, renderComponentFilter, renderIgnoreFilter, RENDER_BUFFER_SIZE, renderHighlight, renderHighlightStyle, overlayActive, overlayComponentFilter, overlayIgnoreFilter, overlayShowLabels, overlayFadeTimeout, overlayMaxHighlights, overlaySetHighlights, overlayRenderCounts;
 	var init_shared = __esmMin(() => {
 		pressHandlers = {};
 		consoleLogs = [];
@@ -144,11 +144,12 @@
 		renderIgnoreFilter = null;
 		RENDER_BUFFER_SIZE = 5e3;
 		renderHighlight = typeof global !== "undefined" && global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ === true;
+		renderHighlightStyle = typeof global !== "undefined" && global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT_STYLE__ === "react-scan" ? "react-scan" : "react-mcp";
 		overlayActive = false;
 		overlayComponentFilter = null;
 		overlayIgnoreFilter = null;
 		overlayShowLabels = false;
-		overlayFadeTimeout = 750;
+		overlayFadeTimeout = 500;
 		overlayMaxHighlights = 100;
 		overlaySetHighlights = null;
 		overlayRenderCounts = {};
@@ -760,10 +761,15 @@
 				for (var j = 0; j < _activeHighlights.length; j++) {
 					var existing = _activeHighlights[j];
 					if (existing._posKey === posKey) {
+						if (existing._fadeTimerId != null) {
+							clearInterval(existing._fadeTimerId);
+							existing._fadeTimerId = void 0;
+						}
 						existing.count++;
 						existing.alpha = 1;
 						existing.timestamp = Date.now();
 						merged = true;
+						_scheduleFade(existing);
 						break;
 					}
 				}
@@ -828,6 +834,7 @@
 			highlight.alpha = 1 - frame / TOTAL_FRAMES;
 			if (frame >= TOTAL_FRAMES) {
 				clearInterval(interval);
+				highlight._fadeTimerId = void 0;
 				var idx = _activeHighlights.indexOf(highlight);
 				if (idx !== -1) _activeHighlights.splice(idx, 1);
 				var tIdx = _fadeTimers.indexOf(interval);
@@ -835,6 +842,7 @@
 			}
 			if (overlaySetHighlights) overlaySetHighlights(_activeHighlights.slice());
 		}, frameInterval);
+		highlight._fadeTimerId = interval;
 		_fadeTimers.push(interval);
 	}
 	function getOverlayComponent() {
@@ -958,7 +966,7 @@
 			"TextAncestor",
 			"CellRenderer"
 		];
-		PRIMARY_COLOR = "115,97,230";
+		PRIMARY_COLOR = renderHighlightStyle === "react-mcp" ? "97,218,251" : "115,97,230";
 		_pendingMeasurements = [];
 		_flushScheduled = false;
 		_activeHighlights = [];

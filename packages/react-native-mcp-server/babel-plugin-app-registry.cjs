@@ -21,9 +21,12 @@ function babel_plugin_app_registry_default(babel) {
 				if (!state.runtimeInjected) {
 					const programPath = path.findParent((p) => p.isProgram?.());
 					if (programPath?.node?.body) {
-						const renderHighlight = state.opts?.renderHighlight === true;
+						const rh = state.opts?.renderHighlight;
+						const renderHighlightEnabled = rh === true || typeof rh === "object" && rh !== null && rh.enabled === true;
+						const renderHighlightStyle = rh === true ? "react-mcp" : typeof rh === "object" && rh !== null && (rh.style === "react-scan" || rh.style === "react-mcp") ? rh.style : "react-mcp";
 						programPath.node.body.unshift(t.expressionStatement(t.callExpression(t.identifier("require"), [t.stringLiteral(RUNTIME_MODULE_ID)])));
-						programPath.node.body.unshift(t.expressionStatement(t.assignmentExpression("=", t.memberExpression(t.identifier("global"), t.identifier("__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__")), t.booleanLiteral(renderHighlight))));
+						programPath.node.body.unshift(t.expressionStatement(t.assignmentExpression("=", t.memberExpression(t.identifier("global"), t.identifier("__REACT_NATIVE_MCP_RENDER_HIGHLIGHT_STYLE__")), t.stringLiteral(renderHighlightStyle))));
+						programPath.node.body.unshift(t.expressionStatement(t.assignmentExpression("=", t.memberExpression(t.identifier("global"), t.identifier("__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__")), t.booleanLiteral(renderHighlightEnabled))));
 						programPath.node.body.unshift(t.expressionStatement(t.assignmentExpression("=", t.memberExpression(t.identifier("global"), t.identifier("__REACT_NATIVE_MCP_ENABLED__")), t.booleanLiteral(true))));
 						state.runtimeInjected = true;
 					}
