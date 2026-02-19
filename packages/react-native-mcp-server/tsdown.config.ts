@@ -12,7 +12,7 @@ export default defineConfig([
     sourcemap: false,
     minify: false,
     dts: false,
-    external: ['react-native'],
+    external: ['react-native', 'react'],
     outputOptions: {
       strictExecutionOrder: true,
       entryFileNames: 'runtime.js',

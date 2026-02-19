@@ -92,7 +92,37 @@
 		renderComponentFilter = null;
 		renderIgnoreFilter = null;
 	}
-	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER, renderProfileActive, renderProfileStartTime, renderCommitCount, renderEntries, renderComponentFilter, renderIgnoreFilter, RENDER_BUFFER_SIZE;
+	function setOverlayActive(active) {
+		overlayActive = active;
+	}
+	function setOverlayComponentFilter(components) {
+		overlayComponentFilter = components;
+	}
+	function setOverlayIgnoreFilter(ignore) {
+		overlayIgnoreFilter = ignore;
+	}
+	function setOverlayShowLabels(show) {
+		overlayShowLabels = show;
+	}
+	function setOverlayFadeTimeout(ms) {
+		overlayFadeTimeout = ms;
+	}
+	function setOverlayMaxHighlights(max) {
+		overlayMaxHighlights = max;
+	}
+	function setOverlaySetHighlights(fn) {
+		overlaySetHighlights = fn;
+	}
+	function resetOverlay() {
+		overlayActive = false;
+		overlayComponentFilter = null;
+		overlayIgnoreFilter = null;
+		overlayShowLabels = false;
+		overlayFadeTimeout = 1500;
+		overlayMaxHighlights = 100;
+		overlayRenderCounts = {};
+	}
+	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER, renderProfileActive, renderProfileStartTime, renderCommitCount, renderEntries, renderComponentFilter, renderIgnoreFilter, RENDER_BUFFER_SIZE, overlayActive, overlayComponentFilter, overlayIgnoreFilter, overlayShowLabels, overlayFadeTimeout, overlayMaxHighlights, overlaySetHighlights, overlayRenderCounts;
 	var init_shared = __esmMin(() => {
 		pressHandlers = {};
 		consoleLogs = [];
@@ -113,6 +143,14 @@
 		renderComponentFilter = null;
 		renderIgnoreFilter = null;
 		RENDER_BUFFER_SIZE = 5e3;
+		overlayActive = false;
+		overlayComponentFilter = null;
+		overlayIgnoreFilter = null;
+		overlayShowLabels = false;
+		overlayFadeTimeout = 750;
+		overlayMaxHighlights = 100;
+		overlaySetHighlights = null;
+		overlayRenderCounts = {};
 	});
 
 //#endregion
@@ -335,7 +373,7 @@
 //#endregion
 //#region src/runtime/render-tracking.ts
 /** 접두사 목록에 해당하는 이름인지 (_접두사 변형 포함) */
-	function matchesPrefixList(name, prefixes) {
+	function matchesPrefixList$1(name, prefixes) {
 		var target = name;
 		if (target.length > 1 && target.charAt(0) === "_") target = target.substring(1);
 		for (var i = 0; i < prefixes.length; i++) if (target.indexOf(prefixes[i]) === 0) return true;
@@ -345,7 +383,7 @@
 	function shouldSkipComponent(name) {
 		if (renderComponentFilter !== null) return renderComponentFilter.indexOf(name) === -1;
 		if (renderIgnoreFilter !== null && renderIgnoreFilter.indexOf(name) !== -1) return true;
-		return matchesPrefixList(name, DEFAULT_IGNORED_PREFIXES);
+		return matchesPrefixList$1(name, DEFAULT_IGNORED_PREFIXES);
 	}
 	/** 빌트인 컴포넌트인지 판별 */
 	function isBuiltinComponent(name) {
@@ -357,7 +395,7 @@
 		while (p) {
 			if (p.tag === 0 || p.tag === 1) {
 				var pName = getFiberTypeName(p);
-				if (!isBuiltinComponent(pName) && !matchesPrefixList(pName, DEFAULT_IGNORED_PREFIXES)) return pName;
+				if (!isBuiltinComponent(pName) && !matchesPrefixList$1(pName, DEFAULT_IGNORED_PREFIXES)) return pName;
 			}
 			p = p.return;
 		}
@@ -540,7 +578,9 @@
 			"AppContainer",
 			"TextAncestor",
 			"VirtualizedList",
-			"CellRenderer"
+			"CellRenderer",
+			"RenderOverlay",
+			"MCPRoot"
 		];
 		BUILTIN_COMPONENTS = [
 			"Text",
@@ -566,10 +606,371 @@
 	});
 
 //#endregion
+//#region src/runtime/screen-offset.ts
+	function resolveScreenOffset() {}
+	var screenOffsetX, screenOffsetY;
+	var init_screen_offset = __esmMin(() => {
+		screenOffsetX = 0;
+		screenOffsetY = 0;
+	});
+
+//#endregion
+//#region src/runtime/render-overlay.ts
+/** react-scan의 isCompositeFiber: 하이라이트 대상이 되는 fiber 종류 */
+	function isCompositeFiber(fiber) {
+		var tag = fiber.tag;
+		return tag === FunctionComponentTag || tag === ClassComponentTag || tag === ForwardRefTag || tag === MemoComponentTag || tag === SimpleMemoComponentTag;
+	}
+	/** react-scan의 didFiberRender: PerformedWork flag 확인 */
+	function didFiberRender(fiber) {
+		if (fiber.alternate === null) return false;
+		var flags = fiber.flags;
+		if (flags === void 0) flags = fiber.effectTag;
+		return typeof flags === "number" && (flags & 1) !== 0;
+	}
+	function matchesPrefixList(name, prefixes) {
+		var target = name;
+		if (target.length > 1 && target.charAt(0) === "_") target = target.substring(1);
+		for (var i = 0; i < prefixes.length; i++) if (target.indexOf(prefixes[i]) === 0) return true;
+		return false;
+	}
+	function shouldSkipOverlay(name) {
+		if (overlayComponentFilter !== null) return overlayComponentFilter.indexOf(name) === -1;
+		if (overlayIgnoreFilter !== null && overlayIgnoreFilter.indexOf(name) !== -1) return true;
+		return matchesPrefixList(name, OVERLAY_IGNORED_PREFIXES);
+	}
+	/** DFS로 composite fiber 아래의 모든 최근접 host fiber 수집 */
+	function getNearestHostFibers(fiber) {
+		var hostFibers = [];
+		var stack = [];
+		if (fiber.tag === 5 && fiber.stateNode) hostFibers.push(fiber);
+		else if (fiber.child) stack.push(fiber.child);
+		while (stack.length > 0) {
+			var current = stack.pop();
+			if (current.tag === 5 && current.stateNode) hostFibers.push(current);
+			else if (current.child) stack.push(current.child);
+			if (current.sibling) stack.push(current.sibling);
+		}
+		return hostFibers;
+	}
+	/**
+	* A) react-scan updateFiber 패턴: 변경된 subtree만 순회.
+	*
+	* 핵심: nextFiber.child !== prevFiber.child 일 때만 자식 순회.
+	* 이렇게 하면 overlay setState로 인한 커밋에서 앱 컴포넌트의
+	* 이전 PerformedWork flag를 재감지하지 않음.
+	*/
+	function collectOverlayHighlights(rootFiber) {
+		if (!rootFiber || !overlayActive) return;
+		var alt = rootFiber.alternate;
+		if (!alt) return;
+		_updateFiber(rootFiber, alt);
+	}
+	function _updateFiber(nextFiber, prevFiber) {
+		if (isCompositeFiber(nextFiber)) {
+			var name = getFiberTypeName(nextFiber);
+			if (name === "RenderOverlay") return;
+			if (!shouldSkipOverlay(name) && didFiberRender(nextFiber)) {
+				var hostFibers = getNearestHostFibers(nextFiber);
+				if (hostFibers.length > 0) _pendingMeasurements.push({
+					hostFibers,
+					name
+				});
+			}
+		}
+		if (nextFiber.child !== prevFiber.child) {
+			var child = nextFiber.child;
+			while (child) {
+				var childAlt = child.alternate;
+				if (childAlt) _updateFiber(child, childAlt);
+				child = child.sibling;
+			}
+		}
+	}
+	/**
+	* B) 측정 + 하이라이트 전달 (requestAnimationFrame 배치)
+	*/
+	function flushOverlayMeasurements() {
+		if (_flushScheduled || _pendingMeasurements.length === 0) return;
+		_flushScheduled = true;
+		var measurements = _pendingMeasurements.slice();
+		_pendingMeasurements.length = 0;
+		if (measurements.length > overlayMaxHighlights) measurements = measurements.slice(0, overlayMaxHighlights);
+		(typeof requestAnimationFrame !== "undefined" ? requestAnimationFrame : setTimeout)(function() {
+			_flushScheduled = false;
+			_processMeasurements(measurements);
+		});
+	}
+	/** 단일 host fiber의 stateNode 측정 → callback(x, y, w, h) */
+	function _measureHostFiber(fiber, g, rn, cb) {
+		var node = fiber.stateNode;
+		if (!node) return false;
+		if (g.nativeFabricUIManager) {
+			var shadowNode = node.node || node._internalInstanceHandle && node._internalInstanceHandle.stateNode && node._internalInstanceHandle.stateNode.node;
+			if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) shadowNode = node._viewInfo.shadowNodeWrapper;
+			if (shadowNode) {
+				/* @__PURE__ */ resolveScreenOffset();
+				g.nativeFabricUIManager.measureInWindow(shadowNode, function(x, y, w, h) {
+					cb(x + screenOffsetX, y + screenOffsetY, w, h);
+				});
+				return true;
+			}
+		}
+		if (rn && rn.UIManager && rn.findNodeHandle) {
+			var handle = rn.findNodeHandle(node);
+			if (handle) {
+				rn.UIManager.measure(handle, function(_x, _y, w, h, pageX, pageY) {
+					cb(pageX, pageY, w, h);
+				});
+				return true;
+			}
+		}
+		return false;
+	}
+	function _processMeasurements(measurements) {
+		var remaining = measurements.length;
+		if (remaining === 0) return;
+		var newHighlights = [];
+		var done = 0;
+		function onAllRectsReady(name, rects) {
+			if (rects.length === 0) {
+				done++;
+				if (done >= remaining) _commitHighlights(newHighlights);
+				return;
+			}
+			var minX = rects[0].x;
+			var minY = rects[0].y;
+			var maxX = rects[0].x + rects[0].w;
+			var maxY = rects[0].y + rects[0].h;
+			for (var i = 1; i < rects.length; i++) {
+				var r = rects[i];
+				if (r.x < minX) minX = r.x;
+				if (r.y < minY) minY = r.y;
+				if (r.x + r.w > maxX) maxX = r.x + r.w;
+				if (r.y + r.h > maxY) maxY = r.y + r.h;
+			}
+			var bx = minX;
+			var by = minY;
+			var bw = maxX - minX;
+			var bh = maxY - minY;
+			if (bw > 0 && bh > 0) {
+				var posKey = Math.round(bx) + "-" + Math.round(by) + "-" + Math.round(bw) + "-" + Math.round(bh);
+				var merged = false;
+				for (var j = 0; j < _activeHighlights.length; j++) {
+					var existing = _activeHighlights[j];
+					if (existing._posKey === posKey) {
+						existing.count++;
+						existing.alpha = 1;
+						existing.timestamp = Date.now();
+						merged = true;
+						break;
+					}
+				}
+				if (!merged) for (var k = 0; k < newHighlights.length; k++) {
+					var nh = newHighlights[k];
+					if (nh._posKey === posKey) {
+						nh.count++;
+						merged = true;
+						break;
+					}
+				}
+				if (!merged) newHighlights.push({
+					x: bx,
+					y: by,
+					width: bw,
+					height: bh,
+					name,
+					count: 1,
+					alpha: 1,
+					timestamp: Date.now(),
+					_posKey: posKey
+				});
+			}
+			done++;
+			if (done >= remaining) _commitHighlights(newHighlights);
+		}
+		var g = typeof globalThis !== "undefined" ? globalThis : global;
+		var rn = typeof require !== "undefined" && require("react-native");
+		for (var i = 0; i < measurements.length; i++) {
+			var m = measurements[i];
+			var hostCount = m.hostFibers.length;
+			var measuredRects = [];
+			var hostDone = 0;
+			(function(name, total) {
+				for (var j = 0; j < m.hostFibers.length; j++) if (!_measureHostFiber(m.hostFibers[j], g, rn, function(x, y, w, h) {
+					if (w > 0 && h > 0) measuredRects.push({
+						x,
+						y,
+						w,
+						h
+					});
+					hostDone++;
+					if (hostDone >= total) onAllRectsReady(name, measuredRects);
+				})) {
+					hostDone++;
+					if (hostDone >= total) onAllRectsReady(name, measuredRects);
+				}
+			})(m.name, hostCount);
+		}
+	}
+	function _commitHighlights(newHighlights) {
+		for (var i = 0; i < newHighlights.length; i++) _activeHighlights.push(newHighlights[i]);
+		while (_activeHighlights.length > overlayMaxHighlights) _activeHighlights.shift();
+		if (overlaySetHighlights) overlaySetHighlights(_activeHighlights.slice());
+		for (var j = 0; j < newHighlights.length; j++) _scheduleFade(newHighlights[j]);
+	}
+	function _scheduleFade(highlight) {
+		var frame = 0;
+		var frameInterval = overlayFadeTimeout / TOTAL_FRAMES;
+		var interval = setInterval(function() {
+			frame++;
+			highlight.alpha = 1 - frame / TOTAL_FRAMES;
+			if (frame >= TOTAL_FRAMES) {
+				clearInterval(interval);
+				var idx = _activeHighlights.indexOf(highlight);
+				if (idx !== -1) _activeHighlights.splice(idx, 1);
+				var tIdx = _fadeTimers.indexOf(interval);
+				if (tIdx !== -1) _fadeTimers.splice(tIdx, 1);
+			}
+			if (overlaySetHighlights) overlaySetHighlights(_activeHighlights.slice());
+		}, frameInterval);
+		_fadeTimers.push(interval);
+	}
+	function getOverlayComponent() {
+		if (_OverlayComponent) return _OverlayComponent;
+		var React = require("react");
+		var RN = require("react-native");
+		function RenderOverlay() {
+			var stateRef = React.useState([]);
+			var highlights = stateRef[0];
+			var setHighlights = stateRef[1];
+			var activeRef = React.useRef(false);
+			React.useEffect(function() {
+				setOverlaySetHighlights(function(h) {
+					if (activeRef.current) setHighlights(h);
+				});
+				activeRef.current = true;
+				return function() {
+					activeRef.current = false;
+					setOverlaySetHighlights(null);
+				};
+			}, []);
+			if (!overlayActive || highlights.length === 0) return null;
+			var children = [];
+			for (var i = 0; i < highlights.length; i++) {
+				var h = highlights[i];
+				var alpha = h.alpha > 0 ? h.alpha : 0;
+				var rectStyle = {
+					position: "absolute",
+					left: h.x,
+					top: h.y,
+					width: h.width,
+					height: h.height,
+					borderWidth: 1,
+					borderColor: "rgba(" + PRIMARY_COLOR + "," + alpha.toFixed(2) + ")",
+					backgroundColor: "rgba(" + PRIMARY_COLOR + "," + (alpha * .1).toFixed(3) + ")"
+				};
+				var labelText = h.name;
+				if (h.count > 1) labelText += " ×" + h.count;
+				if (labelText.length > 20) labelText = labelText.substring(0, 20) + "…";
+				var showLabel = overlayShowLabels || h.count >= 2;
+				var labelEl = null;
+				if (showLabel) {
+					var labelContainerStyle = {
+						position: "absolute",
+						top: -16,
+						left: 0,
+						backgroundColor: "rgba(" + PRIMARY_COLOR + "," + alpha.toFixed(2) + ")",
+						paddingHorizontal: 3,
+						paddingVertical: 1,
+						borderRadius: 2
+					};
+					var labelTextStyle = {
+						color: "rgba(255,255,255," + alpha.toFixed(2) + ")",
+						fontSize: 10,
+						fontFamily: "Menlo",
+						fontWeight: "600"
+					};
+					labelEl = React.createElement(RN.View, { style: labelContainerStyle }, React.createElement(RN.Text, { style: labelTextStyle }, labelText));
+				}
+				children.push(React.createElement(RN.View, {
+					key: "hl-" + i,
+					style: rectStyle
+				}, labelEl));
+			}
+			return React.createElement(RN.View, {
+				style: {
+					position: "absolute",
+					top: 0,
+					left: 0,
+					right: 0,
+					bottom: 0
+				},
+				pointerEvents: "none"
+			}, children);
+		}
+		RenderOverlay.displayName = "RenderOverlay";
+		_OverlayComponent = RenderOverlay;
+		return _OverlayComponent;
+	}
+	function startRenderHighlight(options) {
+		var opts = typeof options === "object" && options !== null ? options : {};
+		stopRenderHighlight();
+		setOverlayActive(true);
+		if (Array.isArray(opts.components) && opts.components.length > 0) setOverlayComponentFilter(opts.components);
+		if (Array.isArray(opts.ignore) && opts.ignore.length > 0) setOverlayIgnoreFilter(opts.ignore);
+		if (typeof opts.showLabels === "boolean") setOverlayShowLabels(opts.showLabels);
+		if (typeof opts.fadeTimeout === "number" && opts.fadeTimeout > 0) setOverlayFadeTimeout(opts.fadeTimeout);
+		if (typeof opts.maxHighlights === "number" && opts.maxHighlights > 0) setOverlayMaxHighlights(opts.maxHighlights);
+		return { started: true };
+	}
+	function stopRenderHighlight() {
+		for (var i = 0; i < _fadeTimers.length; i++) clearInterval(_fadeTimers[i]);
+		_fadeTimers.length = 0;
+		_activeHighlights.length = 0;
+		_pendingMeasurements.length = 0;
+		_flushScheduled = false;
+		if (overlaySetHighlights) overlaySetHighlights([]);
+		resetOverlay();
+		return { stopped: true };
+	}
+	var FunctionComponentTag, ClassComponentTag, ForwardRefTag, MemoComponentTag, SimpleMemoComponentTag, OVERLAY_IGNORED_PREFIXES, PRIMARY_COLOR, _pendingMeasurements, _flushScheduled, _activeHighlights, _fadeTimers, TOTAL_FRAMES, _OverlayComponent;
+	var init_render_overlay = __esmMin(() => {
+		init_fiber_helpers();
+		init_shared();
+		init_screen_offset();
+		FunctionComponentTag = 0;
+		ClassComponentTag = 1;
+		ForwardRefTag = 11;
+		MemoComponentTag = 14;
+		SimpleMemoComponentTag = 15;
+		OVERLAY_IGNORED_PREFIXES = [
+			"RenderOverlay",
+			"MCPRoot",
+			"LogBox",
+			"Pressability",
+			"YellowBox",
+			"RCT",
+			"Debugging",
+			"AppContainer",
+			"TextAncestor",
+			"CellRenderer"
+		];
+		PRIMARY_COLOR = "115,97,230";
+		_pendingMeasurements = [];
+		_flushScheduled = false;
+		_activeHighlights = [];
+		_fadeTimers = [];
+		TOTAL_FRAMES = 45;
+		_OverlayComponent = null;
+	});
+
+//#endregion
 //#region src/runtime/state-change-tracking.ts
 	var init_state_change_tracking = __esmMin(() => {
 		init_state_hooks();
 		init_render_tracking();
+		init_render_overlay();
 		init_shared();
 		(function() {
 			var g = typeof globalThis !== "undefined" ? globalThis : typeof global !== "undefined" ? global : null;
@@ -585,6 +986,12 @@
 					if (renderProfileActive && root && root.current) {
 						incrementRenderCommitCount();
 						collectRenderEntries(root.current);
+					}
+				} catch (_e) {}
+				try {
+					if (overlayActive && root && root.current) {
+						collectOverlayHighlights(root.current);
+						flushOverlayMeasurements();
 					}
 				} catch (_e) {}
 			};
@@ -839,15 +1246,6 @@
 	}
 	var init_query_selector = __esmMin(() => {
 		init_fiber_helpers();
-	});
-
-//#endregion
-//#region src/runtime/screen-offset.ts
-	function resolveScreenOffset() {}
-	var screenOffsetX, screenOffsetY;
-	var init_screen_offset = __esmMin(() => {
-		screenOffsetX = 0;
-		screenOffsetY = 0;
 	});
 
 //#endregion
@@ -1191,7 +1589,18 @@
 //#endregion
 //#region src/runtime/mcp-registration.ts
 	function registerComponent(name, component) {
-		return require("react-native").AppRegistry.registerComponent(name, component);
+		var wrappedFactory = function() {
+			var Orig = component();
+			var React = require("react");
+			var RN = require("react-native");
+			var Overlay = getOverlayComponent();
+			function MCPRoot(props) {
+				return React.createElement(RN.View, { style: { flex: 1 } }, React.createElement(Orig, props), React.createElement(Overlay, null));
+			}
+			MCPRoot.displayName = "MCPRoot";
+			return MCPRoot;
+		};
+		return require("react-native").AppRegistry.registerComponent(name, wrappedFactory);
 	}
 	function registerPressHandler(testID, handler) {
 		if (typeof testID === "string" && typeof handler === "function") pressHandlers[testID] = handler;
@@ -1236,6 +1645,7 @@
 	var init_mcp_registration = __esmMin(() => {
 		init_fiber_helpers();
 		init_shared();
+		init_render_overlay();
 	});
 
 //#endregion
@@ -2144,6 +2554,7 @@
 		init_network_mock();
 		init_mcp_state();
 		init_mcp_render();
+		init_render_overlay();
 		init_mcp_query();
 		init_mcp_measure();
 		init_mcp_accessibility();
@@ -2193,7 +2604,9 @@
 			getAccessibilityAudit,
 			startRenderProfile,
 			getRenderReport,
-			clearRenderProfile
+			clearRenderProfile,
+			startRenderHighlight,
+			stopRenderHighlight
 		};
 		if (typeof global !== "undefined") global.__REACT_NATIVE_MCP__ = MCP;
 		if (typeof globalThis !== "undefined") globalThis.__REACT_NATIVE_MCP__ = MCP;
@@ -2699,6 +3112,7 @@
 		init_fiber_helpers();
 		init_state_hooks();
 		init_render_tracking();
+		init_render_overlay();
 		init_state_change_tracking();
 		init_query_selector();
 		init_fiber_serialization();

@@ -26,6 +26,8 @@ var DEFAULT_IGNORED_PREFIXES = [
   'TextAncestor', // RN Text context provider
   'VirtualizedList', // internal list component
   'CellRenderer', // FlatList internal
+  'RenderOverlay', // MCP render overlay — 리렌더 캐스케이드 방지
+  'MCPRoot', // MCP root wrapper — 리렌더 캐스케이드 방지
 ];
 
 /** RN 빌트인 컴포넌트 — 무시하지 않고, 가장 가까운 사용자 컴포넌트 이름을 붙여서 구분 */

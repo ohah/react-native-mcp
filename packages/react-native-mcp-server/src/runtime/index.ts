@@ -17,7 +17,8 @@ import './shared';
 import './fiber-helpers';
 import './state-hooks';
 import './render-tracking'; // 렌더 프로파일링 수집 로직 (state-hooks 이후)
-import './state-change-tracking'; // onCommitFiberRoot 래핑 (state-hooks, render-tracking 이후)
+import './render-overlay'; // 렌더 오버레이 시각 하이라이트 (render-tracking 이후)
+import './state-change-tracking'; // onCommitFiberRoot 래핑 (state-hooks, render-tracking, render-overlay 이후)
 import './query-selector';
 import './screen-offset';
 import './fiber-serialization';

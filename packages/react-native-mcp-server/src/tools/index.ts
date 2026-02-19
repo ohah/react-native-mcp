@@ -36,6 +36,7 @@ import { registerGetStateChanges } from './get-state-changes.js';
 import { registerNetworkMock } from './network-mock.js';
 import { registerVisualCompare } from './visual-compare.js';
 import { registerRenderTracking } from './render-tracking.js';
+import { registerRenderOverlay } from './render-overlay.js';
 
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
@@ -77,4 +78,6 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerVisualCompare(server, appSession);
   // 렌더 프로파일링
   registerRenderTracking(server, appSession);
+  // 렌더 오버레이 (시각적 리렌더 하이라이트)
+  registerRenderOverlay(server, appSession);
 }
