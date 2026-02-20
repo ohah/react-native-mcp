@@ -194,6 +194,10 @@ jobs:
             # MCP 포트 포워딩 (앱이 localhost:12300 접근 시 호스트로 전달)
             adb reverse tcp:12300 tcp:12300
 
+            # 에뮬레이터 세로(Portrait) 방향 고정 (0=portrait, 자동회전 끔)
+            adb shell settings put system accelerometer_rotation 0 || true
+            adb shell settings put system user_rotation 0 || true
+
             # E2E YAML 시나리오 실행 (시뮬/에뮬 지연 시 tap 타임아웃 확대)
             export REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000
             node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/ -p android -o e2e-artifacts/yaml-results --no-auto-launch
