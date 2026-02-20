@@ -337,7 +337,8 @@ async function runSteps(
 export async function runSuite(
   suite: TestSuite,
   reporter: Reporter,
-  opts: RunOptions = {}
+  opts: RunOptions = {},
+  sharedApp?: AppClient
 ): Promise<SuiteResult> {
   const outputDir = opts.output ?? './results';
   const platform = opts.platform ?? suite.config.platform;
@@ -350,33 +351,37 @@ export async function runSuite(
   const autoLaunch = opts.autoLaunch !== false;
 
   let app: AppClient;
-  try {
-    app = await AppClient.create({
-      platform,
-      deviceId,
-      bundleId: resolvedBundleId,
-      connectionTimeout: opts.timeout ?? suite.config.timeout,
-      launchApp: autoLaunch,
-      iosOrientation: suite.config.orientation,
-    });
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    const result: SuiteResult = {
-      name: suite.name,
-      status: 'failed',
-      duration: Date.now() - start,
-      steps: [
-        {
-          step: { launch: 'AppClient.create' } as TestStep,
-          status: 'failed',
-          duration: Date.now() - start,
-          error,
-        },
-      ],
-    };
-    reporter.onStepResult(result.steps[0]!);
-    reporter.onSuiteEnd(result);
-    return result;
+  if (sharedApp) {
+    app = sharedApp;
+  } else {
+    try {
+      app = await AppClient.create({
+        platform,
+        deviceId,
+        bundleId: resolvedBundleId,
+        connectionTimeout: opts.timeout ?? suite.config.timeout,
+        launchApp: autoLaunch,
+        iosOrientation: suite.config.orientation,
+      });
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      const result: SuiteResult = {
+        name: suite.name,
+        status: 'failed',
+        duration: Date.now() - start,
+        steps: [
+          {
+            step: { launch: 'AppClient.create' } as TestStep,
+            status: 'failed',
+            duration: Date.now() - start,
+            error,
+          },
+        ],
+      };
+      reporter.onStepResult(result.steps[0]!);
+      reporter.onSuiteEnd(result);
+      return result;
+    }
   }
 
   const allStepResults: StepResult[] = [];
@@ -452,7 +457,7 @@ export async function runSuite(
       allStepResults.push(...results);
     }
 
-    await app.close().catch(() => {});
+    if (!sharedApp) await app.close().catch(() => {});
   }
 
   const result: SuiteResult = {
@@ -501,11 +506,76 @@ export async function runAll(
   const start = Date.now();
   const suiteResults: SuiteResult[] = [];
 
+  if (suites.length === 0) {
+    const result: RunResult = {
+      suites: [],
+      total: 0,
+      passed: 0,
+      failed: 0,
+      skipped: 0,
+      duration: Date.now() - start,
+    };
+    const end = reporter.onRunEnd(result);
+    if (end instanceof Promise) await end;
+    return result;
+  }
+
+  const first = suites[0]!;
+  const platform = opts.platform ?? first.config.platform;
+  const deviceId = opts.deviceId ?? first.config.deviceId;
+  const resolvedBundleId = resolveBundleId(first.config.bundleId, platform);
+  const autoLaunch = opts.autoLaunch !== false;
+
+  let app: AppClient | null = null;
+  try {
+    app = await AppClient.create({
+      platform,
+      deviceId,
+      bundleId: resolvedBundleId,
+      connectionTimeout: opts.timeout ?? first.config.timeout,
+      launchApp: autoLaunch,
+      iosOrientation: first.config.orientation,
+    });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    const failedResult: SuiteResult = {
+      name: first.name,
+      status: 'failed',
+      duration: 0,
+      steps: [
+        {
+          step: { launch: 'AppClient.create' } as TestStep,
+          status: 'failed',
+          duration: 0,
+          error,
+        },
+      ],
+    };
+    reporter.onSuiteStart(first.name);
+    reporter.onStepResult(failedResult.steps[0]!);
+    reporter.onSuiteEnd(failedResult);
+    const result: RunResult = {
+      suites: [failedResult],
+      total: 1,
+      passed: 0,
+      failed: 1,
+      skipped: 0,
+      duration: Date.now() - start,
+    };
+    const end = reporter.onRunEnd(result);
+    if (end instanceof Promise) await end;
+    return result;
+  }
+
   const bail = opts.bail !== false; // default: true
-  for (const suite of suites) {
-    const result = await runSuite(suite, reporter, opts);
-    suiteResults.push(result);
-    if (bail && result.status === 'failed') break;
+  try {
+    for (const suite of suites) {
+      const result = await runSuite(suite, reporter, opts, app);
+      suiteResults.push(result);
+      if (bail && result.status === 'failed') break;
+    }
+  } finally {
+    await app.close().catch(() => {});
   }
 
   const counts = aggregateStepCounts(suiteResults);

@@ -5,6 +5,7 @@ import { JsonReporter } from './json.js';
 import { HtmlReporter } from './html.js';
 import { SlackReporter } from './slack.js';
 import { GithubPrReporter } from './github-pr.js';
+import { DashboardReporter } from './dashboard.js';
 
 export interface Reporter {
   onSuiteStart(name: string): void;
@@ -44,6 +45,8 @@ export function createReporter(
     }
     case 'github-pr':
       return new GithubPrReporter({ outputDir });
+    case 'dashboard':
+      return new DashboardReporter(outputDir);
     case 'console':
     default:
       return new ConsoleReporter();
@@ -56,3 +59,4 @@ export { JsonReporter } from './json.js';
 export { HtmlReporter } from './html.js';
 export { SlackReporter } from './slack.js';
 export { GithubPrReporter } from './github-pr.js';
+export { DashboardReporter } from './dashboard.js';
