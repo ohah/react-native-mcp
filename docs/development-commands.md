@@ -41,3 +41,10 @@ Metro 실행 중에만 동작하는 스크립트들. `get_component_source` / �
 - **gh**: PR 생성·수정 전에 `gh auth switch --hostname github.com --user ohah` 로 ohah로 전환한다. 작업 후 원래 계정으로 복원한다.
 
 자세한 절차는 [.cursor/commands/init-pr.md](../.cursor/commands/init-pr.md), [.cursor/commands/pr.md](../.cursor/commands/pr.md) 를 참고한다.
+
+## CI E2E 시뮬레이터/에뮬레이터 기기 지정
+
+GitHub Actions E2E에서 로컬과 같은 해상도·기기를 쓰려면 아래처럼 지정할 수 있다.
+
+- **iOS**: 워크플로가 시뮬레이터 목록을 로그에 출력한다. 사용 기기 우선순위: `examples/demo-app/e2e/.ios-simulator-device` 파일 첫 줄 > repo/org 변수 `IOS_SIMULATOR_DEVICE` > 기본 `iPad Air 11-inch`.
+- **Android**: 워크플로가 연결 기기(`adb devices -l`) 및 AVD 목록(`emulator -list-avds`)을 로그에 출력한다. 사용 AVD 우선순위: `examples/demo-app/e2e/.android-emulator-device` 파일 첫 줄 > repo/org 변수 `ANDROID_EMULATOR_DEVICE` > 기본 `avd-34`. 에뮬레이터 해상도는 `-skin 1920x1200` 으로 고정(CI 일관성용).
