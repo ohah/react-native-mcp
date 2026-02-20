@@ -2,6 +2,7 @@
   { "type": "file", "name": "index", "label": "설치" },
   "getting-started",
   { "type": "file", "name": "e2e-yaml-reference", "label": "YAML" },
+  { "type": "file", "name": "e2e-dashboard", "label": "대시보드" },
   {
     "type": "dir",
     "name": "steps",
