@@ -26,27 +26,31 @@ export function getScreenInfo(): any {
   }
 }
 
-/**
- * Android: measureInWindow는 픽셀을 반환함. tap/swipe는 dp를 기대하므로 px → dp 변환.
- * iOS: 이미 points(dp)로 반환하므로 변환 없음.
- */
-function toDpIfAndroid(raw: MeasureResult): MeasureResult {
-  try {
-    var rn = typeof require !== 'undefined' && require('react-native');
-    if (!rn || rn.Platform?.OS !== 'android') return raw;
-    var scale = rn.PixelRatio ? rn.PixelRatio.get() : 1;
-    if (scale <= 0) return raw;
-    return {
-      x: raw.x / scale,
-      y: raw.y / scale,
-      width: raw.width / scale,
-      height: raw.height / scale,
-      pageX: raw.pageX / scale,
-      pageY: raw.pageY / scale,
-    };
-  } catch {
-    return raw;
+/** fiber.child부터 DFS로 첫 번째 host fiber(type=string, stateNode 있음) 탐색 */
+function findNearestHost(fiber: Fiber | null): Fiber | null {
+  if (!fiber) return null;
+  if (typeof fiber.type === 'string' && fiber.stateNode) return fiber;
+  var c: Fiber | null = fiber.child;
+  while (c) {
+    var h = findNearestHost(c);
+    if (h) return h;
+    c = c.sibling;
   }
+  return null;
+}
+
+/** stateNode에서 Fabric shadow node 추출 */
+function getShadowNode(stateNode: any): any {
+  if (!stateNode) return null;
+  var sn =
+    stateNode.node ||
+    (stateNode._internalInstanceHandle &&
+      stateNode._internalInstanceHandle.stateNode &&
+      stateNode._internalInstanceHandle.stateNode.node);
+  if (!sn && stateNode._viewInfo && stateNode._viewInfo.shadowNodeWrapper) {
+    sn = stateNode._viewInfo.shadowNodeWrapper;
+  }
+  return sn || null;
 }
 
 /**
@@ -81,6 +85,12 @@ export function measureView(uid: string): Promise<MeasureResult> {
 
       if (!found) return reject(new Error('uid "' + uid + '" not found or has no native view'));
 
+      // class component 등 non-host fiber면 host descendant로 교체
+      if (found && typeof found.type !== 'string') {
+        var host = findNearestHost(found.child);
+        if (host) found = host;
+      }
+
       // Fabric: stateNode.node + nativeFabricUIManager.measureInWindow
       var g: any = typeof globalThis !== 'undefined' ? globalThis : global;
       // Bridge: UIManager.measure
@@ -90,30 +100,20 @@ export function measureView(uid: string): Promise<MeasureResult> {
       while (found) {
         var node = (found as Fiber).stateNode;
         if (g.nativeFabricUIManager && node) {
-          var shadowNode =
-            node.node ||
-            (node._internalInstanceHandle &&
-              node._internalInstanceHandle.stateNode &&
-              node._internalInstanceHandle.stateNode.node);
-          // Reanimated AnimatedComponent: _viewInfo.shadowNodeWrapper
-          if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) {
-            shadowNode = node._viewInfo.shadowNodeWrapper;
-          }
+          var shadowNode = getShadowNode(node);
           if (shadowNode) {
             resolveScreenOffset();
             g.nativeFabricUIManager.measureInWindow(
               shadowNode,
               function (x: number, y: number, w: number, h: number) {
-                resolve(
-                  toDpIfAndroid({
-                    x: x,
-                    y: y,
-                    width: w,
-                    height: h,
-                    pageX: x + screenOffsetX,
-                    pageY: y + screenOffsetY,
-                  })
-                );
+                resolve({
+                  x: x,
+                  y: y,
+                  width: w,
+                  height: h,
+                  pageX: x + screenOffsetX,
+                  pageY: y + screenOffsetY,
+                });
               }
             );
             return;
@@ -126,9 +126,7 @@ export function measureView(uid: string): Promise<MeasureResult> {
             rn.UIManager.measure(
               handle,
               function (x: number, y: number, w: number, h: number, pageX: number, pageY: number) {
-                resolve(
-                  toDpIfAndroid({ x: x, y: y, width: w, height: h, pageX: pageX, pageY: pageY })
-                );
+                resolve({ x: x, y: y, width: w, height: h, pageX: pageX, pageY: pageY });
               }
             );
             return;
@@ -172,32 +170,28 @@ export function measureViewSync(uid: string): MeasureResult | null {
 
     if (!found) return null;
 
-    var node = found.stateNode;
     var g: any = typeof globalThis !== 'undefined' ? globalThis : global;
 
-    if (g.nativeFabricUIManager && node) {
-      var shadowNode =
-        node.node ||
-        (node._internalInstanceHandle &&
-          node._internalInstanceHandle.stateNode &&
-          node._internalInstanceHandle.stateNode.node);
-      if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) {
-        shadowNode = node._viewInfo.shadowNodeWrapper;
+    if (g.nativeFabricUIManager) {
+      var sn = getShadowNode(found.stateNode);
+      if (!sn) {
+        var host = findNearestHost(found.child);
+        if (host) sn = getShadowNode(host.stateNode);
       }
-      if (shadowNode) {
+      if (sn) {
         var result: MeasureResult | null = null;
         resolveScreenOffset();
         g.nativeFabricUIManager.measureInWindow(
-          shadowNode,
+          sn,
           function (x: number, y: number, w: number, h: number) {
-            result = toDpIfAndroid({
+            result = {
               x: x,
               y: y,
               width: w,
               height: h,
               pageX: x + screenOffsetX,
               pageY: y + screenOffsetY,
-            });
+            };
           }
         );
         return result; // Fabric에서는 콜백이 동기 실행

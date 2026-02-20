@@ -1543,6 +1543,25 @@
 			return { error: String(e) };
 		}
 	}
+	/** fiber.child부터 DFS로 첫 번째 host fiber(type=string, stateNode 있음) 탐색 */
+	function findNearestHost(fiber) {
+		if (!fiber) return null;
+		if (typeof fiber.type === "string" && fiber.stateNode) return fiber;
+		var c = fiber.child;
+		while (c) {
+			var h = findNearestHost(c);
+			if (h) return h;
+			c = c.sibling;
+		}
+		return null;
+	}
+	/** stateNode에서 Fabric shadow node 추출 */
+	function getShadowNode(stateNode) {
+		if (!stateNode) return null;
+		var sn = stateNode.node || stateNode._internalInstanceHandle && stateNode._internalInstanceHandle.stateNode && stateNode._internalInstanceHandle.stateNode.node;
+		if (!sn && stateNode._viewInfo && stateNode._viewInfo.shadowNodeWrapper) sn = stateNode._viewInfo.shadowNodeWrapper;
+		return sn || null;
+	}
 	/**
 	* measureView(uid) → Promise<{ x, y, width, height, pageX, pageY }>
 	* uid: testID 또는 경로("0.1.2"). query_selector로 얻은 uid 그대로 사용 가능.
@@ -1569,13 +1588,16 @@
 					if (!found) find(fiber.sibling);
 				})(root);
 				if (!found) return reject(/* @__PURE__ */ new Error("uid \"" + uid + "\" not found or has no native view"));
+				if (found && typeof found.type !== "string") {
+					var host = findNearestHost(found.child);
+					if (host) found = host;
+				}
 				var g = typeof globalThis !== "undefined" ? globalThis : global;
 				var rn = typeof require !== "undefined" && require("react-native");
 				while (found) {
 					var node = found.stateNode;
 					if (g.nativeFabricUIManager && node) {
-						var shadowNode = node.node || node._internalInstanceHandle && node._internalInstanceHandle.stateNode && node._internalInstanceHandle.stateNode.node;
-						if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) shadowNode = node._viewInfo.shadowNodeWrapper;
+						var shadowNode = getShadowNode(node);
 						if (shadowNode) {
 							/* @__PURE__ */ resolveScreenOffset();
 							g.nativeFabricUIManager.measureInWindow(shadowNode, function(x, y, w, h) {
@@ -1635,15 +1657,17 @@
 				if (!found) find(fiber.sibling);
 			})(root);
 			if (!found) return null;
-			var node = found.stateNode;
 			var g = typeof globalThis !== "undefined" ? globalThis : global;
-			if (g.nativeFabricUIManager && node) {
-				var shadowNode = node.node || node._internalInstanceHandle && node._internalInstanceHandle.stateNode && node._internalInstanceHandle.stateNode.node;
-				if (!shadowNode && node._viewInfo && node._viewInfo.shadowNodeWrapper) shadowNode = node._viewInfo.shadowNodeWrapper;
-				if (shadowNode) {
+			if (g.nativeFabricUIManager) {
+				var sn = getShadowNode(found.stateNode);
+				if (!sn) {
+					var host = findNearestHost(found.child);
+					if (host) sn = getShadowNode(host.stateNode);
+				}
+				if (sn) {
 					var result = null;
 					/* @__PURE__ */ resolveScreenOffset();
-					g.nativeFabricUIManager.measureInWindow(shadowNode, function(x, y, w, h) {
+					g.nativeFabricUIManager.measureInWindow(sn, function(x, y, w, h) {
 						result = {
 							x,
 							y,
@@ -1830,7 +1854,7 @@
 				return null;
 			})(fiber.child);
 			if (hostChild) {
-				var hostUid = hostChild.memoizedProps && hostChild.memoizedProps.testID || getPathUid(hostChild);
+				var hostUid = getPathUid(hostChild);
 				try {
 					measure = measureViewSync(hostUid);
 				} catch (e) {}
