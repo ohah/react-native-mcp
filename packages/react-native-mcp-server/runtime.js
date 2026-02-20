@@ -267,6 +267,488 @@
 	var init_fiber_helpers = __esmMin(() => {});
 
 //#endregion
+//#region src/runtime/query-selector.ts
+/**
+	* 셀렉터 문자열을 AST로 파싱한다 (재귀 하강 파서).
+	* 지원 문법:
+	*   Type#testID[attr="val"]:text("..."):display-name("..."):nth-of-type(N):has-press:has-scroll
+	*   A > B (직접 자식), A B (후손), A, B (OR)
+	*/
+	function parseSelector(input) {
+		var pos = 0;
+		var len = input.length;
+		function isIdentChar(ch) {
+			return /[A-Za-z0-9_.-]/.test(ch);
+		}
+		function skipSpaces() {
+			while (pos < len && (input.charAt(pos) === " " || input.charAt(pos) === "	")) pos++;
+		}
+		function readIdentifier() {
+			var start = pos;
+			while (pos < len && isIdentChar(input.charAt(pos))) pos++;
+			return input.substring(start, pos);
+		}
+		function readQuotedString() {
+			var quote = input.charAt(pos);
+			if (quote !== "\"" && quote !== "'") return "";
+			pos++;
+			var start = pos;
+			while (pos < len && input.charAt(pos) !== quote) {
+				if (input.charAt(pos) === "\\") pos++;
+				pos++;
+			}
+			if (pos >= len) return null;
+			var str = input.substring(start, pos);
+			pos++;
+			return str;
+		}
+		function readNumber() {
+			var start = pos;
+			while (pos < len && /[0-9]/.test(input.charAt(pos))) pos++;
+			return parseInt(input.substring(start, pos), 10);
+		}
+		function parseCompound() {
+			var sel = {
+				type: null,
+				testID: null,
+				attrs: [],
+				text: null,
+				displayName: null,
+				nth: -1,
+				hasPress: false,
+				hasScroll: false
+			};
+			var ch = pos < len ? input.charAt(pos) : "";
+			if (/[A-Za-z_]/.test(ch)) sel.type = readIdentifier();
+			if (pos < len && input.charAt(pos) === "#") {
+				pos++;
+				sel.testID = readIdentifier();
+			}
+			while (pos < len && input.charAt(pos) === "[") {
+				pos++;
+				skipSpaces();
+				var attrName = readIdentifier();
+				skipSpaces();
+				if (pos < len && input.charAt(pos) === "=") {
+					pos++;
+					skipSpaces();
+					var attrVal = readQuotedString();
+					if (attrVal === null) throw new Error("Unclosed quote in selector [attr=\"...\"]");
+					sel.attrs.push({
+						name: attrName,
+						value: attrVal
+					});
+				}
+				skipSpaces();
+				if (pos < len && input.charAt(pos) === "]") pos++;
+			}
+			while (pos < len && input.charAt(pos) === ":") {
+				pos++;
+				var pseudo = readIdentifier();
+				if (pseudo === "text") {
+					if (pos < len && input.charAt(pos) === "(") {
+						pos++;
+						skipSpaces();
+						var textVal = readQuotedString();
+						if (textVal === null) throw new Error("Unclosed quote in selector :text(...)");
+						sel.text = textVal;
+						skipSpaces();
+						if (pos < len && input.charAt(pos) === ")") pos++;
+					}
+				} else if (pseudo === "nth-of-type") {
+					if (pos < len && input.charAt(pos) === "(") {
+						pos++;
+						skipSpaces();
+						sel.nth = readNumber() - 1;
+						skipSpaces();
+						if (pos < len && input.charAt(pos) === ")") pos++;
+					}
+				} else if (pseudo === "first-of-type") sel.nth = 0;
+				else if (pseudo === "last-of-type") sel.nth = -2;
+				else if (pseudo === "display-name") {
+					if (pos < len && input.charAt(pos) === "(") {
+						pos++;
+						skipSpaces();
+						var dn = readQuotedString();
+						if (dn === null) throw new Error("Unclosed quote in selector :display-name(\"...\")");
+						skipSpaces();
+						if (pos < len && input.charAt(pos) === ")") pos++;
+						sel.displayName = dn;
+					}
+				} else if (pseudo === "has-press") sel.hasPress = true;
+				else if (pseudo === "has-scroll") sel.hasScroll = true;
+			}
+			return sel;
+		}
+		function parseComplex() {
+			skipSpaces();
+			var segments = [];
+			segments.push({
+				selector: parseCompound(),
+				combinator: null
+			});
+			while (pos < len) {
+				var beforeSkip = pos;
+				skipSpaces();
+				if (pos >= len || input.charAt(pos) === ",") break;
+				var combinator = " ";
+				if (input.charAt(pos) === ">") {
+					combinator = ">";
+					pos++;
+					skipSpaces();
+				} else if (pos === beforeSkip) break;
+				var nextCh = pos < len ? input.charAt(pos) : "";
+				if (!/[A-Za-z_#[:]/.test(nextCh)) break;
+				segments.push({
+					selector: parseCompound(),
+					combinator
+				});
+			}
+			return { segments };
+		}
+		var selectors = [];
+		selectors.push(parseComplex());
+		while (pos < len) {
+			skipSpaces();
+			if (pos >= len || input.charAt(pos) !== ",") break;
+			pos++;
+			selectors.push(parseComplex());
+		}
+		return { selectors };
+	}
+	/** compound 셀렉터가 단일 fiber 노드에 매칭되는지 검사 */
+	function matchesCompound(fiber, compound, TextComp, ImgComp) {
+		if (!fiber) return false;
+		var props = fiber.memoizedProps || {};
+		if (compound.type !== null) {
+			if (getFiberTypeName(fiber) !== compound.type) return false;
+		}
+		if (compound.displayName !== null) {
+			var t = fiber.type;
+			if (!t || typeof t.displayName !== "string" || t.displayName !== compound.displayName) return false;
+		}
+		if (compound.testID !== null && props.testID !== compound.testID) return false;
+		for (var i = 0; i < compound.attrs.length; i++) {
+			var attr = compound.attrs[i];
+			if (String(props[attr.name] || "") !== attr.value) return false;
+		}
+		if (compound.text !== null) {
+			if (collectText(fiber, TextComp).replace(/\s+/g, " ").trim().indexOf(compound.text) === -1) return false;
+		}
+		if (compound.hasPress && typeof props.onPress !== "function") return false;
+		if (compound.hasScroll) {
+			var sn = fiber.stateNode;
+			if (!sn || typeof sn.scrollTo !== "function" && typeof sn.scrollToOffset !== "function") return false;
+		}
+		return true;
+	}
+	/** 계층 셀렉터(A > B, A B) 매칭 — fiber.return을 상향 탐색 */
+	function matchesComplexSelector(fiber, complex, TextComp, ImgComp) {
+		var segs = complex.segments;
+		var last = segs.length - 1;
+		if (!matchesCompound(fiber, segs[last].selector, TextComp, ImgComp)) return false;
+		var current = fiber;
+		for (var i = last - 1; i >= 0; i--) {
+			var combinator = segs[i + 1].combinator;
+			var targetSel = segs[i].selector;
+			if (combinator === ">") {
+				current = current.return;
+				if (!current || !matchesCompound(current, targetSel, TextComp, ImgComp)) return false;
+			} else {
+				current = current.return;
+				while (current) {
+					if (matchesCompound(current, targetSel, TextComp, ImgComp)) break;
+					current = current.return;
+				}
+				if (!current) return false;
+			}
+		}
+		return true;
+	}
+	/** testID 없는 fiber의 경로 기반 uid 계산 ("0.1.2" 형식) */
+	function getPathUid(fiber) {
+		var parts = [];
+		var cur = fiber;
+		while (cur && cur.return) {
+			var parent = cur.return;
+			var idx = 0;
+			var ch = parent.child;
+			while (ch) {
+				if (ch === cur) break;
+				ch = ch.sibling;
+				idx++;
+			}
+			parts.unshift(idx);
+			cur = parent;
+		}
+		parts.unshift(0);
+		return parts.join(".");
+	}
+	/** path("0.1.2")로 Fiber 트리에서 노드 찾기. getComponentTree와 동일한 인덱스 규칙. */
+	function getFiberByPath(root, pathStr) {
+		if (!root || typeof pathStr !== "string") return null;
+		var parts = pathStr.trim().split(".");
+		var fiber = root;
+		for (var i = 0; i < parts.length; i++) {
+			if (!fiber) return null;
+			var part = parts[i];
+			if (part === void 0) return null;
+			var idx = parseInt(part, 10);
+			if (i === 0) {
+				if (idx !== 0) return null;
+				continue;
+			}
+			var child = fiber.child;
+			var j = 0;
+			while (child && j < idx) {
+				child = child.sibling;
+				j++;
+			}
+			fiber = child;
+		}
+		return fiber;
+	}
+	/** uid가 경로 형식인지 ("0", "0.1", "0.1.2" 등) */
+	function isPathUid(uid) {
+		return typeof uid === "string" && /^\d+(\.\d+)*$/.test(uid.trim());
+	}
+	var init_query_selector = __esmMin(() => {
+		init_fiber_helpers();
+	});
+
+//#endregion
+//#region src/runtime/mcp-introspection.ts
+/**
+	* _debugStack.stack 문자열에서 모든 (url:line:column) 프레임 추출.
+	* 예: " at fn (http://...:25822:77)\n at App (http://...:7284:69)" → [{ bundleUrl, line, column }, ...]
+	* 첫 프레임이 React 내부인 경우가 많으므로 서버에서 순서대로 심볼리케이트해 앱 소스 프레임을 고름.
+	*/
+	function getSourceRefFromStack(stack) {
+		if (typeof stack !== "string" || !stack) return [];
+		var out = [];
+		var re = /\(([^)]+):(\d+):(\d+)\)/g;
+		var m;
+		while ((m = re.exec(stack)) !== null) {
+			var url = m[1];
+			var lineStr = m[2];
+			var colStr = m[3];
+			if (url == null || lineStr == null || colStr == null) continue;
+			var line = parseInt(lineStr, 10);
+			var column = parseInt(colStr, 10);
+			if (!isNaN(line)) out.push({
+				bundleUrl: url,
+				line,
+				column
+			});
+		}
+		return out;
+	}
+	/**
+	* uid(경로 "0.1.2" 또는 testID)로 Fiber 찾기.
+	*/
+	function findFiberByUid(root, uid) {
+		if (!root || typeof uid !== "string") return null;
+		var u = uid.trim();
+		if (isPathUid(u)) return getFiberByPath(root, u);
+		var found = null;
+		(function visit(f) {
+			if (!f || found) return;
+			var props = f.memoizedProps;
+			if (props && typeof props.testID === "string" && props.testID.trim() === u) {
+				found = f;
+				return;
+			}
+			visit(f.child);
+			visit(f.sibling);
+		})(root);
+		return found;
+	}
+	/**
+	* uid에 해당하는 컴포넌트의 소스 위치 ref 목록 (번들 URL + 라인/컬럼). 서버에서 소스맵으로 원본 파일 추론용.
+	* _debugStack이 없으면 빈 배열. 여러 프레임을 반환하므로 서버에서 앱 소스에 해당하는 첫 프레임을 선택할 수 있음.
+	*/
+	function getSourceRefForUid(uid) {
+		try {
+			var root = getFiberRoot();
+			if (!root) return [];
+			var fiber = findFiberByUid(root, uid);
+			var debugStack = fiber && fiber._debugStack;
+			if (!debugStack || typeof debugStack.stack !== "string") return [];
+			return getSourceRefFromStack(debugStack.stack);
+		} catch (e) {
+			return [];
+		}
+	}
+	/**
+	* 클릭 가능 요소 목록 (uid + label). Fiber 트리에서 onPress 있는 모든 노드 수집.
+	* _pressHandlers 레지스트리가 있으면 우선 사용, 없으면 Fiber 순회.
+	*/
+	function getClickables() {
+		var ids = Object.keys(pressHandlers);
+		if (ids.length > 0) {
+			var root0 = getFiberRoot();
+			var c0 = root0 ? getRNComponents() : null;
+			return ids.map(function(id) {
+				var label = "";
+				if (root0 && c0) (function visit(fiber) {
+					if (!fiber || label) return;
+					if (fiber.memoizedProps && fiber.memoizedProps.testID === id) {
+						label = collectText(fiber, c0.Text).replace(/\s+/g, " ").trim();
+						return;
+					}
+					visit(fiber.child);
+					visit(fiber.sibling);
+				})(root0);
+				return {
+					uid: id,
+					label
+				};
+			});
+		}
+		try {
+			var root = getFiberRoot();
+			if (!root) return [];
+			var c = getRNComponents();
+			var out = [];
+			function visit(fiber) {
+				if (!fiber) return;
+				var props = fiber.memoizedProps;
+				if (typeof (props && props.onPress) === "function") {
+					var testID = props && props.testID || void 0;
+					var label = getLabel(fiber, c.Text, c.Image);
+					out.push({
+						uid: testID || "",
+						label
+					});
+					visit(fiber.sibling);
+					return;
+				}
+				visit(fiber.child);
+				visit(fiber.sibling);
+			}
+			visit(root);
+			return out;
+		} catch (e) {
+			return [];
+		}
+	}
+	/**
+	* Fiber 트리 전체에서 Text 노드 내용 수집. 버튼 여부와 무관하게 모든 보이는 텍스트.
+	* 반환: [{ text, testID? }] — testID는 해당 Text의 조상 중 가장 가까운 testID.
+	*/
+	function getTextNodes() {
+		try {
+			var root = getFiberRoot();
+			if (!root) return [];
+			var c = getRNComponents();
+			var TextComponent = c && c.Text;
+			if (!TextComponent) return [];
+			var out = [];
+			function visit(fiber) {
+				if (!fiber) return;
+				if (fiber.type === TextComponent) {
+					var text = getTextNodeContent(fiber, TextComponent);
+					if (text) out.push({
+						text: text.replace(/\s+/g, " "),
+						testID: getAncestorTestID(fiber)
+					});
+				}
+				visit(fiber.child);
+				visit(fiber.sibling);
+			}
+			visit(root);
+			return out;
+		} catch (e) {
+			return [];
+		}
+	}
+	/** 컴포넌트 이름이 숨김 대상인지 판별 (_접두사 변형 포함) */
+	function isHiddenComponent(name) {
+		var target = name;
+		if (target.length > 1 && target.charAt(0) === "_") target = target.substring(1);
+		for (var i = 0; i < HIDDEN_COMPONENT_PREFIXES.length; i++) if (target.indexOf(HIDDEN_COMPONENT_PREFIXES[i]) === 0) return true;
+		return false;
+	}
+	/**
+	* Fiber 트리 전체를 컴포넌트 트리로 직렬화. querySelector 대체용 스냅샷.
+	* 노드: { uid, type, testID?, accessibilityLabel?, text?, children? }
+	* uid: testID 있으면 testID, 없으면 경로 "0.1.2". click(uid)는 testID일 때만 동작.
+	* options: { maxDepth } (기본 무제한, 권장 20~30)
+	*/
+	function getComponentTree(options) {
+		try {
+			var root = getFiberRoot();
+			if (!root) return null;
+			var c = getRNComponents();
+			var TextComponent = c && c.Text;
+			var maxDepth = options && typeof options.maxDepth === "number" ? options.maxDepth : 999;
+			function buildNode(fiber, path, depth) {
+				if (!fiber || depth > maxDepth) return null;
+				var props = fiber.memoizedProps || {};
+				var testID = typeof props.testID === "string" && props.testID.trim() ? props.testID.trim() : void 0;
+				var typeName = getFiberTypeName(fiber);
+				var displayName = typeof fiber.type === "object" && fiber.type != null && typeof fiber.type.displayName === "string" ? fiber.type.displayName : "";
+				if (isHiddenComponent(typeName) || isHiddenComponent(displayName)) {
+					var out = [];
+					var child = fiber.child;
+					var idx = 0;
+					while (child) {
+						var childPath = path + "." + idx;
+						var childResult = buildNode(child, childPath, depth + 1);
+						if (Array.isArray(childResult)) out.push(...childResult);
+						else if (childResult) out.push(childResult);
+						child = child.sibling;
+						idx += 1;
+					}
+					return out.length ? out : null;
+				}
+				var node = {
+					uid: testID || path,
+					type: typeName
+				};
+				if (testID) node.testID = testID;
+				if (typeof props.accessibilityLabel === "string" && props.accessibilityLabel.trim()) node.accessibilityLabel = props.accessibilityLabel.trim();
+				if (fiber.type === TextComponent) {
+					var text = getTextNodeContent(fiber, TextComponent);
+					if (text) node.text = text.replace(/\s+/g, " ");
+				}
+				var children = [];
+				var child = fiber.child;
+				var idx = 0;
+				while (child) {
+					var childPath = path + "." + idx;
+					var childResult = buildNode(child, childPath, depth + 1);
+					if (Array.isArray(childResult)) children.push(...childResult);
+					else if (childResult) children.push(childResult);
+					child = child.sibling;
+					idx += 1;
+				}
+				if (children.length) node.children = children;
+				return node;
+			}
+			var result = buildNode(root, "0", 0);
+			return Array.isArray(result) ? result.length === 1 ? result[0] : {
+				uid: "0",
+				type: "Root",
+				children: result
+			} : result;
+		} catch (e) {
+			return null;
+		}
+	}
+	var HIDDEN_COMPONENT_PREFIXES;
+	var init_mcp_introspection = __esmMin(() => {
+		init_fiber_helpers();
+		init_query_selector();
+		init_shared();
+		HIDDEN_COMPONENT_PREFIXES = [
+			"RenderOverlay",
+			"MCPRoot",
+			"LogBox"
+		];
+	});
+
+//#endregion
 //#region src/runtime/state-hooks.ts
 /** fiber의 memoizedState 체인에서 state Hook(queue 존재)만 추출 */
 	function parseHooks(fiber) {
@@ -341,6 +823,12 @@
 	function collectStateChanges(fiber) {
 		if (!fiber) return;
 		if (fiber.tag === 0 || fiber.tag === 1) {
+			var name = getFiberTypeName(fiber);
+			if (isHiddenComponent(name)) {
+				collectStateChanges(fiber.child);
+				collectStateChanges(fiber.sibling);
+				return;
+			}
 			var prev = fiber.alternate;
 			if (prev) {
 				var prevHook = prev.memoizedState;
@@ -348,14 +836,17 @@
 				var hookIdx = 0;
 				while (prevHook && nextHook && typeof prevHook === "object" && typeof nextHook === "object") {
 					if (nextHook.queue && !shallowEqual(prevHook.memoizedState, nextHook.memoizedState)) {
-						var name = getFiberTypeName(fiber);
+						var debugStack = fiber._debugStack;
+						var stackStr = debugStack && typeof debugStack.stack === "string" ? debugStack.stack : "";
+						var sourceRef = stackStr ? getSourceRefFromStack(stackStr) : void 0;
 						pushStateChange({
 							id: nextStateChangeId(),
 							timestamp: Date.now(),
 							component: name,
 							hookIndex: hookIdx,
 							prev: safeClone(prevHook.memoizedState),
-							next: safeClone(nextHook.memoizedState)
+							next: safeClone(nextHook.memoizedState),
+							sourceRef: sourceRef && sourceRef.length > 0 ? sourceRef : void 0
 						});
 					}
 					prevHook = prevHook.next;
@@ -369,6 +860,7 @@
 	}
 	var init_state_hooks = __esmMin(() => {
 		init_fiber_helpers();
+		init_mcp_introspection();
 		init_shared();
 	});
 
@@ -1022,256 +1514,6 @@
 	});
 
 //#endregion
-//#region src/runtime/query-selector.ts
-/**
-	* 셀렉터 문자열을 AST로 파싱한다 (재귀 하강 파서).
-	* 지원 문법:
-	*   Type#testID[attr="val"]:text("..."):display-name("..."):nth-of-type(N):has-press:has-scroll
-	*   A > B (직접 자식), A B (후손), A, B (OR)
-	*/
-	function parseSelector(input) {
-		var pos = 0;
-		var len = input.length;
-		function isIdentChar(ch) {
-			return /[A-Za-z0-9_.-]/.test(ch);
-		}
-		function skipSpaces() {
-			while (pos < len && (input.charAt(pos) === " " || input.charAt(pos) === "	")) pos++;
-		}
-		function readIdentifier() {
-			var start = pos;
-			while (pos < len && isIdentChar(input.charAt(pos))) pos++;
-			return input.substring(start, pos);
-		}
-		function readQuotedString() {
-			var quote = input.charAt(pos);
-			if (quote !== "\"" && quote !== "'") return "";
-			pos++;
-			var start = pos;
-			while (pos < len && input.charAt(pos) !== quote) {
-				if (input.charAt(pos) === "\\") pos++;
-				pos++;
-			}
-			if (pos >= len) return null;
-			var str = input.substring(start, pos);
-			pos++;
-			return str;
-		}
-		function readNumber() {
-			var start = pos;
-			while (pos < len && /[0-9]/.test(input.charAt(pos))) pos++;
-			return parseInt(input.substring(start, pos), 10);
-		}
-		function parseCompound() {
-			var sel = {
-				type: null,
-				testID: null,
-				attrs: [],
-				text: null,
-				displayName: null,
-				nth: -1,
-				hasPress: false,
-				hasScroll: false
-			};
-			var ch = pos < len ? input.charAt(pos) : "";
-			if (/[A-Za-z_]/.test(ch)) sel.type = readIdentifier();
-			if (pos < len && input.charAt(pos) === "#") {
-				pos++;
-				sel.testID = readIdentifier();
-			}
-			while (pos < len && input.charAt(pos) === "[") {
-				pos++;
-				skipSpaces();
-				var attrName = readIdentifier();
-				skipSpaces();
-				if (pos < len && input.charAt(pos) === "=") {
-					pos++;
-					skipSpaces();
-					var attrVal = readQuotedString();
-					if (attrVal === null) throw new Error("Unclosed quote in selector [attr=\"...\"]");
-					sel.attrs.push({
-						name: attrName,
-						value: attrVal
-					});
-				}
-				skipSpaces();
-				if (pos < len && input.charAt(pos) === "]") pos++;
-			}
-			while (pos < len && input.charAt(pos) === ":") {
-				pos++;
-				var pseudo = readIdentifier();
-				if (pseudo === "text") {
-					if (pos < len && input.charAt(pos) === "(") {
-						pos++;
-						skipSpaces();
-						var textVal = readQuotedString();
-						if (textVal === null) throw new Error("Unclosed quote in selector :text(...)");
-						sel.text = textVal;
-						skipSpaces();
-						if (pos < len && input.charAt(pos) === ")") pos++;
-					}
-				} else if (pseudo === "nth-of-type") {
-					if (pos < len && input.charAt(pos) === "(") {
-						pos++;
-						skipSpaces();
-						sel.nth = readNumber() - 1;
-						skipSpaces();
-						if (pos < len && input.charAt(pos) === ")") pos++;
-					}
-				} else if (pseudo === "first-of-type") sel.nth = 0;
-				else if (pseudo === "last-of-type") sel.nth = -2;
-				else if (pseudo === "display-name") {
-					if (pos < len && input.charAt(pos) === "(") {
-						pos++;
-						skipSpaces();
-						var dn = readQuotedString();
-						if (dn === null) throw new Error("Unclosed quote in selector :display-name(\"...\")");
-						skipSpaces();
-						if (pos < len && input.charAt(pos) === ")") pos++;
-						sel.displayName = dn;
-					}
-				} else if (pseudo === "has-press") sel.hasPress = true;
-				else if (pseudo === "has-scroll") sel.hasScroll = true;
-			}
-			return sel;
-		}
-		function parseComplex() {
-			skipSpaces();
-			var segments = [];
-			segments.push({
-				selector: parseCompound(),
-				combinator: null
-			});
-			while (pos < len) {
-				var beforeSkip = pos;
-				skipSpaces();
-				if (pos >= len || input.charAt(pos) === ",") break;
-				var combinator = " ";
-				if (input.charAt(pos) === ">") {
-					combinator = ">";
-					pos++;
-					skipSpaces();
-				} else if (pos === beforeSkip) break;
-				var nextCh = pos < len ? input.charAt(pos) : "";
-				if (!/[A-Za-z_#[:]/.test(nextCh)) break;
-				segments.push({
-					selector: parseCompound(),
-					combinator
-				});
-			}
-			return { segments };
-		}
-		var selectors = [];
-		selectors.push(parseComplex());
-		while (pos < len) {
-			skipSpaces();
-			if (pos >= len || input.charAt(pos) !== ",") break;
-			pos++;
-			selectors.push(parseComplex());
-		}
-		return { selectors };
-	}
-	/** compound 셀렉터가 단일 fiber 노드에 매칭되는지 검사 */
-	function matchesCompound(fiber, compound, TextComp, ImgComp) {
-		if (!fiber) return false;
-		var props = fiber.memoizedProps || {};
-		if (compound.type !== null) {
-			if (getFiberTypeName(fiber) !== compound.type) return false;
-		}
-		if (compound.displayName !== null) {
-			var t = fiber.type;
-			if (!t || typeof t.displayName !== "string" || t.displayName !== compound.displayName) return false;
-		}
-		if (compound.testID !== null && props.testID !== compound.testID) return false;
-		for (var i = 0; i < compound.attrs.length; i++) {
-			var attr = compound.attrs[i];
-			if (String(props[attr.name] || "") !== attr.value) return false;
-		}
-		if (compound.text !== null) {
-			if (collectText(fiber, TextComp).replace(/\s+/g, " ").trim().indexOf(compound.text) === -1) return false;
-		}
-		if (compound.hasPress && typeof props.onPress !== "function") return false;
-		if (compound.hasScroll) {
-			var sn = fiber.stateNode;
-			if (!sn || typeof sn.scrollTo !== "function" && typeof sn.scrollToOffset !== "function") return false;
-		}
-		return true;
-	}
-	/** 계층 셀렉터(A > B, A B) 매칭 — fiber.return을 상향 탐색 */
-	function matchesComplexSelector(fiber, complex, TextComp, ImgComp) {
-		var segs = complex.segments;
-		var last = segs.length - 1;
-		if (!matchesCompound(fiber, segs[last].selector, TextComp, ImgComp)) return false;
-		var current = fiber;
-		for (var i = last - 1; i >= 0; i--) {
-			var combinator = segs[i + 1].combinator;
-			var targetSel = segs[i].selector;
-			if (combinator === ">") {
-				current = current.return;
-				if (!current || !matchesCompound(current, targetSel, TextComp, ImgComp)) return false;
-			} else {
-				current = current.return;
-				while (current) {
-					if (matchesCompound(current, targetSel, TextComp, ImgComp)) break;
-					current = current.return;
-				}
-				if (!current) return false;
-			}
-		}
-		return true;
-	}
-	/** testID 없는 fiber의 경로 기반 uid 계산 ("0.1.2" 형식) */
-	function getPathUid(fiber) {
-		var parts = [];
-		var cur = fiber;
-		while (cur && cur.return) {
-			var parent = cur.return;
-			var idx = 0;
-			var ch = parent.child;
-			while (ch) {
-				if (ch === cur) break;
-				ch = ch.sibling;
-				idx++;
-			}
-			parts.unshift(idx);
-			cur = parent;
-		}
-		parts.unshift(0);
-		return parts.join(".");
-	}
-	/** path("0.1.2")로 Fiber 트리에서 노드 찾기. getComponentTree와 동일한 인덱스 규칙. */
-	function getFiberByPath(root, pathStr) {
-		if (!root || typeof pathStr !== "string") return null;
-		var parts = pathStr.trim().split(".");
-		var fiber = root;
-		for (var i = 0; i < parts.length; i++) {
-			if (!fiber) return null;
-			var part = parts[i];
-			if (part === void 0) return null;
-			var idx = parseInt(part, 10);
-			if (i === 0) {
-				if (idx !== 0) return null;
-				continue;
-			}
-			var child = fiber.child;
-			var j = 0;
-			while (child && j < idx) {
-				child = child.sibling;
-				j++;
-			}
-			fiber = child;
-		}
-		return fiber;
-	}
-	/** uid가 경로 형식인지 ("0", "0.1", "0.1.2" 등) */
-	function isPathUid(uid) {
-		return typeof uid === "string" && /^\d+(\.\d+)*$/.test(uid.trim());
-	}
-	var init_query_selector = __esmMin(() => {
-		init_fiber_helpers();
-	});
-
-//#endregion
 //#region src/runtime/mcp-measure.ts
 /**
 	* getScreenInfo() → { screen, window, scale, fontScale, orientation }
@@ -1669,204 +1911,6 @@
 		init_fiber_helpers();
 		init_shared();
 		init_render_overlay();
-	});
-
-//#endregion
-//#region src/runtime/mcp-introspection.ts
-/**
-	* _debugStack.stack 문자열에서 모든 (url:line:column) 프레임 추출.
-	* 예: " at fn (http://...:25822:77)\n at App (http://...:7284:69)" → [{ bundleUrl, line, column }, ...]
-	* 첫 프레임이 React 내부인 경우가 많으므로 서버에서 순서대로 심볼리케이트해 앱 소스 프레임을 고름.
-	*/
-	function getSourceRefFromStack(stack) {
-		if (typeof stack !== "string" || !stack) return [];
-		var out = [];
-		var re = /\(([^)]+):(\d+):(\d+)\)/g;
-		var m;
-		while ((m = re.exec(stack)) !== null) {
-			var url = m[1];
-			var lineStr = m[2];
-			var colStr = m[3];
-			if (url == null || lineStr == null || colStr == null) continue;
-			var line = parseInt(lineStr, 10);
-			var column = parseInt(colStr, 10);
-			if (!isNaN(line)) out.push({
-				bundleUrl: url,
-				line,
-				column
-			});
-		}
-		return out;
-	}
-	/**
-	* uid(경로 "0.1.2" 또는 testID)로 Fiber 찾기.
-	*/
-	function findFiberByUid(root, uid) {
-		if (!root || typeof uid !== "string") return null;
-		var u = uid.trim();
-		if (isPathUid(u)) return getFiberByPath(root, u);
-		var found = null;
-		(function visit(f) {
-			if (!f || found) return;
-			var props = f.memoizedProps;
-			if (props && typeof props.testID === "string" && props.testID.trim() === u) {
-				found = f;
-				return;
-			}
-			visit(f.child);
-			visit(f.sibling);
-		})(root);
-		return found;
-	}
-	/**
-	* uid에 해당하는 컴포넌트의 소스 위치 ref 목록 (번들 URL + 라인/컬럼). 서버에서 소스맵으로 원본 파일 추론용.
-	* _debugStack이 없으면 빈 배열. 여러 프레임을 반환하므로 서버에서 앱 소스에 해당하는 첫 프레임을 선택할 수 있음.
-	*/
-	function getSourceRefForUid(uid) {
-		try {
-			var root = getFiberRoot();
-			if (!root) return [];
-			var fiber = findFiberByUid(root, uid);
-			var debugStack = fiber && fiber._debugStack;
-			if (!debugStack || typeof debugStack.stack !== "string") return [];
-			return getSourceRefFromStack(debugStack.stack);
-		} catch (e) {
-			return [];
-		}
-	}
-	/**
-	* 클릭 가능 요소 목록 (uid + label). Fiber 트리에서 onPress 있는 모든 노드 수집.
-	* _pressHandlers 레지스트리가 있으면 우선 사용, 없으면 Fiber 순회.
-	*/
-	function getClickables() {
-		var ids = Object.keys(pressHandlers);
-		if (ids.length > 0) {
-			var root0 = getFiberRoot();
-			var c0 = root0 ? getRNComponents() : null;
-			return ids.map(function(id) {
-				var label = "";
-				if (root0 && c0) (function visit(fiber) {
-					if (!fiber || label) return;
-					if (fiber.memoizedProps && fiber.memoizedProps.testID === id) {
-						label = collectText(fiber, c0.Text).replace(/\s+/g, " ").trim();
-						return;
-					}
-					visit(fiber.child);
-					visit(fiber.sibling);
-				})(root0);
-				return {
-					uid: id,
-					label
-				};
-			});
-		}
-		try {
-			var root = getFiberRoot();
-			if (!root) return [];
-			var c = getRNComponents();
-			var out = [];
-			function visit(fiber) {
-				if (!fiber) return;
-				var props = fiber.memoizedProps;
-				if (typeof (props && props.onPress) === "function") {
-					var testID = props && props.testID || void 0;
-					var label = getLabel(fiber, c.Text, c.Image);
-					out.push({
-						uid: testID || "",
-						label
-					});
-					visit(fiber.sibling);
-					return;
-				}
-				visit(fiber.child);
-				visit(fiber.sibling);
-			}
-			visit(root);
-			return out;
-		} catch (e) {
-			return [];
-		}
-	}
-	/**
-	* Fiber 트리 전체에서 Text 노드 내용 수집. 버튼 여부와 무관하게 모든 보이는 텍스트.
-	* 반환: [{ text, testID? }] — testID는 해당 Text의 조상 중 가장 가까운 testID.
-	*/
-	function getTextNodes() {
-		try {
-			var root = getFiberRoot();
-			if (!root) return [];
-			var c = getRNComponents();
-			var TextComponent = c && c.Text;
-			if (!TextComponent) return [];
-			var out = [];
-			function visit(fiber) {
-				if (!fiber) return;
-				if (fiber.type === TextComponent) {
-					var text = getTextNodeContent(fiber, TextComponent);
-					if (text) out.push({
-						text: text.replace(/\s+/g, " "),
-						testID: getAncestorTestID(fiber)
-					});
-				}
-				visit(fiber.child);
-				visit(fiber.sibling);
-			}
-			visit(root);
-			return out;
-		} catch (e) {
-			return [];
-		}
-	}
-	/**
-	* Fiber 트리 전체를 컴포넌트 트리로 직렬화. querySelector 대체용 스냅샷.
-	* 노드: { uid, type, testID?, accessibilityLabel?, text?, children? }
-	* uid: testID 있으면 testID, 없으면 경로 "0.1.2". click(uid)는 testID일 때만 동작.
-	* options: { maxDepth } (기본 무제한, 권장 20~30)
-	*/
-	function getComponentTree(options) {
-		try {
-			var root = getFiberRoot();
-			if (!root) return null;
-			var c = getRNComponents();
-			var TextComponent = c && c.Text;
-			var maxDepth = options && typeof options.maxDepth === "number" ? options.maxDepth : 999;
-			function buildNode(fiber, path, depth) {
-				if (!fiber || depth > maxDepth) return null;
-				var props = fiber.memoizedProps || {};
-				var testID = typeof props.testID === "string" && props.testID.trim() ? props.testID.trim() : void 0;
-				var typeName = getFiberTypeName(fiber);
-				var node = {
-					uid: testID || path,
-					type: typeName
-				};
-				if (testID) node.testID = testID;
-				if (typeof props.accessibilityLabel === "string" && props.accessibilityLabel.trim()) node.accessibilityLabel = props.accessibilityLabel.trim();
-				if (fiber.type === TextComponent) {
-					var text = getTextNodeContent(fiber, TextComponent);
-					if (text) node.text = text.replace(/\s+/g, " ");
-				}
-				var children = [];
-				var child = fiber.child;
-				var idx = 0;
-				while (child) {
-					var childPath = path + "." + idx;
-					var childNode = buildNode(child, childPath, depth + 1);
-					if (childNode) children.push(childNode);
-					child = child.sibling;
-					idx += 1;
-				}
-				if (children.length) node.children = children;
-				return node;
-			}
-			return buildNode(root, "0", 0);
-		} catch (e) {
-			return null;
-		}
-	}
-	var init_mcp_introspection = __esmMin(() => {
-		init_fiber_helpers();
-		init_query_selector();
-		init_shared();
 	});
 
 //#endregion
@@ -2717,8 +2761,42 @@
 
 //#endregion
 //#region src/runtime/network-helpers.ts
+/** fetch 진입 시 호출. 이 요청용 request id를 등록해 두고, XHR이 takeCurrentFetchRequestId로 가져감 */
+	function setCurrentFetchRequest(url, method, id) {
+		currentFetchRequest = {
+			url,
+			method,
+			id,
+			time: Date.now()
+		};
+	}
+	/** XHR send 시 호출. 방금 시작한 fetch와 url+method가 같으면 그 fetch의 request id를 반환하고 초기화(한 번만 사용) */
+	function takeCurrentFetchRequestId(url, method) {
+		if (!currentFetchRequest) return null;
+		const now = Date.now();
+		if (currentFetchRequest.url !== url || currentFetchRequest.method !== method || now - currentFetchRequest.time > RECENT_FETCH_MS) return null;
+		const id = currentFetchRequest.id;
+		currentFetchRequest = null;
+		return id;
+	}
+	/** entry.id가 이미 있으면 기존 항목에 병합(id로 동일 요청 판단). 없으면 새 id 부여 후 push */
 	function pushNetworkEntry(entry) {
-		entry.id = nextNetworkRequestId();
+		const id = entry.id;
+		if (id != null && id > 0) {
+			const existing = networkRequests.find((e) => e.id === id);
+			if (existing) {
+				if (entry.status != null) existing.status = entry.status;
+				if (entry.statusText != null) existing.statusText = entry.statusText;
+				if (entry.responseHeaders != null) existing.responseHeaders = entry.responseHeaders;
+				if (entry.responseBody != null) existing.responseBody = entry.responseBody;
+				if (entry.duration != null) existing.duration = entry.duration;
+				if (entry.state != null) existing.state = entry.state;
+				if (entry.error != null) existing.error = entry.error;
+				if (entry.mocked != null) existing.mocked = entry.mocked;
+				return;
+			}
+		}
+		if (entry.id == null || entry.id === 0) entry.id = nextNetworkRequestId();
 		networkRequests.push(entry);
 		if (networkRequests.length > NETWORK_BUFFER_SIZE) networkRequests.shift();
 	}
@@ -2727,8 +2805,11 @@
 		var s = typeof body === "string" ? body : String(body);
 		return s.length > NETWORK_BODY_LIMIT ? s.substring(0, NETWORK_BODY_LIMIT) : s;
 	}
+	var RECENT_FETCH_MS, currentFetchRequest;
 	var init_network_helpers = __esmMin(() => {
 		init_shared();
+		RECENT_FETCH_MS = 200;
+		currentFetchRequest = null;
 	});
 
 //#endregion
@@ -2768,6 +2849,8 @@
 				var entry = this.__mcpNetworkEntry;
 				if (entry) {
 					entry.requestBody = truncateBody(body);
+					var fetchId = takeCurrentFetchRequestId(entry.url, entry.method);
+					if (fetchId != null) entry.id = fetchId;
 					var mockRule = findMatchingMock(entry.method, entry.url);
 					if (mockRule) {
 						var xhr = this;
@@ -2884,8 +2967,10 @@
 					bodyStr = typeof requestBody === "string" ? requestBody : typeof requestBody.toString === "function" ? requestBody.toString() : String(requestBody);
 					if (bodyStr != null && bodyStr.length > NETWORK_BODY_LIMIT) bodyStr = bodyStr.substring(0, NETWORK_BODY_LIMIT);
 				}
+				var requestId = nextNetworkRequestId();
+				setCurrentFetchRequest(url, method, requestId);
 				var entry = {
-					id: 0,
+					id: requestId,
 					method,
 					url,
 					requestHeaders,
