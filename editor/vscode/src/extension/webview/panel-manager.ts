@@ -5,7 +5,6 @@
 
 import * as vscode from 'vscode';
 import type { WsClient } from '../ws-client';
-import { createResolveSourceRef } from '../resolve-state-source';
 import { createMessageHandler } from './message-handler';
 
 export class PanelManager implements vscode.Disposable {
@@ -46,9 +45,7 @@ export class PanelManager implements vscode.Disposable {
     this.panel.webview.html = getHtml(webviewJsUri, webviewCssUri, this.panel.webview.cspSource);
 
     // Message routing
-    const handler = createMessageHandler(this.client, {
-      resolveSourceRef: createResolveSourceRef(this.context),
-    });
+    const handler = createMessageHandler(this.client);
     this.panel.webview.onDidReceiveMessage(
       async (msg) => {
         const response = await handler(msg);

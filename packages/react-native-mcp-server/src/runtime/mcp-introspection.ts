@@ -156,8 +156,18 @@ export function getTextNodes(): Array<{ text: string; testID?: string }> {
   }
 }
 
-/** 내부용 컴포넌트 — 트리에서 노드로 노출하지 않고 자식만 상위에 이어붙임 */
-const HIDDEN_TREE_TYPES = new Set(['RenderOverlay', 'MCPRoot']);
+/** 내부용 컴포넌트 — 트리/상태 변경에서 숨김 (접두사 매칭) */
+const HIDDEN_COMPONENT_PREFIXES = ['RenderOverlay', 'MCPRoot', 'LogBox'];
+
+/** 컴포넌트 이름이 숨김 대상인지 판별 (_접두사 변형 포함) */
+export function isHiddenComponent(name: string): boolean {
+  var target = name;
+  if (target.length > 1 && target.charAt(0) === '_') target = target.substring(1);
+  for (var i = 0; i < HIDDEN_COMPONENT_PREFIXES.length; i++) {
+    if (target.indexOf(HIDDEN_COMPONENT_PREFIXES[i]!) === 0) return true;
+  }
+  return false;
+}
 
 /**
  * Fiber 트리 전체를 컴포넌트 트리로 직렬화. querySelector 대체용 스냅샷.
@@ -184,7 +194,7 @@ export function getComponentTree(options: any): any {
         typeof (fiber.type as any).displayName === 'string'
           ? (fiber.type as any).displayName
           : '';
-      var isHidden = HIDDEN_TREE_TYPES.has(typeName) || HIDDEN_TREE_TYPES.has(displayName);
+      var isHidden = isHiddenComponent(typeName) || isHiddenComponent(displayName);
       if (isHidden) {
         var out: any[] = [];
         var child = fiber.child;

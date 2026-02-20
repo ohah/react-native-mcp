@@ -6,7 +6,6 @@
 
 import * as vscode from 'vscode';
 import type { WsClient } from '../ws-client';
-import { createResolveSourceRef } from '../resolve-state-source';
 import { createMessageHandler } from './message-handler';
 
 export class SidebarViewProvider implements vscode.WebviewViewProvider {
@@ -48,9 +47,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     );
 
     // Message routing
-    const handler = createMessageHandler(this.client, {
-      resolveSourceRef: createResolveSourceRef(this.context),
-    });
+    const handler = createMessageHandler(this.client);
     const msgDisposable = webviewView.webview.onDidReceiveMessage(async (msg) => {
       const response = await handler(msg);
       if (response && this.view) {
