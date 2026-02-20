@@ -173,7 +173,8 @@ jobs:
             # MCP 포트 포워딩 (앱이 localhost:12300 접근 시 호스트로 전달)
             adb reverse tcp:12300 tcp:12300
 
-            # E2E YAML 시나리오 실행 (press-counter.yaml 등)
+            # E2E YAML 시나리오 실행 (시뮬/에뮬 지연 시 tap 타임아웃 확대)
+            export REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000
             node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/ -p android -o e2e-artifacts/yaml-results --no-auto-launch
 
       - name: 실패 시 스크린샷·로그 저장
