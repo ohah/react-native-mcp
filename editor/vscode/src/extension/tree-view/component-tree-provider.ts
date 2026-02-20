@@ -29,6 +29,15 @@ class TreeItem extends vscode.TreeItem {
     this.tooltip = node.uid ?? node.type;
     this.description = node.testID ? `#${node.testID}` : undefined;
 
+    // Click → reveal source (Phase 4: source jump)
+    if (node.testID) {
+      this.command = {
+        command: 'rnMcp.revealComponentSource',
+        title: 'Go to Source',
+        arguments: [node.testID],
+      };
+    }
+
     // Icon based on component type
     if (node.type === 'Text' || node.type === 'RCTText') {
       this.iconPath = new vscode.ThemeIcon('symbol-string');
