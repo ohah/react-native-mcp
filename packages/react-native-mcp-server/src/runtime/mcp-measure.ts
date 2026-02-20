@@ -27,6 +27,29 @@ export function getScreenInfo(): any {
 }
 
 /**
+ * Android: measureInWindow는 픽셀을 반환함. tap/swipe는 dp를 기대하므로 px → dp 변환.
+ * iOS: 이미 points(dp)로 반환하므로 변환 없음.
+ */
+function toDpIfAndroid(raw: MeasureResult): MeasureResult {
+  try {
+    var rn = typeof require !== 'undefined' && require('react-native');
+    if (!rn || rn.Platform?.OS !== 'android') return raw;
+    var scale = rn.PixelRatio ? rn.PixelRatio.get() : 1;
+    if (scale <= 0) return raw;
+    return {
+      x: raw.x / scale,
+      y: raw.y / scale,
+      width: raw.width / scale,
+      height: raw.height / scale,
+      pageX: raw.pageX / scale,
+      pageY: raw.pageY / scale,
+    };
+  } catch {
+    return raw;
+  }
+}
+
+/**
  * measureView(uid) → Promise<{ x, y, width, height, pageX, pageY }>
  * uid: testID 또는 경로("0.1.2"). query_selector로 얻은 uid 그대로 사용 가능.
  * Fiber에서 native node를 찾아 measureInWindow (Fabric) 또는 measure (Bridge)로 절대 좌표 반환.
@@ -81,14 +104,16 @@ export function measureView(uid: string): Promise<MeasureResult> {
             g.nativeFabricUIManager.measureInWindow(
               shadowNode,
               function (x: number, y: number, w: number, h: number) {
-                resolve({
-                  x: x,
-                  y: y,
-                  width: w,
-                  height: h,
-                  pageX: x + screenOffsetX,
-                  pageY: y + screenOffsetY,
-                });
+                resolve(
+                  toDpIfAndroid({
+                    x: x,
+                    y: y,
+                    width: w,
+                    height: h,
+                    pageX: x + screenOffsetX,
+                    pageY: y + screenOffsetY,
+                  })
+                );
               }
             );
             return;
@@ -101,7 +126,9 @@ export function measureView(uid: string): Promise<MeasureResult> {
             rn.UIManager.measure(
               handle,
               function (x: number, y: number, w: number, h: number, pageX: number, pageY: number) {
-                resolve({ x: x, y: y, width: w, height: h, pageX: pageX, pageY: pageY });
+                resolve(
+                  toDpIfAndroid({ x: x, y: y, width: w, height: h, pageX: pageX, pageY: pageY })
+                );
               }
             );
             return;
@@ -163,14 +190,14 @@ export function measureViewSync(uid: string): MeasureResult | null {
         g.nativeFabricUIManager.measureInWindow(
           shadowNode,
           function (x: number, y: number, w: number, h: number) {
-            result = {
+            result = toDpIfAndroid({
               x: x,
               y: y,
               width: w,
               height: h,
               pageX: x + screenOffsetX,
               pageY: y + screenOffsetY,
-            };
+            });
           }
         );
         return result; // Fabric에서는 콜백이 동기 실행
