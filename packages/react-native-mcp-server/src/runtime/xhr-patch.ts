@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { pushNetworkEntry, truncateBody } from './network-helpers';
+import { pushNetworkEntry, truncateBody, takeCurrentFetchRequestId } from './network-helpers';
 import { findMatchingMock } from './network-mock';
 
 // ─── XHR monkey-patch — 네트워크 요청 캡처 ──────────────────────
@@ -41,6 +41,8 @@ import { findMatchingMock } from './network-mock';
     var entry = this.__mcpNetworkEntry;
     if (entry) {
       entry.requestBody = truncateBody(body);
+      var fetchId = takeCurrentFetchRequestId(entry.url, entry.method);
+      if (fetchId != null) entry.id = fetchId;
 
       // ─── Network mock intercept ──────────────────────
       var mockRule = findMatchingMock(entry.method, entry.url);

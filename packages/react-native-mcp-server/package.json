@@ -39,6 +39,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
+    "./symbolicate": {
+      "types": "./dist/symbolicate.d.ts",
+      "import": "./dist/symbolicate.js",
+      "require": "./dist/symbolicate.js"
+    },
     "./runtime": "./runtime.js",
     "./runtime.js": "./runtime.js",
     "./babel-preset": "./babel-preset.cjs",
