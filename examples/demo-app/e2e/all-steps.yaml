@@ -220,15 +220,16 @@ steps:
   # ─── Step 32: Bottom sheet ─────────────────────────────────────────
   # Animated.View(translateY) → measureInWindow가 transform 포함 좌표를 반환해
   # center가 화면 밖으로 계산됨. viewport clamping이 자동으로 visible rect 내 좌표로 보정.
-  # Android/CI에서 Pan 인식이 부족할 수 있어 distance/duration 확대 + swipe 후 대기.
+  # Pan onEnd: wantOpen = velocityY < -100 || sheetOffset < 90. iOS CI(idb)에서 터치 샘플링/속도
+  # 차이로 열리지 않을 수 있으므로 distance·duration·대기 시간을 넉넉히 준다.
   - swipe:
       {
         selector: 'GestureDetector View:text("Bottom sheet")',
         direction: 'up',
-        distance: '50%',
-        duration: 600,
+        distance: '70%',
+        duration: 800,
       }
-  - wait: 500
+  - wait: 1200
   - waitForText: { text: '상태: 열림', selector: '#sheet-status', timeout: 5000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#toggle-target', timeout: 5000 }
