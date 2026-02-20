@@ -1,4 +1,5 @@
 import { MCP } from './mcp-object';
+import { setOverlayTopInsetDp } from './shared';
 
 // ─── WebSocket 연결 (__DEV__ 자동 · 릴리즈는 REACT_NATIVE_MCP_ENABLED로 Metro 실행) ─
 
@@ -139,6 +140,10 @@ function connect(): void {
           clearTimeout(_pongTimer);
           _pongTimer = null;
         }
+        return;
+      }
+      if (msg.type === 'setTopInsetDp' && typeof msg.topInsetDp === 'number') {
+        setOverlayTopInsetDp(msg.topInsetDp);
         return;
       }
       if (msg.method === 'eval' && msg.id != null) {

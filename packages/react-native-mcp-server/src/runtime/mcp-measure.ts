@@ -1,6 +1,7 @@
 import type { Fiber, MeasureResult } from './types';
 import { getFiberRoot } from './fiber-helpers';
 import { isPathUid, getFiberByPath } from './query-selector';
+import { overlayTopInsetDp } from './shared';
 import { resolveScreenOffset, screenOffsetX, screenOffsetY } from './screen-offset';
 
 /**
@@ -14,13 +15,23 @@ export function getScreenInfo(): any {
     var win = rn.Dimensions.get('window');
     var pixelRatio = rn.PixelRatio ? rn.PixelRatio.get() : 1;
     var fontScale = rn.PixelRatio ? rn.PixelRatio.getFontScale() : 1;
-    return {
+    var out: Record<string, unknown> = {
       screen: { width: screen.width, height: screen.height },
       window: { width: win.width, height: win.height },
       scale: pixelRatio,
       fontScale: fontScale,
       orientation: win.width > win.height ? 'landscape' : 'portrait',
     };
+    if (
+      rn.Platform &&
+      rn.Platform.OS === 'android' &&
+      rn.StatusBar &&
+      typeof (rn.StatusBar as any).currentHeight === 'number'
+    ) {
+      out.statusBarHeightDp = (rn.StatusBar as any).currentHeight / pixelRatio;
+    }
+    if (overlayTopInsetDp > 0) out.overlayTopInsetDp = overlayTopInsetDp;
+    return out;
   } catch (e) {
     return { error: String(e) };
   }

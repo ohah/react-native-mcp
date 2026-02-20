@@ -35,6 +35,7 @@ import {
   setOverlayMaxHighlights,
   setOverlaySetHighlights as setOverlaySetHighlightsFn,
   resetOverlay,
+  overlayTopInsetDp,
 } from './shared';
 import { resolveScreenOffset, screenOffsetX, screenOffsetY } from './screen-offset';
 
@@ -500,16 +501,28 @@ export function getOverlayComponent(): any {
 
     if (!overlayActive || highlights.length === 0) return null;
 
+    // Android: measureInWindow는 콘텐츠(윈도우) 기준 좌표를 반환하는데, 오버레이 루트는 화면 전체(0,0=상태바 위)라
+    // y에 상태바 높이(dp)를 더해 정렬. RN 이슈 #19497. 서버가 setTopInsetDp로 보낸 값 우선(tap/swipe와 동일).
+    var topInsetDp = 0;
+    if (RN.Platform.OS === 'android') {
+      if (overlayTopInsetDp > 0) {
+        topInsetDp = overlayTopInsetDp;
+      } else if (RN.StatusBar && typeof (RN.StatusBar as any).currentHeight === 'number') {
+        var ratio = RN.PixelRatio && RN.PixelRatio.get ? RN.PixelRatio.get() : 1;
+        topInsetDp = (RN.StatusBar as any).currentHeight / ratio;
+      }
+    }
     var children = [];
     for (var i = 0; i < highlights.length; i++) {
       var h = highlights[i]!;
       var alpha = h.alpha > 0 ? h.alpha : 0;
+      var drawY = h.y + topInsetDp;
 
       // react-scan 스타일: purple stroke + 10% fill (라벨은 별도 노드로 아래에서 추가)
       var rectStyle = {
         position: 'absolute' as const,
         left: h.x,
-        top: h.y,
+        top: drawY,
         width: h.width,
         height: h.height,
         borderWidth: 1,
@@ -528,7 +541,7 @@ export function getOverlayComponent(): any {
         var labelContainerStyle = {
           position: 'absolute' as const,
           left: h.x,
-          top: h.y - 16,
+          top: drawY - 16,
           backgroundColor: 'rgba(' + PRIMARY_COLOR + ',' + alpha.toFixed(2) + ')',
           paddingHorizontal: 3,
           paddingVertical: 1,

@@ -154,12 +154,15 @@ export class AppSession {
 
   /**
    * 수동으로 Android top inset(dp) 설정.
-   * ADB 자동 감지 결과를 덮어쓴다.
+   * ADB 자동 감지 결과를 덮어쓴다. 앱 오버레이에도 전달한다.
    */
   setTopInsetDp(dp: number, deviceId?: string, platform?: string): void {
     const conn = this.resolveDevice(deviceId, platform);
     const ratio = conn.pixelRatio ?? 1;
     conn.topInsetPx = Math.round(dp * ratio);
+    if (conn.platform === 'android' && conn.ws.readyState === 1) {
+      conn.ws.send(JSON.stringify({ type: 'setTopInsetDp', topInsetDp: dp }));
+    }
   }
 
   /** 디버깅: WebSocket 서버/클라이언트 상태 */
@@ -332,17 +335,25 @@ export class AppSession {
               devices: this.getConnectedDevices(),
             });
 
-            // Android: top inset 감지 (비동기, 연결 차단하지 않음)
+            // Android: top inset 감지 (비동기, 연결 차단하지 않음). 앱 오버레이 좌표 보정용으로 앱에 전달.
             if (platform === 'android') {
+              const ratio = pixelRatio ?? 1;
+              const sendTopInsetToApp = (px: number) => {
+                if (conn.ws.readyState === 1) {
+                  const topInsetDp = px / ratio;
+                  conn.ws.send(JSON.stringify({ type: 'setTopInsetDp', topInsetDp }));
+                }
+              };
               // init 메시지에 topInsetDp가 있으면 수동 오버라이드
               const userTopInset = typeof msg.topInsetDp === 'number' ? msg.topInsetDp : null;
               if (userTopInset != null) {
-                const ratio = pixelRatio ?? 1;
                 conn.topInsetPx = Math.round(userTopInset * ratio);
+                sendTopInsetToApp(conn.topInsetPx);
               } else {
                 getAndroidTopInset()
                   .then((px) => {
                     conn.topInsetPx = px;
+                    sendTopInsetToApp(px);
                   })
                   .catch(() => {
                     /* keep 0 */
