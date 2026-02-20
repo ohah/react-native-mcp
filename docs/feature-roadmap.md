@@ -605,7 +605,7 @@ npx @ohah/react-native-mcp-server test run e2e/ --no-auto-launch
 | **HTML**              | 스크린샷 포함 시각적 리포트. 브라우저에서 열기 | ★★☆    | ✓ 완료 |
 | **Slack/Discord**     | 웹훅으로 결과 요약 전송. 실패 시 스크린샷 경로 | ★★☆    | ✓ 완료 |
 | **GitHub PR Comment** | `gh` CLI로 PR에 결과 코멘트 자동 작성          | ★☆☆    | ✓ 완료 |
-| **Dashboard**         | 시간별 추이, flaky 테스트 감지, 통계           | ★★★    | 미구현 |
+| **Dashboard**         | 시간별 추이, flaky 테스트 감지, 통계           | ★★★    | ✓ 완료 |
 
 **HTML 리포트 예시**:
 
@@ -632,7 +632,7 @@ npx @ohah/react-native-mcp-server test run e2e/ -p ios -r slack --slack-webhook 
 
 **난이도**: HTML ★★☆, Slack ★★☆, GitHub PR ★☆☆, Dashboard ★★★
 
-**Dashboard 미포함 이유**: 시간별 추이·flaky 감지·통계는 실행 이력 저장, 시계열 데이터, flaky 판정 로직, 전용 UI/서비스가 필요해 범위가 크고(★★★) 별도 이슈/PR로 진행하는 것이 적절함.
+**Dashboard**: 구현 완료. `-r dashboard -o <dir>` 실행 시 `runs.json` 누적, `test report show -o <dir>`로 웹 대시보드 서빙·브라우저 오픈. 사용법은 document 사이트의 E2E 대시보드 문서 참고.
 
 **구현 방향 (제안)**: Playwright 형태가 가장 안정적. 로컬에서 생성하는 **단일 HTML 리포트**를 기본으로 두고, 매 실행마다 쌓는 **실행 이력**(run 결과 JSON)을 그 리포트가 읽어서 **추이·flaky**를 표시. 서버/DB 없이 로컬 디렉터리 또는 CI 아티팩트만으로 동작. (참고: “다중 런”은 **시간순 이력 누적**만 의미함. 여러 기기 동시 실행·merge는 계획에 없음.)
 
@@ -839,6 +839,7 @@ npx react-native-mcp-server init --yes             # 프롬프트 스킵
  ├─ ✓ 접근성 자동 감사            ★★☆  — 4개 규칙 (pressable-label, image-alt, touch-size, role)
  ├─ ✓ 비주얼 리그레션             ★★☆  — pixelmatch + 컴포넌트 크롭
  ├─ ✓ 리포팅 (HTML/Slack/GitHub)  ★★☆  — 3개 리포터 추가
+ ├─ ✓ Dashboard 리포터             ★★★  — runs.json, flaky, 스텝 상세, test report show
  ├─ ✓ CI/CD 통합                  ★★☆  — iOS + Android GitHub Actions 워크플로우
  ├─ ✓ 원커맨드 셋업               ★★☆  — react-native-mcp-server init
  ├─ ✓ 리렌더 프로파일링           ★★★  — PerformedWork flag 기반 bail-out 판별 + trigger 분석
@@ -846,7 +847,6 @@ npx react-native-mcp-server init --yes             # 프롬프트 스킵
  └─ ✓ VS Code 확장 (Phase 1~3)   ★★★  — Console/Network/State/Render 패널, 컴포넌트 트리, 접근성
 
 미완료 — 중기 ──────────────────────────────────────────────
- ├─ 11. Dashboard 리포터           ★★★  — 시계열 추이, flaky 감지, 통계
  └─ 14. 문서 + 예제                ★★☆  — 퀵스타트, API docs, 데모 영상
 
 미완료 — 장기 ──────────────────────────────────────────────
@@ -873,7 +873,6 @@ npx react-native-mcp-server init --yes             # 프롬프트 스킵
 | ---------------------- | --------------------- | ----------------------- |
 | E2E: `pinch`           | 서버 도구 신규 + 전체 | 멀티터치 — idb/adb 제한 |
 | waitForIdle (Animated) | runtime.js            | RN 내부 API 버전 호환성 |
-| Dashboard 리포터       | 새 패키지             | 시계열 DB + UI          |
 
 ### 추천 구현 순서 (남은 항목)
 
