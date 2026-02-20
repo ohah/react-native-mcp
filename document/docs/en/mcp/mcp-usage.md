@@ -91,7 +91,7 @@ Once connected, **42 tools** are available across 12 categories — interaction,
 
 Ask the AI to "take a snapshot of the app" or "tap the login button" and it will call these tools automatically.
 
-For detailed parameters, examples, and platform-specific tips for every tool, see the **[Tool Reference](./tools/)**. For real-world usage scenarios, check out the **[Cookbook](./cookbook/)**.
+For detailed parameters, examples, and platform-specific tips for every tool, see the **[Tool Reference](./tools)**. For real-world usage scenarios, check out the **[Cookbook](./cookbook)**.
 
 ---
 
