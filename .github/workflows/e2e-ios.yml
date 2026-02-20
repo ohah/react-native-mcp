@@ -175,6 +175,8 @@ jobs:
           xcrun simctl install booted "$APP_PATH"
 
       - name: E2E YAML 테스트 실행
+        env:
+          REACT_NATIVE_MCP_TAP_TIMEOUT_MS: 25000
         run: node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/ -p ios -o e2e-artifacts/yaml-results --no-auto-launch
 
       - name: 실패 시 스크린샷·로그 저장

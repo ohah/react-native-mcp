@@ -21,6 +21,12 @@ import {
 } from './adb-utils.js';
 import { getIOSOrientationInfo, transformForIdb } from './ios-landscape.js';
 
+/** idb/adb tap 명령 타임아웃(ms). 기본 10s. CI 등 느린 환경에서는 REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000 설정. */
+const TAP_TIMEOUT_MS =
+  typeof process.env.REACT_NATIVE_MCP_TAP_TIMEOUT_MS !== 'undefined'
+    ? Math.max(5000, parseInt(process.env.REACT_NATIVE_MCP_TAP_TIMEOUT_MS, 10) || 10000)
+    : 10000;
+
 const schema = z.object({
   platform: z.enum(['ios', 'android']).describe('ios or android.'),
   x: z.number().describe('X in points (dp). Pixels auto on Android.'),
@@ -70,7 +76,7 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
           const iy = Math.round(t.y);
           const cmd = ['ui', 'tap', String(ix), String(iy)];
           if (isLongPress) cmd.push('--duration', String(duration / 1000));
-          await runIdbCommand(cmd, udid);
+          await runIdbCommand(cmd, udid, { timeoutMs: TAP_TIMEOUT_MS });
           // Allow UI to update before returning so callers (e.g. assert_text) see the result.
           await new Promise((r) => setTimeout(r, 300));
           return {
@@ -102,10 +108,13 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
                 String(py),
                 String(duration),
               ],
-              serial
+              serial,
+              { timeoutMs: TAP_TIMEOUT_MS }
             );
           } else {
-            await runAdbCommand(['shell', 'input', 'tap', String(px), String(py)], serial);
+            await runAdbCommand(['shell', 'input', 'tap', String(px), String(py)], serial, {
+              timeoutMs: TAP_TIMEOUT_MS,
+            });
           }
           // Allow UI to update before returning so callers (e.g. assert_text) see the result.
           await new Promise((r) => setTimeout(r, 300));
