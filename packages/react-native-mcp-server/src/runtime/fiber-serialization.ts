@@ -54,8 +54,7 @@ export function fiberToResult(fiber: Fiber, TextComp: any, ImgComp: any): any {
       return null;
     })(fiber.child);
     if (hostChild) {
-      var hostUid =
-        (hostChild.memoizedProps && hostChild.memoizedProps.testID) || getPathUid(hostChild);
+      var hostUid = getPathUid(hostChild);
       try {
         measure = measureViewSync(hostUid);
       } catch (e) {}
