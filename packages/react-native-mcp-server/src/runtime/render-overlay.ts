@@ -132,15 +132,21 @@ export interface HighlightData {
   _fadeTimerId?: ReturnType<typeof setInterval>; // 머지 시 재페이드용
 }
 
-// ─── getNearestHostFibers (bippy getNearestHostFibers와 동일 DFS 패턴) ───
-// bippy는 isHostFiber(tag 5,26,27 또는 type==='string'); RN은 host가 tag 5만 해당.
+// ─── getNearestHostFibers (bippy getNearestHostFibers와 동일) ─────────────
+// bippy isHostFiber: tag 5(HostComponent), 26(HostHoistable), 27(HostSingleton) 또는 type==='string'.
+
+function isHostFiber(fiber: Fiber): boolean {
+  var tag = fiber.tag;
+  if (tag === 5 || tag === 26 || tag === 27) return true;
+  return typeof fiber.type === 'string';
+}
 
 /** DFS로 composite fiber 아래의 모든 최근접 host fiber 수집 */
 function getNearestHostFibers(fiber: Fiber): Fiber[] {
   var hostFibers: Fiber[] = [];
   var stack: Fiber[] = [];
 
-  if (fiber.tag === 5 && fiber.stateNode) {
+  if (isHostFiber(fiber) && fiber.stateNode) {
     hostFibers.push(fiber);
   } else if (fiber.child) {
     stack.push(fiber.child);
@@ -148,9 +154,8 @@ function getNearestHostFibers(fiber: Fiber): Fiber[] {
 
   while (stack.length > 0) {
     var current = stack.pop()!;
-    if (current.tag === 5 && current.stateNode) {
+    if (isHostFiber(current) && current.stateNode) {
       hostFibers.push(current);
-      // host fiber 발견 → 이 branch 하위 탐색 중지 (sibling은 계속)
     } else if (current.child) {
       stack.push(current.child);
     }
