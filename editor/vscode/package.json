@@ -65,6 +65,10 @@
       {
         "command": "rnMcp.runAccessibilityAudit",
         "title": "React Native MCP: Run Accessibility Audit"
+      },
+      {
+        "command": "rnMcp.revealComponentSource",
+        "title": "React Native MCP: Go to Component Source"
       }
     ],
     "viewsContainers": {

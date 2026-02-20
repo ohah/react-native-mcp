@@ -11,6 +11,7 @@ import { PanelManager } from './webview/panel-manager';
 import { SidebarViewProvider } from './webview/sidebar-view-provider';
 import { ComponentTreeProvider } from './tree-view/component-tree-provider';
 import { AccessibilityDiagnostics } from './codelens/accessibility-diagnostics';
+import { revealComponentSource } from './reveal-component-source';
 
 let client: WsClient;
 let statusBar: StatusBar;
@@ -48,6 +49,9 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand('rnMcp.runAccessibilityAudit', () => {
       accessibilityDiag.run();
+    }),
+    vscode.commands.registerCommand('rnMcp.revealComponentSource', (identifier: string) => {
+      revealComponentSource(identifier);
     }),
     treeView,
     statusBar,
