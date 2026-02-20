@@ -1,5 +1,5 @@
-import { NETWORK_BODY_LIMIT } from './shared';
-import { pushNetworkEntry, truncateBody } from './network-helpers';
+import { NETWORK_BODY_LIMIT, nextNetworkRequestId } from './shared';
+import { pushNetworkEntry, truncateBody, setCurrentFetchRequest } from './network-helpers';
 import { findMatchingMock } from './network-mock';
 
 // ─── fetch monkey-patch — 네이티브 fetch 요청 캡처 ──────────────
@@ -73,8 +73,11 @@ import { findMatchingMock } from './network-mock';
       }
     }
 
+    var requestId = nextNetworkRequestId();
+    setCurrentFetchRequest(url, method, requestId);
+
     var entry: any = {
-      id: 0,
+      id: requestId,
       method: method,
       url: url,
       requestHeaders: requestHeaders,

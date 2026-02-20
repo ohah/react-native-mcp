@@ -451,6 +451,14 @@ body {
   white-space: nowrap;
 }
 
+.state-goto-source {
+  margin-left: 6px;
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .state-expand-icon {
   font-size: 10px;
   opacity: 0.5;

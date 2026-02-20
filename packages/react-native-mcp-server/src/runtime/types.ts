@@ -43,6 +43,8 @@ export interface NetworkEntry {
   duration: number | null;
   error: string | null;
   state: string;
+  /** true when the response was returned by a network mock rule */
+  mocked?: boolean;
 }
 
 export interface StateChangeEntry {
@@ -52,6 +54,8 @@ export interface StateChangeEntry {
   hookIndex: number;
   prev: any;
   next: any;
+  /** 소스맵 추론용. fiber._debugStack에서 추출한 (bundleUrl, line, column) 목록 */
+  sourceRef?: Array<{ bundleUrl: string; line: number; column: number }>;
 }
 
 export interface RenderEntry {

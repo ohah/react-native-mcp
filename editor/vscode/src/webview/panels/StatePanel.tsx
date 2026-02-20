@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { sendRequest } from '../hooks/useExtensionMessage';
 import { useAppState } from '../App';
+import { JsonViewer } from '../components/JsonViewer';
+
+type SourceRef = Array<{ bundleUrl: string; line: number; column: number }>;
 
 interface StateEntry {
   id: number;
@@ -9,6 +12,7 @@ interface StateEntry {
   hookIndex: number;
   prev: unknown;
   next: unknown;
+  sourceRef?: SourceRef;
 }
 
 // ─── Helpers ───
@@ -120,14 +124,14 @@ function UnifiedDiff({ prev, next }: { prev: unknown; next: unknown }) {
     );
   }
 
-  // Fallback: type mismatch
+  // Fallback: type mismatch or other — 배열/객체는 JsonViewer로 펼침 가능
   return (
     <div className="state-unified-diff">
       <div className="diff-line diff-removed">
-        <span className="diff-marker">-</span> {JSON.stringify(prev)}
+        <span className="diff-marker">-</span> {renderDiffValue(prev)}
       </div>
       <div className="diff-line diff-added">
-        <span className="diff-marker">+</span> {JSON.stringify(next)}
+        <span className="diff-marker">+</span> {renderDiffValue(next)}
       </div>
     </div>
   );
@@ -156,7 +160,7 @@ function ObjectDiff({
           return (
             <div key={key} className="diff-line diff-added">
               <span className="diff-marker">+</span>
-              <span className="diff-key">{key}</span>: {renderInlineValue(next[key])}
+              <span className="diff-key">{key}</span>: {renderDiffValue(next[key])}
             </div>
           );
         }
@@ -164,7 +168,7 @@ function ObjectDiff({
           return (
             <div key={key} className="diff-line diff-removed">
               <span className="diff-marker">-</span>
-              <span className="diff-key">{key}</span>: {renderInlineValue(prev[key])}
+              <span className="diff-key">{key}</span>: {renderDiffValue(prev[key])}
             </div>
           );
         }
@@ -173,11 +177,11 @@ function ObjectDiff({
             <div key={key}>
               <div className="diff-line diff-removed">
                 <span className="diff-marker">-</span>
-                <span className="diff-key">{key}</span>: {renderInlineValue(prev[key])}
+                <span className="diff-key">{key}</span>: {renderDiffValue(prev[key])}
               </div>
               <div className="diff-line diff-added">
                 <span className="diff-marker">+</span>
-                <span className="diff-key">{key}</span>: {renderInlineValue(next[key])}
+                <span className="diff-key">{key}</span>: {renderDiffValue(next[key])}
               </div>
             </div>
           );
@@ -186,7 +190,7 @@ function ObjectDiff({
         return (
           <div key={key} className="diff-line diff-unchanged">
             <span className="diff-marker"> </span>
-            <span className="diff-key">{key}</span>: {renderInlineValue(prev[key])}
+            <span className="diff-key">{key}</span>: {renderDiffValue(prev[key])}
           </div>
         );
       })}
@@ -210,7 +214,7 @@ function ArrayDiff({ prev, next }: { prev: unknown[]; next: unknown[] }) {
           return (
             <div key={i} className="diff-line diff-added">
               <span className="diff-marker">+</span>
-              <span className="diff-key">[{i}]</span> {renderInlineValue(next[i])}
+              <span className="diff-key">[{i}]</span> {renderDiffValue(next[i])}
             </div>
           );
         }
@@ -218,7 +222,7 @@ function ArrayDiff({ prev, next }: { prev: unknown[]; next: unknown[] }) {
           return (
             <div key={i} className="diff-line diff-removed">
               <span className="diff-marker">-</span>
-              <span className="diff-key">[{i}]</span> {renderInlineValue(prev[i])}
+              <span className="diff-key">[{i}]</span> {renderDiffValue(prev[i])}
             </div>
           );
         }
@@ -227,11 +231,11 @@ function ArrayDiff({ prev, next }: { prev: unknown[]; next: unknown[] }) {
             <div key={i}>
               <div className="diff-line diff-removed">
                 <span className="diff-marker">-</span>
-                <span className="diff-key">[{i}]</span> {renderInlineValue(prev[i])}
+                <span className="diff-key">[{i}]</span> {renderDiffValue(prev[i])}
               </div>
               <div className="diff-line diff-added">
                 <span className="diff-marker">+</span>
-                <span className="diff-key">[{i}]</span> {renderInlineValue(next[i])}
+                <span className="diff-key">[{i}]</span> {renderDiffValue(next[i])}
               </div>
             </div>
           );
@@ -239,7 +243,7 @@ function ArrayDiff({ prev, next }: { prev: unknown[]; next: unknown[] }) {
         return (
           <div key={i} className="diff-line diff-unchanged">
             <span className="diff-marker"> </span>
-            <span className="diff-key">[{i}]</span> {renderInlineValue(prev[i])}
+            <span className="diff-key">[{i}]</span> {renderDiffValue(prev[i])}
           </div>
         );
       })}
@@ -264,6 +268,14 @@ function renderInlineValue(v: unknown): React.ReactNode {
   if (Array.isArray(v)) return <span className="json-null">Array({v.length})</span>;
   if (typeof v === 'object') return <span className="json-null">{'{…}'}</span>;
   return <span>{String(v)}</span>;
+}
+
+/** 배열/객체는 JsonViewer로 펼침 가능, 나머지는 인라인 */
+function renderDiffValue(v: unknown): React.ReactNode {
+  if (v === null || v === undefined || typeof v !== 'object') {
+    return renderInlineValue(v);
+  }
+  return <JsonViewer data={v} defaultExpanded={false} />;
 }
 
 // ─── Component group ───
@@ -300,10 +312,12 @@ function StateRow({
   entry,
   isExpanded,
   onToggle,
+  onGoToSource,
 }: {
   entry: StateEntry;
   isExpanded: boolean;
   onToggle: () => void;
+  onGoToSource?: (sourceRef: SourceRef) => void;
 }) {
   return (
     <div className={`state-row ${isExpanded ? 'expanded' : ''}`}>
@@ -312,6 +326,19 @@ function StateRow({
         <span className="state-comp-name">{entry.component}</span>
         <span className="state-hook">#{entry.hookIndex}</span>
         <span className="state-summary">{summarizeChange(entry.prev, entry.next)}</span>
+        {entry.sourceRef?.length ? (
+          <button
+            type="button"
+            className="state-goto-source"
+            onClick={(e) => {
+              e.stopPropagation();
+              onGoToSource?.(entry.sourceRef!);
+            }}
+            title="Go to source"
+          >
+            Go to source
+          </button>
+        ) : null}
         <span className="state-expand-icon">{isExpanded ? '▾' : '▸'}</span>
       </div>
       {isExpanded && (
@@ -329,10 +356,12 @@ function GroupedEntryRow({
   entry,
   isExpanded,
   onToggle,
+  onGoToSource,
 }: {
   entry: StateEntry;
   isExpanded: boolean;
   onToggle: () => void;
+  onGoToSource?: (sourceRef: SourceRef) => void;
 }) {
   const isSimple = isPrimitive(entry.prev) && isPrimitive(entry.next);
 
@@ -351,6 +380,19 @@ function GroupedEntryRow({
         ) : (
           <>
             <span className="state-summary">{summarizeChange(entry.prev, entry.next)}</span>
+            {entry.sourceRef?.length ? (
+              <button
+                type="button"
+                className="state-goto-source"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGoToSource?.(entry.sourceRef!);
+                }}
+                title="Go to source"
+              >
+                Go to source
+              </button>
+            ) : null}
             <span className="state-expand-icon">{isExpanded ? '▾' : '▸'}</span>
           </>
         )}
@@ -369,9 +411,11 @@ function GroupedEntryRow({
 function GroupedView({
   entries,
   componentFilter,
+  onGoToSource,
 }: {
   entries: StateEntry[];
   componentFilter: string;
+  onGoToSource?: (sourceRef: SourceRef) => void;
 }) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -425,6 +469,7 @@ function GroupedView({
                     entry={entry}
                     isExpanded={expandedId === entry.id}
                     onToggle={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
+                    onGoToSource={onGoToSource}
                   />
                 ))}
               </div>
@@ -487,6 +532,24 @@ export function StatePanel() {
     }
   };
 
+  const handleGoToSource = useCallback(async (sourceRef: SourceRef) => {
+    try {
+      const result = await sendRequest('resolveSourceRef', { sourceRef });
+      if (
+        result &&
+        typeof result === 'object' &&
+        'ok' in result &&
+        !result.ok &&
+        'message' in result
+      ) {
+        // eslint-disable-next-line no-alert
+        alert((result as { message: string }).message);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const filteredEntries = useMemo(() => {
     if (!componentFilter) return entries;
     return entries.filter((e) => e.component.toLowerCase().includes(componentFilter.toLowerCase()));
@@ -531,7 +594,11 @@ export function StatePanel() {
         ) : entries.length === 0 ? (
           <div className="empty-state">No state changes recorded</div>
         ) : viewMode === 'grouped' ? (
-          <GroupedView entries={entries} componentFilter={componentFilter} />
+          <GroupedView
+            entries={entries}
+            componentFilter={componentFilter}
+            onGoToSource={handleGoToSource}
+          />
         ) : /* Timeline view */
         filteredEntries.length === 0 ? (
           <div className="empty-state">No matches for "{componentFilter}"</div>
@@ -542,6 +609,7 @@ export function StatePanel() {
               entry={entry}
               isExpanded={expandedId === entry.id}
               onToggle={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
+              onGoToSource={handleGoToSource}
             />
           ))
         )}

@@ -156,6 +156,9 @@ export function getTextNodes(): Array<{ text: string; testID?: string }> {
   }
 }
 
+/** 내부용 컴포넌트 — 트리에서 노드로 노출하지 않고 자식만 상위에 이어붙임 */
+const HIDDEN_TREE_TYPES = new Set(['RenderOverlay', 'MCPRoot']);
+
 /**
  * Fiber 트리 전체를 컴포넌트 트리로 직렬화. querySelector 대체용 스냅샷.
  * 노드: { uid, type, testID?, accessibilityLabel?, text?, children? }
@@ -169,12 +172,33 @@ export function getComponentTree(options: any): any {
     var c = getRNComponents();
     var TextComponent = c && c.Text;
     var maxDepth = options && typeof options.maxDepth === 'number' ? options.maxDepth : 999;
-    function buildNode(fiber: Fiber, path: string, depth: number): any {
+    function buildNode(fiber: Fiber, path: string, depth: number): any | any[] {
       if (!fiber || depth > maxDepth) return null;
       var props = fiber.memoizedProps || {};
       var testID =
         typeof props.testID === 'string' && props.testID.trim() ? props.testID.trim() : undefined;
       var typeName = getFiberTypeName(fiber);
+      var displayName =
+        typeof fiber.type === 'object' &&
+        fiber.type != null &&
+        typeof (fiber.type as any).displayName === 'string'
+          ? (fiber.type as any).displayName
+          : '';
+      var isHidden = HIDDEN_TREE_TYPES.has(typeName) || HIDDEN_TREE_TYPES.has(displayName);
+      if (isHidden) {
+        var out: any[] = [];
+        var child = fiber.child;
+        var idx = 0;
+        while (child) {
+          var childPath = path + '.' + idx;
+          var childResult = buildNode(child, childPath, depth + 1);
+          if (Array.isArray(childResult)) out.push(...childResult);
+          else if (childResult) out.push(childResult);
+          child = child.sibling;
+          idx += 1;
+        }
+        return out.length ? out : null;
+      }
       var uid = testID || path;
       var node: any = {
         uid: uid,
@@ -192,15 +216,21 @@ export function getComponentTree(options: any): any {
       var idx = 0;
       while (child) {
         var childPath = path + '.' + idx;
-        var childNode = buildNode(child, childPath, depth + 1);
-        if (childNode) children.push(childNode);
+        var childResult = buildNode(child, childPath, depth + 1);
+        if (Array.isArray(childResult)) children.push(...childResult);
+        else if (childResult) children.push(childResult);
         child = child.sibling;
         idx += 1;
       }
       if (children.length) node.children = children;
       return node;
     }
-    return buildNode(root, '0', 0);
+    var result = buildNode(root, '0', 0);
+    return Array.isArray(result)
+      ? result.length === 1
+        ? result[0]
+        : { uid: '0', type: 'Root', children: result }
+      : result;
   } catch (e) {
     return null;
   }
