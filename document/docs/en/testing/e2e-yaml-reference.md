@@ -30,7 +30,7 @@ teardown?: Step[] # Run on exit (optional)
 
 ## Step types
 
-The runner supports **33 step types** across 7 categories. See the [Steps Reference](./steps) for full details on every step.
+The runner supports **33 step types** across 7 categories. See the [Steps Reference](./steps/overview) for full details on every step.
 
 | Category                                  | Steps | Description                                          |
 | ----------------------------------------- | ----- | ---------------------------------------------------- |

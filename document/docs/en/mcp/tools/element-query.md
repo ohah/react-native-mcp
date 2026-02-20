@@ -8,11 +8,11 @@ Find the first element matching a selector in the React Fiber tree. Returns UID,
 
 #### Parameters
 
-| Parameter  | Type                 | Required | Description                                                                |
-| ---------- | -------------------- | -------- | -------------------------------------------------------------------------- |
-| `selector` | `string`             | **Yes**  | Selector for the RN Fiber tree (see [Selector Syntax](./#selector-syntax)) |
-| `platform` | `"ios" \| "android"` | No       | Target platform                                                            |
-| `deviceId` | `string`             | No       | Target device                                                              |
+| Parameter  | Type                 | Required | Description                                                                        |
+| ---------- | -------------------- | -------- | ---------------------------------------------------------------------------------- |
+| `selector` | `string`             | **Yes**  | Selector for the RN Fiber tree (see [Selector Syntax](./overview#selector-syntax)) |
+| `platform` | `"ios" \| "android"` | No       | Target platform                                                                    |
+| `deviceId` | `string`             | No       | Target device                                                                      |
 
 #### Example
 
