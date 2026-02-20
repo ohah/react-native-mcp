@@ -1,5 +1,5 @@
 [
-  { "type": "file", "name": "index", "label": "개요" },
+  { "type": "file", "name": "overview", "label": "개요" },
   { "type": "file", "name": "debug-ui", "label": "UI 디버깅" },
   { "type": "file", "name": "network-mocking", "label": "네트워크 모킹" },
   { "type": "file", "name": "performance", "label": "성능 프로파일링" },

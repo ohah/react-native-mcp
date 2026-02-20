@@ -1,5 +1,5 @@
 [
-  { "type": "file", "name": "index", "label": "개요" },
+  { "type": "file", "name": "overview", "label": "개요" },
   { "type": "file", "name": "device", "label": "디바이스 & 상태" },
   { "type": "file", "name": "screen-capture", "label": "화면 캡처" },
   { "type": "file", "name": "element-query", "label": "엘리먼트 쿼리" },

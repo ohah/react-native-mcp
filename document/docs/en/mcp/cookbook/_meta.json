@@ -1,5 +1,5 @@
 [
-  { "type": "file", "name": "index", "label": "Overview" },
+  { "type": "file", "name": "overview", "label": "Overview" },
   { "type": "file", "name": "debug-ui", "label": "UI Debugging" },
   { "type": "file", "name": "network-mocking", "label": "Network Mocking" },
   { "type": "file", "name": "performance", "label": "Performance Profiling" },

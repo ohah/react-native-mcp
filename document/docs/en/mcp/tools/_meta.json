@@ -1,5 +1,5 @@
 [
-  { "type": "file", "name": "index", "label": "Overview" },
+  { "type": "file", "name": "overview", "label": "Overview" },
   { "type": "file", "name": "device", "label": "Device & Status" },
   { "type": "file", "name": "screen-capture", "label": "Screen Capture" },
   { "type": "file", "name": "element-query", "label": "Element Query" },
