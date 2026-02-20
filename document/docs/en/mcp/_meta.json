@@ -6,6 +6,18 @@
   { "type": "file", "name": "expo-guide", "label": "Expo Guide" },
   { "type": "file", "name": "vscode-extension", "label": "VS Code Extension" },
   { "type": "file", "name": "troubleshooting", "label": "Troubleshooting" },
-  { "type": "dir", "name": "tools", "label": "Tool Reference" },
-  { "type": "dir", "name": "cookbook", "label": "Cookbook" }
+  {
+    "type": "dir",
+    "name": "tools",
+    "label": "Tool Reference",
+    "collapsible": true,
+    "collapsed": false
+  },
+  {
+    "type": "dir",
+    "name": "cookbook",
+    "label": "Cookbook",
+    "collapsible": true,
+    "collapsed": false
+  }
 ]

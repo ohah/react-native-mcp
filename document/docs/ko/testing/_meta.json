@@ -2,6 +2,12 @@
   { "type": "file", "name": "index", "label": "설치" },
   "getting-started",
   { "type": "file", "name": "e2e-yaml-reference", "label": "YAML" },
-  { "type": "dir", "name": "steps", "label": "스텝 레퍼런스" },
+  {
+    "type": "dir",
+    "name": "steps",
+    "label": "스텝 레퍼런스",
+    "collapsible": true,
+    "collapsed": false
+  },
   { "type": "file", "name": "e2e-github-actions", "label": "GitHub Actions" }
 ]

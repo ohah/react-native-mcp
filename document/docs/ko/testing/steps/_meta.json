@@ -1,5 +1,5 @@
 [
-  { "type": "file", "name": "index", "label": "개요" },
+  { "type": "file", "name": "overview", "label": "개요" },
   { "type": "file", "name": "interaction", "label": "인터랙션" },
   { "type": "file", "name": "assertions", "label": "검증" },
   { "type": "file", "name": "waits", "label": "대기" },

@@ -1,5 +1,5 @@
 [
-  { "type": "file", "name": "index", "label": "Overview" },
+  { "type": "file", "name": "overview", "label": "Overview" },
   { "type": "file", "name": "interaction", "label": "Interaction" },
   { "type": "file", "name": "assertions", "label": "Assertions" },
   { "type": "file", "name": "waits", "label": "Waits" },
