@@ -157,8 +157,8 @@ jobs:
           echo "=== Available simulators (name, udid) ==="
           xcrun simctl list devices available --json | jq -r '.devices | to_entries[] | "--- \(.key) ---", (.value[] | "\(.name) | \(.udid)")"' || true
 
-          # 기기 이름: .ios-simulator-device 파일 > vars.IOS_SIMULATOR_DEVICE > 기본 iPad Air 11-inch
-          DEVICE_NAME="iPad Air 11-inch"
+          # 기기 이름: .ios-simulator-device 파일 > vars.IOS_SIMULATOR_DEVICE > 기본 iPad Air 11-inch (M2)
+          DEVICE_NAME="iPad Air 11-inch (M2)"
           if [ -n "$IOS_SIMULATOR_DEVICE_VAR" ]; then
             DEVICE_NAME="$IOS_SIMULATOR_DEVICE_VAR"
           fi
@@ -191,6 +191,11 @@ jobs:
           fi
           echo "Installing app: $APP_PATH"
           xcrun simctl install booted "$APP_PATH"
+
+      - name: 시뮬레이터 세로(Portrait) 방향으로 설정
+        run: |
+          # Simulator 활성화 후 Device > Orientation > Portrait 선택 (AppleScript)
+          osascript -e 'tell application "Simulator" to activate' -e 'delay 1' -e 'tell application "System Events" to tell process "Simulator" to click menu item "Portrait" of menu 1 of menu item "Orientation" of menu 1 of menu bar item "Device" of menu bar 1' || true
 
       - name: E2E YAML 테스트 실행
         env:

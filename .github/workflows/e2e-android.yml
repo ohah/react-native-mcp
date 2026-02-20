@@ -185,10 +185,7 @@ jobs:
             echo "=== Connected Android devices (adb devices -l) ==="
             adb devices -l
             echo "=== Available AVDs ==="
-            emulator -list-avds 2>/dev/null || true
-            if [ -n "${ANDROID_HOME:-}" ]; then
-              "$ANDROID_HOME/emulator/emulator" -list-avds 2>/dev/null || true
-            fi
+            emulator -list-avds 2>/dev/null || [ -z "${ANDROID_HOME:-}" ] || "$ANDROID_HOME/emulator/emulator" -list-avds 2>/dev/null || true
 
             # APK 설치 (runner가 줄마다 별도 sh -c로 실행해 변수 미공유 → 경로 리터럴 사용)
             ls -la examples/demo-app/android/app/build/outputs/apk/release/app-release.apk
