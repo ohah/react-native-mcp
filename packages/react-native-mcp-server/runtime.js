@@ -92,6 +92,9 @@
 		renderComponentFilter = null;
 		renderIgnoreFilter = null;
 	}
+	function setOverlayTopInsetDp(dp) {
+		overlayTopInsetDp = dp;
+	}
 	function setOverlayActive(active) {
 		overlayActive = active;
 	}
@@ -122,7 +125,7 @@
 		overlayMaxHighlights = 100;
 		overlayRenderCounts = {};
 	}
-	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER, renderProfileActive, renderProfileStartTime, renderCommitCount, renderEntries, renderComponentFilter, renderIgnoreFilter, RENDER_BUFFER_SIZE, renderHighlight, renderHighlightStyle, overlayActive, overlayComponentFilter, overlayIgnoreFilter, overlayShowLabels, overlayFadeTimeout, overlayMaxHighlights, overlaySetHighlights, overlayRenderCounts;
+	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER, renderProfileActive, renderProfileStartTime, renderCommitCount, renderEntries, renderComponentFilter, renderIgnoreFilter, RENDER_BUFFER_SIZE, renderHighlight, renderHighlightStyle, overlayTopInsetDp, overlayActive, overlayComponentFilter, overlayIgnoreFilter, overlayShowLabels, overlayFadeTimeout, overlayMaxHighlights, overlaySetHighlights, overlayRenderCounts;
 	var init_shared = __esmMin(() => {
 		pressHandlers = {};
 		consoleLogs = [];
@@ -145,6 +148,7 @@
 		RENDER_BUFFER_SIZE = 5e3;
 		renderHighlight = typeof global !== "undefined" && global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ === true;
 		renderHighlightStyle = typeof global !== "undefined" && global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT_STYLE__ === "react-scan" ? "react-scan" : "react-mcp";
+		overlayTopInsetDp = 0;
 		overlayActive = false;
 		overlayComponentFilter = null;
 		overlayIgnoreFilter = null;
@@ -1370,14 +1374,23 @@
 				};
 			}, []);
 			if (!overlayActive || highlights.length === 0) return null;
+			var topInsetDp = 0;
+			if (RN.Platform.OS === "android") {
+				if (overlayTopInsetDp > 0) topInsetDp = overlayTopInsetDp;
+				else if (RN.StatusBar && typeof RN.StatusBar.currentHeight === "number") {
+					var ratio = RN.PixelRatio && RN.PixelRatio.get ? RN.PixelRatio.get() : 1;
+					topInsetDp = RN.StatusBar.currentHeight / ratio;
+				}
+			}
 			var children = [];
 			for (var i = 0; i < highlights.length; i++) {
 				var h = highlights[i];
 				var alpha = h.alpha > 0 ? h.alpha : 0;
+				var drawY = h.y + topInsetDp;
 				var rectStyle = {
 					position: "absolute",
 					left: h.x,
-					top: h.y,
+					top: drawY,
 					width: h.width,
 					height: h.height,
 					borderWidth: 1,
@@ -1394,7 +1407,7 @@
 					var labelContainerStyle = {
 						position: "absolute",
 						left: h.x,
-						top: h.y - 16,
+						top: drawY - 16,
 						backgroundColor: "rgba(" + PRIMARY_COLOR + "," + alpha.toFixed(2) + ")",
 						paddingHorizontal: 3,
 						paddingVertical: 1,
@@ -1526,7 +1539,7 @@
 			var win = rn.Dimensions.get("window");
 			var pixelRatio = rn.PixelRatio ? rn.PixelRatio.get() : 1;
 			var fontScale = rn.PixelRatio ? rn.PixelRatio.getFontScale() : 1;
-			return {
+			var out = {
 				screen: {
 					width: screen.width,
 					height: screen.height
@@ -1539,6 +1552,9 @@
 				fontScale,
 				orientation: win.width > win.height ? "landscape" : "portrait"
 			};
+			if (rn.Platform && rn.Platform.OS === "android" && rn.StatusBar && typeof rn.StatusBar.currentHeight === "number") out.statusBarHeightDp = rn.StatusBar.currentHeight / pixelRatio;
+			if (overlayTopInsetDp > 0) out.overlayTopInsetDp = overlayTopInsetDp;
+			return out;
 		} catch (e) {
 			return { error: String(e) };
 		}
@@ -1688,6 +1704,7 @@
 	var init_mcp_measure = __esmMin(() => {
 		init_fiber_helpers();
 		init_query_selector();
+		init_shared();
 		init_screen_offset();
 	});
 
@@ -3207,6 +3224,10 @@
 					}
 					return;
 				}
+				if (msg.type === "setTopInsetDp" && typeof msg.topInsetDp === "number") {
+					setOverlayTopInsetDp(msg.topInsetDp);
+					return;
+				}
 				if (msg.method === "eval" && msg.id != null) {
 					var result;
 					var errMsg = null;
@@ -3247,6 +3268,7 @@
 	var _isDevMode, wsUrl, ws, _reconnectTimer, reconnectDelay, _mcpEnabled, _heartbeatTimer, _pongTimer, HEARTBEAT_INTERVAL_MS, PONG_TIMEOUT_MS, _AppRegistry, _originalRun, PERIODIC_INTERVAL_MS;
 	var init_connection = __esmMin(() => {
 		init_mcp_object();
+		init_shared();
 		_isDevMode = typeof globalThis !== "undefined" && typeof globalThis.__DEV__ !== "undefined" && globalThis.__DEV__ || typeof process !== "undefined" && process.env && process.env.REACT_NATIVE_MCP_ENABLED === "true";
 		if (_isDevMode && typeof console !== "undefined" && console.warn) console.warn("[MCP] runtime loaded, __REACT_NATIVE_MCP__ available");
 		wsUrl = "ws://localhost:12300";

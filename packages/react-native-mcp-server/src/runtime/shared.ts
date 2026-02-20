@@ -117,6 +117,12 @@ export var renderHighlightStyle: 'react-scan' | 'react-mcp' =
     ? 'react-scan'
     : 'react-mcp';
 
+// ─── Android overlay top inset (dp). 서버가 setTopInsetDp 메시지로 설정. tap/swipe와 동일 값 사용.
+export var overlayTopInsetDp = 0;
+export function setOverlayTopInsetDp(dp: number) {
+  overlayTopInsetDp = dp;
+}
+
 // ─── Render overlay (render-overlay ↔ state-change-tracking) ───
 export var overlayActive = false;
 export var overlayComponentFilter: string[] | null = null;
