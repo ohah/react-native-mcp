@@ -4,6 +4,10 @@
  */
 
 import * as vscode from 'vscode';
+import { findSourceLine, type FileContent } from './reveal-component-source-logic';
+
+export type { FileContent } from './reveal-component-source-logic';
+export { findSourceLine } from './reveal-component-source-logic';
 
 const GLOB = '**/*.{tsx,jsx,ts,js}';
 const EXCLUDE = '**/node_modules/**';
@@ -16,31 +20,30 @@ export async function revealComponentSource(identifier: string): Promise<void> {
   }
 
   const files = await vscode.workspace.findFiles(GLOB, EXCLUDE, MAX_FILES);
+  const contents: FileContent[] = [];
   for (const uri of files) {
     try {
       const doc = await vscode.workspace.openTextDocument(uri);
-      const text = doc.getText();
-      if (!text.includes(identifier)) continue;
-
-      const lines = text.split(/\r?\n/);
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (!line.includes('testID') || !line.includes(identifier)) continue;
-        const lineNum = i;
-        const editor = await vscode.window.showTextDocument(doc, {
-          selection: new vscode.Range(lineNum, 0, lineNum, line.length),
-          viewColumn: vscode.ViewColumn.One,
-          preserveFocus: false,
-        });
-        editor.revealRange(
-          new vscode.Range(lineNum, 0, lineNum, line.length),
-          vscode.TextEditorRevealType.InCenter
-        );
-        return;
-      }
+      contents.push({ uri: uri.toString(), text: doc.getText() });
     } catch {
       // skip unreadable files
     }
+  }
+
+  const found = findSourceLine(identifier, contents);
+  if (found) {
+    const uri = vscode.Uri.parse(found.uri);
+    const doc = await vscode.workspace.openTextDocument(uri);
+    const editor = await vscode.window.showTextDocument(doc, {
+      selection: new vscode.Range(found.lineIndex, 0, found.lineIndex, found.lineLength),
+      viewColumn: vscode.ViewColumn.One,
+      preserveFocus: false,
+    });
+    editor.revealRange(
+      new vscode.Range(found.lineIndex, 0, found.lineIndex, found.lineLength),
+      vscode.TextEditorRevealType.InCenter
+    );
+    return;
   }
 
   vscode.window.showWarningMessage(

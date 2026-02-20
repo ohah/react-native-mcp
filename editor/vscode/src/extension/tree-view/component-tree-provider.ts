@@ -15,6 +15,25 @@ interface ComponentNode {
   children?: ComponentNode[];
 }
 
+/** 내부 성능 측정용 컴포넌트 — 트리에 노출하지 않음 */
+const HIDDEN_COMPONENT_TYPES = new Set(['RenderOverlay', 'MCPRoot']);
+
+function filterHiddenNodes(nodes: ComponentNode[]): ComponentNode[] {
+  const result: ComponentNode[] = [];
+  for (const node of nodes) {
+    if (HIDDEN_COMPONENT_TYPES.has(node.type)) {
+      const children = node.children ?? [];
+      result.push(...filterHiddenNodes(children));
+    } else {
+      const filtered = node.children
+        ? { ...node, children: filterHiddenNodes(node.children) }
+        : node;
+      result.push(filtered);
+    }
+  }
+  return result;
+}
+
 class TreeItem extends vscode.TreeItem {
   children?: ComponentNode[];
 
@@ -96,9 +115,9 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<TreeItem> 
       const deviceId = this.client.selectedDeviceId ?? undefined;
       const result = await this.client.getComponentTree({ maxDepth: 30 }, deviceId);
       if (result && typeof result === 'object') {
-        // The tree is a single root node
         const root = result as ComponentNode;
-        this.rootNodes = root.children ?? [root];
+        const raw = root.children ?? [root];
+        this.rootNodes = filterHiddenNodes(raw);
       } else {
         this.rootNodes = [];
       }
