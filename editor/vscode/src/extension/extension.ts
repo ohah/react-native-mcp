@@ -11,13 +11,17 @@ import { PanelManager } from './webview/panel-manager';
 import { SidebarViewProvider } from './webview/sidebar-view-provider';
 import { ComponentTreeProvider } from './tree-view/component-tree-provider';
 import { AccessibilityDiagnostics } from './codelens/accessibility-diagnostics';
+import { AccessibilityCodeLensProvider } from './codelens/accessibility-codelens';
 import { revealComponentSource } from './reveal-component-source';
+import { E2eDashboardPanel } from './e2e-dashboard-panel';
 
 let client: WsClient;
 let statusBar: StatusBar;
 let panelManager: PanelManager;
 let treeProvider: ComponentTreeProvider;
 let accessibilityDiag: AccessibilityDiagnostics;
+let accessibilityCodeLens: vscode.Disposable;
+let e2eDashboardPanel: E2eDashboardPanel;
 
 export function activate(context: vscode.ExtensionContext): void {
   const config = vscode.workspace.getConfiguration('reactNativeMcp');
@@ -27,6 +31,12 @@ export function activate(context: vscode.ExtensionContext): void {
   panelManager = new PanelManager(context, client);
   treeProvider = new ComponentTreeProvider(client);
   accessibilityDiag = new AccessibilityDiagnostics(client);
+  accessibilityCodeLens = vscode.languages.registerCodeLensProvider(
+    [{ language: 'typescriptreact' }, { language: 'javascriptreact' }],
+    new AccessibilityCodeLensProvider(client)
+  );
+
+  e2eDashboardPanel = new E2eDashboardPanel(context);
 
   // Register sidebar DevTools webview view (Activity Bar)
   const sidebarProvider = new SidebarViewProvider(context, client);
@@ -53,10 +63,20 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('rnMcp.revealComponentSource', (identifier: string) => {
       revealComponentSource(identifier);
     }),
+    vscode.commands.registerCommand('rnMcp.openE2eDashboardBrowser', () => {
+      vscode.env.openExternal(vscode.Uri.parse('http://127.0.0.1:9323/'));
+    }),
+    vscode.commands.registerCommand('rnMcp.showE2eDashboard', () => {
+      const cfg = vscode.workspace.getConfiguration('reactNativeMcp');
+      const port = cfg.get<number>('e2eDashboardPort', 9323);
+      e2eDashboardPanel.show(port);
+    }),
     treeView,
     statusBar,
     panelManager,
     accessibilityDiag,
+    accessibilityCodeLens,
+    e2eDashboardPanel,
     { dispose: () => client.dispose() }
   );
 

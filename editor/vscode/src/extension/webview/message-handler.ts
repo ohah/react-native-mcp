@@ -63,6 +63,46 @@ export function createMessageHandler(client: WsClient): Handler {
           result = true;
           break;
 
+        case 'listNetworkMocks':
+          result = await client.listNetworkMocks(
+            payload?.deviceId as string | undefined,
+            payload?.platform as string | undefined
+          );
+          break;
+
+        case 'setNetworkMock':
+          result = await client.setNetworkMock(
+            payload as {
+              urlPattern: string;
+              isRegex?: boolean;
+              method?: string;
+              status?: number;
+              statusText?: string;
+              headers?: Record<string, string>;
+              body?: string;
+              delay?: number;
+            },
+            payload?.deviceId as string | undefined,
+            payload?.platform as string | undefined
+          );
+          break;
+
+        case 'removeNetworkMock':
+          result = await client.removeNetworkMock(
+            (payload?.id as number) ?? 0,
+            payload?.deviceId as string | undefined,
+            payload?.platform as string | undefined
+          );
+          break;
+
+        case 'clearNetworkMocks':
+          await client.clearNetworkMocks(
+            payload?.deviceId as string | undefined,
+            payload?.platform as string | undefined
+          );
+          result = true;
+          break;
+
         case 'getStateChanges':
           result = await client.getStateChanges(
             payload as { component?: string; since?: number; limit?: number } | undefined,

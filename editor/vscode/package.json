@@ -69,6 +69,14 @@
       {
         "command": "rnMcp.revealComponentSource",
         "title": "React Native MCP: Go to Component Source"
+      },
+      {
+        "command": "rnMcp.openE2eDashboardBrowser",
+        "title": "React Native MCP: Open E2E Dashboard (Browser)"
+      },
+      {
+        "command": "rnMcp.showE2eDashboard",
+        "title": "React Native MCP: Show E2E Dashboard"
       }
     ],
     "viewsContainers": {
@@ -114,6 +122,11 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically connect to MCP server on startup"
+        },
+        "reactNativeMcp.e2eDashboardPort": {
+          "type": "number",
+          "default": 9323,
+          "description": "Port for E2E dashboard (run test report show first)"
         }
       }
     }

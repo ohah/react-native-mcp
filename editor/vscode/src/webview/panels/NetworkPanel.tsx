@@ -20,6 +20,16 @@ interface NetworkEntry {
   mocked?: boolean;
 }
 
+interface MockRule {
+  id: number;
+  urlPattern: string;
+  isRegex: boolean;
+  method: string | null;
+  status: number;
+  enabled: boolean;
+  hitCount: number;
+}
+
 type DetailTab = 'headers' | 'request' | 'response';
 
 function parseHeaders(
@@ -214,14 +224,73 @@ export function NetworkPanel() {
   const [urlFilter, setUrlFilter] = useState('');
   const [methodFilter, setMethodFilter] = useState('');
   const [polling, setPolling] = useState(true);
+  const [mocks, setMocks] = useState<MockRule[]>([]);
+  const [mockSectionOpen, setMockSectionOpen] = useState(false);
+  const [addMockUrl, setAddMockUrl] = useState('');
+  const [addMockMethod, setAddMockMethod] = useState('');
+  const [addMockStatus, setAddMockStatus] = useState('200');
+  const [addMockBody, setAddMockBody] = useState('');
 
   // Clear data on disconnect
   useEffect(() => {
     if (!connected) {
       setRequests([]);
       setSelectedId(null);
+      setMocks([]);
     }
   }, [disconnectGeneration]);
+
+  const fetchMocks = useCallback(async () => {
+    if (!connected) return;
+    try {
+      const result = await sendRequest('listNetworkMocks');
+      setMocks(Array.isArray(result) ? (result as MockRule[]) : []);
+    } catch {
+      setMocks([]);
+    }
+  }, [connected]);
+
+  useEffect(() => {
+    if (!connected) return;
+    fetchMocks();
+  }, [connected, fetchMocks, disconnectGeneration]);
+
+  const handleAddMock = async () => {
+    if (!addMockUrl.trim()) return;
+    try {
+      const opts: Record<string, unknown> = { urlPattern: addMockUrl.trim() };
+      const statusNum = parseInt(addMockStatus, 10);
+      if (!isNaN(statusNum)) opts.status = statusNum;
+      if (addMockMethod.trim()) opts.method = addMockMethod.trim();
+      if (addMockBody.trim()) opts.body = addMockBody.trim();
+      await sendRequest('setNetworkMock', opts);
+      setAddMockUrl('');
+      setAddMockMethod('');
+      setAddMockStatus('200');
+      setAddMockBody('');
+      fetchMocks();
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRemoveMock = async (id: number) => {
+    try {
+      await sendRequest('removeNetworkMock', { id });
+      fetchMocks();
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleClearMocks = async () => {
+    try {
+      await sendRequest('clearNetworkMocks');
+      fetchMocks();
+    } catch {
+      // ignore
+    }
+  };
 
   const fetchRequests = useCallback(async () => {
     if (!connected) return;
@@ -320,6 +389,129 @@ export function NetworkPanel() {
         <span style={{ marginLeft: 'auto', fontSize: 11, opacity: 0.5 }}>
           {requests.length} request{requests.length !== 1 ? 's' : ''}
         </span>
+      </div>
+
+      {/* Mock rules */}
+      <div
+        className="mock-section"
+        style={{ borderBottom: '1px solid var(--vscode-panel-border, #333)' }}
+      >
+        <button
+          type="button"
+          className="mock-section-toggle"
+          onClick={() => setMockSectionOpen(!mockSectionOpen)}
+          style={{
+            width: '100%',
+            padding: '6px 10px',
+            textAlign: 'left',
+            background: 'var(--vscode-editor-inactiveSelectionBackground, #2a2a2a)',
+            border: 'none',
+            color: 'var(--vscode-foreground)',
+            cursor: 'pointer',
+            fontSize: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <span style={{ opacity: 0.8 }}>{mockSectionOpen ? '▼' : '▶'}</span>
+          Mock rules ({mocks.length})
+        </button>
+        {mockSectionOpen && (
+          <div style={{ padding: '10px 12px', fontSize: 12 }}>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 8,
+                alignItems: 'center',
+                marginBottom: 10,
+              }}
+            >
+              <input
+                type="text"
+                placeholder="URL pattern (e.g. /api/users)"
+                value={addMockUrl}
+                onChange={(e) => setAddMockUrl(e.target.value)}
+                style={{ minWidth: 160, padding: '4px 8px' }}
+              />
+              <select
+                value={addMockMethod}
+                onChange={(e) => setAddMockMethod(e.target.value)}
+                style={{ padding: '4px 8px', minWidth: 70 }}
+              >
+                <option value="">Any</option>
+                {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                placeholder="Status"
+                value={addMockStatus}
+                onChange={(e) => setAddMockStatus(e.target.value)}
+                style={{ width: 60, padding: '4px 8px' }}
+              />
+              <input
+                type="text"
+                placeholder="Body (optional)"
+                value={addMockBody}
+                onChange={(e) => setAddMockBody(e.target.value)}
+                style={{ minWidth: 120, padding: '4px 8px' }}
+              />
+              <button
+                type="button"
+                onClick={handleAddMock}
+                disabled={!addMockUrl.trim() || !connected}
+              >
+                Add Mock
+              </button>
+              {mocks.length > 0 && (
+                <button type="button" onClick={handleClearMocks} className="btn-secondary">
+                  Clear all mocks
+                </button>
+              )}
+            </div>
+            {mocks.length > 0 && (
+              <table className="headers-table" style={{ width: '100%', fontSize: 11 }}>
+                <thead>
+                  <tr>
+                    <th className="header-name">ID</th>
+                    <th className="header-name">Method</th>
+                    <th className="header-name">URL pattern</th>
+                    <th className="header-name">Status</th>
+                    <th className="header-name">Hits</th>
+                    <th className="header-name"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mocks.map((r) => (
+                    <tr key={r.id}>
+                      <td className="header-value">{r.id}</td>
+                      <td className="header-value">{r.method ?? '*'}</td>
+                      <td className="header-value" style={{ wordBreak: 'break-all' }}>
+                        {r.isRegex ? `/${r.urlPattern}/` : r.urlPattern}
+                      </td>
+                      <td className="header-value">{r.status}</td>
+                      <td className="header-value">{r.hitCount}</td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMock(r.id)}
+                          style={{ padding: '2px 8px', fontSize: 11 }}
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Split pane: list + detail */}

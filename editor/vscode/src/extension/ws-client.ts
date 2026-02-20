@@ -262,6 +262,41 @@ export class WsClient extends EventEmitter {
     await this.eval(code, deviceId, platform);
   }
 
+  async listNetworkMocks(deviceId?: string, platform?: string): Promise<unknown[]> {
+    const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.listNetworkMocks ? __REACT_NATIVE_MCP__.listNetworkMocks() : []; })();`;
+    const result = await this.eval(code, deviceId, platform);
+    return Array.isArray(result) ? result : [];
+  }
+
+  async setNetworkMock(
+    opts: {
+      urlPattern: string;
+      isRegex?: boolean;
+      method?: string;
+      status?: number;
+      statusText?: string;
+      headers?: Record<string, string>;
+      body?: string;
+      delay?: number;
+    },
+    deviceId?: string,
+    platform?: string
+  ): Promise<unknown> {
+    const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.addNetworkMock ? __REACT_NATIVE_MCP__.addNetworkMock(${JSON.stringify(opts)}) : null; })();`;
+    return this.eval(code, deviceId, platform);
+  }
+
+  async removeNetworkMock(id: number, deviceId?: string, platform?: string): Promise<boolean> {
+    const code = `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.removeNetworkMock ? __REACT_NATIVE_MCP__.removeNetworkMock(${id}) : false; })();`;
+    const result = await this.eval(code, deviceId, platform);
+    return result === true;
+  }
+
+  async clearNetworkMocks(deviceId?: string, platform?: string): Promise<void> {
+    const code = `(function(){ if (typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.clearNetworkMocks) { __REACT_NATIVE_MCP__.clearNetworkMocks(); return true; } return false; })();`;
+    await this.eval(code, deviceId, platform);
+  }
+
   async getComponentTree(
     opts: { maxDepth?: number } = {},
     deviceId?: string,
