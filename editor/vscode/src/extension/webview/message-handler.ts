@@ -4,7 +4,6 @@
  */
 
 import type { WsClient } from '../ws-client';
-import type { ResolveResult, SourceRef } from '../resolve-state-source';
 
 interface WebviewMessage {
   type: string;
@@ -21,11 +20,7 @@ interface WebviewResponse {
 
 type Handler = (msg: WebviewMessage) => Promise<WebviewResponse | null>;
 
-export interface MessageHandlerOptions {
-  resolveSourceRef?: (sourceRef: SourceRef) => Promise<ResolveResult>;
-}
-
-export function createMessageHandler(client: WsClient, options?: MessageHandlerOptions): Handler {
+export function createMessageHandler(client: WsClient): Handler {
   return async (msg: WebviewMessage): Promise<WebviewResponse | null> => {
     const { type, id, payload } = msg;
     if (!id) return null;
@@ -34,13 +29,6 @@ export function createMessageHandler(client: WsClient, options?: MessageHandlerO
       let result: unknown;
 
       switch (type) {
-        case 'resolveSourceRef':
-          if (options?.resolveSourceRef && payload?.sourceRef) {
-            result = await options.resolveSourceRef(payload.sourceRef as SourceRef);
-          } else {
-            result = { ok: false, message: 'resolveSourceRef not available' };
-          }
-          break;
         case 'getConsoleLogs':
           result = await client.getConsoleLogs(
             payload as { level?: string; since?: number; limit?: number } | undefined,

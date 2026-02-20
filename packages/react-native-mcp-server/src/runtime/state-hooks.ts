@@ -1,6 +1,6 @@
 import type { Fiber } from './types';
 import { getFiberTypeName } from './fiber-helpers';
-import { getSourceRefFromStack } from './mcp-introspection';
+import { getSourceRefFromStack, isHiddenComponent } from './mcp-introspection';
 import { pushStateChange, nextStateChangeId } from './shared';
 
 /** fiber의 memoizedState 체인에서 state Hook(queue 존재)만 추출 */
@@ -83,6 +83,12 @@ export function safeClone(val: any, maxDepth?: number): any {
 export function collectStateChanges(fiber: Fiber | null): void {
   if (!fiber) return;
   if (fiber.tag === 0 || fiber.tag === 1) {
+    var name = getFiberTypeName(fiber);
+    if (isHiddenComponent(name)) {
+      collectStateChanges(fiber.child);
+      collectStateChanges(fiber.sibling);
+      return;
+    }
     var prev = fiber.alternate;
     if (prev) {
       var prevHook = prev.memoizedState;
@@ -90,7 +96,6 @@ export function collectStateChanges(fiber: Fiber | null): void {
       var hookIdx = 0;
       while (prevHook && nextHook && typeof prevHook === 'object' && typeof nextHook === 'object') {
         if (nextHook.queue && !shallowEqual(prevHook.memoizedState, nextHook.memoizedState)) {
-          var name = getFiberTypeName(fiber);
           var debugStack = (fiber as any)._debugStack;
           var stackStr = debugStack && typeof debugStack.stack === 'string' ? debugStack.stack : '';
           var sourceRef = stackStr ? getSourceRefFromStack(stackStr) : undefined;

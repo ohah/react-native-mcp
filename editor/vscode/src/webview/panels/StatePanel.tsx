@@ -3,8 +3,6 @@ import { sendRequest } from '../hooks/useExtensionMessage';
 import { useAppState } from '../App';
 import { JsonViewer } from '../components/JsonViewer';
 
-type SourceRef = Array<{ bundleUrl: string; line: number; column: number }>;
-
 interface StateEntry {
   id: number;
   timestamp: number;
@@ -12,7 +10,6 @@ interface StateEntry {
   hookIndex: number;
   prev: unknown;
   next: unknown;
-  sourceRef?: SourceRef;
 }
 
 // ─── Helpers ───
@@ -312,12 +309,10 @@ function StateRow({
   entry,
   isExpanded,
   onToggle,
-  onGoToSource,
 }: {
   entry: StateEntry;
   isExpanded: boolean;
   onToggle: () => void;
-  onGoToSource?: (sourceRef: SourceRef) => void;
 }) {
   return (
     <div className={`state-row ${isExpanded ? 'expanded' : ''}`}>
@@ -326,19 +321,6 @@ function StateRow({
         <span className="state-comp-name">{entry.component}</span>
         <span className="state-hook">#{entry.hookIndex}</span>
         <span className="state-summary">{summarizeChange(entry.prev, entry.next)}</span>
-        {entry.sourceRef?.length ? (
-          <button
-            type="button"
-            className="state-goto-source"
-            onClick={(e) => {
-              e.stopPropagation();
-              onGoToSource?.(entry.sourceRef!);
-            }}
-            title="Go to source"
-          >
-            Go to source
-          </button>
-        ) : null}
         <span className="state-expand-icon">{isExpanded ? '▾' : '▸'}</span>
       </div>
       {isExpanded && (
@@ -356,12 +338,10 @@ function GroupedEntryRow({
   entry,
   isExpanded,
   onToggle,
-  onGoToSource,
 }: {
   entry: StateEntry;
   isExpanded: boolean;
   onToggle: () => void;
-  onGoToSource?: (sourceRef: SourceRef) => void;
 }) {
   const isSimple = isPrimitive(entry.prev) && isPrimitive(entry.next);
 
@@ -380,19 +360,6 @@ function GroupedEntryRow({
         ) : (
           <>
             <span className="state-summary">{summarizeChange(entry.prev, entry.next)}</span>
-            {entry.sourceRef?.length ? (
-              <button
-                type="button"
-                className="state-goto-source"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onGoToSource?.(entry.sourceRef!);
-                }}
-                title="Go to source"
-              >
-                Go to source
-              </button>
-            ) : null}
             <span className="state-expand-icon">{isExpanded ? '▾' : '▸'}</span>
           </>
         )}
@@ -411,11 +378,9 @@ function GroupedEntryRow({
 function GroupedView({
   entries,
   componentFilter,
-  onGoToSource,
 }: {
   entries: StateEntry[];
   componentFilter: string;
-  onGoToSource?: (sourceRef: SourceRef) => void;
 }) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -469,7 +434,6 @@ function GroupedView({
                     entry={entry}
                     isExpanded={expandedId === entry.id}
                     onToggle={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
-                    onGoToSource={onGoToSource}
                   />
                 ))}
               </div>
@@ -532,24 +496,6 @@ export function StatePanel() {
     }
   };
 
-  const handleGoToSource = useCallback(async (sourceRef: SourceRef) => {
-    try {
-      const result = await sendRequest('resolveSourceRef', { sourceRef });
-      if (
-        result &&
-        typeof result === 'object' &&
-        'ok' in result &&
-        !result.ok &&
-        'message' in result
-      ) {
-        // eslint-disable-next-line no-alert
-        alert((result as { message: string }).message);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
   const filteredEntries = useMemo(() => {
     if (!componentFilter) return entries;
     return entries.filter((e) => e.component.toLowerCase().includes(componentFilter.toLowerCase()));
@@ -594,11 +540,7 @@ export function StatePanel() {
         ) : entries.length === 0 ? (
           <div className="empty-state">No state changes recorded</div>
         ) : viewMode === 'grouped' ? (
-          <GroupedView
-            entries={entries}
-            componentFilter={componentFilter}
-            onGoToSource={handleGoToSource}
-          />
+          <GroupedView entries={entries} componentFilter={componentFilter} />
         ) : /* Timeline view */
         filteredEntries.length === 0 ? (
           <div className="empty-state">No matches for "{componentFilter}"</div>
@@ -609,7 +551,6 @@ export function StatePanel() {
               entry={entry}
               isExpanded={expandedId === entry.id}
               onToggle={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
-              onGoToSource={handleGoToSource}
             />
           ))
         )}
