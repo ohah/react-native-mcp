@@ -648,15 +648,20 @@
 		if (overlayIgnoreFilter !== null && overlayIgnoreFilter.indexOf(name) !== -1) return true;
 		return matchesPrefixList(name, OVERLAY_IGNORED_PREFIXES);
 	}
+	function isHostFiber(fiber) {
+		var tag = fiber.tag;
+		if (tag === 5 || tag === 26 || tag === 27) return true;
+		return typeof fiber.type === "string";
+	}
 	/** DFS로 composite fiber 아래의 모든 최근접 host fiber 수집 */
 	function getNearestHostFibers(fiber) {
 		var hostFibers = [];
 		var stack = [];
-		if (fiber.tag === 5 && fiber.stateNode) hostFibers.push(fiber);
+		if (isHostFiber(fiber) && fiber.stateNode) hostFibers.push(fiber);
 		else if (fiber.child) stack.push(fiber.child);
 		while (stack.length > 0) {
 			var current = stack.pop();
-			if (current.tag === 5 && current.stateNode) hostFibers.push(current);
+			if (isHostFiber(current) && current.stateNode) hostFibers.push(current);
 			else if (current.child) stack.push(current.child);
 			if (current.sibling) stack.push(current.sibling);
 		}
