@@ -588,43 +588,9 @@ npx @ohah/react-native-mcp-server test run e2e/ --no-auto-launch
 
 ---
 
-### 10. 병렬 테스트
+### ~~10. 병렬 테스트~~ (계획에서 제외)
 
-**현재**: 스위트를 순차 실행. 하나의 디바이스에서 하나의 스위트.
-
-**목표**:
-
-```bash
-# 멀티 스위트 병렬 실행
-npx @ohah/react-native-mcp-server test run e2e/ -p ios --parallel 3
-
-# 멀티 디바이스 병렬 (iOS 시뮬레이터 여러 대)
-npx @ohah/react-native-mcp-server test run e2e/ -p ios --devices "iPhone 16,iPhone SE"
-```
-
-**구현 방식**:
-
-```
-Sequential (현재):
-  Suite A → Suite B → Suite C  (총 시간: A + B + C)
-
-Parallel (목표):
-  Device 1: Suite A ─────┐
-  Device 2: Suite B ─────┤  (총 시간: max(A, B, C))
-  Device 3: Suite C ─────┘
-```
-
-**핵심 구현 사항**:
-
-| 항목        | 설명                                                           |
-| ----------- | -------------------------------------------------------------- |
-| 워커 풀     | Node.js worker_threads 또는 child_process로 스위트별 독립 실행 |
-| 디바이스 풀 | 사용 가능한 시뮬레이터/에뮬레이터를 풀로 관리, 스위트에 배분   |
-| 포트 관리   | 워커마다 다른 WebSocket 포트 사용 (12300, 12301, 12302...)     |
-| 결과 병합   | 워커별 결과를 하나의 RunResult로 합침                          |
-| 리포팅      | 병렬 진행 상황 표시 (워커별 상태)                              |
-
-**난이도**: ★★★ — 포트 관리, 디바이스 풀링, 결과 병합 복잡.
+~~멀티 디바이스/스위트 동시 실행. 워커 풀, 디바이스 풀, 포트 관리, 결과 병합.~~ 모바일에서 여러 기기 동시 실행은 현실적으로 수요·구현 부담 대비 우선순위가 낮아 **계획에서 제외**함. 스위트는 계속 순차 실행.
 
 ---
 
@@ -667,6 +633,47 @@ npx @ohah/react-native-mcp-server test run e2e/ -p ios -r slack --slack-webhook 
 **난이도**: HTML ★★☆, Slack ★★☆, GitHub PR ★☆☆, Dashboard ★★★
 
 **Dashboard 미포함 이유**: 시간별 추이·flaky 감지·통계는 실행 이력 저장, 시계열 데이터, flaky 판정 로직, 전용 UI/서비스가 필요해 범위가 크고(★★★) 별도 이슈/PR로 진행하는 것이 적절함.
+
+**구현 방향 (제안)**: Playwright 형태가 가장 안정적. 로컬에서 생성하는 **단일 HTML 리포트**를 기본으로 두고, 매 실행마다 쌓는 **실행 이력**(run 결과 JSON)을 그 리포트가 읽어서 **추이·flaky**를 표시. 서버/DB 없이 로컬 디렉터리 또는 CI 아티팩트만으로 동작. (참고: “다중 런”은 **시간순 이력 누적**만 의미함. 여러 기기 동시 실행·merge는 계획에 없음.)
+
+**구현 안 (Playwright 스타일)**:
+
+1. **데이터**
+   - 출력 디렉터리: `output/dashboard/` (또는 `-o` 기준).
+   - `runs.json`: 배열 하나. **실행마다 한 번씩** 한 요소 추가(append). 기기 1대·프로세스 1개 가정(병렬 다중 기기 merge 아님). 각 요소 = 한 런의 요약:
+     - `runId`, `timestamp`, `duration`, `passed`, `failed`, `skipped`, `platform`(선택)
+     - `suites`: `{ name, steps: [{ label, status }] }` — flaky 계산에 필요한 최소치만.
+   - 상한: 최근 N회(예: 100)만 유지. reporter가 읽기 → append → `slice(-N)` → 쓰기.
+   - `file://`에서 동작하려면 **runs.json 한 파일**만 로드하면 되도록 (디렉터리 목록 조회 불가 대비).
+
+2. **리포터**
+   - `reporters/dashboard.ts` 신규. `Reporter` 인터페이스 구현.
+   - `onRunEnd(result: RunResult)`: 기존 `RunResult` → 위 요약 형태로 변환 후 `runs.json`에 append. 동시 실행 시 파일 락 또는 `runs/<runId>.json` 단일 파일로 저장하고, 인덱스 파일(`runs.json` = runId 목록)만 append하는 방식도 가능(그 경우 HTML은 `runs.json`으로 목록 조회 후 각 runId에 대해 `runs/<id>.json` fetch — 로컬 서버 제공 시에만 유리).
+   - **단일 파일 유지**: `runs.json`만 사용. 읽기 → `JSON.parse` → push(요약) → `slice(-100)` → `writeFileSync`. 동시성은 “같은 output 디렉터리에 한 프로세스만 쓴다”로 가정(CI에서는 보통 1 run per job).
+
+3. **Flaky 판정**
+   - HTML(클라이언트)에서 계산. `runs.json`을 읽은 뒤:
+     - 스텝 식별: `suite.name` + `step.label` (또는 step 인덱스).
+     - 최근 K회(예: 20) 안에서 해당 스텝이 **한 번이라도 passed + 한 번이라도 failed**이면 flaky.
+   - UI: “Flaky” 탭/섹션에 (suite, step) 목록 + 마지막 실패 런 링크.
+
+4. **HTML**
+   - `output/dashboard/index.html` 단일 파일. 스크립트 인라인 또는 `report.js` 한 개.
+   - 로드 시 `./runs.json` fetch(상대 경로라서 `file://`에서 같은 디렉터리면 브라우저에 따라 동작. **로컬에서 열 때는 `npx serve output/dashboard` 또는 `test report show`로 미니 서버 띄우고 열기 권장**).
+   - 화면: 요약(최근 런 N개, pass/fail 추이) + Flaky 목록 + 런별 상세(클릭 시 스텝 목록·에러·스크린샷 경로). 추이 차트는 optional(작은 라이브러리 또는 `<canvas>`).
+
+5. **CLI**
+   - `test run e2e/ -r dashboard -o output` → 기존처럼 reporter만 `dashboard` 선택.
+   - (선택) `test report show` 또는 `report show --output output/dashboard`: `output/dashboard`를 정적 서빙(예: `node -e "require('http').createServer(require('ecstatic')({ root: '...' })).listen(3xxx)"` 또는 `serve` 패키지) 후 기본 브라우저로 `http://localhost:3xxx` 오픈. `file://` 제한 회피.
+
+6. **코드 위치**
+   - `packages/react-native-mcp-server/src/test/reporters/dashboard.ts` (리포터)
+   - `reporters/index.ts`에 `dashboard` 추가, `createReporter` 분기
+   - HTML 템플릿: 리포터가 문자열로 생성해 `output/dashboard/index.html`에 쓰거나, `reporters/dashboard-template.html` 같은 정적 파일을 복사한 뒤 `runs.json`만 스크립트로 읽게.
+
+이렇게 하면 서버/DB 없이, 기존 `RunResult`와 Reporter 인터페이스만 활용해 Playwright 스타일 대시보드를 구현할 수 있음.
+
+**벤치마킹**: Playwright 리포트·show-report·데이터 구조 대비 요약은 [playwright-dashboard-benchmark.md](playwright-dashboard-benchmark.md) 참고.
 
 ---
 
@@ -839,7 +846,6 @@ npx react-native-mcp-server init --yes             # 프롬프트 스킵
  └─ ✓ VS Code 확장 (Phase 1~3)   ★★★  — Console/Network/State/Render 패널, 컴포넌트 트리, 접근성
 
 미완료 — 중기 ──────────────────────────────────────────────
- ├─ 10. 병렬 테스트                ★★★  — 멀티 디바이스/스위트 동시 실행
  ├─ 11. Dashboard 리포터           ★★★  — 시계열 추이, flaky 감지, 통계
  └─ 14. 문서 + 예제                ★★☆  — 퀵스타트, API docs, 데모 영상
 
@@ -863,12 +869,11 @@ npx react-native-mcp-server init --yes             # 프롬프트 스킵
 
 #### ★★★ 어려움
 
-| 기능                   | 구현 범위             | 비고                       |
-| ---------------------- | --------------------- | -------------------------- |
-| E2E: `pinch`           | 서버 도구 신규 + 전체 | 멀티터치 — idb/adb 제한    |
-| waitForIdle (Animated) | runtime.js            | RN 내부 API 버전 호환성    |
-| 병렬 테스트            | 새 아키텍처           | 포트/디바이스 풀/결과 병합 |
-| Dashboard 리포터       | 새 패키지             | 시계열 DB + UI             |
+| 기능                   | 구현 범위             | 비고                    |
+| ---------------------- | --------------------- | ----------------------- |
+| E2E: `pinch`           | 서버 도구 신규 + 전체 | 멀티터치 — idb/adb 제한 |
+| waitForIdle (Animated) | runtime.js            | RN 내부 API 버전 호환성 |
+| Dashboard 리포터       | 새 패키지             | 시계열 DB + UI          |
 
 ### 추천 구현 순서 (남은 항목)
 
@@ -876,9 +881,6 @@ npx react-native-mcp-server init --yes             # 프롬프트 스킵
 다음: 문서 + 예제
       → 퀵스타트 (bare RN + Expo), API docs 사이트, 데모 영상 30초
       → 기술 난이도 낮지만 채택률에 가장 큰 영향
-
-중기: 병렬 테스트
-      → 워커 풀 + 디바이스 풀 + 포트 관리 + 결과 병합. 대규모 스위트 필수.
 
 중기: VS Code 확장 Phase 4+
       → 소스 코드 점프, CodeLens, 네트워크 모킹 GUI, 웹 대시보드
