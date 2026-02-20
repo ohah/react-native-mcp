@@ -1,11 +1,11 @@
 /**
  * Render overlay: react-scan 스타일 시각적 리렌더 하이라이트.
  *
- * react-scan 기준 (https://github.com/aidenybai/react-scan):
- * - composite fiber만 대상 (tag 0,1,11,14,15)
+ * react-scan 기준 (https://github.com/aidenybai/react-scan, bippy):
+ * - composite fiber만 대상 (tag 0,1,9,11,14,15 — bippy didFiberRender와 동일 집합)
  * - PerformedWork flag (bit 0x1) 로 실제 렌더 여부 판별
  * - getNearestHostFibers DFS로 모든 최근접 host fiber 수집 → rect 병합
- * - 색상: purple rgb(115,97,230), fill 10%
+ * - 색상: rgb(72,160,195), fill 10%
  * - 페이드: 500ms (react-scan native withTiming duration 동일)
  * - 배지: "ComponentName xN" (rect 위에, 11px 모노스페이스)
  *
@@ -39,28 +39,38 @@ import {
 import { resolveScreenOffset, screenOffsetX, screenOffsetY } from './screen-offset';
 
 // ─── Composite fiber tags (react-scan/bippy 기준) ─────────────────
+// bippy ReactWorkTags: https://github.com/facebook/react/blob/main/packages/react-reconciler/src/ReactWorkTags.js
 var FunctionComponentTag = 0;
 var ClassComponentTag = 1;
 var ForwardRefTag = 11;
+var ContextConsumerTag = 9;
 var MemoComponentTag = 14;
 var SimpleMemoComponentTag = 15;
 
-/** react-scan의 isCompositeFiber: 하이라이트 대상이 되는 fiber 종류 */
+/**
+ * 하이라이트 후보 fiber: bippy isCompositeFiber(0,1,11,14,15) + ContextConsumerTag(9).
+ * bippy didFiberRender는 9를 포함하므로, 리렌더 보고 집합을 맞추기 위해 9 포함.
+ */
 function isCompositeFiber(fiber: Fiber): boolean {
   var tag = fiber.tag;
   return (
     tag === FunctionComponentTag ||
     tag === ClassComponentTag ||
     tag === ForwardRefTag ||
+    tag === ContextConsumerTag ||
     tag === MemoComponentTag ||
     tag === SimpleMemoComponentTag
   );
 }
 
-/** react-scan의 didFiberRender: PerformedWork flag 확인 */
+/**
+ * didFiberRender: PerformedWork flag(bit 0x1)로 실제 렌더 여부 판별.
+ * bippy didFiberRender와 동일하게 composite에서 (flags & PerformedWork) 사용.
+ * 차이: mount(alternate === null)는 false — 초기 마운트는 하이라이트하지 않고 리렌더만 표시.
+ */
 function didFiberRender(fiber: Fiber): boolean {
   var alt = fiber.alternate;
-  if (alt === null) return false; // mount — 이미 화면에 있는 것만 하이라이트
+  if (alt === null) return false; // mount — 리렌더 하이라이트만 목적
   var flags = (fiber as any).flags;
   if (flags === undefined) flags = (fiber as any).effectTag;
   return typeof flags === 'number' && (flags & 1) !== 0;
@@ -122,7 +132,8 @@ export interface HighlightData {
   _fadeTimerId?: ReturnType<typeof setInterval>; // 머지 시 재페이드용
 }
 
-// ─── getNearestHostFibers (react-scan/bippy 동일 로직) ────────────
+// ─── getNearestHostFibers (bippy getNearestHostFibers와 동일 DFS 패턴) ───
+// bippy는 isHostFiber(tag 5,26,27 또는 type==='string'); RN은 host가 tag 5만 해당.
 
 /** DFS로 composite fiber 아래의 모든 최근접 host fiber 수집 */
 function getNearestHostFibers(fiber: Fiber): Fiber[] {
@@ -165,7 +176,9 @@ var _flushScheduled = false;
 var _activeHighlights: HighlightData[] = [];
 var _fadeTimers: any[] = [];
 
-// ─── TOTAL_FRAMES: react-scan 동일 (45프레임) ─────────────────────
+// ─── TOTAL_FRAMES / 소멸 시점 (react-scan 스타일) ─────────────────
+// 45프레임으로 나눠 선형 페이드. 소멸 = 페이드 시작 후 정확히 overlayFadeTimeout(기본 500ms).
+// merge 시 기존 타이머 clear 후 재시작 → 소멸 시점이 "마지막 갱신 + 500ms"로 연기 (react-scan 동일).
 var TOTAL_FRAMES = 45;
 
 /**
@@ -323,6 +336,7 @@ function _processMeasurements(measurements: PendingMeasurement[]): void {
         Math.round(bx) + '-' + Math.round(by) + '-' + Math.round(bw) + '-' + Math.round(bh);
 
       // 1) 기존 활성 하이라이트에서 merge (react-scan: 같은 위치면 count만 증가, 페이드 재시작)
+      // 한 번 탭에 ×2: 탭 → setState 등으로 인해 같은 컴포넌트가 두 번 리렌더(두 커밋) → 같은 posKey로 두 번 수집되어 merge 시 count++
       var merged = false;
       for (var j = 0; j < _activeHighlights.length; j++) {
         var existing = _activeHighlights[j]!;
@@ -421,7 +435,8 @@ function _commitHighlights(newHighlights: HighlightData[]): void {
 }
 
 function _scheduleFade(highlight: HighlightData): void {
-  // react-scan native: withTiming(0, { duration: 500 }). 45프레임에 걸쳐 alpha 1→0.
+  // 페이드: overlayFadeTimeout(기본 500ms) 동안 alpha 1→0, 45프레임 선형. react-scan native withTiming(0, { duration: 500 })과 동일.
+  // 소멸 시점: frame >= TOTAL_FRAMES 일 때 _activeHighlights에서 제거 → "페이드 시작 후 정확히 fadeTimeout"에 소멸.
   var frame = 0;
   var frameInterval = overlayFadeTimeout / TOTAL_FRAMES;
   var interval = setInterval(function () {
@@ -485,7 +500,7 @@ export function getOverlayComponent(): any {
       var h = highlights[i]!;
       var alpha = h.alpha > 0 ? h.alpha : 0;
 
-      // react-scan 스타일: purple stroke + 10% fill
+      // react-scan 스타일: purple stroke + 10% fill (라벨은 별도 노드로 아래에서 추가)
       var rectStyle = {
         position: 'absolute' as const,
         left: h.x,
@@ -496,22 +511,19 @@ export function getOverlayComponent(): any {
         borderColor: 'rgba(' + PRIMARY_COLOR + ',' + alpha.toFixed(2) + ')',
         backgroundColor: 'rgba(' + PRIMARY_COLOR + ',' + (alpha * 0.1).toFixed(3) + ')',
       };
+      children.push(React.createElement(RN.View, { key: 'rect-' + i, style: rectStyle }));
 
-      // 라벨: react-scan 형식 "ComponentName ×N" (20자 제한)
+      // 라벨: rect와 형제로 오버레이 직접 자식 → 부모(rect) 너비에 잘리지 않고 텍스트 크기만큼만 표시
       var labelText = h.name;
       if (h.count > 1) labelText += ' ×' + h.count;
-      if (labelText.length > 20) labelText = labelText.substring(0, 20) + '…';
+      // 말줄임표 없이 전체 표시 (길이 제한 제거)
 
-      // 라벨은 항상 표시 (react-scan 동일), showLabels=false면 count>=2일 때만
       var showLabel = overlayShowLabels || h.count >= 2;
-
-      var labelEl = null;
       if (showLabel) {
-        // 라벨 위치: rect 위쪽 (react-scan: y - height - 4)
         var labelContainerStyle = {
           position: 'absolute' as const,
-          top: -16,
-          left: 0,
+          left: h.x,
+          top: h.y - 16,
           backgroundColor: 'rgba(' + PRIMARY_COLOR + ',' + alpha.toFixed(2) + ')',
           paddingHorizontal: 3,
           paddingVertical: 1,
@@ -523,14 +535,14 @@ export function getOverlayComponent(): any {
           fontFamily: 'Menlo',
           fontWeight: '600' as const,
         };
-        labelEl = React.createElement(
-          RN.View,
-          { style: labelContainerStyle },
-          React.createElement(RN.Text, { style: labelTextStyle }, labelText)
+        children.push(
+          React.createElement(
+            RN.View,
+            { key: 'label-' + i, style: labelContainerStyle },
+            React.createElement(RN.Text, { style: labelTextStyle }, labelText)
+          )
         );
       }
-
-      children.push(React.createElement(RN.View, { key: 'hl-' + i, style: rectStyle }, labelEl));
     }
 
     return React.createElement(
