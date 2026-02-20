@@ -149,14 +149,32 @@ jobs:
           cp -R "$HOME/DerivedData/Build/Products/Release-iphonesimulator/"*.app "${{ runner.temp }}/e2e-app-cache/ios/"
 
       - name: 시뮬레이터 부팅 및 앱 설치
+        env:
+          # 로컬과 해상도 맞추려면: 로컬에서 사용하는 기기 이름을 설정 (예: iPhone 15)
+          # 로컬 기기 이름 확인: xcrun simctl list devices available
+          IOS_SIMULATOR_DEVICE_VAR: ${{ vars.IOS_SIMULATOR_DEVICE }}
         run: |
-          # 비주얼 리그레션 해상도 일치를 위해 기기 고정 (iPhone 16 우선, 없으면 첫 번째 iPhone)
-          DEVICE_UDID=$(xcrun simctl list devices available --json | jq -r '.devices | to_entries[] | .value[] | select(.name == "iPhone 16") | .udid' | head -n 1)
+          echo "=== Available simulators (name, udid) ==="
+          xcrun simctl list devices available --json | jq -r '.devices | to_entries[] | "--- \(.key) ---", (.value[] | "\(.name) | \(.udid)")"' || true
+
+          # 기기 이름: .ios-simulator-device 파일 > vars.IOS_SIMULATOR_DEVICE > 기본 iPad Air 11-inch
+          DEVICE_NAME="iPad Air 11-inch"
+          if [ -n "$IOS_SIMULATOR_DEVICE_VAR" ]; then
+            DEVICE_NAME="$IOS_SIMULATOR_DEVICE_VAR"
+          fi
+          if [ -f "examples/demo-app/e2e/.ios-simulator-device" ]; then
+            READ=$(head -n 1 examples/demo-app/e2e/.ios-simulator-device | tr -d ' \r\n')
+            [ -n "$READ" ] && DEVICE_NAME="$READ"
+          fi
+          echo "Using simulator device name: $DEVICE_NAME"
+
+          DEVICE_UDID=$(xcrun simctl list devices available --json | jq -r --arg name "$DEVICE_NAME" '.devices | to_entries[] | .value[] | select(.name == $name) | .udid' | head -n 1)
           if [ -z "$DEVICE_UDID" ]; then
-            DEVICE_UDID=$(xcrun simctl list devices iPhone available --json | jq -r '.devices | to_entries[] | .value[] | select(.name | contains("iPhone")) | .udid' | head -n 1)
+            echo "Warning: '$DEVICE_NAME' not found, falling back to first available iPhone or iPad"
+            DEVICE_UDID=$(xcrun simctl list devices available --json | jq -r '.devices | to_entries[] | .value[] | select(.name | contains("iPhone") or contains("iPad")) | .udid' | head -n 1)
           fi
           if [ -z "$DEVICE_UDID" ]; then
-            echo "Error: No available iPhone simulator found"
+            echo "Error: No available iPhone/iPad simulator found"
             exit 1
           fi
           echo "DEVICE_UDID=$DEVICE_UDID" >> $GITHUB_ENV

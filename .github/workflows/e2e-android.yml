@@ -45,6 +45,22 @@ jobs:
       - name: 코드 체크아웃
         uses: actions/checkout@v4
 
+      - name: Android AVD 이름 결정
+        id: avd
+        env:
+          ANDROID_EMULATOR_DEVICE_VAR: ${{ vars.ANDROID_EMULATOR_DEVICE }}
+        run: |
+          AVD_NAME="avd-34"
+          if [ -n "${ANDROID_EMULATOR_DEVICE_VAR:-}" ]; then
+            AVD_NAME="$ANDROID_EMULATOR_DEVICE_VAR"
+          fi
+          if [ -f examples/demo-app/e2e/.android-emulator-device ]; then
+            READ=$(head -n 1 examples/demo-app/e2e/.android-emulator-device | tr -d ' \r\n')
+            [ -n "$READ" ] && AVD_NAME="$READ"
+          fi
+          echo "name=$AVD_NAME" >> $GITHUB_OUTPUT
+          echo "Using AVD name: $AVD_NAME"
+
       - name: 디스크 공간 확보
         run: |
           sudo apt-get remove -y '^dotnet-.*' 'php.*' '^mongodb-.*' '^mysql-.*' azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri
@@ -139,18 +155,18 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-34
+          key: avd-${{ steps.avd.outputs.name }}
 
       - name: AVD 스냅샷 생성 (캐시 미스 시)
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          avd-name: avd-34
+          avd-name: ${{ steps.avd.outputs.name }}
           api-level: 34
           target: google_apis
           arch: x86_64
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -skin 1920x1200 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
           script: echo "Generated AVD snapshot for caching."
 
@@ -158,14 +174,22 @@ jobs:
         id: e2e-test
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          avd-name: avd-34
+          avd-name: ${{ steps.avd.outputs.name }}
           api-level: 34
           target: google_apis
           arch: x86_64
           force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-snapshot-save -no-window -skin 1920x1200 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
+            echo "=== Connected Android devices (adb devices -l) ==="
+            adb devices -l
+            echo "=== Available AVDs ==="
+            emulator -list-avds 2>/dev/null || true
+            if [ -n "${ANDROID_HOME:-}" ]; then
+              "$ANDROID_HOME/emulator/emulator" -list-avds 2>/dev/null || true
+            fi
+
             # APK 설치 (runner가 줄마다 별도 sh -c로 실행해 변수 미공유 → 경로 리터럴 사용)
             ls -la examples/demo-app/android/app/build/outputs/apk/release/app-release.apk
             adb install -r examples/demo-app/android/app/build/outputs/apk/release/app-release.apk
