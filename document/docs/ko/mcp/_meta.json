@@ -1,7 +1,7 @@
 [
   { "type": "file", "name": "index", "label": "설치 및 연결" },
   { "type": "file", "name": "cli-init", "label": "CLI Init (빠른 설정)" },
-  "getting-started",
+  { "type": "file", "name": "getting-started", "label": "시작하기" },
   { "type": "file", "name": "mcp-usage", "label": "Cursor / Claude / Copilot" },
   { "type": "file", "name": "expo-guide", "label": "Expo 가이드" },
   { "type": "file", "name": "vscode-extension", "label": "VS Code 확장" },
