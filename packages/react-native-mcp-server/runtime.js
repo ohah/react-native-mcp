@@ -618,12 +618,19 @@
 
 //#endregion
 //#region src/runtime/render-overlay.ts
-/** react-scan의 isCompositeFiber: 하이라이트 대상이 되는 fiber 종류 */
+/**
+	* 하이라이트 후보 fiber: bippy isCompositeFiber(0,1,11,14,15) + ContextConsumerTag(9).
+	* bippy didFiberRender는 9를 포함하므로, 리렌더 보고 집합을 맞추기 위해 9 포함.
+	*/
 	function isCompositeFiber(fiber) {
 		var tag = fiber.tag;
-		return tag === FunctionComponentTag || tag === ClassComponentTag || tag === ForwardRefTag || tag === MemoComponentTag || tag === SimpleMemoComponentTag;
+		return tag === FunctionComponentTag || tag === ClassComponentTag || tag === ForwardRefTag || tag === ContextConsumerTag || tag === MemoComponentTag || tag === SimpleMemoComponentTag;
 	}
-	/** react-scan의 didFiberRender: PerformedWork flag 확인 */
+	/**
+	* didFiberRender: PerformedWork flag(bit 0x1)로 실제 렌더 여부 판별.
+	* bippy didFiberRender와 동일하게 composite에서 (flags & PerformedWork) 사용.
+	* 차이: mount(alternate === null)는 false — 초기 마운트는 하이라이트하지 않고 리렌더만 표시.
+	*/
 	function didFiberRender(fiber) {
 		if (fiber.alternate === null) return false;
 		var flags = fiber.flags;
@@ -880,16 +887,17 @@
 					borderColor: "rgba(" + PRIMARY_COLOR + "," + alpha.toFixed(2) + ")",
 					backgroundColor: "rgba(" + PRIMARY_COLOR + "," + (alpha * .1).toFixed(3) + ")"
 				};
+				children.push(React.createElement(RN.View, {
+					key: "rect-" + i,
+					style: rectStyle
+				}));
 				var labelText = h.name;
 				if (h.count > 1) labelText += " ×" + h.count;
-				if (labelText.length > 20) labelText = labelText.substring(0, 20) + "…";
-				var showLabel = overlayShowLabels || h.count >= 2;
-				var labelEl = null;
-				if (showLabel) {
+				if (overlayShowLabels || h.count >= 2) {
 					var labelContainerStyle = {
 						position: "absolute",
-						top: -16,
-						left: 0,
+						left: h.x,
+						top: h.y - 16,
 						backgroundColor: "rgba(" + PRIMARY_COLOR + "," + alpha.toFixed(2) + ")",
 						paddingHorizontal: 3,
 						paddingVertical: 1,
@@ -901,12 +909,11 @@
 						fontFamily: "Menlo",
 						fontWeight: "600"
 					};
-					labelEl = React.createElement(RN.View, { style: labelContainerStyle }, React.createElement(RN.Text, { style: labelTextStyle }, labelText));
+					children.push(React.createElement(RN.View, {
+						key: "label-" + i,
+						style: labelContainerStyle
+					}, React.createElement(RN.Text, { style: labelTextStyle }, labelText)));
 				}
-				children.push(React.createElement(RN.View, {
-					key: "hl-" + i,
-					style: rectStyle
-				}, labelEl));
 			}
 			return React.createElement(RN.View, {
 				style: {
@@ -944,7 +951,7 @@
 		resetOverlay();
 		return { stopped: true };
 	}
-	var FunctionComponentTag, ClassComponentTag, ForwardRefTag, MemoComponentTag, SimpleMemoComponentTag, OVERLAY_IGNORED_PREFIXES, PRIMARY_COLOR, _pendingMeasurements, _flushScheduled, _activeHighlights, _fadeTimers, TOTAL_FRAMES, _OverlayComponent;
+	var FunctionComponentTag, ClassComponentTag, ForwardRefTag, ContextConsumerTag, MemoComponentTag, SimpleMemoComponentTag, OVERLAY_IGNORED_PREFIXES, PRIMARY_COLOR, _pendingMeasurements, _flushScheduled, _activeHighlights, _fadeTimers, TOTAL_FRAMES, _OverlayComponent;
 	var init_render_overlay = __esmMin(() => {
 		init_fiber_helpers();
 		init_shared();
@@ -952,6 +959,7 @@
 		FunctionComponentTag = 0;
 		ClassComponentTag = 1;
 		ForwardRefTag = 11;
+		ContextConsumerTag = 9;
 		MemoComponentTag = 14;
 		SimpleMemoComponentTag = 15;
 		OVERLAY_IGNORED_PREFIXES = [
