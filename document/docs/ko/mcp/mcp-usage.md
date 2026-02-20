@@ -91,7 +91,7 @@ claude mcp add --transport stdio react-native-mcp -- npx -y @ohah/react-native-m
 
 AI에게 "지금 앱 화면 스냅샷 찍어줘", "로그인 버튼 눌러줘"처럼 요청하면 해당 도구를 자동으로 호출해 동작합니다.
 
-모든 도구의 상세 파라미터, 예제, 플랫폼별 팁은 **[도구 레퍼런스](./tools)** 를 참고하세요. 실전 활용 시나리오는 **[쿡북](./cookbook)** 에서 확인할 수 있습니다.
+모든 도구의 상세 파라미터, 예제, 플랫폼별 팁은 **[도구 레퍼런스](./tools/overview)** 를 참고하세요. 실전 활용 시나리오는 **[쿡북](./cookbook/overview)** 에서 확인할 수 있습니다.
 
 ---
 

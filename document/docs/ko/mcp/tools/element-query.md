@@ -8,11 +8,11 @@ React Fiber 트리에서 셀렉터와 일치하는 첫 번째 요소를 찾습�
 
 #### Parameters
 
-| Parameter  | Type                 | Required | Description                                                         |
-| ---------- | -------------------- | -------- | ------------------------------------------------------------------- |
-| `selector` | `string`             | **Yes**  | RN Fiber 트리용 셀렉터 ([Selector Syntax](./#selector-syntax) 참조) |
-| `platform` | `"ios" \| "android"` | No       | 대상 플랫폼                                                         |
-| `deviceId` | `string`             | No       | 대상 디바이스                                                       |
+| Parameter  | Type                 | Required | Description                                                                 |
+| ---------- | -------------------- | -------- | --------------------------------------------------------------------------- |
+| `selector` | `string`             | **Yes**  | RN Fiber 트리용 셀렉터 ([Selector Syntax](./overview#selector-syntax) 참조) |
+| `platform` | `"ios" \| "android"` | No       | 대상 플랫폼                                                                 |
+| `deviceId` | `string`             | No       | 대상 디바이스                                                               |
 
 #### Example
 
