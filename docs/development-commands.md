@@ -46,5 +46,5 @@ Metro 실행 중에만 동작하는 스크립트들. `get_component_source` / �
 
 GitHub Actions E2E에서 로컬과 같은 해상도·기기를 쓰려면 아래처럼 지정할 수 있다.
 
-- **iOS**: 워크플로가 시뮬레이터 목록을 로그에 출력한다. 사용 기기 우선순위: `examples/demo-app/e2e/.ios-simulator-device` 파일 첫 줄 > repo/org 변수 `IOS_SIMULATOR_DEVICE` > 기본 `iPad Air 11-inch`.
+- **iOS**: 워크플로가 시뮬레이터 목록을 로그에 출력한다. 사용 기기 우선순위: `examples/demo-app/e2e/.ios-simulator-device` 파일 첫 줄 > repo/org 변수 `IOS_SIMULATOR_DEVICE` > 기본 `iPad Air 11-inch (M2)`.
 - **Android**: 워크플로가 연결 기기(`adb devices -l`) 및 AVD 목록(`emulator -list-avds`)을 로그에 출력한다. 사용 AVD 우선순위: `examples/demo-app/e2e/.android-emulator-device` 파일 첫 줄 > repo/org 변수 `ANDROID_EMULATOR_DEVICE` > 기본 `avd-34`. 에뮬레이터 해상도는 `-skin 1920x1200` 으로 고정(CI 일관성용).
