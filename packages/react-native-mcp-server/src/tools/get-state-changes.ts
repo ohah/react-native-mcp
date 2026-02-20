@@ -88,7 +88,7 @@ export function registerGetStateChanges(server: McpServer, appSession: AppSessio
               useCache: true,
             });
             if (!pos.ok) continue;
-            if (isAppSource(pos.source)) {
+            if (pos.source != null && isAppSource(pos.source)) {
               return `${pos.source}:${pos.line ?? 0}:${pos.column ?? 0}`;
             }
           }
@@ -100,7 +100,8 @@ export function registerGetStateChanges(server: McpServer, appSession: AppSessio
               useCache: true,
             }
           );
-          if (first.ok) return `${first.source}:${first.line ?? 0}:${first.column ?? 0}`;
+          if (first.ok && first.source != null)
+            return `${first.source}:${first.line ?? 0}:${first.column ?? 0}`;
           return null;
         };
         const resolved = await Promise.all(
