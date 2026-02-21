@@ -48,9 +48,7 @@ describe('video-recording tools', () => {
       expect(result.content).toBeDefined();
       expect(result.content!.length).toBeGreaterThan(0);
       expect(result.content![0].type).toBe('text');
-      expect(result.content![0].text).toContain(
-        'filePath must be under current working directory'
-      );
+      expect(result.content![0].text).toContain('filePath must be under current working directory');
     });
   });
 
