@@ -30,7 +30,7 @@ teardown?: Step[] # 종료 시 실행 (선택)
 
 ## Step 타입
 
-러너는 7개 카테고리에 걸쳐 **32가지 스텝 타입**을 지원한다. 각 스텝의 상세 내용은 [스텝 레퍼런스](./steps/overview)를 참고한다.
+러너는 8개 카테고리에 걸쳐 **34가지 스텝 타입**을 지원한다. 각 스텝의 상세 내용은 [스텝 레퍼런스](./steps/overview)를 참고한다.
 
 | 카테고리                                    | 스텝 수 | 설명                                           |
 | ------------------------------------------- | ------- | ---------------------------------------------- |
@@ -40,6 +40,7 @@ teardown?: Step[] # 종료 시 실행 (선택)
 | [내비게이션 & 디바이스](./steps/navigation) | 7       | 버튼, 뒤로, 홈, 딥링크, 위치, 초기화           |
 | [앱 생명주기](./steps/lifecycle)            | 2       | 앱 실행 및 종료                                |
 | [스크린샷](./steps/screenshots)             | 2       | 스크린샷 캡처 및 비교                          |
+| [비디오](./steps/screenshots)               | 2       | 화면 녹화 시작·중지 (idb/adb)                  |
 | [유틸리티](./steps/utilities)               | 4       | 텍스트 복사·붙여넣기, JS 실행, 미디어 추가     |
 
 ---
@@ -86,6 +87,13 @@ steps:
 teardown:
   - terminate: org.example.app
 ```
+
+### 비디오 녹화
+
+- **startRecording**: `{ path?: string }` — 화면 녹화 시작 (iOS: idb, Android: adb screenrecord). `path`를 생략하면 `outputDir/e2e-recording.mp4`에 저장. 경로는 현재 작업 디렉터리 하위여야 한다.
+- **stopRecording**: `{}` — 현재 녹화를 중지하고 파일로 저장. 녹화를 시작하지 않았을 때도 teardown에서 호출해도 안전(무시됨).
+
+`setup`에서 `startRecording`, `teardown`에서 `stopRecording`을 두면 전체 실행이 녹화되고, 스텝 실패 시에도 teardown이 실행되므로 녹화가 항상 중지된다.
 
 ## E2E CLI (`@ohah/react-native-mcp-server test`)
 

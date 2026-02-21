@@ -8,11 +8,7 @@ import { resolve, sep } from 'node:path';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { runCommand } from './run-command.js';
 import { checkIdbAvailable, resolveUdid, idbNotInstalledError } from './idb-utils.js';
-import {
-  checkAdbAvailable,
-  resolveSerial,
-  adbNotInstalledError,
-} from './adb-utils.js';
+import { checkAdbAvailable, resolveSerial, adbNotInstalledError } from './adb-utils.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 

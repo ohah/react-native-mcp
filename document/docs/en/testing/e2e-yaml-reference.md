@@ -30,7 +30,7 @@ teardown?: Step[] # Run on exit (optional)
 
 ## Step types
 
-The runner supports **32 step types** across 7 categories. See the [Steps Reference](./steps/overview) for full details on every step.
+The runner supports **34 step types** across 8 categories. See the [Steps Reference](./steps/overview) for full details on every step.
 
 | Category                                  | Steps | Description                                          |
 | ----------------------------------------- | ----- | ---------------------------------------------------- |
@@ -40,6 +40,7 @@ The runner supports **32 step types** across 7 categories. See the [Steps Refere
 | [Navigation & Device](./steps/navigation) | 7     | Press button, back, home, deep link, location, reset |
 | [App Lifecycle](./steps/lifecycle)        | 2     | Launch and terminate apps                            |
 | [Screenshots](./steps/screenshots)        | 2     | Capture and compare screenshots                      |
+| [Video](./steps/screenshots)              | 2     | Start and stop screen recording (idb/adb)            |
 | [Utilities](./steps/utilities)            | 4     | Copy/paste text, run JS, add media                   |
 
 ---
@@ -86,6 +87,13 @@ steps:
 teardown:
   - terminate: org.example.app
 ```
+
+### Video recording
+
+- **startRecording**: `{ path?: string }` — Start screen recording (idb on iOS, adb screenrecord on Android). If `path` is omitted, saves to `outputDir/e2e-recording.mp4`. Path must be under the current working directory.
+- **stopRecording**: `{}` — Stop the current recording and save the file. Safe to call in teardown even when no recording was started (no-op).
+
+Use `startRecording` in `setup` and `stopRecording` in `teardown` so the full run is captured; teardown runs even on step failure, so the recording is always stopped.
 
 ## E2E CLI (`@ohah/react-native-mcp-server test`)
 

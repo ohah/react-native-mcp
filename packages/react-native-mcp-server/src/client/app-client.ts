@@ -213,6 +213,42 @@ export class AppClient {
     return res.content;
   }
 
+  /** Start screen recording. Use stopRecording() to stop and save. Path must be under cwd. */
+  async startRecording(opts: { filePath: string } & DeviceOpts): Promise<unknown> {
+    const mergedArgs = { ...this.defaultOpts(), filePath: opts.filePath };
+    const res = await this.client.callTool({
+      name: 'start_video_recording',
+      arguments: mergedArgs,
+    });
+    if (res.isError) {
+      const text = (res.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+      throw new McpToolError('start_video_recording', text);
+    }
+    return res.content;
+  }
+
+  /** Stop current screen recording and save to the path given in startRecording. No-op if none active. */
+  async stopRecording(
+    opts?: DeviceOpts
+  ): Promise<{ success: boolean; filePath?: string; error?: string }> {
+    const mergedArgs = { ...this.defaultOpts(), ...opts };
+    const res = await this.client.callTool({
+      name: 'stop_video_recording',
+      arguments: mergedArgs,
+    });
+    const text = (res.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    try {
+      const parsed = JSON.parse(text) as { success: boolean; filePath?: string; error?: string };
+      return parsed;
+    } catch {
+      if (text.includes('No active recording')) {
+        return { success: false, error: 'No active recording.' };
+      }
+      if (res.isError) throw new McpToolError('stop_video_recording', text);
+      return { success: false, error: text };
+    }
+  }
+
   async describeUi(
     opts?: { mode?: 'all' | 'point'; x?: number; y?: number; nested?: boolean } & DeviceOpts
   ): Promise<unknown> {
