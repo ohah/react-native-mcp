@@ -4,7 +4,7 @@ import { TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-han
 
 export type StepProps = { isDarkMode: boolean };
 
-export function StepGestureGhNoId({ isDarkMode }: StepProps) {
+export function StepGestureGhNoId({ isDarkMode: _isDarkMode }: StepProps) {
   const [count, setCount] = React.useState(0);
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>

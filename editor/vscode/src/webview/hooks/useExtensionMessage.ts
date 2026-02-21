@@ -3,7 +3,7 @@
  * Sends requests via vscode.postMessage, matches responses by UUID.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 declare function acquireVsCodeApi(): {
   postMessage(msg: unknown): void;
@@ -13,7 +13,6 @@ declare function acquireVsCodeApi(): {
 
 const vscode = acquireVsCodeApi();
 
-type Listener = (msg: MessageEvent) => void;
 type PendingResolve = { resolve: (val: unknown) => void; reject: (err: Error) => void };
 
 let reqCounter = 0;

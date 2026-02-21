@@ -203,7 +203,7 @@ describe('Heartbeat', () => {
 
     it('stop() 후 stale 체크 타이머가 정리됨', async () => {
       session.start(TEST_PORT);
-      const client = await connectClient(TEST_PORT);
+      await connectClient(TEST_PORT);
 
       const devices = session.getConnectedDevices();
       const conn = session.resolveDevice(devices[0]!.deviceId);

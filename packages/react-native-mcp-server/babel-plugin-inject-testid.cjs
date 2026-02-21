@@ -61,7 +61,7 @@ function babel_plugin_inject_testid_default(babel) {
 				if (scope === void 0) return;
 				const el = path.node;
 				const testIdAttr = el.attributes.find((a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === "testID");
-				if (!!!testIdAttr) {
+				if (!testIdAttr) {
 					const tagName = getTagName(t, el.name);
 					const baseValue = `${scope.componentName}-${scope.jsxIndex}-${tagName}`;
 					const keyAttr = el.attributes.find((a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === "key");

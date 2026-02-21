@@ -32,11 +32,11 @@ export function pressByLabel(labelSubstring: string, index?: number): boolean {
     if (typeof fn === 'function') {
       try {
         fn();
-      } catch (e) {}
+      } catch {}
       return true;
     }
     return false;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
@@ -71,11 +71,11 @@ export function longPressByLabel(labelSubstring: string, index?: number): boolea
     if (typeof fn === 'function') {
       try {
         fn();
-      } catch (e) {}
+      } catch {}
       return true;
     }
     return false;
-  } catch (e) {
+  } catch {
     return false;
   }
 }

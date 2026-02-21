@@ -47,6 +47,7 @@ import { findMatchingMock } from './network-mock';
       // ─── Network mock intercept ──────────────────────
       var mockRule = findMatchingMock(entry.method, entry.url);
       if (mockRule) {
+        // eslint-disable-next-line no-this-alias -- XHR open/send 콜백에서 this 바인딩 유지
         var xhr = this;
         var mockResp = mockRule.response;
         var deliverMock = function () {
@@ -72,13 +73,14 @@ import { findMatchingMock } from './network-mock';
               xhr.__didReceiveData(fakeId, mockResp.body);
             }
             xhr.__didCompleteResponse(fakeId, '', false);
-          } catch (_e) {}
+          } catch {}
         };
         setTimeout(deliverMock, mockResp.delay > 0 ? mockResp.delay : 0);
         return;
       }
       // ─── End mock intercept ──────────────────────────
 
+      // eslint-disable-next-line no-this-alias -- load 이벤트 콜백에서 this 바인딩 유지
       var xhr = this;
 
       xhr.addEventListener('load', function () {
@@ -86,12 +88,12 @@ import { findMatchingMock } from './network-mock';
         entry.statusText = xhr.statusText || null;
         try {
           entry.responseHeaders = xhr.getAllResponseHeaders() || null;
-        } catch (_e) {
+        } catch {
           entry.responseHeaders = null;
         }
         try {
           entry.responseBody = truncateBody(xhr.responseText);
-        } catch (_e) {
+        } catch {
           entry.responseBody = null;
         }
         entry.duration = Date.now() - entry.startTime;

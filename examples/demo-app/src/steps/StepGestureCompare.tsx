@@ -4,7 +4,7 @@ import { TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-han
 
 export type StepProps = { isDarkMode: boolean };
 
-export function StepGestureCompare({ isDarkMode }: StepProps) {
+export function StepGestureCompare({ isDarkMode: _isDarkMode }: StepProps) {
   const [touchableTaps, setTouchableTaps] = React.useState(0);
   const [pressableTaps, setPressableTaps] = React.useState(0);
   const [ghTaps, setGhTaps] = React.useState(0);

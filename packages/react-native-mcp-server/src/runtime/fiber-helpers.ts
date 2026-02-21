@@ -13,7 +13,7 @@ export function getFiberRootFromHook(hook: DevToolsHook, rendererID: number): Fi
         var first = roots.values().next().value;
         if (first) return toRootFiber(first);
       }
-    } catch (_e) {}
+    } catch {}
   }
   var renderer = hook.renderers && hook.renderers.get(rendererID);
   if (renderer && typeof renderer.getCurrentFiber === 'function') {

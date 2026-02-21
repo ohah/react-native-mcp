@@ -26,7 +26,7 @@ export function StepWebViewNoTestId({ isDarkMode }: StepProps) {
     try {
       const data = JSON.parse(e.nativeEvent.data);
       if (data?.type === 'postMessage-test') setPostMessageCount((c) => c + 1);
-    } catch (_) {}
+    } catch {}
   }, []);
 
   return (

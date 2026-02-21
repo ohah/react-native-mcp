@@ -6,9 +6,11 @@ import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-const SCRIPT_PATH = path.join(process.cwd(), 'scripts', 'doctor.mjs');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SCRIPT_PATH = path.join(__dirname, '..', '..', 'scripts', 'doctor.mjs');
 
 function runDoctor(cwd: string): { stdout: string; stderr: string; status: number | null } {
   const r = spawnSync('node', [SCRIPT_PATH], {

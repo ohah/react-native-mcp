@@ -10,7 +10,7 @@ import {
   type DashboardRunSummary,
 } from '../../test/reporters/dashboard.js';
 import { createReporter } from '../../test/reporters/index.js';
-import type { RunResult, SuiteResult, StepResult } from '../../test/types.js';
+import type { RunResult, StepResult } from '../../test/types.js';
 
 function stepResult(
   status: StepResult['status'],

@@ -4,8 +4,6 @@
  * JPEG 아티팩트 false-positive 방지를 위해 항상 PNG 원본 기준 비교.
  */
 
-import type Sharp from 'sharp';
-
 export interface CompareResult {
   pass: boolean;
   diffRatio: number;

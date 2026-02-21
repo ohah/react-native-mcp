@@ -141,7 +141,7 @@ export function getAccessibilityAudit(options?: any): any[] {
       var measure: any = null;
       try {
         measure = (globalThis as any).__REACT_NATIVE_MCP__.measureViewSync(uid);
-      } catch (e) {}
+      } catch {}
       if (!measure && typeof item.fiber.type !== 'string') {
         var hostChild = (function findHost(f: Fiber | null): Fiber | null {
           if (!f) return null;
@@ -159,7 +159,7 @@ export function getAccessibilityAudit(options?: any): any[] {
             (hostChild.memoizedProps && hostChild.memoizedProps.testID) || getPathUid(hostChild);
           try {
             measure = measureViewSync(hostUid);
-          } catch (e) {}
+          } catch {}
         }
       }
       if (measure && (measure.width < minTouchTarget || measure.height < minTouchTarget)) {
@@ -182,7 +182,7 @@ export function getAccessibilityAudit(options?: any): any[] {
     }
 
     return violations;
-  } catch (e) {
+  } catch {
     return [];
   }
 }

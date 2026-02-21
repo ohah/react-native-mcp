@@ -10,7 +10,7 @@ export function registerWebView(ref: any, id: string): void {
     if (_webViewRefToId)
       try {
         _webViewRefToId.set(ref, id);
-      } catch (e) {}
+      } catch {}
   }
 }
 
@@ -95,7 +95,7 @@ export function handleWebViewMessage(data: any): boolean {
     if (payload.error != null) pending.resolve({ ok: false, error: payload.error });
     else pending.resolve({ ok: true, value: payload.value });
     return true;
-  } catch (_) {
+  } catch {
     return false;
   }
 }

@@ -13,7 +13,7 @@ import {
 
 export type StepProps = { isDarkMode: boolean };
 
-export function StepPressVariants({ isDarkMode }: StepProps) {
+export function StepPressVariants({ isDarkMode: _isDarkMode }: StepProps) {
   const [touchableOpacityTaps, setTouchableOpacityTaps] = React.useState(0);
   const [touchableHighlightTaps, setTouchableHighlightTaps] = React.useState(0);
   const [rnButtonTaps, setRnButtonTaps] = React.useState(0);

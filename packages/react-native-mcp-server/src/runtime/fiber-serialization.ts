@@ -5,7 +5,7 @@ import { measureViewSync } from './mcp-measure';
 import { getWebViewIdForRef } from './mcp-webview';
 
 /** fiber 노드를 결과 객체로 직렬화 */
-export function fiberToResult(fiber: Fiber, TextComp: any, ImgComp: any): any {
+export function fiberToResult(fiber: Fiber, TextComp: any, _ImgComp: any): any {
   var props = fiber.memoizedProps || {};
   var typeName = getFiberTypeName(fiber);
   var testID =
@@ -38,7 +38,7 @@ export function fiberToResult(fiber: Fiber, TextComp: any, ImgComp: any): any {
   var measure = null;
   try {
     measure = measureViewSync(uid);
-  } catch (e) {}
+  } catch {}
   // composite fiber(AnimatedComponent 등)면 measure가 null일 수 있음.
   // 하위 첫 번째 host child의 uid로 재시도.
   if (!measure && typeof fiber.type !== 'string') {
@@ -57,7 +57,7 @@ export function fiberToResult(fiber: Fiber, TextComp: any, ImgComp: any): any {
       var hostUid = getPathUid(hostChild);
       try {
         measure = measureViewSync(hostUid);
-      } catch (e) {}
+      } catch {}
       // Bridge fallback용: host child uid 저장
       if (!measure) result._measureUid = hostUid;
     }

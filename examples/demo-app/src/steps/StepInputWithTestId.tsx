@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, TextInput, ScrollView } from 'react-native';
 
 export type StepProps = { isDarkMode: boolean };
 

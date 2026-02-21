@@ -17,18 +17,18 @@ import { renderProfileActive, overlayActive, incrementRenderCommitCount } from '
     if (typeof orig === 'function') orig.call(hook, rendererID, root);
     try {
       if (root && root.current) collectStateChanges(root.current);
-    } catch (_e) {}
+    } catch {}
     try {
       if (renderProfileActive && root && root.current) {
         incrementRenderCommitCount();
         collectRenderEntries(root.current);
       }
-    } catch (_e) {}
+    } catch {}
     try {
       if (overlayActive && root && root.current) {
         collectOverlayHighlights(root.current);
         flushOverlayMeasurements();
       }
-    } catch (_e) {}
+    } catch {}
   };
 })();

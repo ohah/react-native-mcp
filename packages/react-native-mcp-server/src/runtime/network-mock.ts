@@ -9,7 +9,7 @@ export function matchesMockRule(rule: NetworkMockRule, method: string, url: stri
   if (rule.isRegex) {
     try {
       return new RegExp(rule.urlPattern).test(url);
-    } catch (_e) {
+    } catch {
       return false;
     }
   }
