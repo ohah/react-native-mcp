@@ -92,8 +92,8 @@ steps:
   # ─── Step 10: FlatList (타입+텍스트:nth로 아이템 찾기) ──────────────
   # 두 번째 "탭: 0"이 보일 때까지 스크롤 후, 그 버튼만 탭 (viewport 검사로 화면 안에 있을 때만 성공)
   - scrollUntilVisible:
-      { selector: 'Pressable:text("탭: 0"):nth-of-type(2)', direction: 'down', maxScrolls: 5 }
-  - wait: 300
+      { selector: 'Pressable:text("탭: 0"):nth-of-type(2)', direction: 'down', maxScrolls: 10 }
+  - wait: 500
   - tap: { selector: 'Pressable:text("탭: 0"):nth-of-type(2)' }
   - waitForText: { text: '탭: 1', timeout: 5000 }
   - tap: { selector: 'Pressable:text("다음")' }
