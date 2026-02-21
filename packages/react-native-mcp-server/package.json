@@ -28,7 +28,8 @@
     "runtime.js",
     "babel-preset.cjs",
     "babel-plugin-app-registry.cjs",
-    "babel-plugin-inject-testid.cjs"
+    "babel-plugin-inject-testid.cjs",
+    "scripts/doctor.mjs"
   ],
   "type": "module",
   "main": "dist/index.js",
@@ -67,7 +68,8 @@
     "dev": "bun run --watch src/index.ts",
     "mcp:run": "bun dist/index.js",
     "mcp": "bun run build && bun dist/index.js",
-    "test": "bun test src/"
+    "test": "bun test src/",
+    "doctor": "node scripts/doctor.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.0",
@@ -93,6 +95,9 @@
     "metro": "^0.83.3",
     "tsdown": "0.20.3",
     "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "react-native": ">=0.74.0"
   },
   "engines": {
     "bun": ">=1.0.0",
