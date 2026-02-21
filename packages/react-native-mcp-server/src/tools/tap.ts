@@ -90,6 +90,7 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
         } else {
           if (!(await checkAdbAvailable())) return adbNotInstalledError();
           const serial = await resolveSerial(deviceId);
+          await appSession.ensureAndroidTopInset(deviceId, serial);
           const scale =
             appSession.getPixelRatio(undefined, 'android') ?? (await getAndroidScale(serial));
           const topInsetDp = appSession.getTopInsetDp(deviceId, 'android');
