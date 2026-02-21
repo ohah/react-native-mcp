@@ -253,6 +253,16 @@ async function executeStep(
       err.diffImagePath = diffPath;
       throw err;
     }
+  } else if ('startRecording' in step) {
+    const filePath = step.startRecording.path
+      ? step.startRecording.path.startsWith('/')
+        ? resolve(step.startRecording.path)
+        : resolve(ctx.outputDir, step.startRecording.path.replace(/^\.\//, ''))
+      : resolve(ctx.outputDir, 'e2e-recording.mp4');
+    mkdirSync(dirname(filePath), { recursive: true });
+    await app.startRecording({ filePath });
+  } else if ('stopRecording' in step) {
+    await app.stopRecording();
   } else {
     throw new Error(`Unknown step type: ${stepKey(step as TestStep)}`);
   }

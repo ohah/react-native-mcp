@@ -98,8 +98,8 @@ idb(iOS)와 adb(Android)는 이미 화면 녹화 명령을 제공한다. 이를 
 - [x] **AC4** 해당 플랫폼에 디바이스 0대면 start 실패.
 - [x] **AC5** 이미 해당 스코프에서 녹화 중일 때 start 재호출 시 실패 ("already recording").
 - [x] **AC6** start 없이 stop 호출 시 "no active recording"으로 안전 반환.
-- [ ] **AC7** (선택, v2) YAML startRecording/stopRecording 시 test run으로 start → steps → stop 실행, 출력 디렉터리에 mp4 생성.
-- [ ] **AC8** (선택, v2) 스텝 실패 시 teardown의 stopRecording 실행으로 녹화 프로세스 종료.
+- [x] **AC7** (v2) YAML startRecording/stopRecording 시 test run으로 start → steps → stop 실행, 출력 디렉터리에 mp4 생성.
+- [x] **AC8** (v2) 스텝 실패 시 teardown의 stopRecording 실행으로 녹화 프로세스 종료.
 - [x] **AC9** (보안) filePath 또는 pull 대상 경로가 허용 베이스(e2e-artifacts/outputDir) 하위가 아니면 start 또는 stop 실패.
 - [x] **AC10** (라이프사이클) 서버 종료 시 활성 녹화가 있으면 해당 프로세스에 SIGTERM/SIGINT 전송되어 정리됨.
 

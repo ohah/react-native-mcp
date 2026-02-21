@@ -141,6 +141,11 @@ const stepSchema: z.ZodType<unknown> = z.lazy(() =>
         update: z.boolean().optional(),
       }),
     }),
+    // Video recording (v2)
+    z.object({
+      startRecording: z.object({ path: z.string().optional() }),
+    }),
+    z.object({ stopRecording: z.null().or(z.object({}).strict()).default(null) }).strict(),
   ])
 );
 

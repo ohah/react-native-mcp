@@ -79,7 +79,9 @@ export type TestStep =
         threshold?: number;
         update?: boolean;
       };
-    };
+    }
+  | { startRecording: { path?: string } }
+  | { stopRecording: null | Record<string, never> };
 
 export interface StepResult {
   step: TestStep;
