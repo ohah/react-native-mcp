@@ -1,10 +1,10 @@
 ---
-description: Reference for 33 E2E YAML step types (tap, assert, wait, navigate, etc.) with syntax and selector rules.
+description: Reference for 32 E2E YAML step types (tap, assert, wait, navigate, etc.) with syntax and selector rules.
 ---
 
 # Steps Reference
 
-The E2E YAML runner supports **33 step types** across 7 categories. Each step performs a single action — tap, assert, wait, navigate, etc.
+The E2E YAML runner supports **32 step types** across 7 categories. Each step performs a single action — tap, assert, wait, navigate, etc.
 
 ## Step syntax
 
@@ -40,7 +40,7 @@ Steps that accept a `selector` field use the same query syntax as MCP tools:
 | Category                            | Steps | Description                                          |
 | ----------------------------------- | ----- | ---------------------------------------------------- |
 | [Interaction](./interaction)        | 8     | Tap, swipe, type, long press, double tap, scroll     |
-| [Assertions](./assertions)          | 6     | Verify text, visibility, element count, value        |
+| [Assertions](./assertions)          | 5     | Verify text, visibility, element count, value        |
 | [Waits](./waits)                    | 4     | Wait for text, visibility, or fixed delay            |
 | [Navigation & Device](./navigation) | 7     | Press button, back, home, deep link, location, reset |
 | [App Lifecycle](./lifecycle)        | 2     | Launch and terminate apps                            |

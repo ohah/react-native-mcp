@@ -82,27 +82,6 @@
 
 ---
 
-## assertHasText
-
-텍스트가 (선택 시 해당 요소에) 있는지 검증한다. `assertText`의 별칭(alias).
-
-#### Parameters
-
-| 필드     | 타입   | 필수 | 설명             |
-| -------- | ------ | ---- | ---------------- |
-| text     | string | ✓    | 기대하는 텍스트  |
-| selector | string |      | 검사 범위 셀렉터 |
-
-#### Example
-
-```yaml
-- assertHasText:
-    text: '₩12,000'
-    selector: '#price-label'
-```
-
----
-
 ## assertValue
 
 TextInput 등의 `value` prop이 기대값과 일치하는지 검증한다.

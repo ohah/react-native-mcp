@@ -30,12 +30,12 @@ teardown?: Step[] # Run on exit (optional)
 
 ## Step types
 
-The runner supports **33 step types** across 7 categories. See the [Steps Reference](./steps/overview) for full details on every step.
+The runner supports **32 step types** across 7 categories. See the [Steps Reference](./steps/overview) for full details on every step.
 
 | Category                                  | Steps | Description                                          |
 | ----------------------------------------- | ----- | ---------------------------------------------------- |
 | [Interaction](./steps/interaction)        | 8     | Tap, swipe, type, long press, double tap, scroll     |
-| [Assertions](./steps/assertions)          | 6     | Verify text, visibility, element count, value        |
+| [Assertions](./steps/assertions)          | 5     | Verify text, visibility, element count, value        |
 | [Waits](./steps/waits)                    | 4     | Wait for text, visibility, or fixed delay            |
 | [Navigation & Device](./steps/navigation) | 7     | Press button, back, home, deep link, location, reset |
 | [App Lifecycle](./steps/lifecycle)        | 2     | Launch and terminate apps                            |
@@ -73,7 +73,7 @@ steps:
   - waitForText:
       text: 'Home'
       timeout: 5000
-  - assertHasText:
+  - assertText:
       text: 'Welcome'
       selector: '#greeting'
   - longPress:

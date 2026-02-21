@@ -82,27 +82,6 @@ Assert that the number of elements matching the selector equals the expected cou
 
 ---
 
-## assertHasText
-
-Assert that the text is present (within the element when selector is given). Alias for `assertText`.
-
-#### Parameters
-
-| Field    | Type   | Required | Description    |
-| -------- | ------ | -------- | -------------- |
-| text     | string | Yes      | Expected text  |
-| selector | string | No       | Scope selector |
-
-#### Example
-
-```yaml
-- assertHasText:
-    text: 'Total: $12.00'
-    selector: '#price-label'
-```
-
----
-
 ## assertValue
 
 Assert that the element's `value` prop matches the expected string.

@@ -166,11 +166,6 @@ async function executeStep(
     await app.tap(step.longPress.selector, { duration: step.longPress.duration ?? 800 });
   } else if ('addMedia' in step) {
     await app.addMedia(step.addMedia.paths);
-  } else if ('assertHasText' in step) {
-    const result = await app.assertText(step.assertHasText.text, {
-      selector: step.assertHasText.selector,
-    });
-    if (!result.pass) throw new Error(result.message);
   } else if ('clearText' in step) {
     await app.clearText(step.clearText.selector);
   } else if ('doubleTap' in step) {
