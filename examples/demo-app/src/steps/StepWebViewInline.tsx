@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, ScrollView } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 const HTML = `

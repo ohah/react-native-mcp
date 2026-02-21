@@ -34,7 +34,7 @@ import { findMatchingMock } from './network-mock';
               requestHeaders[key] = input.headers[key];
             }
           }
-        } catch (_e) {}
+        } catch {}
       }
       if (input.body != null) requestBody = input.body;
     }
@@ -55,7 +55,7 @@ import { findMatchingMock } from './network-mock';
               requestHeaders[key] = init.headers[key];
             }
           }
-        } catch (_e) {}
+        } catch {}
       }
       if (init.body != null) requestBody = init.body;
     }
@@ -112,7 +112,7 @@ import { findMatchingMock } from './network-mock';
             statusText: mockResp.statusText || '',
             headers: mockResp.headers,
           });
-        } catch (_e) {
+        } catch {
           var _body = mockResp.body;
           fakeResponse = {
             ok: mockResp.status >= 200 && mockResp.status < 300,
@@ -174,7 +174,7 @@ import { findMatchingMock } from './network-mock';
             });
           }
           entry.responseHeaders = JSON.stringify(headerObj);
-        } catch (_e) {
+        } catch {
           entry.responseHeaders = null;
         }
         entry.duration = Date.now() - entry.startTime;
@@ -195,7 +195,7 @@ import { findMatchingMock } from './network-mock';
             .catch(function () {
               pushNetworkEntry(entry);
             });
-        } catch (_e) {
+        } catch {
           pushNetworkEntry(entry);
         }
 

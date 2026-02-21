@@ -1101,7 +1101,7 @@ describe('getNetworkRequests / clearNetworkRequests (fetch)', () => {
 
     try {
       await fetchFn('https://api.example.com/fetch-test');
-    } catch (_e) {
+    } catch {
       // 실제 네트워크 에러는 무시 — 캡처 여부만 확인
     }
 
@@ -1129,7 +1129,7 @@ describe('getNetworkRequests / clearNetworkRequests (fetch)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: '{"hello":"world"}',
       });
-    } catch (_e) {
+    } catch {
       // 실제 네트워크 에러는 무시
     }
 
@@ -1460,7 +1460,7 @@ describe('Network Mock — fetch 인터셉트', () => {
 
     try {
       await fetchFn('https://example.com/real-url');
-    } catch (_e) {
+    } catch {
       // 실제 네트워크 에러는 무시
     }
 

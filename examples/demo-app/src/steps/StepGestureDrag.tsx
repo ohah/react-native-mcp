@@ -1,16 +1,11 @@
 import React, { useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-native-reanimated';
 
 export type StepProps = { isDarkMode: boolean };
 
-export function StepGestureDrag({ isDarkMode }: StepProps) {
+export function StepGestureDrag({ _isDarkMode: isDarkMode }: StepProps) {
   const [dragCount, setDragCount] = React.useState(0);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);

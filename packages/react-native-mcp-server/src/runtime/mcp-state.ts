@@ -18,7 +18,7 @@ export function inspectState(selector: string): any {
     var parsed;
     try {
       parsed = parseSelector(selector.trim());
-    } catch (_parseErr) {
+    } catch {
       return null;
     }
     // 첫 번째 매칭 fiber 찾기
@@ -56,7 +56,7 @@ export function inspectState(selector: string): any {
         return { index: h.index, type: h.type, value: safeClone(h.value) };
       }),
     };
-  } catch (e) {
+  } catch {
     return null;
   }
 }

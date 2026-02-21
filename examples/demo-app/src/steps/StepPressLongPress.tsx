@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, Pressable, ScrollView } from 'react-native';
 
 export type StepProps = { isDarkMode: boolean };
 
-export function StepPressLongPress({ isDarkMode }: StepProps) {
+export function StepPressLongPress({ isDarkMode: _isDarkMode }: StepProps) {
   const [longPressCount, setLongPressCount] = React.useState(0);
   const [longPressNoIdCount, setLongPressNoIdCount] = React.useState(0);
   return (

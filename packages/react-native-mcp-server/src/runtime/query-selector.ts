@@ -182,7 +182,7 @@ export function matchesCompound(
   fiber: Fiber | null,
   compound: any,
   TextComp: any,
-  ImgComp: any
+  _ImgComp: any
 ): boolean {
   if (!fiber) return false;
   var props = fiber.memoizedProps || {};
@@ -232,13 +232,13 @@ export function matchesComplexSelector(
   fiber: Fiber,
   complex: any,
   TextComp: any,
-  ImgComp: any
+  _ImgComp: any
 ): boolean {
   var segs = complex.segments;
   var last = segs.length - 1;
 
   // 마지막 segment가 현재 fiber에 매칭되어야 함
-  if (!matchesCompound(fiber, segs[last].selector, TextComp, ImgComp)) return false;
+  if (!matchesCompound(fiber, segs[last].selector, TextComp, _ImgComp)) return false;
 
   var current: Fiber | null = fiber;
   for (var i = last - 1; i >= 0; i--) {
@@ -248,12 +248,12 @@ export function matchesComplexSelector(
     if (combinator === '>') {
       // 직접 부모가 매칭되어야 함
       current = current!.return;
-      if (!current || !matchesCompound(current, targetSel, TextComp, ImgComp)) return false;
+      if (!current || !matchesCompound(current, targetSel, TextComp, _ImgComp)) return false;
     } else {
       // 후손: 조상 중 하나가 매칭되면 됨
       current = current!.return;
       while (current) {
-        if (matchesCompound(current, targetSel, TextComp, ImgComp)) break;
+        if (matchesCompound(current, targetSel, TextComp, _ImgComp)) break;
         current = current.return;
       }
       if (!current) return false;

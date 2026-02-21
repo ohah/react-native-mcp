@@ -5,7 +5,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 
 export type StepProps = { isDarkMode: boolean };
 
-export function StepGestureReanimated({ isDarkMode }: StepProps) {
+export function StepGestureReanimated({ isDarkMode: _isDarkMode }: StepProps) {
   const [taps, setTaps] = React.useState(0);
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({

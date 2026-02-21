@@ -44,7 +44,7 @@ function sleep(ms: number): Promise<void> {
 
 /** selector 패턴 감지: #, :, [, >, . 중 하나라도 포함되면 selector로 간주 */
 function looksLikeSelector(value: string): boolean {
-  return /[#:\[>.]/.test(value);
+  return /[#:[>.]/.test(value);
 }
 
 export class AppClient {

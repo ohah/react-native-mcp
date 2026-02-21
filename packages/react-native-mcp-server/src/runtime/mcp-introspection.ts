@@ -71,7 +71,7 @@ export function getSourceRefForUid(
     var debugStack = fiber && (fiber as any)._debugStack;
     if (!debugStack || typeof debugStack.stack !== 'string') return [];
     return getSourceRefFromStack(debugStack.stack);
-  } catch (e) {
+  } catch {
     return [];
   }
 }
@@ -123,7 +123,7 @@ export function getClickables(): Array<{ uid: string; label: string }> {
     }
     visit(root);
     return out;
-  } catch (e) {
+  } catch {
     return [];
   }
 }
@@ -151,7 +151,7 @@ export function getTextNodes(): Array<{ text: string; testID?: string }> {
     }
     visit(root);
     return out;
-  } catch (e) {
+  } catch {
     return [];
   }
 }
@@ -241,7 +241,7 @@ export function getComponentTree(options: any): any {
         ? result[0]
         : { uid: '0', type: 'Root', children: result }
       : result;
-  } catch (e) {
+  } catch {
     return null;
   }
 }

@@ -210,7 +210,7 @@ export function measureViewSync(uid: string): MeasureResult | null {
     }
 
     return null; // Bridge → measureView() 사용 필요
-  } catch (e) {
+  } catch {
     return null;
   }
 }

@@ -16,7 +16,7 @@ export function querySelectorAll(selector: string): any[] {
     var parsed;
     try {
       parsed = parseSelector(selector.trim());
-    } catch (parseErr) {
+    } catch {
       return []; // 따옴표 미닫힘 등 파싱 실패 시 빈 배열
     }
     var results: any[] = [];
@@ -67,7 +67,7 @@ export function querySelectorAll(selector: string): any[] {
       }
     }
     return deduped;
-  } catch (e) {
+  } catch {
     return [];
   }
 }
@@ -80,7 +80,7 @@ export function querySelector(selector: string): any {
   try {
     var all = querySelectorAll(selector);
     return all.length > 0 ? all[0] : null;
-  } catch (e) {
+  } catch {
     return null;
   }
 }

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, Pressable, ScrollView } from 'react-native';
 
 export type StepProps = { isDarkMode: boolean };
 
-export function StepPressTestId({ isDarkMode }: StepProps) {
+export function StepPressTestId({ isDarkMode: _isDarkMode }: StepProps) {
   const [count, setCount] = React.useState(0);
   return (
     <View style={styles.container}>

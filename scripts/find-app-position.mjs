@@ -41,7 +41,6 @@ async function main() {
     process.exit(1);
   }
   const consumer = await new SourceMapConsumer(rawMap);
-  const sources = rawMap.sources || [];
   // eachMapping: find one generated position that maps to wanted source
   let found = null;
   consumer.eachMapping((m) => {

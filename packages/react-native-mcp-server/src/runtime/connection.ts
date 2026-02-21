@@ -53,7 +53,7 @@ function _startHeartbeat(): void {
     }
     try {
       ws.send(JSON.stringify({ type: 'ping' }));
-    } catch (_e) {
+    } catch {
       return;
     }
     _pongTimer = setTimeout(function () {
@@ -61,7 +61,7 @@ function _startHeartbeat(): void {
       if (ws)
         try {
           ws.close();
-        } catch (_e) {}
+        } catch {}
     }, PONG_TIMEOUT_MS);
   }, HEARTBEAT_INTERVAL_MS);
 }
@@ -72,7 +72,7 @@ function connect(): void {
   if (ws)
     try {
       ws.close();
-    } catch (_e) {}
+    } catch {}
   ws = new WebSocket(wsUrl);
   ws.onopen = function () {
     if (typeof console !== 'undefined' && console.warn) {
@@ -107,7 +107,7 @@ function connect(): void {
         // Hermes(RN 0.74 이하)에서 URL.origin 미구현 → protocol+host 수동 파싱
         try {
           origin = new URL(scriptURL).origin;
-        } catch (_ue) {
+        } catch {
           var match = scriptURL.match(/^(https?:\/\/[^/?#]+)/);
           if (match) origin = match[1] ?? null;
         }
@@ -233,7 +233,7 @@ _AppRegistry.runApplication = function () {
         }
       });
     }
-  } catch (_e) {}
+  } catch {}
 })();
 
 // 주기적 재시도: 앱이 먼저 떠 있고 나중에 MCP를 켜도 자동 연결 (순서 무관)
