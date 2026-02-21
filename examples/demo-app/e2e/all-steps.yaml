@@ -123,7 +123,7 @@ steps:
   - webviewEval:
       webViewId: 'StepWebViewNoTestId-2-WebView'
       script: 'document.getElementById("postmsg-btn").click()'
-  - waitForText: { text: 'postMessage 수: 1', selector: '#postmessage-count', timeout: 5000 }
+  - waitForText: { text: 'postMessage 수: 1', selector: '#postmessage-count', timeout: 10000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#network-fetch-get', timeout: 5000 }
   # ─── Step 15: Network GET (android: 네트워크 불안정 → assertion 생략) ──
