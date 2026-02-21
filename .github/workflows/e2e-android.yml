@@ -200,7 +200,7 @@ jobs:
 
             # E2E YAML 시나리오 실행 (시뮬/에뮬 지연 시 tap 타임아웃 확대)
             export REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000
-            node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/ -p android -o e2e-artifacts/yaml-results --no-auto-launch
+            node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/all-steps.yaml -p android -o e2e-artifacts/yaml-results --no-auto-launch
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
