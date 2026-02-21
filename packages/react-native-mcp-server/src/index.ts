@@ -5,11 +5,16 @@
  *
  * `init` 서브커맨드: 프로젝트 셋업 CLI
  * `test` 서브커맨드: YAML E2E 테스트 실행
+ * `doctor` 서브커맨드: 도입 환경 검사 (Node/RN 버전, idb/adb 등)
  */
 
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { appSession } from './websocket-server.js';
+import { startHealthServer } from './health-server.js';
 import { registerAllTools } from './tools/index.js';
 import { registerAllResources } from './resources/index.js';
 import { VERSION } from './version.js';
@@ -23,6 +28,7 @@ const WS_PORT = 12300;
  */
 async function main() {
   appSession.start(WS_PORT);
+  startHealthServer(appSession, WS_PORT);
 
   const server = new McpServer({
     name: 'react-native-mcp-server',
@@ -43,6 +49,14 @@ if (subcommand === 'test') {
   // 'test' 토큰 제거 → test CLI가 "run <path> ..." 를 argv[2]로 받도록
   process.argv = [process.argv[0], process.argv[1], ...process.argv.slice(3)];
   await import('./test/cli.js');
+} else if (subcommand === 'doctor') {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const doctorScript = path.join(__dirname, '..', 'scripts', 'doctor.mjs');
+  const r = spawnSync(process.execPath, [doctorScript], {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+  });
+  process.exit(r.status ?? 1);
 } else if (subcommand === 'init') {
   const { parseArgs } = await import('node:util');
   const { runInit } = await import('./init/index.js');
