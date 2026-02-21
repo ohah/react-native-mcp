@@ -514,6 +514,42 @@ describe('compareScreenshot', () => {
   });
 });
 
+describe('startRecording / stopRecording (Video)', () => {
+  it('startRecording path 지정 파싱', () => {
+    const suite = writeAndParse("  - startRecording: { path: './artifacts/rec.mp4' }");
+    expect(suite.steps[0]).toEqual({ startRecording: { path: './artifacts/rec.mp4' } });
+  });
+
+  it('startRecording path 생략 가능', () => {
+    const suite = writeAndParse('  - startRecording: {}');
+    expect(suite.steps[0]).toEqual({ startRecording: {} });
+  });
+
+  it('stopRecording null 파싱', () => {
+    const suite = writeAndParse('  - stopRecording:');
+    expect(suite.steps[0]).toEqual({ stopRecording: null });
+  });
+
+  it('stopRecording 빈 객체 파싱', () => {
+    const suite = writeAndParse('  - stopRecording: {}');
+    expect(suite.steps[0]).toEqual({ stopRecording: {} });
+  });
+
+  it('startRecording → stopRecording 순서 파싱', () => {
+    const suite = writeAndParse(
+      [
+        "  - startRecording: { path: './out.mp4' }",
+        "  - tap: { selector: '#btn' }",
+        '  - stopRecording:',
+      ].join('\n')
+    );
+    expect(suite.steps).toHaveLength(3);
+    expect(suite.steps[0]).toEqual({ startRecording: { path: './out.mp4' } });
+    expect('tap' in suite.steps[1]!).toBe(true);
+    expect(suite.steps[2]).toEqual({ stopRecording: null });
+  });
+});
+
 describe('Phase 2 스텝 혼합', () => {
   it('흐름 제어 + 기존 스텝이 함께 파싱됨', () => {
     const suite = writeAndParse(
