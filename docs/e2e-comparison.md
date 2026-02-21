@@ -105,7 +105,7 @@ Appium은 WebView 컨텍스트 전환을 지원하지만, 설정이 복잡하다
 | GPS 모킹                               | ✓ `setLocation`       | `device.setLocation()`      | `setLocation`      | `setLocation()`    |
 | 권한 다이얼로그                        | ✗                     | `permissions` 옵션          | 자동 처리          | caps 설정          |
 | 앱 상태 초기화                         | ✓ `clearState`        | `launchApp({delete: true})` | `clearState`       | `removeApp()`      |
-| 비디오 녹화                            | ✗                     | `artifacts` 설정            | `startRecording`   | `startRecording()` |
+| 비디오 녹화                            | ✓ (start/stop 도구)   | `artifacts` 설정            | `startRecording`   | `startRecording()` |
 | 네트워크 모킹                          | ✓ `set_network_mock`  | URL blacklist               | ✗                  | ✗                  |
 | 재시도 (retry)                         | ✓ `retry`             | ✗                           | 자동 재시도        | 코드 레벨          |
 

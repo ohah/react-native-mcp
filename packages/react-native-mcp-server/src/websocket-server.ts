@@ -7,6 +7,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { setMetroBaseUrlFromApp } from './tools/metro-cdp.js';
 import { getAndroidTopInset } from './tools/adb-utils.js';
+import { stopAllRecordings } from './tools/video-recording.js';
 
 const DEFAULT_PORT = 12300;
 
@@ -484,6 +485,7 @@ export class AppSession {
 
   /** 서버 종료 */
   stop(): void {
+    stopAllRecordings();
     if (this.staleCheckTimer) {
       clearInterval(this.staleCheckTimer);
       this.staleCheckTimer = null;
