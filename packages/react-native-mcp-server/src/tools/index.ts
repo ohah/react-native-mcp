@@ -34,6 +34,7 @@ import { registerSetLocation } from './set-location.js';
 import { registerScrollUntilVisible } from './scroll-until-visible.js';
 import { registerInspectState } from './inspect-state.js';
 import { registerGetStateChanges } from './get-state-changes.js';
+import { registerAssertState } from './assert-state.js';
 import { registerNetworkMock } from './network-mock.js';
 import { registerVisualCompare } from './visual-compare.js';
 import { registerRenderTracking } from './render-tracking.js';
@@ -73,9 +74,10 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerSetLocation(server);
   // scroll_until_visible — 요소가 보일 때까지 자동 스크롤
   registerScrollUntilVisible(server, appSession);
-  // React 상태 인스펙션 — state Hook 조회 및 변경 이력
+  // React 상태 인스펙션 — state Hook 조회, 변경 이력, 상태 검증
   registerInspectState(server, appSession);
   registerGetStateChanges(server, appSession);
+  registerAssertState(server, appSession);
   // 네트워크 모킹
   registerNetworkMock(server, appSession);
   // 비주얼 리그레션 테스트
