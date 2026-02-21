@@ -101,6 +101,10 @@ jobs:
       - name: 의존성 설치
         run: bun install
 
+      - name: Doctor (환경 검사)
+        run: node ../../packages/react-native-mcp-server/scripts/doctor.mjs
+        working-directory: examples/demo-app
+
       - name: MCP 서버 빌드
         run: bun run build
 
