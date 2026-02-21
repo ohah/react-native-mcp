@@ -21,7 +21,7 @@ Detox, Maestro와 비교하여 추가 예정인 스텝 및 기능 목록. 구현
 | 6    | ~~`doubleTap`~~        | ★★☆    | 1h     | ✗ (tap 2회)                 | ✅ 구현 완료. tap 2회 (기본 간격 50ms)                    |
 | 7    | ~~`${VAR}` 환경 변수~~ | ★★☆    | 1.5h   | ✗                           | ✅ 구현 완료. parser에서 문자열 치환. CLI --env 옵션 추가 |
 | 8    | ~~`addMedia`~~         | ★☆☆    | 0.5h   | ✗ (add_media 이미 존재)     | ✅ 구현 완료. 서버 도구 있음. runner 연결만               |
-| 9    | ~~`assertHasText`~~    | ★☆☆    | 0.5h   | ✗ (assert_text 재사용)      | ✅ 구현 완료. assertText alias                            |
+| 9    | ~~`assertHasText`~~    | ★☆☆    | 0.5h   | ✗ (assert_text 재사용)      | ✅ 완료 후 제거. assertText만 사용                        |
 | 10   | ~~`assertValue`~~      | ★★☆    | 1h     | ✗ (querySelector value)     | ✅ 구현 완료. querySelector value prop 비교               |
 | 11   | ~~`repeat`~~           | ★★☆    | 1.5h   | ✗                           | ✅ 구현 완료. runner에 재귀 루프. z.lazy() 재귀 정의      |
 | 12   | ~~`runFlow`~~          | ★★☆    | 2h     | ✗                           | ✅ 구현 완료. 상대경로 해석 + Set 순환참조 방지           |
@@ -118,15 +118,9 @@ runner의 `StepContext`에 `platform` 추가하여 iOS/Android 분기 처리.
 
 ---
 
-### 8. ~~assertHasText~~ ★☆☆ ✅ 구현 완료
+### 8. ~~assertHasText~~ ★☆☆ ✅ 구현 완료 후 제거
 
-기존 `assertText` alias. selector는 선택 필드.
-
-```yaml
-- assertHasText:
-    text: '₩12,000'
-    selector: '#price-label'
-```
+기존 `assertText`와 동일한 alias였으나 제거됨. 텍스트 검증은 `assertText`만 사용.
 
 ---
 
@@ -504,7 +498,7 @@ Phase 1 (기존 도구 래핑) ─── 예상 6h
  ├─ #5 clearText         ★★☆  1h    ✅ 완료
  ├─ #6 doubleTap         ★★☆  1h    ✅ 완료
  ├─ #7 addMedia          ★☆☆  0.5h  ✅ 완료
- ├─ #8 assertHasText     ★☆☆  0.5h  ✅ 완료
+ ├─ #8 assertHasText     ★☆☆  0.5h  ✅ 완료 후 제거
  └─ #9 assertValue       ★★☆  1h    ✅ 완료
 
 Phase 2 (흐름 제어) ─────── 예상 8h
@@ -548,15 +542,15 @@ React Native 컴포넌트의 `displayName` (또는 함수 이름)은 웹의 DOM 
 
 ## 현재 지원 vs 추가 예정 요약
 
-| 카테고리          | 현재 지원                                                                            | 추가 예정                 |
-| ----------------- | ------------------------------------------------------------------------------------ | ------------------------- |
-| **탭/제스처**     | tap, swipe, scrollUntilVisible, longPress, doubleTap                                 | pinch                     |
-| **텍스트**        | typeText, inputText, clearText, **copyText**, **pasteText**                          | —                         |
-| **대기**          | wait, waitForText, waitForVisible, waitForNotVisible                                 | waitForIdle (자동 동기화) |
-| **검증**          | assertText, assertVisible, assertNotVisible, assertCount, assertHasText, assertValue | —                         |
-| **비주얼 비교**   | compareScreenshot (전체 화면 + 컴포넌트 크롭, pixelmatch)                            | —                         |
-| **흐름 제어**     | runFlow, repeat, if/when, ${VAR}, retry                                              | —                         |
-| **네트워크 모킹** | mockNetwork, clearNetworkMocks                                                       | —                         |
-| **디바이스**      | pressButton, back, home, hideKeyboard, **setLocation**, **clearState**               | —                         |
-| **앱 제어**       | launch, terminate, openDeepLink, addMedia                                            | —                         |
-| **기타**          | screenshot, evaluate, webviewEval                                                    | —                         |
+| 카테고리          | 현재 지원                                                              | 추가 예정                 |
+| ----------------- | ---------------------------------------------------------------------- | ------------------------- |
+| **탭/제스처**     | tap, swipe, scrollUntilVisible, longPress, doubleTap                   | pinch                     |
+| **텍스트**        | typeText, inputText, clearText, **copyText**, **pasteText**            | —                         |
+| **대기**          | wait, waitForText, waitForVisible, waitForNotVisible                   | waitForIdle (자동 동기화) |
+| **검증**          | assertText, assertVisible, assertNotVisible, assertCount, assertValue  | —                         |
+| **비주얼 비교**   | compareScreenshot (전체 화면 + 컴포넌트 크롭, pixelmatch)              | —                         |
+| **흐름 제어**     | runFlow, repeat, if/when, ${VAR}, retry                                | —                         |
+| **네트워크 모킹** | mockNetwork, clearNetworkMocks                                         | —                         |
+| **디바이스**      | pressButton, back, home, hideKeyboard, **setLocation**, **clearState** | —                         |
+| **앱 제어**       | launch, terminate, openDeepLink, addMedia                              | —                         |
+| **기타**          | screenshot, evaluate, webviewEval                                      | —                         |

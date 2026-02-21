@@ -76,22 +76,6 @@ describe('addMedia', () => {
   });
 });
 
-describe('assertHasText', () => {
-  it('text + selector', () => {
-    const suite = writeAndParse("  - assertHasText: { text: 'hello', selector: '#msg' }");
-    expect(suite.steps[0]).toEqual({ assertHasText: { text: 'hello', selector: '#msg' } });
-  });
-
-  it('selector 생략 가능', () => {
-    const suite = writeAndParse("  - assertHasText: { text: 'hello' }");
-    expect(suite.steps[0]).toEqual({ assertHasText: { text: 'hello' } });
-  });
-
-  it('text 누락 시 에러', () => {
-    expect(() => writeAndParse('  - assertHasText: {}')).toThrow();
-  });
-});
-
 describe('clearText', () => {
   it('selector 파싱', () => {
     const suite = writeAndParse("  - clearText: { selector: '#email' }");
@@ -146,7 +130,7 @@ describe('기존 스텝과 혼합', () => {
         '  - back:',
         '  - wait: 500',
         "  - longPress: { selector: '#item' }",
-        "  - assertHasText: { text: 'OK' }",
+        "  - assertText: { text: 'OK' }",
         '  - home:',
       ].join('\n')
     );
@@ -155,7 +139,7 @@ describe('기존 스텝과 혼합', () => {
     expect('back' in suite.steps[1]!).toBe(true);
     expect('wait' in suite.steps[2]!).toBe(true);
     expect('longPress' in suite.steps[3]!).toBe(true);
-    expect('assertHasText' in suite.steps[4]!).toBe(true);
+    expect('assertText' in suite.steps[4]!).toBe(true);
     expect('home' in suite.steps[5]!).toBe(true);
   });
 });
