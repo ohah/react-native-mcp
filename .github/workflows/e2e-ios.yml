@@ -39,7 +39,7 @@ jobs:
     needs: check
     if: needs.check.outputs.should-run == 'true'
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: 코드 체크아웃
