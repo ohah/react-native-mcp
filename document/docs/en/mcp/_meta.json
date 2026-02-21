@@ -4,6 +4,14 @@
   { "type": "file", "name": "getting-started", "label": "Getting Started" },
   { "type": "file", "name": "mcp-usage", "label": "Cursor / Claude / Copilot" },
   { "type": "file", "name": "expo-guide", "label": "Expo Guide" },
+  {
+    "type": "file",
+    "name": "compatibility-and-requirements",
+    "label": "Compatibility & requirements"
+  },
+  { "type": "file", "name": "adoption-checklist", "label": "Adoption checklist" },
+  { "type": "file", "name": "known-limitations-and-risks", "label": "Known limitations & risks" },
+  { "type": "file", "name": "observability", "label": "Observability" },
   { "type": "file", "name": "vscode-extension", "label": "VS Code Extension" },
   { "type": "file", "name": "troubleshooting", "label": "Troubleshooting" },
   {
