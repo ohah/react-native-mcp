@@ -6,7 +6,7 @@
 
 import { WebSocketServer, WebSocket } from 'ws';
 import { setMetroBaseUrlFromApp } from './tools/metro-cdp.js';
-import { getAndroidTopInset, getAndroidScale } from './tools/adb-utils.js';
+import { getAndroidTopInset } from './tools/adb-utils.js';
 
 const DEFAULT_PORT = 12300;
 
@@ -41,6 +41,8 @@ export interface DeviceConnection {
   pixelRatio: number | null;
   /** Android top inset in px (상태바/캡션바). ADB dumpsys에서 감지. */
   topInsetPx: number;
+  /** Android에서 ensureAndroidTopInset으로 dumpsys 시도한 적 있음. 0이어도 재호출 방지. */
+  topInsetAttempted?: boolean;
   /** Date.now() of last message received from this device (for stale detection). */
   lastMessageTime: number;
 }
@@ -162,6 +164,29 @@ export class AppSession {
     conn.topInsetPx = Math.round(dp * ratio);
     if (conn.platform === 'android' && conn.ws.readyState === 1) {
       conn.ws.send(JSON.stringify({ type: 'setTopInsetDp', topInsetDp: dp }));
+    }
+  }
+
+  /**
+   * Android tap 전에 top inset이 0이면 한 번만 dumpsys로 보충.
+   * 연결당 한 번만 시도(topInsetAttempted). 0이어도 재호출하지 않아 adb 낭비 방지.
+   */
+  async ensureAndroidTopInset(deviceId: string | undefined, serial: string): Promise<void> {
+    let conn: DeviceConnection;
+    try {
+      conn = this.resolveDevice(deviceId, 'android');
+    } catch {
+      return;
+    }
+    if (conn.topInsetPx > 0) return;
+    if (conn.topInsetAttempted) return;
+    conn.topInsetAttempted = true;
+    const px = await getAndroidTopInset(serial);
+    if (px <= 0) return;
+    const ratio = conn.pixelRatio ?? 1;
+    conn.topInsetPx = px;
+    if (conn.ws.readyState === 1) {
+      conn.ws.send(JSON.stringify({ type: 'setTopInsetDp', topInsetDp: px / ratio }));
     }
   }
 
