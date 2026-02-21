@@ -4,6 +4,10 @@
   { "type": "file", "name": "getting-started", "label": "시작하기" },
   { "type": "file", "name": "mcp-usage", "label": "Cursor / Claude / Copilot" },
   { "type": "file", "name": "expo-guide", "label": "Expo 가이드" },
+  { "type": "file", "name": "compatibility-and-requirements", "label": "호환성 및 요구사항" },
+  { "type": "file", "name": "adoption-checklist", "label": "도입 전 체크리스트" },
+  { "type": "file", "name": "known-limitations-and-risks", "label": "알려진 제한·리스크" },
+  { "type": "file", "name": "observability", "label": "운영·관찰 (Observability)" },
   { "type": "file", "name": "vscode-extension", "label": "VS Code 확장" },
   { "type": "file", "name": "troubleshooting", "label": "문제 해결" },
   {
