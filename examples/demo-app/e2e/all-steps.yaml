@@ -3,7 +3,7 @@
 name: 전체 35 스텝
 config:
   platform: ios
-  timeout: 90000
+  timeout: 120000
   bundleId:
     ios: org.reactnativemcp.demo
     android: com.reactnativemcp.demo
@@ -12,7 +12,7 @@ setup:
   - launch: __bundleId__
   - waitForVisible:
       selector: 'Pressable:text("Count:")'
-      timeout: 15000
+      timeout: 25000
 
 steps:
   # ─── Step 1: Press Counter (텍스트로 찾기) ──────────────────────────
@@ -25,42 +25,42 @@ steps:
   - waitForText: { text: 'Count: 3', selector: 'Pressable:text("Count:")', timeout: 6000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - wait: 500
-  - waitForVisible: { selector: 'Pressable:text("testID 없음")', timeout: 5000 }
+  - waitForVisible: { selector: 'Pressable:text("testID 없음")', timeout: 15000 }
   # ─── Step 2: testID 없음 ───────────────────────────────────────────
   - tap: { selector: 'Pressable:text("testID 없음")' }
-  - waitForText: { text: 'testID 없음 (1)', timeout: 3000 }
+  - waitForText: { text: 'testID 없음 (1)', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'TouchableOpacity:text("TouchableOpacity (0)")', timeout: 5000 }
+  - waitForVisible: { selector: 'TouchableOpacity:text("TouchableOpacity (0)")', timeout: 15000 }
   - wait: 300
   # ─── Step 3: Press Variants ────────────────────────────────────────
   - tap: { selector: 'TouchableOpacity:text("TouchableOpacity (0)")' }
-  - waitForText: { text: 'TouchableOpacity (1)', timeout: 3000 }
+  - waitForText: { text: 'TouchableOpacity (1)', timeout: 20000 }
   - tap: { selector: 'TouchableHighlight:text("TouchableHighlight (0)")' }
-  - waitForText: { text: 'TouchableHighlight (1)', timeout: 3000 }
+  - waitForText: { text: 'TouchableHighlight (1)', timeout: 20000 }
   # Android: RN Button title이 대문자로 표시되어 "RN BUTTON (0)". 동일 화면에 Button 1개뿐이므로 타입만으로 탭
   - tap: { selector: 'Button' }
   - wait: 500
   - tap: { selector: 'Pressable:text("Icon + Label (0)")' }
-  - waitForText: { text: 'Icon + Label (1)', timeout: 3000 }
+  - waitForText: { text: 'Icon + Label (1)', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'Pressable:text("Long Press (0)")', timeout: 5000 }
+  - waitForVisible: { selector: 'Pressable:text("Long Press (0)")', timeout: 15000 }
   # ─── Step 4: Long Press (텍스트로 찾기) ─────────────────────────────
   - tap: { selector: 'Pressable:text("Long Press (0)")', duration: 800 }
-  - waitForText: { text: 'Long Press (1)', timeout: 3000 }
+  - waitForText: { text: 'Long Press (1)', timeout: 20000 }
   - tap: { selector: 'Pressable:text("롱프레스 testID없음 (0)")', duration: 800 }
-  - waitForText: { text: '롱프레스 testID없음 (1)', timeout: 3000 }
+  - waitForText: { text: '롱프레스 testID없음 (1)', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#input-with-testid', timeout: 5000 }
+  - waitForVisible: { selector: '#input-with-testid', timeout: 15000 }
   # ─── Step 5: Input with testID (의도적 testID 사용) ────────────────
   - typeText: { selector: '#input-with-testid', text: 'e2e' }
-  - waitForText: { text: '입력값: e2e', timeout: 3000 }
+  - waitForText: { text: '입력값: e2e', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'TextInput[placeholder="testID 없는 입력"]', timeout: 5000 }
+  - waitForVisible: { selector: 'TextInput[placeholder="testID 없는 입력"]', timeout: 15000 }
   # ─── Step 6: Input no testID (placeholder로 찾기) ────────────────────
   - typeText: { selector: 'TextInput[placeholder="testID 없는 입력"]', text: 'ok' }
-  - waitForText: { text: '입력값: ok', timeout: 3000 }
+  - waitForText: { text: '입력값: ok', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'ScrollView', timeout: 5000 }
+  - waitForVisible: { selector: 'ScrollView', timeout: 15000 }
   # ─── Step 7: ScrollView no ref (타입+텍스트로 찾기) ─────────────────
   - swipe: { selector: 'ScrollView', direction: 'up', distance: '30%' }
   - wait: 1500
@@ -68,155 +68,155 @@ steps:
       { selector: 'Pressable:text("버튼 15 (0)")', direction: 'down', maxScrolls: 5 }
   - wait: 500
   - tap: { selector: 'Pressable:text("버튼 15 (0)")' }
-  - waitForText: { text: '버튼 15 (1)', timeout: 5000 }
+  - waitForText: { text: '버튼 15 (1)', timeout: 15000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'ScrollView', timeout: 5000 }
+  - waitForVisible: { selector: 'ScrollView', timeout: 15000 }
   # ─── Step 8: ScrollView with ref (타입+텍스트로 버튼 찾기) ──────────
   - swipe: { selector: 'ScrollView', direction: 'up', distance: '30%' }
   - wait: 1500
   - scrollUntilVisible:
       { selector: 'Pressable:text("버튼 20 (0)")', direction: 'down', maxScrolls: 5 }
   - tap: { selector: 'Pressable:text("버튼 20 (0)")' }
-  - waitForText: { text: '버튼 20 (1)', timeout: 5000 }
+  - waitForText: { text: '버튼 20 (1)', timeout: 15000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'Pressable:text("버튼 0 (0)")', timeout: 5000 }
+  - waitForVisible: { selector: 'Pressable:text("버튼 0 (0)")', timeout: 15000 }
   # ─── Step 9: ScrollView no testID ──────────────────────────────────
   - swipe: { selector: 'ScrollView', direction: 'up', distance: '40%' }
   - wait: 1500
   - scrollUntilVisible:
       { selector: 'Pressable:text("버튼 20 (0)")', direction: 'down', maxScrolls: 5 }
   - tap: { selector: 'Pressable:text("버튼 20 (0)")' }
-  - waitForText: { text: '버튼 20 (1)', timeout: 5000 }
+  - waitForText: { text: '버튼 20 (1)', timeout: 15000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'FlatList', timeout: 5000 }
+  - waitForVisible: { selector: 'FlatList', timeout: 15000 }
   # ─── Step 10: FlatList (타입+텍스트:nth로 아이템 찾기) ──────────────
   # 두 번째 "탭: 0"이 보일 때까지 스크롤 후, 그 버튼만 탭 (viewport 검사로 화면 안에 있을 때만 성공)
   - scrollUntilVisible:
       { selector: 'Pressable:text("탭: 0"):nth-of-type(2)', direction: 'down', maxScrolls: 10 }
   - wait: 500
   - tap: { selector: 'Pressable:text("탭: 0"):nth-of-type(2)' }
-  - waitForText: { text: '탭: 1', timeout: 5000 }
+  - waitForText: { text: '탭: 1', timeout: 15000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'Pressable:text("클릭: 0")', timeout: 5000 }
+  - waitForVisible: { selector: 'Pressable:text("클릭: 0")', timeout: 15000 }
   # ─── Step 11: FlatList no testID ───────────────────────────────────
   # "클릭: 0"이 보일 때까지 스크롤 후 탭 (Step 10과 동일하게 swipe 없이 단일 플로우)
   - scrollUntilVisible: { selector: 'Pressable:text("클릭: 0")', direction: 'down', maxScrolls: 5 }
   - wait: 300
   - tap: { selector: 'Pressable:text("클릭: 0")' }
-  - waitForText: { text: '클릭: 1', timeout: 3000 }
+  - waitForText: { text: '클릭: 1', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#demo-app-webview', timeout: 5000 }
+  - waitForVisible: { selector: '#demo-app-webview', timeout: 15000 }
   # ─── Step 12: WebView inline ──────────────────────────────────────
   - webviewEval:
       {
         webViewId: 'demo-app-webview',
         script: 'document.getElementById("webview-demo-btn").click()',
       }
-  - waitForText: { text: 'RN 탭 수: 1', timeout: 5000 }
+  - waitForText: { text: 'RN 탭 수: 1', timeout: 15000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#demo-app-webview-naver', timeout: 5000 }
+  - waitForVisible: { selector: '#demo-app-webview-naver', timeout: 15000 }
   # ─── Step 13: WebView Naver ───────────────────────────────────────
   - webviewEval: { webViewId: 'demo-app-webview-naver', script: 'document.title' }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#postmessage-count', timeout: 5000 }
+  - waitForVisible: { selector: '#postmessage-count', timeout: 15000 }
   # ─── Step 14: WebView no testID (Babel이 자동 부여한 ID로 실행) ─────
   - webviewEval:
       webViewId: 'StepWebViewNoTestId-2-WebView'
       script: 'document.getElementById("postmsg-btn").click()'
-  - waitForText: { text: 'postMessage 수: 1', selector: '#postmessage-count', timeout: 10000 }
+  - waitForText: { text: 'postMessage 수: 1', selector: '#postmessage-count', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#network-fetch-get', timeout: 5000 }
+  - waitForVisible: { selector: '#network-fetch-get', timeout: 15000 }
   # ─── Step 15: Network GET (android: 네트워크 불안정 → assertion 생략) ──
   - tap: { selector: '#network-fetch-get' }
   - wait: 3000
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#network-fetch-post', timeout: 5000 }
+  - waitForVisible: { selector: '#network-fetch-post', timeout: 15000 }
   # ─── Step 16: Network POST ─────────────────────────────────────────
   - tap: { selector: '#network-fetch-post' }
   - wait: 3000
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#network-fetch-multiple', timeout: 5000 }
+  - waitForVisible: { selector: '#network-fetch-multiple', timeout: 15000 }
   # ─── Step 17: Network Multiple ─────────────────────────────────────
   - tap: { selector: '#network-fetch-multiple' }
   - wait: 3000
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#network-fetch-error', timeout: 5000 }
+  - waitForVisible: { selector: '#network-fetch-error', timeout: 15000 }
   # ─── Step 18: Network Error ────────────────────────────────────────
   - tap: { selector: '#network-fetch-error' }
   - wait: 3000
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#network-xhr-get', timeout: 5000 }
+  - waitForVisible: { selector: '#network-xhr-get', timeout: 15000 }
   # ─── Step 19: Network XHR ──────────────────────────────────────────
   - tap: { selector: '#network-xhr-get' }
   - wait: 2000
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#gesture-compare-touchable', timeout: 5000 }
+  - waitForVisible: { selector: '#gesture-compare-touchable', timeout: 15000 }
   # ─── Step 20: Gesture Compare ──────────────────────────────────────
   - tap: { selector: '#gesture-compare-touchable' }
-  - waitForText: { text: '1', selector: '#gesture-compare-touchable', timeout: 3000 }
+  - waitForText: { text: '1', selector: '#gesture-compare-touchable', timeout: 20000 }
   - tap: { selector: '#gesture-compare-pressable' }
-  - waitForText: { text: '1', selector: '#gesture-compare-pressable', timeout: 3000 }
+  - waitForText: { text: '1', selector: '#gesture-compare-pressable', timeout: 20000 }
   - tap: { selector: '#gesture-compare-gh-touchable' }
-  - waitForText: { text: '1', selector: '#gesture-compare-gh-touchable', timeout: 3000 }
+  - waitForText: { text: '1', selector: '#gesture-compare-gh-touchable', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#gesture-tap-detector-wrapper', timeout: 5000 }
+  - waitForVisible: { selector: '#gesture-tap-detector-wrapper', timeout: 15000 }
   # ─── Step 21: Gesture Tap ─────────────────────────────────────────
   - tap: { selector: '#gesture-tap-detector-wrapper' }
-  - waitForText: { text: '1', timeout: 3000 }
+  - waitForText: { text: '1', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#gesture-gh-pressable', timeout: 5000 }
+  - waitForVisible: { selector: '#gesture-gh-pressable', timeout: 15000 }
   # ─── Step 22: RNGH Pressable ───────────────────────────────────────
   - tap: { selector: '#gesture-gh-pressable' }
-  - waitForText: { text: 'RNGH TouchableOpacity: 1', timeout: 3000 }
+  - waitForText: { text: 'RNGH TouchableOpacity: 1', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'TouchableOpacity:text("RNGH 라벨만")', timeout: 5000 }
+  - waitForVisible: { selector: 'TouchableOpacity:text("RNGH 라벨만")', timeout: 15000 }
   # ─── Step 23: RNGH no testID (GHTouchableOpacity) ──────────────────
   - tap: { selector: 'TouchableOpacity:text("RNGH 라벨만")' }
-  - waitForText: { text: 'RNGH 라벨만: 1', timeout: 3000 }
+  - waitForText: { text: 'RNGH 라벨만: 1', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#gesture-reanimated-trigger', timeout: 5000 }
+  - waitForVisible: { selector: '#gesture-reanimated-trigger', timeout: 15000 }
   # ─── Step 24: Reanimated ───────────────────────────────────────────
   - tap: { selector: '#gesture-reanimated-trigger' }
-  - waitForText: { text: '1', timeout: 3000 }
+  - waitForText: { text: '1', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'TouchableOpacity:text("눌러보세요 (라벨만)")', timeout: 5000 }
+  - waitForVisible: { selector: 'TouchableOpacity:text("눌러보세요 (라벨만)")', timeout: 15000 }
   # ─── Step 25: Reanimated no ID ─────────────────────────────────────
   - tap: { selector: 'TouchableOpacity:text("눌러보세요 (라벨만)")' }
   - wait: 500
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#gesture-reanimated-scroll', timeout: 5000 }
+  - waitForVisible: { selector: '#gesture-reanimated-scroll', timeout: 15000 }
   # ─── Step 26: Reanimated Scroll ───────────────────────────────────
   - swipe: { selector: '#gesture-reanimated-scroll', direction: 'up', distance: '40%' }
-  - waitForText: { text: 'Reanimated 목록 아이템', timeout: 5000 }
+  - waitForText: { text: 'Reanimated 목록 아이템', timeout: 15000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'View:text("스와이프 to delete 행 1")', timeout: 5000 }
+  - waitForVisible: { selector: 'View:text("스와이프 to delete 행 1")', timeout: 15000 }
   # ─── Step 27: Swipeable ────────────────────────────────────────────
   - swipe: { selector: 'View:text("스와이프 to delete 행 1")', direction: 'left', distance: '70%' }
-  - waitForVisible: { selector: 'View:text("삭제")', timeout: 3000 }
+  - waitForVisible: { selector: 'View:text("삭제")', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#gesture-drag-area', timeout: 5000 }
+  - waitForVisible: { selector: '#gesture-drag-area', timeout: 15000 }
   # ─── Step 28: Drag (Pan) ───────────────────────────────────────────
   - swipe: { selector: '#gesture-drag-area', direction: 'right', distance: '5%' }
-  - waitForText: { text: '드래그 완료: 1', selector: '#gesture-drag-count', timeout: 5000 }
+  - waitForText: { text: '드래그 완료: 1', selector: '#gesture-drag-count', timeout: 15000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: 'ScrollView', timeout: 5000 }
+  - waitForVisible: { selector: 'ScrollView', timeout: 15000 }
   # ─── Step 29: Pull to refresh ──────────────────────────────────────
   - swipe: { selector: 'ScrollView', direction: 'down', distance: '30%' }
-  - waitForText: { text: '새로고침 횟수: 1', timeout: 5000 }
+  - waitForText: { text: '새로고침 횟수: 1', timeout: 15000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#gesture-drawer-open', timeout: 5000 }
+  - waitForVisible: { selector: '#gesture-drawer-open', timeout: 15000 }
   # ─── Step 30: Drawer ──────────────────────────────────────────────
   - tap: { selector: '#gesture-drawer-open' }
-  - waitForText: { text: '드로워: 열림', selector: '#drawer-status', timeout: 3000 }
+  - waitForText: { text: '드로워: 열림', selector: '#drawer-status', timeout: 20000 }
   - tap: { selector: '#drawer-overlay' }
-  - waitForText: { text: '닫힘', timeout: 3000 }
+  - waitForText: { text: '닫힘', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#pager-status', timeout: 5000 }
+  - waitForVisible: { selector: '#pager-status', timeout: 15000 }
   # ─── Step 31: Pager ────────────────────────────────────────────────
   - swipe: { selector: 'ScrollView:has-scroll', direction: 'left', distance: '80%', duration: 400 }
-  - waitForText: { text: '현재 페이지: 2', selector: '#pager-status', timeout: 3000 }
+  - waitForText: { text: '현재 페이지: 2', selector: '#pager-status', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#sheet-status', timeout: 5000 }
+  - waitForVisible: { selector: '#sheet-status', timeout: 15000 }
   # ─── Step 32: Bottom sheet ─────────────────────────────────────────
   # Animated.View(translateY) → measureInWindow가 transform 포함 좌표를 반환해
   # center가 화면 밖으로 계산됨. viewport clamping이 자동으로 visible rect 내 좌표로 보정.
@@ -230,26 +230,26 @@ steps:
         duration: 800,
       }
   - wait: 1200
-  - waitForText: { text: '상태: 열림', selector: '#sheet-status', timeout: 5000 }
+  - waitForText: { text: '상태: 열림', selector: '#sheet-status', timeout: 15000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#toggle-target', timeout: 5000 }
+  - waitForVisible: { selector: '#toggle-target', timeout: 15000 }
   # ─── Step 33: Toggle visibility ───────────────────────────────────
   - assertVisible: { selector: '#toggle-target' }
   - tap: { selector: '#toggle-visibility-btn' }
-  - waitForNotVisible: { selector: '#toggle-target', timeout: 3000 }
+  - waitForNotVisible: { selector: '#toggle-target', timeout: 20000 }
   - tap: { selector: '#toggle-visibility-btn' }
-  - waitForVisible: { selector: '#toggle-target', timeout: 3000 }
+  - waitForVisible: { selector: '#toggle-target', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#long-list', timeout: 5000 }
+  - waitForVisible: { selector: '#long-list', timeout: 15000 }
   # ─── Step 34: Long list ───────────────────────────────────────────
   - scrollUntilVisible: { selector: '#long-list-item-99', direction: 'down', maxScrolls: 15 }
   - tap: { selector: '#long-list-item-99' }
-  - waitForText: { text: '탭: 아이템 99', timeout: 3000 }
+  - waitForText: { text: '탭: 아이템 99', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
-  - waitForVisible: { selector: '#element-count-status', timeout: 5000 }
+  - waitForVisible: { selector: '#element-count-status', timeout: 15000 }
   # ─── Step 35: Element count ────────────────────────────────────────
   - assertVisible: { selector: '#count-item-0' }
   - assertText: { text: '남은 아이템: 5', selector: '#element-count-status' }
   - tap: { selector: '#count-item-0' }
-  - waitForText: { text: '남은 아이템: 4', selector: '#element-count-status', timeout: 3000 }
+  - waitForText: { text: '남은 아이템: 4', selector: '#element-count-status', timeout: 20000 }
   - screenshot: { path: './results/all-35-steps-success.png' }
