@@ -3185,7 +3185,7 @@
 				deviceName = rn.Platform && rn.Platform.constants && rn.Platform.constants.Model || null;
 				if (rn.PixelRatio) pixelRatio = rn.PixelRatio.get();
 			} catch (_e) {
-				if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Failed to read platform info:", _e && _e.message);
+				if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Failed to read platform info:", _e instanceof Error ? _e.message : String(_e));
 			}
 			try {
 				var _rn = require("react-native");
@@ -3198,7 +3198,7 @@
 					if (match) origin = (_match$ = match[1]) !== null && _match$ !== void 0 ? _match$ : null;
 				}
 			} catch (_e2) {
-				if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Failed to read metro URL:", _e2 && _e2.message);
+				if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Failed to read metro URL:", _e2 instanceof Error ? _e2.message : String(_e2));
 			}
 			try {
 				ws.send(JSON.stringify({
@@ -3210,7 +3210,7 @@
 					pixelRatio
 				}));
 			} catch (_e3) {
-				if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Failed to send init:", _e3 && _e3.message);
+				if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Failed to send init:", _e3 instanceof Error ? _e3.message : String(_e3));
 			}
 			_startHeartbeat();
 		};
