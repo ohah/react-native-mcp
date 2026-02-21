@@ -18,10 +18,13 @@ steps:
   # ─── Step 1: Press Counter (텍스트로 찾기) ──────────────────────────
   - assertText: { text: 'Count: 0', selector: 'Pressable:text("Count:")' }
   - tap: { selector: 'Pressable:text("Count:")' }
+  - wait: 500
   - waitForText: { text: 'Count: 1', selector: 'Pressable:text("Count:")', timeout: 6000 }
   - tap: { selector: 'Pressable:text("Count:")' }
+  - wait: 500
   - waitForText: { text: 'Count: 2', selector: 'Pressable:text("Count:")', timeout: 6000 }
   - tap: { selector: 'Pressable:text("Count:")' }
+  - wait: 500
   - waitForText: { text: 'Count: 3', selector: 'Pressable:text("Count:")', timeout: 6000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - wait: 500
