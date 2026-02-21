@@ -42,6 +42,8 @@ Metro 실행 중에만 동작하는 스크립트들. `get_component_source` / �
 
 자세한 절차는 [.cursor/commands/init-pr.md](../.cursor/commands/init-pr.md), [.cursor/commands/pr.md](../.cursor/commands/pr.md) 를 참고한다.
 
+E2E가 CI에서 가끔 실패할 때의 원인과 재실행 권장은 [e2e-ci-reliability.md](e2e-ci-reliability.md) 참고.
+
 ## CI E2E 시뮬레이터/에뮬레이터 기기 지정
 
 GitHub Actions E2E에서 로컬과 같은 해상도·기기를 쓰려면 아래처럼 지정할 수 있다.
