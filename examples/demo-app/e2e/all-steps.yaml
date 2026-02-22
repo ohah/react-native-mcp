@@ -79,8 +79,9 @@ steps:
   - wait: 1500
   - scrollUntilVisible:
       { selector: 'Pressable:text("버튼 20 (0)")', direction: 'down', maxScrolls: 5 }
+  - wait: 500
   - tap: { selector: 'Pressable:text("버튼 20 (0)")' }
-  - waitForText: { text: '버튼 20 (1)', timeout: 15000 }
+  - waitForText: { text: '버튼 20 (1)', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'Pressable:text("버튼 0 (0)")', timeout: 15000 }
   # ─── Step 9: ScrollView no testID ──────────────────────────────────
@@ -88,8 +89,9 @@ steps:
   - wait: 1500
   - scrollUntilVisible:
       { selector: 'Pressable:text("버튼 20 (0)")', direction: 'down', maxScrolls: 5 }
+  - wait: 500
   - tap: { selector: 'Pressable:text("버튼 20 (0)")' }
-  - waitForText: { text: '버튼 20 (1)', timeout: 15000 }
+  - waitForText: { text: '버튼 20 (1)', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'FlatList', timeout: 15000 }
   # ─── Step 10: FlatList (타입+텍스트:nth로 아이템 찾기) ──────────────
