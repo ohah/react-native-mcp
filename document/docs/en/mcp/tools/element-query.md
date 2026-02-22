@@ -163,3 +163,46 @@ Run JavaScript inside an in-app WebView. Useful for DOM manipulation, form filli
 - Prefer this over `tap` for WebView DOM interactions — it's faster and more reliable.
 - WebViews are auto-registered by the babel plugin. Use `getRegisteredWebViewIds()` to discover available IDs.
 - The script must evaluate to a value to return a result. End with a string or expression.
+
+---
+
+## get_component_source
+
+Resolve a component to its source location (file path, line, column) using React's `_debugStack` and the Metro source map. Use a selector or a `uid` from `take_snapshot`. Useful for "open this component in the editor" or token-efficient code navigation.
+
+#### Parameters
+
+| Parameter  | Type                 | Required | Description                                                                                 |
+| ---------- | -------------------- | -------- | ------------------------------------------------------------------------------------------- |
+| `selector` | `string`             | No       | Selector to find the component. If omitted, `uid` is required.                              |
+| `uid`      | `string`             | No       | UID from `take_snapshot` (testID or path like `0.1.2`). If omitted, `selector` is required. |
+| `platform` | `"ios" \| "android"` | No       | Target platform                                                                             |
+| `deviceId` | `string`             | No       | Target device                                                                               |
+
+#### Example
+
+```json
+// By selector
+{
+  "tool": "get_component_source",
+  "arguments": { "selector": "#SubmitButton" }
+}
+
+// By uid from snapshot
+{
+  "tool": "get_component_source",
+  "arguments": { "uid": "header>Text:0" }
+}
+
+// Response
+{
+  "filePath": "/app/src/components/SubmitButton.tsx",
+  "lineNumber": 42,
+  "columnNumber": 10
+}
+```
+
+#### Tips
+
+- App source is preferred: frames from `node_modules/react`, `node_modules/react-native`, or the runtime are skipped when an app file is available.
+- Use this to jump to the right file and line when an AI or user asks to "edit this component" without searching the codebase.

@@ -37,3 +37,14 @@ Expo 상세 호환 표는 [Expo 가이드](expo-guide) 참고.
 
 - `packages/react-native-mcp-server/package.json`: `engines`, `peerDependencies`
 - 기능 로드맵 § 안정화
+
+---
+
+## 참조 문서 (저장소)
+
+상세 설정·CLI 레퍼런스는 이 사이트가 아닌 저장소 `docs/` 폴더에 있다.
+
+- **[idb-setup](https://github.com/ohah/react-native-mcp/blob/main/docs/idb-setup.md)** — idb 설치 및 설정
+- **[ADB_REFERENCE](https://github.com/ohah/react-native-mcp/blob/main/docs/ADB_REFERENCE.md)** — adb 명령·옵션
+- **[IDB_REFERENCE](https://github.com/ohah/react-native-mcp/blob/main/docs/IDB_REFERENCE.md)** — idb 명령·옵션
+- **[e2e-orientation-and-idb-coordinates](https://github.com/ohah/react-native-mcp/blob/main/docs/e2e-orientation-and-idb-coordinates.md)** — E2E 방향·좌표 참고

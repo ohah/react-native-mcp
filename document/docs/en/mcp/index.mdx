@@ -72,6 +72,14 @@ module.exports = {
 };
 ```
 
+### Babel preset options (reference)
+
+| Option / env               | Description                                                                                                       |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `renderHighlight`          | See table above. Visual re-render overlay at app load.                                                            |
+| `REACT_NATIVE_MCP_ENABLED` | When running Metro, set to `true` to enable MCP in production builds. Default off for security.                   |
+| testID injection           | The preset injects `testID` (and optional `displayName`) on key elements for selectors. No extra config required. |
+
 ## 4. Native tools (idb / adb)
 
 Tap, swipe, screenshots, etc. use **idb** (iOS) and **adb** (Android). You must install them.

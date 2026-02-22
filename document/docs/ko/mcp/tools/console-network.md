@@ -99,3 +99,39 @@
 - `responseBody`는 문자열로 캡처됩니다. 큰 응답은 잘릴 수 있습니다.
 
 - 테스트 시나리오 전에 `clear`(target: `network_requests`)로 버퍼를 비울 수 있습니다.
+
+---
+
+## clear
+
+콘솔 로그, 네트워크 요청, 네트워크 모크, 상태 변경, 렌더 프로파일 데이터 중 하나의 메모리 버퍼를 비웁니다. 앱 데이터 초기화는 별도 도구 `clear_state`를 사용하세요.
+
+#### Parameters
+
+| 파라미터   | 타입                 | 필수   | 설명                                                                                            |
+| ---------- | -------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| `target`   | `string`             | 예     | 다음 중 하나: `console`, `network_requests`, `network_mocks`, `state_changes`, `render_profile` |
+| `platform` | `"ios" \| "android"` | 아니오 | 대상 플랫폼                                                                                     |
+| `deviceId` | `string`             | 아니오 | 대상 디바이스                                                                                   |
+
+#### Example
+
+```json
+// 테스트 전 콘솔 버퍼 비우기
+{ "tool": "clear", "arguments": { "target": "console" } }
+
+// 네트워크 모크 규칙 제거
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
+
+// 렌더 프로파일링 중지 및 데이터 비우기
+{ "tool": "clear", "arguments": { "target": "render_profile" } }
+```
+
+#### Tips
+
+- `console` — 캡처된 콘솔 메시지 비우기.
+- `network_requests` — 요청/응답 버퍼 비우기.
+- `network_mocks` — 모든 모크 규칙 제거.
+- `state_changes` — 상태 변경 이력 비우기.
+- `render_profile` — 프로파일링 중지 및 리포트 비우기.
+- 앱 저장소·권한 초기화는 [디바이스 및 상태](./device)의 `clear_state`를 사용하세요.

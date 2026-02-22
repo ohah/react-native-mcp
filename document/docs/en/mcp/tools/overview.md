@@ -1,10 +1,10 @@
 ---
-description: Reference for all 38 MCP tools (tap, snapshot, assert, etc.) with selector syntax and common parameters.
+description: Reference for all MCP tools (tap, snapshot, assert, video recording, etc.) with selector syntax and common parameters.
 ---
 
 # Tool Reference
 
-React Native MCP provides **47 tools** across 12 categories. Every tool is available to any MCP-compatible client (Cursor, Claude, Copilot, etc.) out of the box.
+React Native MCP provides **50 tools** across 12 categories. Every tool is available to any MCP-compatible client (Cursor, Claude, Copilot, etc.) out of the box.
 
 ## Common Parameters
 
@@ -38,11 +38,11 @@ See each tool page for detailed parameter tables, examples, and platform-specifi
 | Category                               | Tools | Description                                                                                               |
 | -------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------- |
 | [Device & Status](./device)            | 10    | Connection status, device/app listing, deep links, GPS, terminate app, orientation/screen size, app reset |
-| [Screen Capture](./screen-capture)     | 4     | Screenshots, component tree snapshots, native UI tree, visual comparison                                  |
-| [Element Query](./element-query)       | 4     | Find elements, run JS in app or WebView                                                                   |
+| [Screen Capture](./screen-capture)     | 6     | Screenshots, snapshots, native UI tree, visual comparison, video recording                                |
+| [Element Query](./element-query)       | 5     | Find elements, run JS in app or WebView, resolve component to source location                             |
 | [Interaction](./interaction)           | 8     | Tap, swipe, text input, key events, scrolling                                                             |
-| [Assertions](./assertions)             | 4     | Verify text, visibility, element count                                                                    |
-| [Console & Network](./console-network) | 4     | Inspect console logs and network requests                                                                 |
+| [Assertions](./assertions)             | 5     | Verify text, visibility, element count, state                                                             |
+| [Console & Network](./console-network) | 3     | Inspect console logs and network requests, clear buffers                                                  |
 | [Network Mocking](./network-mocking)   | 4     | Mock API responses without backend changes                                                                |
 | [State Inspection](./state-inspection) | 3     | Inspect React hooks and state changes                                                                     |
 | [Render Profiling](./render-profiling) | 3     | Profile renders, find unnecessary re-renders                                                              |

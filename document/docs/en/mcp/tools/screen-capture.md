@@ -164,3 +164,62 @@ Compare the current screen against a baseline PNG for visual regression testing.
 - Use `selector` to compare only a specific component (e.g., `#header`) instead of the full screen.
 - Lower `threshold` values are stricter (0 = pixel-perfect, 1 = any difference passes).
 - Uses [sharp](https://sharp.pixelplumbing.com/) + [pixelmatch](https://github.com/mapbox/pixelmatch) internally.
+
+---
+
+## Video recording
+
+Start and stop screen recording on the device/simulator. Uses **idb** on iOS and **adb screenrecord** on Android. Only one recording can be active per MCP server at a time.
+
+### start_video_recording
+
+Start recording the device screen. The recording continues until you call `stop_video_recording`.
+
+#### Parameters
+
+| Parameter  | Type                 | Required | Description                                                                                                        |
+| ---------- | -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| `platform` | `"ios" \| "android"` | **Yes**  | Target platform                                                                                                    |
+| `filePath` | `string`             | **Yes**  | Host path to save the recording. Must be under the current working directory (e.g. `e2e-artifacts/recording.mp4`). |
+| `deviceId` | `string`             | No       | Device ID. Omit when only one device is connected.                                                                 |
+
+#### Example
+
+```json
+{
+  "tool": "start_video_recording",
+  "arguments": {
+    "platform": "ios",
+    "filePath": "e2e-artifacts/session.mp4"
+  }
+}
+```
+
+#### Tips
+
+- If a recording is already in progress, the tool returns an error. Call `stop_video_recording` first.
+- On server exit (or session end), any active recording is stopped automatically.
+
+---
+
+### stop_video_recording
+
+Stop the current recording and save the file to the path given when starting.
+
+#### Parameters
+
+| Parameter  | Type                 | Required | Description                                     |
+| ---------- | -------------------- | -------- | ----------------------------------------------- |
+| `platform` | `"ios" \| "android"` | No       | Platform to stop. Omit when only one recording. |
+| `deviceId` | `string`             | No       | Device ID. Omit for single device.              |
+
+#### Example
+
+```json
+{ "tool": "stop_video_recording", "arguments": { "platform": "ios" } }
+```
+
+#### Tips
+
+- Returns the path to the saved file on success.
+- iOS: uses idb. Android: uses adb screenrecord (SIGINT to stop and finalize).
