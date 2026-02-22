@@ -44,12 +44,6 @@ export interface DeviceConnection {
   topInsetPx: number;
   /** Android에서 ensureAndroidTopInset으로 dumpsys 시도한 적 있음. 0이어도 재호출 방지. */
   topInsetAttempted?: boolean;
-  /** window가 statusBar를 포함하는지 여부. true면 measureInWindow이 screen-absolute → topInset 안 더함. */
-  windowIncludesStatusBar?: boolean;
-  /** 런타임에서 보낸 screen height (dp). */
-  screenHeightDp: number;
-  /** 런타임에서 보낸 window height (dp). */
-  windowHeightDp: number;
   /** Date.now() of last message received from this device (for stale detection). */
   lastMessageTime: number;
 }
@@ -126,10 +120,8 @@ export class AppSession {
       .filter((c) => c.ws.readyState === WebSocket.OPEN)
       .map((c) => {
         const ratio = c.pixelRatio ?? 1;
-        let topInsetDp = 0;
-        if (c.platform === 'android' && !c.windowIncludesStatusBar && c.topInsetPx > 0) {
-          topInsetDp = c.topInsetPx / ratio;
-        }
+        const topInsetDp =
+          c.platform === 'android' && c.topInsetPx > 0 ? c.topInsetPx / ratio : 0;
         return {
           deviceId: c.deviceId,
           platform: c.platform,
@@ -152,14 +144,12 @@ export class AppSession {
 
   /**
    * Android top inset을 dp 단위로 반환.
-   * windowIncludesStatusBar가 true면 0 (measureInWindow이 이미 screen-absolute).
-   * 그 외: topInsetPx / pixelRatio. iOS는 항상 0.
+   * topInsetPx / pixelRatio. iOS는 항상 0.
    */
   getTopInsetDp(deviceId?: string, platform?: string): number {
     try {
       const conn = this.resolveDevice(deviceId, platform);
       if (conn.platform !== 'android') return 0;
-      if (conn.windowIncludesStatusBar) return 0;
       if (conn.topInsetPx === 0) return 0;
       const ratio = conn.pixelRatio ?? 1;
       return conn.topInsetPx / ratio;
@@ -171,13 +161,11 @@ export class AppSession {
   /**
    * 수동으로 Android top inset(dp) 설정.
    * ADB 자동 감지 결과를 덮어쓴다. 앱 오버레이에도 전달한다.
-   * 수동 오버라이드 시 windowIncludesStatusBar 판별 리셋.
    */
   setTopInsetDp(dp: number, deviceId?: string, platform?: string): void {
     const conn = this.resolveDevice(deviceId, platform);
     const ratio = conn.pixelRatio ?? 1;
     conn.topInsetPx = Math.round(dp * ratio);
-    conn.windowIncludesStatusBar = false;
     if (conn.platform === 'android' && conn.ws.readyState === 1) {
       conn.ws.send(JSON.stringify({ type: 'setTopInsetDp', topInsetDp: dp }));
     }
@@ -186,7 +174,6 @@ export class AppSession {
   /**
    * Android tap 전에 top inset이 0이면 한 번만 dumpsys로 보충.
    * 연결당 한 번만 시도(topInsetAttempted). 0이어도 재호출하지 않아 adb 낭비 방지.
-   * windowIncludesStatusBar가 true면 skip (이미 판별 완료, inset 불필요).
    */
   async ensureAndroidTopInset(deviceId: string | undefined, serial: string): Promise<void> {
     let conn: DeviceConnection;
@@ -195,25 +182,14 @@ export class AppSession {
     } catch {
       return;
     }
-    if (conn.windowIncludesStatusBar) return;
     if (conn.topInsetPx > 0) return;
     if (conn.topInsetAttempted) return;
     conn.topInsetAttempted = true;
     const insets = await getAndroidInsets(serial);
     const topPx = insets.captionBarPx > 0 ? insets.captionBarPx : insets.statusBarPx;
     if (topPx <= 0) return;
-    const ratio = conn.pixelRatio ?? 1;
     conn.topInsetPx = topPx;
-    // 판별 로직
-    const actualGap = conn.screenHeightDp - conn.windowHeightDp;
-    const navBarDp = insets.navBarPx / ratio;
-    if (Math.abs(actualGap - navBarDp) <= 4) {
-      conn.windowIncludesStatusBar = true;
-      if (conn.ws.readyState === 1) {
-        conn.ws.send(JSON.stringify({ type: 'setTopInsetDp', topInsetDp: 0 }));
-      }
-      return;
-    }
+    const ratio = conn.pixelRatio ?? 1;
     if (conn.ws.readyState === 1) {
       conn.ws.send(JSON.stringify({ type: 'setTopInsetDp', topInsetDp: topPx / ratio }));
     }
@@ -367,8 +343,6 @@ export class AppSession {
             const deviceName = typeof msg.deviceName === 'string' ? msg.deviceName : null;
             const metroBaseUrl = typeof msg.metroBaseUrl === 'string' ? msg.metroBaseUrl : null;
             const pixelRatio = typeof msg.pixelRatio === 'number' ? msg.pixelRatio : null;
-            const screenHeightDp = typeof msg.screenHeight === 'number' ? msg.screenHeight : 0;
-            const windowHeightDp = typeof msg.windowHeight === 'number' ? msg.windowHeight : 0;
 
             const conn: DeviceConnection = {
               deviceId,
@@ -379,8 +353,6 @@ export class AppSession {
               metroBaseUrl,
               pixelRatio,
               topInsetPx: 0,
-              screenHeightDp,
-              windowHeightDp,
               lastMessageTime: Date.now(),
             };
             this.devices.set(deviceId, conn);
@@ -393,7 +365,7 @@ export class AppSession {
               devices: this.getConnectedDevices(),
             });
 
-            // Android: top inset 감지 + windowIncludesStatusBar 판별
+            // Android: dumpsys에서 top inset(상태바/캡션바) 감지
             if (platform === 'android') {
               const ratio = pixelRatio ?? 1;
               // init 메시지에 topInsetDp가 있으면 수동 오버라이드
@@ -409,29 +381,10 @@ export class AppSession {
                     const topPx =
                       insets.captionBarPx > 0 ? insets.captionBarPx : insets.statusBarPx;
                     conn.topInsetPx = topPx;
-
-                    // 판별: screenHeight - windowHeight ≈ navBarDp → window가 statusBar 포함
-                    const actualGap = screenHeightDp - windowHeightDp;
-                    const navBarDp = insets.navBarPx / ratio;
-                    console.error(
-                      `[react-native-mcp-server] topInset detection: screenH=${screenHeightDp} windowH=${windowHeightDp} gap=${actualGap.toFixed(1)} navBarDp=${navBarDp.toFixed(1)} statusBarPx=${insets.statusBarPx} navBarPx=${insets.navBarPx}`
-                    );
-                    if (Math.abs(actualGap - navBarDp) <= 4) {
-                      conn.windowIncludesStatusBar = true;
-                      console.error(
-                        `[react-native-mcp-server] windowIncludesStatusBar=true → topInset=0dp`
-                      );
-                      if (conn.ws.readyState === 1) {
-                        conn.ws.send(JSON.stringify({ type: 'setTopInsetDp', topInsetDp: 0 }));
-                      }
-                      return;
-                    }
-
-                    // window가 statusBar 미포함 → topInset 더함
                     if (topPx > 0 && conn.ws.readyState === 1) {
                       const topInsetDp = topPx / ratio;
                       console.error(
-                        `[react-native-mcp-server] windowIncludesStatusBar=false → topInset=${topInsetDp}dp`
+                        `[react-native-mcp-server] Android topInset=${topInsetDp}dp (${topPx}px, ratio=${ratio})`
                       );
                       conn.ws.send(JSON.stringify({ type: 'setTopInsetDp', topInsetDp }));
                     }
