@@ -1,6 +1,6 @@
 # Device & Status
 
-Tools for checking connection status, listing devices, navigating via deep links, setting GPS, and resetting app state.
+Tools for connection status, device/app listing, deep links, GPS, app termination, screen orientation/size, and app state reset.
 
 ## get_debugger_status
 
@@ -61,6 +61,35 @@ List connected simulators/emulators and physical devices.
 
 - iOS requires [idb](https://fbidb.io/) to be installed.
 - Android requires `adb` in your PATH.
+
+---
+
+## list_apps
+
+List installed apps on the device/simulator. **No app connection required.**
+
+#### Parameters
+
+| Parameter  | Type                 | Required | Description               |
+| ---------- | -------------------- | -------- | ------------------------- |
+| `platform` | `"ios" \| "android"` | **Yes**  | Target platform           |
+| `deviceId` | `string`             | No       | Device ID. Auto if single |
+
+#### Example
+
+```json
+// Request
+{ "tool": "list_apps", "arguments": { "platform": "ios" } }
+
+// Response (summary + JSON)
+// Found N app(s). Use these IDs with terminate_app(platform, appId).
+// [ { "id": "com.example.app", "name": "My App" }, ... ]
+```
+
+#### Tips
+
+- iOS: `idb list-apps --json`. Android: `pm list packages -3` (third-party only).
+- Use returned `id` as `appId` in `terminate_app`.
 
 ---
 
@@ -159,3 +188,116 @@ Clear app data or reset permissions.
 
 - **Android**: Runs `pm clear` — wipes all app data (storage, databases, preferences).
 - **iOS**: Only resets privacy permissions (`xcrun simctl privacy reset`). For a full data reset on iOS, uninstall and reinstall the app.
+
+---
+
+## terminate_app
+
+Terminate an app by bundle ID or package name. **No app connection required.** For development and CI only; avoid terminating system or critical apps.
+
+#### Parameters
+
+| Parameter  | Type                 | Required | Description                                               |
+| ---------- | -------------------- | -------- | --------------------------------------------------------- |
+| `platform` | `"ios" \| "android"` | **Yes**  | Target platform                                           |
+| `appId`    | `string`             | **Yes**  | iOS bundle ID or Android package. Use `list_apps` to find |
+| `deviceId` | `string`             | No       | Device ID. Auto if single                                 |
+
+#### Example
+
+```json
+// Request
+{
+  "tool": "terminate_app",
+  "arguments": { "platform": "android", "appId": "com.example.app" }
+}
+```
+
+#### Tips
+
+- iOS: `simctl terminate`. Android: `am force-stop`.
+- `appId` allows only letters, digits, dots, underscores, hyphens.
+
+---
+
+## get_orientation
+
+Get current screen orientation (portrait/landscape) and platform raw value. **No app connection required.**
+
+#### Parameters
+
+| Parameter  | Type                 | Required | Description               |
+| ---------- | -------------------- | -------- | ------------------------- |
+| `platform` | `"ios" \| "android"` | **Yes**  | Target platform           |
+| `deviceId` | `string`             | No       | Device ID. Auto if single |
+
+#### Example
+
+```json
+// Request
+{ "tool": "get_orientation", "arguments": { "platform": "ios" } }
+
+// Response
+{ "orientation": "portrait", "raw": 1 }
+```
+
+#### Tips
+
+- iOS: backboardd GraphicsOrientation (1–4). Android: user_rotation (0–3).
+
+---
+
+## set_orientation
+
+Set screen orientation to portrait or landscape.
+
+#### Parameters
+
+| Parameter     | Type                        | Required | Description               |
+| ------------- | --------------------------- | -------- | ------------------------- |
+| `platform`    | `"ios" \| "android"`        | **Yes**  | Target platform           |
+| `orientation` | `"portrait" \| "landscape"` | **Yes**  | Desired orientation       |
+| `deviceId`    | `string`                    | No       | Device ID. Auto if single |
+
+#### Example
+
+```json
+// Request
+{
+  "tool": "set_orientation",
+  "arguments": { "platform": "android", "orientation": "landscape" }
+}
+```
+
+#### Tips
+
+- **Android**: Sets `user_rotation` 0 (portrait) or 1 (landscape).
+- **iOS**: Simulator only; returns an error on physical device.
+
+---
+
+## get_screen_size
+
+Get screen dimensions (width and height in px).
+
+#### Parameters
+
+| Parameter  | Type                 | Required | Description               |
+| ---------- | -------------------- | -------- | ------------------------- |
+| `platform` | `"ios" \| "android"` | **Yes**  | Target platform           |
+| `deviceId` | `string`             | No       | Device ID. Auto if single |
+
+#### Example
+
+```json
+// Request
+{ "tool": "get_screen_size", "arguments": { "platform": "android" } }
+
+// Response
+{ "width": 1920, "height": 1200, "unit": "px" }
+```
+
+#### Tips
+
+- **Android**: Returns physical pixels from `wm size`. No app connection required.
+- **iOS**: Returns from `getScreenInfo()` only when app is connected; otherwise "not supported" error.
