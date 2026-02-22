@@ -119,15 +119,16 @@ export function registerStartVideoRecording(server: McpServer): void {
         if (platform === 'ios') {
           if (!(await checkIdbAvailable())) return idbNotInstalledError();
           const udid = await resolveUdid(deviceId);
-          // idb video <path> --udid <udid>. 일부 버전은 record-video 서브커맨드 사용 가능.
-          const proc = spawn('idb', ['video', filePath, '--udid', udid], {
+          const absolutePath = resolve(filePath);
+          // idb video <path> --udid <udid>. Use absolute path so file is saved regardless of cwd.
+          const proc = spawn('idb', ['video', absolutePath, '--udid', udid], {
             stdio: 'ignore',
           });
           proc.on('error', () => {
             if (activeRecording?.platform === 'ios') activeRecording = null;
           });
           proc.unref();
-          activeRecording = { platform: 'ios', process: proc, hostPath: resolve(filePath) };
+          activeRecording = { platform: 'ios', process: proc, hostPath: absolutePath };
         } else {
           if (!(await checkAdbAvailable())) return adbNotInstalledError();
           const serial = await resolveSerial(deviceId);
@@ -246,6 +247,8 @@ export function registerStopVideoRecording(server: McpServer): void {
           let resultPath = hostPath;
           if (recPlatform === 'android' && devicePath && serial) {
             try {
+              // Give device time to flush and close the mp4 after screenrecord exits.
+              await new Promise((r) => setTimeout(r, 2000));
               await runCommand('adb', ['-s', serial, 'pull', devicePath, hostPath], {
                 timeoutMs: 30000,
               });
