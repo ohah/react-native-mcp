@@ -41,7 +41,7 @@ export function registerFilePush(server: McpServer): void {
   ).registerTool(
     'file_push',
     {
-      description: 'Push local file to simulator/device. iOS: idb + bundleId. Android: adb path.',
+      description: 'Push local file to device. iOS requires bundleId.',
       inputSchema: schema,
     },
     async (args: unknown) => {

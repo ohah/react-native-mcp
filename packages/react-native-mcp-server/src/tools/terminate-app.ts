@@ -47,8 +47,7 @@ export function registerTerminateApp(server: McpServer): void {
   ).registerTool(
     'terminate_app',
     {
-      description:
-        'Terminate an app by bundle ID or package. No app connection required. Use list_apps to discover IDs. For development and CI only. Avoid terminating system or critical apps.',
+      description: 'Terminate app by bundle ID or package name. No app connection required.',
       inputSchema: schema,
     },
     async (args: unknown) => {

@@ -41,7 +41,7 @@ export function registerClearState(server: McpServer): void {
     'clear_state',
     {
       description:
-        'Clear app data (Android: pm clear) or reset permissions (iOS: privacy only). Use before tests. iOS full reset needs uninstall+reinstall.',
+        'Clear app data (Android) or reset permissions (iOS). iOS full reset needs uninstall+reinstall.',
       inputSchema: schema,
     },
     async (args: unknown) => {

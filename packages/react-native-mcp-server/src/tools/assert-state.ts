@@ -62,7 +62,7 @@ export function registerAssertState(server: McpServer, appSession: AppSession): 
     'assert_state',
     {
       description:
-        'Assert that a React component state hook value matches expected. Uses selector, hookIndex, optional path (dot-notation), and expected value. Returns { pass, message }.',
+        'Assert React state hook value matches expected. Use with selector and hookIndex.',
       inputSchema: schema,
     },
     async (args: unknown) => {

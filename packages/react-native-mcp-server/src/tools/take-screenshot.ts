@@ -109,7 +109,7 @@ export function registerTakeScreenshot(server: McpServer, appSession: AppSession
     'take_screenshot',
     {
       description:
-        'Capture device/simulator screen. JPEG 720p. Returns point size for coords. Prefer assert_text/assert_visible (screenshots use vision tokens).',
+        'Capture device screen as JPEG. Prefer assert_text/assert_visible over screenshots when possible.',
       inputSchema: schema,
     },
     async (args: unknown) => {

@@ -38,7 +38,7 @@ export function registerGetComponentSource(server: McpServer, appSession: AppSes
     'get_component_source',
     {
       description:
-        'Resolve component to source location (file, line, column) via _debugStack and Metro source map. Use selector or uid from take_snapshot. Returns path suitable for opening in editor.',
+        'Get source file location (file, line, column) for a component. Use selector or uid from take_snapshot.',
       inputSchema: schema,
     },
     async (args) => {

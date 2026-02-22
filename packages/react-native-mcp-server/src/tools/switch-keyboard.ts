@@ -81,7 +81,7 @@ export function registerSwitchKeyboard(server: McpServer): void {
     'switch_keyboard',
     {
       description:
-        'Switch keyboard on simulator/emulator. Use before input_text for correct layout. iOS: Ctrl+Space. Android: IME by ID.',
+        'Switch keyboard language on simulator/emulator. Use before input_text for correct layout.',
       inputSchema: schema,
     },
     async (args: unknown) => {

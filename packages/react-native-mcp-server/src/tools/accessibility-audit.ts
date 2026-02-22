@@ -29,7 +29,7 @@ export function registerAccessibilityAudit(server: McpServer, appSession: AppSes
     'accessibility_audit',
     {
       description:
-        'Run a11y audit on RN tree. Returns violations: rule, selector, severity, message. Rules: pressable-needs-label, image-needs-alt, touch-target-size, missing-role.',
+        'Run accessibility audit on component tree. Returns violations with rule, selector, and severity.',
       inputSchema: schema,
     },
     async (args) => {

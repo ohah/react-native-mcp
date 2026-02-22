@@ -84,8 +84,7 @@ export function registerStartVideoRecording(server: McpServer): void {
   ).registerTool(
     'start_video_recording',
     {
-      description:
-        'Start screen recording on device/simulator. Save with stop_video_recording. iOS: idb, Android: adb screenrecord.',
+      description: 'Start screen recording. Call stop_video_recording to save.',
       inputSchema: startSchema,
     },
     async (args: unknown) => {

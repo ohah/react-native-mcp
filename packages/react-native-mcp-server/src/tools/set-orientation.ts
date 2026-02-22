@@ -64,8 +64,7 @@ export function registerSetOrientation(server: McpServer): void {
   ).registerTool(
     'set_orientation',
     {
-      description:
-        'Set orientation to portrait or landscape. Android: device/emulator. iOS: simulator only; fails on physical device.',
+      description: 'Set device orientation to portrait or landscape. iOS: simulator only.',
       inputSchema: schema,
     },
     async (args: unknown) => {

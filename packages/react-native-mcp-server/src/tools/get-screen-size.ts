@@ -43,8 +43,7 @@ export function registerGetScreenSize(server: McpServer, appSession: AppSession)
   ).registerTool(
     'get_screen_size',
     {
-      description:
-        'Return screen size (width/height in px). Android: host-only. iOS: requires app connection for reliable result; otherwise use Android or connect app.',
+      description: 'Get screen size (width/height in px). iOS requires app connection.',
       inputSchema: schema,
     },
     async (args: unknown) => {

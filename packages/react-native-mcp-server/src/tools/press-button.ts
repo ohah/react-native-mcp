@@ -57,8 +57,7 @@ export function registerPressButton(server: McpServer): void {
   ).registerTool(
     'press_button',
     {
-      description:
-        'Press physical button. Android: HOME, BACK, MENU, etc. iOS: HOME, LOCK, SIDE_BUTTON. Duration = hold (iOS only).',
+      description: 'Press hardware button (HOME, BACK, LOCK, VOLUME, etc.).',
       inputSchema: schema,
     },
     async (args: unknown) => {

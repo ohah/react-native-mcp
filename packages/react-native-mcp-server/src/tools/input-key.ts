@@ -40,8 +40,7 @@ export function registerInputKey(server: McpServer): void {
   ).registerTool(
     'input_key',
     {
-      description:
-        'Send keycode to simulator/device. iOS: HID. Android: adb. Common: Return, Backspace, ENTER, BACK.',
+      description: 'Send key event to device (Return, Backspace, ENTER, BACK, etc.).',
       inputSchema: schema,
     },
     async (args: unknown) => {
