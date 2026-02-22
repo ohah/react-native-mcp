@@ -27,7 +27,7 @@ mock.module('../tools/adb-utils.js', () => ({
   runAdbCommand: async () => '',
   adbNotInstalledError: () => ({ content: [{ type: 'text' as const, text: 'adb not installed' }] }),
   getAndroidScale: async () => 3,
-  getAndroidTopInset: async () => 0,
+  getAndroidInsets: async () => ({ statusBarPx: 0, navBarPx: 0, captionBarPx: 0 }),
 }));
 
 // portrait (변환 없음) 으로 mock — 이 테스트는 좌표 정수 반올림 검증이 목적

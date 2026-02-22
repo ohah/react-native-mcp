@@ -94,6 +94,7 @@
 	}
 	function setOverlayTopInsetDp(dp) {
 		overlayTopInsetDp = dp;
+		overlayTopInsetConfirmed = true;
 	}
 	function setOverlayActive(active) {
 		overlayActive = active;
@@ -125,7 +126,7 @@
 		overlayMaxHighlights = 100;
 		overlayRenderCounts = {};
 	}
-	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER, renderProfileActive, renderProfileStartTime, renderCommitCount, renderEntries, renderComponentFilter, renderIgnoreFilter, RENDER_BUFFER_SIZE, renderHighlight, renderHighlightStyle, overlayTopInsetDp, overlayActive, overlayComponentFilter, overlayIgnoreFilter, overlayShowLabels, overlayFadeTimeout, overlayMaxHighlights, overlaySetHighlights, overlayRenderCounts;
+	var pressHandlers, consoleLogs, consoleLogId, CONSOLE_BUFFER_SIZE, networkRequests, networkRequestId, NETWORK_BUFFER_SIZE, NETWORK_BODY_LIMIT, networkMockRules, stateChanges, stateChangeId, STATE_CHANGE_BUFFER, renderProfileActive, renderProfileStartTime, renderCommitCount, renderEntries, renderComponentFilter, renderIgnoreFilter, RENDER_BUFFER_SIZE, renderHighlight, renderHighlightStyle, overlayTopInsetDp, overlayTopInsetConfirmed, overlayActive, overlayComponentFilter, overlayIgnoreFilter, overlayShowLabels, overlayFadeTimeout, overlayMaxHighlights, overlaySetHighlights, overlayRenderCounts;
 	var init_shared = __esmMin(() => {
 		pressHandlers = {};
 		consoleLogs = [];
@@ -149,6 +150,7 @@
 		renderHighlight = typeof global !== "undefined" && global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT__ === true;
 		renderHighlightStyle = typeof global !== "undefined" && global.__REACT_NATIVE_MCP_RENDER_HIGHLIGHT_STYLE__ === "react-scan" ? "react-scan" : "react-mcp";
 		overlayTopInsetDp = 0;
+		overlayTopInsetConfirmed = false;
 		overlayActive = false;
 		overlayComponentFilter = null;
 		overlayIgnoreFilter = null;
@@ -173,7 +175,7 @@
 				var first = roots.values().next().value;
 				if (first) return toRootFiber(first);
 			}
-		} catch (_e) {}
+		} catch (_unused) {}
 		var renderer = hook.renderers && hook.renderers.get(rendererID);
 		if (renderer && typeof renderer.getCurrentFiber === "function") {
 			var fiber = renderer.getCurrentFiber();
@@ -421,7 +423,7 @@
 		return { selectors };
 	}
 	/** compound 셀렉터가 단일 fiber 노드에 매칭되는지 검사 */
-	function matchesCompound(fiber, compound, TextComp, ImgComp) {
+	function matchesCompound(fiber, compound, TextComp, _ImgComp) {
 		if (!fiber) return false;
 		var props = fiber.memoizedProps || {};
 		if (compound.type !== null) {
@@ -447,21 +449,21 @@
 		return true;
 	}
 	/** 계층 셀렉터(A > B, A B) 매칭 — fiber.return을 상향 탐색 */
-	function matchesComplexSelector(fiber, complex, TextComp, ImgComp) {
+	function matchesComplexSelector(fiber, complex, TextComp, _ImgComp) {
 		var segs = complex.segments;
 		var last = segs.length - 1;
-		if (!matchesCompound(fiber, segs[last].selector, TextComp, ImgComp)) return false;
+		if (!matchesCompound(fiber, segs[last].selector, TextComp, _ImgComp)) return false;
 		var current = fiber;
 		for (var i = last - 1; i >= 0; i--) {
 			var combinator = segs[i + 1].combinator;
 			var targetSel = segs[i].selector;
 			if (combinator === ">") {
 				current = current.return;
-				if (!current || !matchesCompound(current, targetSel, TextComp, ImgComp)) return false;
+				if (!current || !matchesCompound(current, targetSel, TextComp, _ImgComp)) return false;
 			} else {
 				current = current.return;
 				while (current) {
-					if (matchesCompound(current, targetSel, TextComp, ImgComp)) break;
+					if (matchesCompound(current, targetSel, TextComp, _ImgComp)) break;
 					current = current.return;
 				}
 				if (!current) return false;
@@ -579,7 +581,7 @@
 			var debugStack = fiber && fiber._debugStack;
 			if (!debugStack || typeof debugStack.stack !== "string") return [];
 			return getSourceRefFromStack(debugStack.stack);
-		} catch (e) {
+		} catch (_unused) {
 			return [];
 		}
 	}
@@ -632,7 +634,7 @@
 			}
 			visit(root);
 			return out;
-		} catch (e) {
+		} catch (_unused2) {
 			return [];
 		}
 	}
@@ -662,7 +664,7 @@
 			}
 			visit(root);
 			return out;
-		} catch (e) {
+		} catch (_unused3) {
 			return [];
 		}
 	}
@@ -736,7 +738,7 @@
 				type: "Root",
 				children: result
 			} : result;
-		} catch (e) {
+		} catch (_unused4) {
 			return null;
 		}
 	}
@@ -1376,7 +1378,7 @@
 			if (!overlayActive || highlights.length === 0) return null;
 			var topInsetDp = 0;
 			if (RN.Platform.OS === "android") {
-				if (overlayTopInsetDp > 0) topInsetDp = overlayTopInsetDp;
+				if (overlayTopInsetConfirmed) topInsetDp = overlayTopInsetDp;
 				else if (RN.StatusBar && typeof RN.StatusBar.currentHeight === "number") {
 					var ratio = RN.PixelRatio && RN.PixelRatio.get ? RN.PixelRatio.get() : 1;
 					topInsetDp = RN.StatusBar.currentHeight / ratio;
@@ -1509,19 +1511,19 @@
 				if (typeof orig === "function") orig.call(hook, rendererID, root);
 				try {
 					if (root && root.current) collectStateChanges(root.current);
-				} catch (_e) {}
+				} catch (_unused) {}
 				try {
 					if (renderProfileActive && root && root.current) {
 						incrementRenderCommitCount();
 						collectRenderEntries(root.current);
 					}
-				} catch (_e) {}
+				} catch (_unused2) {}
 				try {
 					if (overlayActive && root && root.current) {
 						collectOverlayHighlights(root.current);
 						flushOverlayMeasurements();
 					}
-				} catch (_e) {}
+				} catch (_unused3) {}
 			};
 		})();
 	});
@@ -1697,7 +1699,7 @@
 				}
 			}
 			return null;
-		} catch (e) {
+		} catch (_unused) {
 			return null;
 		}
 	}
@@ -1715,7 +1717,7 @@
 			_webViews[id] = ref;
 			if (_webViewRefToId) try {
 				_webViewRefToId.set(ref, id);
-			} catch (e) {}
+			} catch (_unused) {}
 		}
 	}
 	function unregisterWebView(id) {
@@ -1800,7 +1802,7 @@
 				value: payload.value
 			});
 			return true;
-		} catch (_) {
+		} catch (_unused2) {
 			return false;
 		}
 	}
@@ -1830,7 +1832,7 @@
 //#endregion
 //#region src/runtime/fiber-serialization.ts
 /** fiber 노드를 결과 객체로 직렬화 */
-	function fiberToResult(fiber, TextComp, ImgComp) {
+	function fiberToResult(fiber, TextComp, _ImgComp) {
 		var props = fiber.memoizedProps || {};
 		var typeName = getFiberTypeName(fiber);
 		var testID = typeof props.testID === "string" && props.testID.trim() ? props.testID.trim() : void 0;
@@ -1857,7 +1859,7 @@
 		var measure = null;
 		try {
 			measure = measureViewSync(uid);
-		} catch (e) {}
+		} catch (_unused) {}
 		if (!measure && typeof fiber.type !== "string") {
 			var hostChild = (function findHost(f) {
 				if (!f) return null;
@@ -1874,7 +1876,7 @@
 				var hostUid = getPathUid(hostChild);
 				try {
 					measure = measureViewSync(hostUid);
-				} catch (e) {}
+				} catch (_unused2) {}
 				if (!measure) result._measureUid = hostUid;
 			}
 		}
@@ -1985,11 +1987,11 @@
 			if (typeof fn === "function") {
 				try {
 					fn();
-				} catch (e) {}
+				} catch (_unused) {}
 				return true;
 			}
 			return false;
-		} catch (e) {
+		} catch (_unused2) {
 			return false;
 		}
 	}
@@ -2021,11 +2023,11 @@
 			if (typeof fn === "function") {
 				try {
 					fn();
-				} catch (e) {}
+				} catch (_unused3) {}
 				return true;
 			}
 			return false;
-		} catch (e) {
+		} catch (_unused4) {
 			return false;
 		}
 	}
@@ -2227,7 +2229,7 @@
 			var parsed;
 			try {
 				parsed = parseSelector(selector.trim());
-			} catch (_parseErr) {
+			} catch (_unused) {
 				return null;
 			}
 			var foundFiber = null;
@@ -2267,7 +2269,7 @@
 					};
 				})
 			};
-		} catch (e) {
+		} catch (_unused2) {
 			return null;
 		}
 	}
@@ -2412,7 +2414,7 @@
 			var parsed;
 			try {
 				parsed = parseSelector(selector.trim());
-			} catch (parseErr) {
+			} catch (_unused) {
 				return [];
 			}
 			var results = [];
@@ -2451,7 +2453,7 @@
 				}
 			}
 			return deduped;
-		} catch (e) {
+		} catch (_unused2) {
 			return [];
 		}
 	}
@@ -2463,7 +2465,7 @@
 		try {
 			var all = querySelectorAll(selector);
 			return all.length > 0 ? all[0] : null;
-		} catch (e) {
+		} catch (_unused3) {
 			return null;
 		}
 	}
@@ -2604,7 +2606,7 @@
 				var measure = null;
 				try {
 					measure = globalThis.__REACT_NATIVE_MCP__.measureViewSync(uid);
-				} catch (e) {}
+				} catch (_unused) {}
 				if (!measure && typeof item.fiber.type !== "string") {
 					var hostChild = (function findHost(f) {
 						if (!f) return null;
@@ -2621,7 +2623,7 @@
 						var hostUid = hostChild.memoizedProps && hostChild.memoizedProps.testID || getPathUid(hostChild);
 						try {
 							measure = measureViewSync(hostUid);
-						} catch (e) {}
+						} catch (_unused2) {}
 					}
 				}
 				if (measure && (measure.width < minTouchTarget || measure.height < minTouchTarget)) violations.push({
@@ -2632,7 +2634,7 @@
 				});
 			}
 			return violations;
-		} catch (e) {
+		} catch (_unused3) {
 			return [];
 		}
 	}
@@ -2649,7 +2651,7 @@
 		if (rule.method && rule.method !== method) return false;
 		if (rule.isRegex) try {
 			return new RegExp(rule.urlPattern).test(url);
-		} catch (_e) {
+		} catch (_unused) {
 			return false;
 		}
 		return url.indexOf(rule.urlPattern) !== -1;
@@ -2911,7 +2913,7 @@
 								xhr.__didReceiveResponse(fakeId, mockResp.status, mockResp.headers || {}, entry.url);
 								if (mockResp.body) xhr.__didReceiveData(fakeId, mockResp.body);
 								xhr.__didCompleteResponse(fakeId, "", false);
-							} catch (_e) {}
+							} catch (_unused) {}
 						};
 						setTimeout(deliverMock, mockResp.delay > 0 ? mockResp.delay : 0);
 						return;
@@ -2922,12 +2924,12 @@
 						entry.statusText = xhr.statusText || null;
 						try {
 							entry.responseHeaders = xhr.getAllResponseHeaders() || null;
-						} catch (_e) {
+						} catch (_unused2) {
 							entry.responseHeaders = null;
 						}
 						try {
 							entry.responseBody = truncateBody(xhr.responseText);
-						} catch (_e) {
+						} catch (_unused3) {
 							entry.responseBody = null;
 						}
 						entry.duration = Date.now() - entry.startTime;
@@ -2983,7 +2985,7 @@
 								requestHeaders[key] = input.headers[key];
 							}
 						}
-					} catch (_e) {}
+					} catch (_unused) {}
 					if (input.body != null) requestBody = input.body;
 				}
 				if (init && typeof init === "object") {
@@ -3000,7 +3002,7 @@
 								requestHeaders[key] = init.headers[key];
 							}
 						}
-					} catch (_e) {}
+					} catch (_unused2) {}
 					if (init.body != null) requestBody = init.body;
 				}
 				var bodyStr = null;
@@ -3044,7 +3046,7 @@
 								statusText: mockResp.statusText || "",
 								headers: mockResp.headers
 							});
-						} catch (_e) {
+						} catch (_unused3) {
 							var _body = mockResp.body;
 							fakeResponse = {
 								ok: mockResp.status >= 200 && mockResp.status < 300,
@@ -3099,7 +3101,7 @@
 							headerObj[k] = v;
 						});
 						entry.responseHeaders = JSON.stringify(headerObj);
-					} catch (_e) {
+					} catch (_unused4) {
 						entry.responseHeaders = null;
 					}
 					entry.duration = Date.now() - entry.startTime;
@@ -3111,7 +3113,7 @@
 						}).catch(function() {
 							pushNetworkEntry(entry);
 						});
-					} catch (_e) {
+					} catch (_unused5) {
 						pushNetworkEntry(entry);
 					}
 					return response;
@@ -3153,13 +3155,13 @@
 			}
 			try {
 				ws.send(JSON.stringify({ type: "ping" }));
-			} catch (_e) {
+			} catch (_unused) {
 				return;
 			}
 			_pongTimer = setTimeout(function() {
 				if (ws) try {
 					ws.close();
-				} catch (_e) {}
+				} catch (_unused2) {}
 			}, PONG_TIMEOUT_MS);
 		}, HEARTBEAT_INTERVAL_MS);
 	}
@@ -3168,7 +3170,7 @@
 		if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
 		if (ws) try {
 			ws.close();
-		} catch (_e) {}
+		} catch (_unused3) {}
 		ws = new WebSocket(wsUrl);
 		ws.onopen = function() {
 			if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Connected to server", wsUrl);
@@ -3179,11 +3181,19 @@
 			var deviceName = null;
 			var origin = null;
 			var pixelRatio = null;
+			var screenHeight = null;
+			var windowHeight = null;
 			try {
 				var rn = require("react-native");
 				platform = rn.Platform && rn.Platform.OS;
 				deviceName = rn.Platform && rn.Platform.constants && rn.Platform.constants.Model || null;
 				if (rn.PixelRatio) pixelRatio = rn.PixelRatio.get();
+				if (rn.Dimensions) {
+					var screenDim = rn.Dimensions.get("screen");
+					var windowDim = rn.Dimensions.get("window");
+					if (screenDim && typeof screenDim.height === "number") screenHeight = screenDim.height;
+					if (windowDim && typeof windowDim.height === "number") windowHeight = windowDim.height;
+				}
 			} catch (_e) {
 				if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Failed to read platform info:", _e instanceof Error ? _e.message : String(_e));
 			}
@@ -3192,7 +3202,7 @@
 				var scriptURL = _rn.NativeModules && _rn.NativeModules.SourceCode && _rn.NativeModules.SourceCode.scriptURL;
 				if (scriptURL && typeof scriptURL === "string") try {
 					origin = new URL(scriptURL).origin;
-				} catch (_ue) {
+				} catch (_unused4) {
 					var _match$;
 					var match = scriptURL.match(/^(https?:\/\/[^/?#]+)/);
 					if (match) origin = (_match$ = match[1]) !== null && _match$ !== void 0 ? _match$ : null;
@@ -3207,7 +3217,9 @@
 					deviceId: platform ? platform + "-1" : void 0,
 					deviceName,
 					metroBaseUrl: origin,
-					pixelRatio
+					pixelRatio,
+					screenHeight,
+					windowHeight
 				}));
 			} catch (_e3) {
 				if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Failed to send init:", _e3 instanceof Error ? _e3.message : String(_e3));
@@ -3253,7 +3265,7 @@
 					});
 					else sendEvalResponse(result, null);
 				}
-			} catch (_unused) {}
+			} catch (_unused5) {}
 		};
 		ws.onclose = function() {
 			_stopHeartbeat();
@@ -3304,7 +3316,7 @@
 						if (ws && ws.readyState === 1) _startHeartbeat();
 					} else _stopHeartbeat();
 				});
-			} catch (_e) {}
+			} catch (_unused6) {}
 		})();
 		PERIODIC_INTERVAL_MS = 5e3;
 		setInterval(function() {
