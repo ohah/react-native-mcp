@@ -130,6 +130,7 @@ steps:
   - webviewEval:
       webViewId: 'StepWebViewNoTestId-2-WebView'
       script: 'document.getElementById("postmsg-btn").click()'
+  - wait: 1000
   - waitForText: { text: 'postMessage 수: 1', selector: '#postmessage-count', timeout: 20000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#network-fetch-get', timeout: 15000 }
