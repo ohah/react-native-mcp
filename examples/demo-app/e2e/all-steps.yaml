@@ -204,7 +204,8 @@ steps:
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#gesture-drag-area', timeout: 15000 }
   # ─── Step 28: Drag (Pan) ───────────────────────────────────────────
-  - swipe: { selector: '#gesture-drag-area', direction: 'right', distance: '5%' }
+  - swipe: { selector: '#gesture-drag-area', direction: 'right', distance: '10%' }
+  - wait: 500
   - waitForText: { text: '드래그 완료: 1', selector: '#gesture-drag-count', timeout: 15000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'ScrollView', timeout: 15000 }
