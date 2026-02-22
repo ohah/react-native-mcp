@@ -76,7 +76,17 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
           const iy = Math.round(t.y);
           const cmd = ['ui', 'tap', String(ix), String(iy)];
           if (isLongPress) cmd.push('--duration', String(duration / 1000));
-          await runIdbCommand(cmd, udid, { timeoutMs: TAP_TIMEOUT_MS });
+          try {
+            await runIdbCommand(cmd, udid, { timeoutMs: TAP_TIMEOUT_MS });
+          } catch (tapErr) {
+            const msg = tapErr instanceof Error ? tapErr.message : String(tapErr);
+            if (msg.includes('Command timed out')) {
+              await new Promise((r) => setTimeout(r, 1500));
+              await runIdbCommand(cmd, udid, { timeoutMs: TAP_TIMEOUT_MS });
+            } else {
+              throw tapErr;
+            }
+          }
           // Allow UI to update before returning so callers (e.g. assert_text) see the result.
           await new Promise((r) => setTimeout(r, 300));
           return {
