@@ -158,7 +158,58 @@ export function _resetScaleCache(): void {
   _scaleBySerial.clear();
 }
 
-/* ─── Android insets (상태바/내비바/캡션바 높이, px) ─── */
+/* ─── Android top inset (상태바/캡션바 높이, px) ─── */
+
+const _topInsetBySerial = new Map<string, number>();
+
+/**
+ * Android 디바이스의 실제 top inset(px)을 `dumpsys window displays`에서 파싱.
+ * captionBar(태블릿 등)가 있으면 우선, 없으면 statusBars 사용.
+ * 파싱 실패 시 0 반환 (호출자가 fallback 처리).
+ */
+export async function getAndroidTopInset(serial?: string): Promise<number> {
+  const key = serial ?? '_default';
+  const cached = _topInsetBySerial.get(key);
+  if (cached != null) return cached;
+  try {
+    const text = await runAdbCommand(['shell', 'dumpsys', 'window', 'displays'], serial, {
+      timeoutMs: 5000,
+    });
+
+    // captionBar가 있으면 우선 (Pixel Tablet 등)
+    const captionMatch = text.match(
+      /InsetsSource[^\n]*type=captionBar[^\n]*frame=\[\d+,\d+\]\[\d+,(\d+)\]/
+    );
+    if (captionMatch) {
+      const px = parseInt(captionMatch[1]!, 10);
+      _topInsetBySerial.set(key, px);
+      return px;
+    }
+
+    // 없으면 statusBars
+    const statusMatch = text.match(
+      /InsetsSource[^\n]*type=statusBars[^\n]*frame=\[\d+,\d+\]\[\d+,(\d+)\]/
+    );
+    if (statusMatch) {
+      const px = parseInt(statusMatch[1]!, 10);
+      _topInsetBySerial.set(key, px);
+      return px;
+    }
+
+    _topInsetBySerial.set(key, 0);
+    return 0;
+  } catch {
+    // 파싱 실패 시 캐싱하지 않음 → 다음 호출에서 재시도
+    return 0;
+  }
+}
+
+/** 테스트용 top inset 캐시 초기화 */
+export function _resetTopInsetCache(): void {
+  _topInsetBySerial.clear();
+}
+
+/* ─── Android insets (statusBar + navBar + captionBar) ─── */
 
 export interface AndroidInsets {
   statusBarPx: number;
@@ -166,22 +217,15 @@ export interface AndroidInsets {
   captionBarPx: number;
 }
 
-const _insetsBySerial = new Map<string, AndroidInsets>();
-
 /**
- * Android 디바이스의 시스템 insets(px)을 `dumpsys window displays`에서 파싱.
- * statusBars, navigationBars, captionBar 세 종류 모두 반환.
- * 파싱 실패 시 모두 0.
+ * Android 디바이스의 statusBar/navBar/captionBar 높이(px)를 dumpsys에서 파싱.
+ * getAndroidTopInset 보다 상세한 정보가 필요할 때 사용.
  */
 export async function getAndroidInsets(serial?: string): Promise<AndroidInsets> {
-  const key = serial ?? '_default';
-  const cached = _insetsBySerial.get(key);
-  if (cached != null) return cached;
   try {
     const text = await runAdbCommand(['shell', 'dumpsys', 'window', 'displays'], serial, {
       timeoutMs: 5000,
     });
-
     let statusBarPx = 0;
     let navBarPx = 0;
     let captionBarPx = 0;
@@ -191,29 +235,26 @@ export async function getAndroidInsets(serial?: string): Promise<AndroidInsets> 
     );
     if (statusMatch) statusBarPx = parseInt(statusMatch[1]!, 10);
 
-    // navigationBars: frame=[0,H-navH][W,H] → height = H - (H-navH) = navH
-    // 또는 간단히 frame=[x1,y1][x2,y2] → height = y2 - y1
     const navMatch = text.match(
-      /InsetsSource[^\n]*type=navigationBars[^\n]*frame=\[\d+,(\d+)\]\[\d+,(\d+)\]/
+      /InsetsSource[^\n]*type=navigationBars[^\n]*frame=\[\d+,(\d+)\]\[\d+,\d+\]/
     );
-    if (navMatch) navBarPx = parseInt(navMatch[2]!, 10) - parseInt(navMatch[1]!, 10);
+    if (navMatch) {
+      const top = parseInt(navMatch[1]!, 10);
+      const bottomMatch = text.match(
+        /InsetsSource[^\n]*type=navigationBars[^\n]*frame=\[\d+,\d+\]\[\d+,(\d+)\]/
+      );
+      if (bottomMatch) navBarPx = parseInt(bottomMatch[1]!, 10) - top;
+    }
 
     const captionMatch = text.match(
       /InsetsSource[^\n]*type=captionBar[^\n]*frame=\[\d+,\d+\]\[\d+,(\d+)\]/
     );
     if (captionMatch) captionBarPx = parseInt(captionMatch[1]!, 10);
 
-    const result: AndroidInsets = { statusBarPx, navBarPx, captionBarPx };
-    _insetsBySerial.set(key, result);
-    return result;
+    return { statusBarPx, navBarPx, captionBarPx };
   } catch {
     return { statusBarPx: 0, navBarPx: 0, captionBarPx: 0 };
   }
-}
-
-/** 테스트용 insets 캐시 초기화 */
-export function _resetInsetsCache(): void {
-  _insetsBySerial.clear();
 }
 
 /* ─── 에러 헬퍼 ─── */

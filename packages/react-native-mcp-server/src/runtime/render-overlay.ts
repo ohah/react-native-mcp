@@ -504,7 +504,6 @@ export function getOverlayComponent(): any {
 
     // Android: measureInWindow는 콘텐츠(윈도우) 기준 좌표를 반환하는데, 오버레이 루트는 화면 전체(0,0=상태바 위)라
     // y에 상태바 높이(dp)를 더해 정렬. RN 이슈 #19497. 서버가 setTopInsetDp로 보낸 값 우선(tap/swipe와 동일).
-    // overlayTopInsetConfirmed가 true면 서버 값만 사용 (0이어도 — window가 statusBar 포함인 경우).
     var topInsetDp = 0;
     if (RN.Platform.OS === 'android') {
       if (overlayTopInsetConfirmed) {
