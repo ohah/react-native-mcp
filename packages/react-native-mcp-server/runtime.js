@@ -3181,19 +3181,11 @@
 			var deviceName = null;
 			var origin = null;
 			var pixelRatio = null;
-			var screenHeight = null;
-			var windowHeight = null;
 			try {
 				var rn = require("react-native");
 				platform = rn.Platform && rn.Platform.OS;
 				deviceName = rn.Platform && rn.Platform.constants && rn.Platform.constants.Model || null;
 				if (rn.PixelRatio) pixelRatio = rn.PixelRatio.get();
-				if (rn.Dimensions) {
-					var screenDim = rn.Dimensions.get("screen");
-					var windowDim = rn.Dimensions.get("window");
-					if (screenDim && typeof screenDim.height === "number") screenHeight = screenDim.height;
-					if (windowDim && typeof windowDim.height === "number") windowHeight = windowDim.height;
-				}
 			} catch (_e) {
 				if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Failed to read platform info:", _e instanceof Error ? _e.message : String(_e));
 			}
@@ -3217,9 +3209,7 @@
 					deviceId: platform ? platform + "-1" : void 0,
 					deviceName,
 					metroBaseUrl: origin,
-					pixelRatio,
-					screenHeight,
-					windowHeight
+					pixelRatio
 				}));
 			} catch (_e3) {
 				if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Failed to send init:", _e3 instanceof Error ? _e3.message : String(_e3));

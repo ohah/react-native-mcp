@@ -86,19 +86,11 @@ function connect(): void {
     var deviceName: string | null = null;
     var origin: string | null = null;
     var pixelRatio: number | null = null;
-    var screenHeight: number | null = null;
-    var windowHeight: number | null = null;
     try {
       var rn = require('react-native');
       platform = rn.Platform && rn.Platform.OS;
       deviceName = (rn.Platform && rn.Platform.constants && rn.Platform.constants.Model) || null;
       if (rn.PixelRatio) pixelRatio = rn.PixelRatio.get();
-      if (rn.Dimensions) {
-        var screenDim = rn.Dimensions.get('screen');
-        var windowDim = rn.Dimensions.get('window');
-        if (screenDim && typeof screenDim.height === 'number') screenHeight = screenDim.height;
-        if (windowDim && typeof windowDim.height === 'number') windowHeight = windowDim.height;
-      }
     } catch (_e) {
       if (typeof console !== 'undefined' && console.warn) {
         console.warn(
@@ -137,8 +129,6 @@ function connect(): void {
           deviceName: deviceName,
           metroBaseUrl: origin,
           pixelRatio: pixelRatio,
-          screenHeight: screenHeight,
-          windowHeight: windowHeight,
         })
       );
     } catch (_e3) {
