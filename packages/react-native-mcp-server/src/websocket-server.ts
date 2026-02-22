@@ -120,13 +120,12 @@ export class AppSession {
       .filter((c) => c.ws.readyState === WebSocket.OPEN)
       .map((c) => {
         const ratio = c.pixelRatio ?? 1;
-        const topInsetDp = c.platform === 'android' && c.topInsetPx > 0 ? c.topInsetPx / ratio : 0;
         return {
           deviceId: c.deviceId,
           platform: c.platform,
           deviceName: c.deviceName,
           connected: true as const,
-          topInsetDp,
+          topInsetDp: c.platform === 'android' && c.topInsetPx > 0 ? c.topInsetPx / ratio : 0,
         };
       });
   }
@@ -148,8 +147,7 @@ export class AppSession {
   getTopInsetDp(deviceId?: string, platform?: string): number {
     try {
       const conn = this.resolveDevice(deviceId, platform);
-      if (conn.platform !== 'android') return 0;
-      if (conn.topInsetPx === 0) return 0;
+      if (conn.platform !== 'android' || conn.topInsetPx === 0) return 0;
       const ratio = conn.pixelRatio ?? 1;
       return conn.topInsetPx / ratio;
     } catch {
