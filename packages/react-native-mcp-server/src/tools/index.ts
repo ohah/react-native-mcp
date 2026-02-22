@@ -27,6 +27,11 @@ import { registerDescribeUi } from './describe-ui.js';
 import { registerFilePush } from './file-push.js';
 import { registerAddMedia } from './add-media.js';
 import { registerListDevices } from './list-devices.js';
+import { registerListApps } from './list-apps.js';
+import { registerTerminateApp } from './terminate-app.js';
+import { registerGetOrientation } from './get-orientation.js';
+import { registerSetOrientation } from './set-orientation.js';
+import { registerGetScreenSize } from './get-screen-size.js';
 import { registerOpenDeeplink } from './open-deeplink.js';
 import { registerClearBuffers } from './clear-buffers.js';
 import { registerClearState } from './clear-state.js';
@@ -66,6 +71,11 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   registerFilePush(server);
   registerAddMedia(server);
   registerListDevices(server);
+  registerListApps(server);
+  registerTerminateApp(server);
+  registerGetOrientation(server);
+  registerSetOrientation(server);
+  registerGetScreenSize(server, appSession);
   // 키보드 전환 — input_text 사용 전 언어 전환
   registerSwitchKeyboard(server);
   // 딥링크
