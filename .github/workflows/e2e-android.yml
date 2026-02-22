@@ -208,13 +208,15 @@ jobs:
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
+        timeout-minutes: 2
         run: |
           mkdir -p e2e-artifacts
           adb exec-out screencap -p > e2e-artifacts/failure-screenshot.png 2>/dev/null || true
-          adb logcat -d 2>/dev/null | tail -n 3000 > e2e-artifacts/logcat.txt || true
+          adb logcat -d -t 3000 2>/dev/null > e2e-artifacts/logcat.txt || true
 
       - name: 아티팩트 업로드
         if: failure()
+        timeout-minutes: 3
         uses: actions/upload-artifact@v4
         with:
           name: e2e-android-failure-artifacts

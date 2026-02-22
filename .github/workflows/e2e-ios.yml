@@ -208,6 +208,7 @@ jobs:
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
+        timeout-minutes: 2
         run: |
           mkdir -p e2e-artifacts
           xcrun simctl io booted screenshot e2e-artifacts/failure-screenshot.png 2>/dev/null || true
@@ -215,6 +216,7 @@ jobs:
 
       - name: 아티팩트 업로드
         if: failure()
+        timeout-minutes: 3
         uses: actions/upload-artifact@v4
         with:
           name: e2e-ios-failure-artifacts
