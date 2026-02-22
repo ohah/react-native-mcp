@@ -13,10 +13,11 @@ setup:
   - waitForVisible:
       selector: 'Pressable:text("Count:")'
       timeout: 25000
+  - wait: 500
 
 steps:
-  # ─── Step 1: Press Counter (텍스트로 찾기) ──────────────────────────
-  - assertText: { text: 'Count: 0', selector: 'Pressable:text("Count:")' }
+  # ─── Step 1: Press Counter (CI 초기 렌더 안정화: waitForText로 초기 상태 대기) ─
+  - waitForText: { text: 'Count: 0', selector: 'Pressable:text("Count:")', timeout: 5000 }
   - tap: { selector: 'Pressable:text("Count:")' }
   - wait: 500
   - waitForText: { text: 'Count: 1', selector: 'Pressable:text("Count:")', timeout: 6000 }

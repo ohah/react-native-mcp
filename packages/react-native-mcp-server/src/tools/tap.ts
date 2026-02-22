@@ -106,26 +106,33 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
           const topInsetDp = appSession.getTopInsetDp(deviceId, 'android');
           const px = Math.round(x * scale);
           const py = Math.round((y + topInsetDp) * scale);
-          if (isLongPress) {
-            // Long press = swipe from same point to same point with duration
-            await runAdbCommand(
-              [
-                'shell',
-                'input',
-                'swipe',
-                String(px),
-                String(py),
-                String(px),
-                String(py),
-                String(duration),
-              ],
-              serial,
-              { timeoutMs: TAP_TIMEOUT_MS }
-            );
-          } else {
-            await runAdbCommand(['shell', 'input', 'tap', String(px), String(py)], serial, {
-              timeoutMs: TAP_TIMEOUT_MS,
-            });
+          const runTap = async (): Promise<void> => {
+            if (isLongPress) {
+              await runAdbCommand(
+                [
+                  'shell',
+                  'input',
+                  'swipe',
+                  String(px),
+                  String(py),
+                  String(px),
+                  String(py),
+                  String(duration),
+                ],
+                serial,
+                { timeoutMs: TAP_TIMEOUT_MS }
+              );
+            } else {
+              await runAdbCommand(['shell', 'input', 'tap', String(px), String(py)], serial, {
+                timeoutMs: TAP_TIMEOUT_MS,
+              });
+            }
+          };
+          try {
+            await runTap();
+          } catch {
+            await new Promise((r) => setTimeout(r, 1500));
+            await runTap();
           }
           // Allow UI to update before returning so callers (e.g. assert_text) see the result.
           await new Promise((r) => setTimeout(r, 300));
