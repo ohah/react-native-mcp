@@ -23,6 +23,8 @@ function makeDevice(
     metroBaseUrl: null,
     pixelRatio: null,
     topInsetPx: 0,
+    screenHeightDp: 0,
+    windowHeightDp: 0,
     lastMessageTime: Date.now(),
   };
 }
