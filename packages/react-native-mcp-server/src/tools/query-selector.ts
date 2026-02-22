@@ -77,7 +77,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
 
   register(
     'query_selector',
-    'Find first element matching selector in Fiber tree. Returns uid, type, measure (pageX, pageY, width, height). Workflow: query_selector → tap(center); uids unknown until called.',
+    'Find first element matching selector. Returns uid, type, and position (pageX, pageY, width, height) for tap.',
     async (args: unknown) => {
       const { selector, deviceId, platform } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {
@@ -117,7 +117,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
 
   register(
     'query_selector_all',
-    'Find all elements matching selector. Returns array with measure. Prefer query_selector for one element; use only when enumerating multiple.',
+    'Find all elements matching selector. Returns array with positions. Use query_selector for single element.',
     async (args: unknown) => {
       const { selector, deviceId, platform } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {

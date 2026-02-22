@@ -29,8 +29,7 @@ export function registerInspectState(server: McpServer, appSession: AppSession):
   s.registerTool(
     'inspect_state',
     {
-      description:
-        'Inspect React state hooks of component by selector. Returns hooks with index and value. Works with useState, Zustand, etc.',
+      description: 'Inspect React state hooks by selector. Works with useState, Zustand, etc.',
       inputSchema: schema,
     },
     async (args: unknown) => {

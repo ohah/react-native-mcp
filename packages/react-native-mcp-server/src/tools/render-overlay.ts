@@ -54,7 +54,7 @@ export function registerRenderOverlay(server: McpServer, appSession: AppSession)
     'start_render_highlight',
     {
       description:
-        'Start visual React component re-render overlay on device (not engine). Overlay rects on re-rendering components, count badges, auto-fade. react-scan style.',
+        'Show visual re-render overlay on device. Highlights re-rendering components with count badges.',
       inputSchema: startSchema,
     },
     async (args: unknown) => {

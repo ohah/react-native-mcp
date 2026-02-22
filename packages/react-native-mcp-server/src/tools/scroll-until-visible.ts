@@ -50,7 +50,7 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
     'scroll_until_visible',
     {
       description:
-        'Scroll until selector is visible. querySelector + swipe loop. Returns pass, scrollCount, element. For long lists.',
+        'Scroll until element matching selector is visible. For long lists and off-screen elements.',
       inputSchema: schema,
     },
     async (args: unknown) => {

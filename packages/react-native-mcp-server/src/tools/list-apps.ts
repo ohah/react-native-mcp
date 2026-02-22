@@ -50,7 +50,7 @@ export function registerListApps(server: McpServer): void {
     'list_apps',
     {
       description:
-        'List installed apps on device/simulator (idb/adb). No app connection required. Returns bundle IDs or packages. Use these IDs with terminate_app(platform, appId).',
+        'List installed apps. No app connection required. Returns bundle IDs or package names.',
       inputSchema: schema,
     },
     async (args: unknown) => {

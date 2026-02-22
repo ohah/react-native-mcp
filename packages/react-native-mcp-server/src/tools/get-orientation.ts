@@ -46,7 +46,7 @@ export function registerGetOrientation(server: McpServer): void {
     'get_orientation',
     {
       description:
-        'Get current orientation (portrait/landscape). Works without app connection. Returns human-readable and raw platform value.',
+        'Get current device orientation (portrait/landscape). No app connection required.',
       inputSchema: schema,
     },
     async (args: unknown) => {

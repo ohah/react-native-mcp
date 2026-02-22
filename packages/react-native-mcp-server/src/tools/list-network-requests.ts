@@ -32,8 +32,7 @@ export function registerListNetworkRequests(server: McpServer, appSession: AppSe
   s.registerTool(
     'list_network_requests',
     {
-      description:
-        'List captured XHR/fetch requests. Filter by url, method, status, since, limit. Returns request/response details.',
+      description: 'List captured network requests. Filter by url, method, status, since, limit.',
       inputSchema: listSchema,
     },
     async (args: unknown) => {

@@ -43,8 +43,7 @@ export function registerEvaluateScript(server: McpServer, appSession: AppSession
   ).registerTool(
     'evaluate_script',
     {
-      description:
-        'Run JS in app context. function (string), args (array). Returns JSON result. Use measureView(uid) for tap/swipe coords.',
+      description: 'Run JS in app context. Returns JSON result. Use measureView(uid) for coords.',
       inputSchema: schema,
     },
     async (args: unknown) => {

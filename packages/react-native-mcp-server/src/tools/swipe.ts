@@ -45,8 +45,7 @@ export function registerSwipe(server: McpServer, appSession: AppSession): void {
   ).registerTool(
     'swipe',
     {
-      description:
-        'Swipe (x1,y1)→(x2,y2) in points. Duration ms (default 300). For scroll/drawer. Use measureView(uid) then swipe; verify with assert_text.',
+      description: 'Swipe from (x1,y1) to (x2,y2) in points. For scrolling and drawers.',
       inputSchema: schema,
     },
     async (args: unknown) => {

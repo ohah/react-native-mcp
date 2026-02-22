@@ -31,8 +31,7 @@ export function registerGetStateChanges(server: McpServer, appSession: AppSessio
   s.registerTool(
     'get_state_changes',
     {
-      description:
-        'List captured state changes (timestamp, component, hook, prev/next). Filter by component, since, limit. Buffer up to 300.',
+      description: 'List captured state changes. Filter by component, since, limit.',
       inputSchema: listSchema,
     },
     async (args: unknown) => {

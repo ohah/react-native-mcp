@@ -51,8 +51,7 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
   ).registerTool(
     'tap',
     {
-      description:
-        'Tap at (x,y) in points. Long press via duration (ms). Use after query_selector; verify with assert_text.',
+      description: 'Tap at (x,y) in points. Long press via duration param.',
       inputSchema: schema,
     },
     async (args: unknown) => {

@@ -55,7 +55,7 @@ export function registerVisualCompare(server: McpServer, appSession: AppSession)
     'visual_compare',
     {
       description:
-        'Compare current screenshot against a baseline PNG. Supports element-level cropping via selector. Use updateBaseline=true to save new baselines.',
+        'Compare screenshot against baseline PNG. Supports element-level cropping via selector.',
       inputSchema: schema,
     },
     async (args: unknown) => {
