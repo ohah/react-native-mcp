@@ -40,7 +40,7 @@ teardown?: Step[] # 종료 시 실행 (선택)
 | [내비게이션 & 디바이스](./steps/navigation) | 7       | 버튼, 뒤로, 홈, 딥링크, 위치, 초기화           |
 | [앱 생명주기](./steps/lifecycle)            | 2       | 앱 실행 및 종료                                |
 | [스크린샷](./steps/screenshots)             | 2       | 스크린샷 캡처 및 비교                          |
-| [비디오](./steps/screenshots)               | 2       | 화면 녹화 시작·중지 (idb/adb)                  |
+| [비디오](./steps/video)                     | 2       | 화면 녹화 시작·중지 (idb/adb)                  |
 | [유틸리티](./steps/utilities)               | 4       | 텍스트 복사·붙여넣기, JS 실행, 미디어 추가     |
 
 ---

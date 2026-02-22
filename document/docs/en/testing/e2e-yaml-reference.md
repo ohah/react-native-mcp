@@ -40,7 +40,7 @@ The runner supports **34 step types** across 8 categories. See the [Steps Refere
 | [Navigation & Device](./steps/navigation) | 7     | Press button, back, home, deep link, location, reset |
 | [App Lifecycle](./steps/lifecycle)        | 2     | Launch and terminate apps                            |
 | [Screenshots](./steps/screenshots)        | 2     | Capture and compare screenshots                      |
-| [Video](./steps/screenshots)              | 2     | Start and stop screen recording (idb/adb)            |
+| [Video](./steps/video)                    | 2     | Start and stop screen recording (idb/adb)            |
 | [Utilities](./steps/utilities)            | 4     | Copy/paste text, run JS, add media                   |
 
 ---

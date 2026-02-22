@@ -136,7 +136,7 @@ graph TB
 
   subgraph Layer2["Layer 2: MCP Server"]
     MCP["MCP Server (Node.js)"]
-    MCP --- M1["42 MCP tools"]
+    MCP --- M1["50 MCP tools"]
     MCP --- M2["WebSocket ws://localhost:12300"]
     MCP --- M3["Native CLI bridge (adb / idb)"]
   end
@@ -233,7 +233,7 @@ packages/react-native-mcp-server/
 ├── src/
 │   ├── index.ts                 # CLI + MCP server (stdio)
 │   ├── websocket-server.ts      # WebSocket (12300)
-│   ├── tools/                   # 42 MCP tools
+│   ├── tools/                   # 50 MCP tools
 │   ├── babel/                   # Babel preset (testID)
 │   ├── metro/                   # Metro transformer
 │   └── runtime/                 # Runtime source → runtime.js

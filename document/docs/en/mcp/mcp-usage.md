@@ -87,7 +87,7 @@ Then run your app and use MCP tools in the conversation. Use `claude mcp list` t
 
 ## Available tools overview
 
-Once connected, **42 tools** are available across 12 categories — interaction, assertions, screen capture, network mocking, state inspection, render profiling, and more.
+Once connected, **50 tools** are available across 12 categories — interaction, assertions, screen capture, network mocking, state inspection, render profiling, and more.
 
 Ask the AI to "take a snapshot of the app" or "tap the login button" and it will call these tools automatically.
 

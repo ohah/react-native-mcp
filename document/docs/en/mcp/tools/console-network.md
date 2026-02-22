@@ -99,3 +99,39 @@ List captured XHR/fetch requests with request and response details.
 - `responseBody` is captured as a string. Large responses may be truncated.
 
 - Use `clear` (target: `network_requests`) to empty the buffer before a test scenario.
+
+---
+
+## clear
+
+Clear one of the in-memory buffers: console logs, network requests, network mocks, state changes, or render profile data. App data reset is a separate tool: `clear_state`.
+
+#### Parameters
+
+| Parameter  | Type                 | Required | Description                                                                               |
+| ---------- | -------------------- | -------- | ----------------------------------------------------------------------------------------- |
+| `target`   | `string`             | **Yes**  | One of: `console`, `network_requests`, `network_mocks`, `state_changes`, `render_profile` |
+| `platform` | `"ios" \| "android"` | No       | Target platform                                                                           |
+| `deviceId` | `string`             | No       | Target device                                                                             |
+
+#### Example
+
+```json
+// Clear console buffer before a test
+{ "tool": "clear", "arguments": { "target": "console" } }
+
+// Clear network mocks
+{ "tool": "clear", "arguments": { "target": "network_mocks" } }
+
+// Stop render profiling and clear profile data
+{ "tool": "clear", "arguments": { "target": "render_profile" } }
+```
+
+#### Tips
+
+- `console` — clears captured console messages.
+- `network_requests` — clears the request/response buffer.
+- `network_mocks` — removes all mock rules.
+- `state_changes` — clears state change history.
+- `render_profile` — stops profiling and clears the report.
+- To reset app storage or permissions, use `clear_state` (see [Device & Status](./device)).

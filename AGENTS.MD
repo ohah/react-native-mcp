@@ -8,4 +8,4 @@
 - [개발 명령어](docs/development-commands.md)
 - [커밋 규칙](docs/commit-rules.md)
 - [PR 규칙](docs/pr-rules.md)
-- [E2E YAML 레퍼런스 (API 문서)](docs/e2e-yaml-reference.md)
+- [E2E YAML 레퍼런스 (API 문서)](document/docs/en/testing/e2e-yaml-reference.md)

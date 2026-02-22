@@ -164,3 +164,62 @@ React Native 컴포넌트 트리를 캡처합니다. UID, 타입, testID, 텍스
 - 전체 화면 대신 특정 컴포넌트(예: `#header`)만 비교하려면 `selector`를 사용하세요.
 - `threshold` 값이 낮을수록 더 엄격합니다 (0 = 픽셀 단위 완벽 일치, 1 = 모든 차이 통과).
 - 내부적으로 [sharp](https://sharp.pixelplumbing.com/) + [pixelmatch](https://github.com/mapbox/pixelmatch)를 사용합니다.
+
+---
+
+## 비디오 녹화
+
+디바이스/시뮬레이터 화면 녹화를 시작·중지합니다. iOS는 **idb**, Android는 **adb screenrecord**를 사용합니다. MCP 서버당 동시에 하나의 녹화만 가능합니다.
+
+### start_video_recording
+
+디바이스 화면 녹화를 시작합니다. `stop_video_recording`을 호출할 때까지 녹화가 계속됩니다.
+
+#### Parameters
+
+| 파라미터   | 타입                 | 필수   | 설명                                                                                               |
+| ---------- | -------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| `platform` | `"ios" \| "android"` | 예     | 대상 플랫폼                                                                                        |
+| `filePath` | `string`             | 예     | 녹화 파일을 저장할 호스트 경로. 현재 작업 디렉터리 아래여야 함(예: `e2e-artifacts/recording.mp4`). |
+| `deviceId` | `string`             | 아니오 | 디바이스 ID. 연결된 디바이스가 하나면 생략 가능.                                                   |
+
+#### Example
+
+```json
+{
+  "tool": "start_video_recording",
+  "arguments": {
+    "platform": "ios",
+    "filePath": "e2e-artifacts/session.mp4"
+  }
+}
+```
+
+#### Tips
+
+- 이미 녹화 중이면 오류를 반환합니다. 먼저 `stop_video_recording`을 호출하세요.
+- 서버 종료(또는 세션 종료) 시 활성 녹화는 자동으로 중지됩니다.
+
+---
+
+### stop_video_recording
+
+현재 녹화를 중지하고, 시작 시 지정한 경로에 파일을 저장합니다.
+
+#### Parameters
+
+| 파라미터   | 타입                 | 필수   | 설명                                    |
+| ---------- | -------------------- | ------ | --------------------------------------- |
+| `platform` | `"ios" \| "android"` | 아니오 | 중지할 플랫폼. 녹화가 하나면 생략 가능. |
+| `deviceId` | `string`             | 아니오 | 디바이스 ID. 단일 디바이스면 생략.      |
+
+#### Example
+
+```json
+{ "tool": "stop_video_recording", "arguments": { "platform": "ios" } }
+```
+
+#### Tips
+
+- 성공 시 저장된 파일 경로를 반환합니다.
+- iOS: idb 사용. Android: adb screenrecord(SIGINT로 중지 후 저장).

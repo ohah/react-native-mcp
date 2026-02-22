@@ -136,7 +136,7 @@ graph TB
 
   subgraph Layer2["2계층: MCP 서버"]
     MCP["MCP 서버 (Node.js)"]
-    MCP --- M1["42개 MCP 도구"]
+    MCP --- M1["50개 MCP 도구"]
     MCP --- M2["WebSocket ws://localhost:12300"]
     MCP --- M3["네이티브 CLI (adb / idb)"]
   end
@@ -152,7 +152,7 @@ graph TB
 ```
 
 - **1계층 — AI 클라이언트:** stdio(MCP 프로토콜)로 MCP 서버와 통신.
-- **2계층 — MCP 서버:** Node.js 프로세스, 42개 도구, 포트 12300 WebSocket, 네이티브 CLI(adb/idb).
+- **2계층 — MCP 서버:** Node.js 프로세스, 50개 도구, 포트 12300 WebSocket, 네이티브 CLI(adb/idb).
 - **3계층 — 앱 런타임 + 네이티브 도구:** 앱 내 `runtime.js`(Fiber, eval, 네트워크/콘솔 인터셉트)와 스크린샷/탭용 호스트 CLI(앱에 네이티브 모듈 없음).
 
 ## 통신 흐름
@@ -233,7 +233,7 @@ packages/react-native-mcp-server/
 ├── src/
 │   ├── index.ts                 # CLI + MCP 서버 (stdio)
 │   ├── websocket-server.ts      # WebSocket (12300)
-│   ├── tools/                   # 42개 MCP 도구
+│   ├── tools/                   # 50개 MCP 도구
 │   ├── babel/                   # Babel 프리셋 (testID)
 │   ├── metro/                   # Metro transformer
 │   └── runtime/                 # 런타임 소스 → runtime.js
