@@ -77,22 +77,22 @@ steps:
   - waitForVisible: { selector: 'ScrollView', timeout: 15000 }
   # ─── Step 8: ScrollView with ref (testID로 버튼 20 고정, CI 탭 오인 방지) ─
   - swipe: { selector: 'ScrollView', direction: 'up', distance: '30%' }
-  - wait: 1500
+  - wait: 2500
   - scrollUntilVisible: { selector: '#scroll-btn-20', direction: 'down', maxScrolls: 5 }
-  - wait: 500
+  - wait: 800
   - tap: { selector: '#scroll-btn-20' }
-  - wait: 300
+  - wait: 800
   - waitForText: { text: '버튼 20 (1)', timeout: 20000, selector: '#scroll-btn-20' }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'Pressable:text("버튼 0 (0)")', timeout: 15000 }
   # ─── Step 9: ScrollView no testID (텍스트 선택자만 사용, 탭 후 대기로 상태 반영 여유) ─
   - swipe: { selector: 'ScrollView', direction: 'up', distance: '40%' }
-  - wait: 1500
+  - wait: 2500
   - scrollUntilVisible:
       { selector: 'Pressable:text("버튼 20 (0)")', direction: 'down', maxScrolls: 5 }
-  - wait: 500
+  - wait: 800
   - tap: { selector: 'Pressable:text("버튼 20 (0)")' }
-  - wait: 300
+  - wait: 800
   - waitForText: { text: '버튼 20 (1)', timeout: 20000, selector: 'Pressable:text("버튼 20 (1)")' }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'FlatList', timeout: 15000 }
