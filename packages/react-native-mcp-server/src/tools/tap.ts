@@ -21,11 +21,11 @@ import {
 } from './adb-utils.js';
 import { getIOSOrientationInfo, transformForIdb } from './ios-landscape.js';
 
-/** idb/adb tap 명령 타임아웃(ms). 기본 10s. CI 등 느린 환경에서는 REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000 설정. */
+/** idb/adb tap 명령 타임아웃(ms). 기본 15s. CI 등 느린 환경에서는 REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000 설정. */
 const TAP_TIMEOUT_MS =
   typeof process.env.REACT_NATIVE_MCP_TAP_TIMEOUT_MS !== 'undefined'
-    ? Math.max(5000, parseInt(process.env.REACT_NATIVE_MCP_TAP_TIMEOUT_MS, 10) || 10000)
-    : 10000;
+    ? Math.max(5000, parseInt(process.env.REACT_NATIVE_MCP_TAP_TIMEOUT_MS, 10) || 15000)
+    : 15000;
 
 const schema = z.object({
   platform: z.enum(['ios', 'android']).describe('ios or android.'),
@@ -81,14 +81,14 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
           } catch (tapErr) {
             const msg = tapErr instanceof Error ? tapErr.message : String(tapErr);
             if (msg.includes('Command timed out')) {
-              await new Promise((r) => setTimeout(r, 1500));
+              await new Promise((r) => setTimeout(r, 2000));
               await runIdbCommand(cmd, udid, { timeoutMs: TAP_TIMEOUT_MS });
             } else {
               throw tapErr;
             }
           }
           // Allow UI to update before returning so callers (e.g. assert_text) see the result.
-          await new Promise((r) => setTimeout(r, 300));
+          await new Promise((r) => setTimeout(r, 500));
           return {
             content: [
               {
@@ -131,11 +131,11 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
           try {
             await runTap();
           } catch {
-            await new Promise((r) => setTimeout(r, 1500));
+            await new Promise((r) => setTimeout(r, 2000));
             await runTap();
           }
           // Allow UI to update before returning so callers (e.g. assert_text) see the result.
-          await new Promise((r) => setTimeout(r, 300));
+          await new Promise((r) => setTimeout(r, 500));
           return {
             content: [
               {
