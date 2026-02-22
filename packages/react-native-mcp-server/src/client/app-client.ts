@@ -455,16 +455,7 @@ export class AppClient {
     const screen = await this.getScreenBounds();
     try {
       const { cx: x, cy: y } = clampToViewport(rawX, rawY, el.measure, screen);
-      const m = el.measure;
-      console.error(
-        `[tap-debug] selector="${selector}" measure={pageX:${m.pageX},pageY:${m.pageY},w:${m.width},h:${m.height}}` +
-          ` center=(${rawX.toFixed(1)},${rawY.toFixed(1)}) clamped=(${x.toFixed(1)},${y.toFixed(1)}) screen=${JSON.stringify(screen)}`
-      );
-      const result = await this.tapXY(x, y, opts);
-      console.error(
-        `[tap-debug] tapXY response: ${typeof result === 'string' ? result : JSON.stringify(result)}`
-      );
-      return result;
+      return this.tapXY(x, y, opts);
     } catch (e) {
       if (e instanceof OffScreenError) {
         throw new McpToolError('tap', `Element "${selector}" is off-screen: ${e.message}`);
