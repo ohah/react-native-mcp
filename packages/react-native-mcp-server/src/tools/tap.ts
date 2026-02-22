@@ -20,13 +20,12 @@ import {
   getAndroidScale,
 } from './adb-utils.js';
 import { getIOSOrientationInfo, transformForIdb } from './ios-landscape.js';
-import { spawn } from 'node:child_process';
 
-/** idb/adb tap 명령 타임아웃(ms). 기본 15s. CI 등 느린 환경에서는 REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000 설정. */
+/** idb/adb tap 명령 타임아웃(ms). 기본 10s. CI 등 느린 환경에서는 REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000 설정. */
 const TAP_TIMEOUT_MS =
   typeof process.env.REACT_NATIVE_MCP_TAP_TIMEOUT_MS !== 'undefined'
-    ? Math.max(5000, parseInt(process.env.REACT_NATIVE_MCP_TAP_TIMEOUT_MS, 10) || 15000)
-    : 15000;
+    ? Math.max(5000, parseInt(process.env.REACT_NATIVE_MCP_TAP_TIMEOUT_MS, 10) || 10000)
+    : 10000;
 
 const schema = z.object({
   platform: z.enum(['ios', 'android']).describe('ios or android.'),
@@ -77,23 +76,9 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
           const iy = Math.round(t.y);
           const cmd = ['ui', 'tap', String(ix), String(iy)];
           if (isLongPress) cmd.push('--duration', String(duration / 1000));
-          try {
-            await runIdbCommand(cmd, udid, { timeoutMs: TAP_TIMEOUT_MS });
-          } catch (tapErr) {
-            const msg = tapErr instanceof Error ? tapErr.message : String(tapErr);
-            if (msg.includes('Command timed out')) {
-              // idb_companion이 먹통일 수 있으므로 kill 후 재시도
-              try {
-                spawn('pkill', ['-9', '-f', 'idb_companion'], { stdio: 'ignore' }).unref();
-              } catch {}
-              await new Promise((r) => setTimeout(r, 3000));
-              await runIdbCommand(cmd, udid, { timeoutMs: TAP_TIMEOUT_MS });
-            } else {
-              throw tapErr;
-            }
-          }
+          await runIdbCommand(cmd, udid, { timeoutMs: TAP_TIMEOUT_MS });
           // Allow UI to update before returning so callers (e.g. assert_text) see the result.
-          await new Promise((r) => setTimeout(r, 500));
+          await new Promise((r) => setTimeout(r, 300));
           return {
             content: [
               {
@@ -111,10 +96,8 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
           const topInsetDp = appSession.getTopInsetDp(deviceId, 'android');
           const px = Math.round(x * scale);
           const py = Math.round((y + topInsetDp) * scale);
-          const runTap = async (): Promise<void> => {
-            // swipe를 사용: input tap은 CI 에뮬레이터에서 간헐적으로 소실됨.
-            // 같은 좌표로 짧은 swipe(100ms hold)가 더 안정적.
-            const holdMs = isLongPress ? duration : 100;
+          if (isLongPress) {
+            // Long press = swipe from same point to same point with duration
             await runAdbCommand(
               [
                 'shell',
@@ -124,20 +107,18 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
                 String(py),
                 String(px),
                 String(py),
-                String(holdMs),
+                String(duration),
               ],
               serial,
               { timeoutMs: TAP_TIMEOUT_MS }
             );
-          };
-          try {
-            await runTap();
-          } catch {
-            await new Promise((r) => setTimeout(r, 2000));
-            await runTap();
+          } else {
+            await runAdbCommand(['shell', 'input', 'tap', String(px), String(py)], serial, {
+              timeoutMs: TAP_TIMEOUT_MS,
+            });
           }
           // Allow UI to update before returning so callers (e.g. assert_text) see the result.
-          await new Promise((r) => setTimeout(r, 500));
+          await new Promise((r) => setTimeout(r, 300));
           return {
             content: [
               {
