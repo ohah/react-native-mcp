@@ -191,6 +191,20 @@ jobs:
             echo "=== Available AVDs ==="
             emulator -list-avds 2>/dev/null || [ -z "${ANDROID_HOME:-}" ] || "$ANDROID_HOME/emulator/emulator" -list-avds 2>/dev/null || true
 
+            echo "=== Emulator diagnostics ==="
+            echo "--- wm size ---"
+            adb shell wm size || true
+            echo "--- wm density ---"
+            adb shell wm density || true
+            echo "--- display info (dumpsys display | grep -E 'mBaseDisplayInfo|density|DisplayDeviceInfo') ---"
+            adb shell dumpsys display | grep -E 'mBaseDisplayInfo|density|DisplayDeviceInfo' || true
+            echo "--- top inset (statusBars / captionBar) ---"
+            adb shell dumpsys window displays | grep -E 'type=(statusBars|captionBar|navigationBars)' || true
+            echo "--- window policy (freeform / desktop) ---"
+            adb shell settings get global force_desktop_mode_on_external_displays 2>/dev/null || true
+            adb shell settings get global enable_freeform_support 2>/dev/null || true
+            echo "=== End diagnostics ==="
+
             # APK 설치 (runner가 줄마다 별도 sh -c로 실행해 변수 미공유 → 경로 리터럴 사용)
             ls -la examples/demo-app/android/app/build/outputs/apk/release/app-release.apk
             adb install -r examples/demo-app/android/app/build/outputs/apk/release/app-release.apk
