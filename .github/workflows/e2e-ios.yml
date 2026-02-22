@@ -198,8 +198,43 @@ jobs:
 
       - name: 시뮬레이터 세로(Portrait) 방향으로 설정
         run: |
-          # Simulator 활성화 후 Device > Orientation > Portrait 선택 (AppleScript)
-          osascript -e 'tell application "Simulator" to activate' -e 'delay 1' -e 'tell application "System Events" to tell process "Simulator" to click menu item "Portrait" of menu 1 of menu item "Orientation" of menu 1 of menu bar item "Device" of menu bar 1' || true
+          set -e
+          # GraphicsOrientation: 1=Portrait 0°, 2=Portrait 180°, 3/4=Landscape. E2E는 1로 고정.
+          read_orientation() {
+            xcrun simctl spawn booted defaults read com.apple.backboardd 2>/dev/null | grep -o 'GraphicsOrientation = [0-9]*' | grep -o '[0-9]*' || echo "0"
+          }
+          is_portrait() {
+            r=$(read_orientation)
+            [ "$r" = "1" ] || [ "$r" = "2" ]
+          }
+          rotate_right() {
+            osascript -e 'tell application "Simulator" to activate' -e 'delay 0.3' -e 'tell application "System Events" to tell process "Simulator" to click menu item "Rotate Right" of menu "Device" of menu bar 1'
+          }
+          # 1) Device > Orientation > Portrait으로 세로 맞추기
+          osascript -e 'tell application "Simulator" to activate' -e 'delay 1' -e 'tell application "System Events" to tell process "Simulator" to click menu item "Portrait" of menu 1 of menu item "Orientation" of menu 1 of menu bar item "Device" of menu bar 1'
+          for attempt in 1 2 3; do
+            sleep 2
+            if is_portrait; then break; fi
+            echo "Attempt $attempt: GraphicsOrientation=$(read_orientation), retrying Portrait menu click..."
+            osascript -e 'tell application "System Events" to tell process "Simulator" to click menu item "Portrait" of menu 1 of menu item "Orientation" of menu 1 of menu bar item "Device" of menu bar 1' || true
+          done
+          r=$(read_orientation)
+          if [ "$r" != "1" ] && [ "$r" != "2" ]; then
+            echo "Failed to set portrait. Current GraphicsOrientation=$r"
+            exit 1
+          fi
+          # 2) 2(180°)이면 Rotate Right 반복해서 1(0°)으로 맞추기
+          for _ in 1 2 3 4; do
+            r=$(read_orientation)
+            if [ "$r" = "1" ]; then
+              echo "Orientation is GraphicsOrientation=1 (Portrait 0°)."
+              exit 0
+            fi
+            rotate_right
+            sleep 2
+          done
+          echo "Failed to set GraphicsOrientation=1. Current: $(read_orientation)"
+          exit 1
 
       - name: E2E YAML 테스트 실행
         env:
