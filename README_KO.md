@@ -23,7 +23,7 @@ React Native 앱 자동화 및 모니터링을 위한 MCP(Model Context Protocol
 | ------------------------------------------------------------------------------- | ------------------------------------------------- |
 | [시작하기](https://ohah.github.io/react-native-mcp/ko/mcp/getting-started)      | 5분 설정 가이드                                   |
 | [Expo 가이드](https://ohah.github.io/react-native-mcp/ko/mcp/expo-guide)        | Expo 전용 설정 (Dev Client, Expo Go, Expo Router) |
-| [도구 레퍼런스](https://ohah.github.io/react-native-mcp/ko/mcp/tools/)          | 48개 도구의 파라미터와 예제                       |
+| [도구 레퍼런스](https://ohah.github.io/react-native-mcp/ko/mcp/tools/overview)  | 49개 도구의 파라미터와 예제                       |
 | [쿡북](https://ohah.github.io/react-native-mcp/ko/mcp/cookbook/)                | 실전 활용 시나리오                                |
 | [아키텍처](https://ohah.github.io/react-native-mcp/ko/mcp/architecture)         | 내부 동작 원리                                    |
 | [문제 해결](https://ohah.github.io/react-native-mcp/ko/mcp/troubleshooting)     | 연결 문제와 해결 방법                             |

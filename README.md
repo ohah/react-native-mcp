@@ -23,7 +23,7 @@ MCP(Model Context Protocol) server for React Native app automation and monitorin
 | --------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | [Quick Start](https://ohah.github.io/react-native-mcp/mcp/getting-started)        | 5-minute setup guide                                   |
 | [Expo Guide](https://ohah.github.io/react-native-mcp/mcp/expo-guide)              | Expo-specific setup (Dev Client, Expo Go, Expo Router) |
-| [Tool Reference](https://ohah.github.io/react-native-mcp/mcp/tools/)              | All 48 tools with parameters and examples              |
+| [Tool Reference](https://ohah.github.io/react-native-mcp/mcp/tools/overview)      | All 49 tools with parameters and examples              |
 | [Cookbook](https://ohah.github.io/react-native-mcp/mcp/cookbook/)                 | Real-world usage scenarios                             |
 | [Architecture](https://ohah.github.io/react-native-mcp/mcp/architecture)          | How it works under the hood                            |
 | [Troubleshooting](https://ohah.github.io/react-native-mcp/mcp/troubleshooting)    | Connection issues and fixes                            |
