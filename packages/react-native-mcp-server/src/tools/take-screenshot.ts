@@ -11,7 +11,8 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { AppSession } from '../websocket-server.js';
 import { runCommand } from './run-command.js';
-import { getAndroidScale } from './adb-utils.js';
+import { getAndroidScale, getAndroidSurfaceOrientation } from './adb-utils.js';
+import { getIOSOrientationInfo } from './ios-landscape.js';
 
 const MAX_HEIGHT = 720;
 const JPEG_QUALITY = 80;
@@ -45,6 +46,62 @@ export async function captureIos(): Promise<Buffer> {
   } finally {
     await unlink(path).catch(() => {});
   }
+}
+
+/**
+ * 스크린샷을 디바이스 orientation에 맞게 회전.
+ * iOS simctl은 항상 portrait 레이아웃으로 캡처하고,
+ * 일부 Android 기기도 landscape에서 portrait 버퍼를 반환.
+ */
+async function rotateToUpright(
+  png: Buffer,
+  platform: 'android' | 'ios',
+  appSession: AppSession,
+  deviceId?: string
+): Promise<Buffer> {
+  const sharp = (await import('sharp')).default;
+
+  if (platform === 'ios') {
+    const info = await getIOSOrientationInfo(appSession, deviceId, 'ios', 'booted');
+    let angle: number;
+    switch (info.graphicsOrientation) {
+      case 2:
+        angle = 180;
+        break;
+      case 3:
+        angle = 90;
+        break;
+      case 4:
+        angle = 270;
+        break;
+      default:
+        return png; // portrait — 회전 불필요
+    }
+    return sharp(png).rotate(angle).png().toBuffer();
+  }
+
+  // Android: SurfaceOrientation과 이미지 차원이 불일치할 때만 회전
+  const surfaceOrientation = await getAndroidSurfaceOrientation();
+  if (surfaceOrientation === 0) return png;
+
+  const metadata = await sharp(png).metadata();
+  const w = metadata.width || 0;
+  const h = metadata.height || 0;
+  const isPortraitImage = h > w;
+
+  if (surfaceOrientation === 1 || surfaceOrientation === 3) {
+    // landscape orientation — screencap이 이미 landscape이면 회전 불필요
+    if (!isPortraitImage) return png;
+    const angle = surfaceOrientation === 1 ? 90 : 270;
+    return sharp(png).rotate(angle).png().toBuffer();
+  }
+
+  if (surfaceOrientation === 2) {
+    // 180° portrait — 이미지 차원은 같지만 내용이 뒤집힘
+    return sharp(png).rotate(180).png().toBuffer();
+  }
+
+  return png;
 }
 
 type ProcessResult = {
@@ -116,10 +173,12 @@ export function registerTakeScreenshot(server: McpServer, appSession: AppSession
       const { platform, filePath } = schema.parse(args);
 
       try {
-        const png = platform === 'android' ? await captureAndroid() : await captureIos();
-        if (!isValidPng(png)) {
+        const rawPng = platform === 'android' ? await captureAndroid() : await captureIos();
+        if (!isValidPng(rawPng)) {
           throw new Error('Capture produced invalid PNG.');
         }
+        // orientation에 맞게 회전 (landscape → 가로 이미지로 표시)
+        const png = await rotateToUpright(rawPng, platform, appSession);
         const runtimeRatio = appSession.getPixelRatio(undefined, platform);
         const { buffer, pointSize, outputSize } = await processImage(png, platform, runtimeRatio);
         if (filePath) {
