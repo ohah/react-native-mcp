@@ -257,6 +257,22 @@ export async function getAndroidInsets(serial?: string): Promise<AndroidInsets> 
   }
 }
 
+/* ─── Android surface orientation (화면 회전 감지) ─── */
+
+/**
+ * Android 디바이스의 현재 SurfaceOrientation 값 조회.
+ * 0 = portrait(0°), 1 = landscape(90°), 2 = portrait(180°), 3 = landscape(270°).
+ */
+export async function getAndroidSurfaceOrientation(serial?: string): Promise<number> {
+  try {
+    const text = await runAdbCommand(['shell', 'dumpsys', 'input'], serial, { timeoutMs: 5000 });
+    const match = text.match(/SurfaceOrientation:\s*(\d)/);
+    return match ? parseInt(match[1]!, 10) : 0;
+  } catch {
+    return 0;
+  }
+}
+
 /* ─── 에러 헬퍼 ─── */
 
 export function adbNotInstalledError(): {
