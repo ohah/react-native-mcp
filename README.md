@@ -19,15 +19,16 @@ MCP(Model Context Protocol) server for React Native app automation and monitorin
 
 ## Documentation
 
-| Guide                                                                  | Description                                            |
-| ---------------------------------------------------------------------- | ------------------------------------------------------ |
-| [Quick Start](https://react-native-mcp.dev/en/mcp/getting-started)     | 5-minute setup guide                                   |
-| [Expo Guide](https://react-native-mcp.dev/en/mcp/expo-guide)           | Expo-specific setup (Dev Client, Expo Go, Expo Router) |
-| [Tool Reference](https://react-native-mcp.dev/en/mcp/tools/)           | All 42 tools with parameters and examples              |
-| [Cookbook](https://react-native-mcp.dev/en/mcp/cookbook/)              | Real-world usage scenarios                             |
-| [Architecture](https://react-native-mcp.dev/en/mcp/architecture)       | How it works under the hood                            |
-| [Troubleshooting](https://react-native-mcp.dev/en/mcp/troubleshooting) | Connection issues and fixes                            |
-| [E2E Testing](https://react-native-mcp.dev/en/testing/)                | YAML scenario testing                                  |
+| Guide                                                                     | Description                                            |
+| ------------------------------------------------------------------------- | ------------------------------------------------------ |
+| [Quick Start](https://react-native-mcp.dev/en/mcp/getting-started)        | 5-minute setup guide                                   |
+| [Expo Guide](https://react-native-mcp.dev/en/mcp/expo-guide)              | Expo-specific setup (Dev Client, Expo Go, Expo Router) |
+| [Tool Reference](https://react-native-mcp.dev/en/mcp/tools/)              | All 42 tools with parameters and examples              |
+| [Cookbook](https://react-native-mcp.dev/en/mcp/cookbook/)                 | Real-world usage scenarios                             |
+| [Architecture](https://react-native-mcp.dev/en/mcp/architecture)          | How it works under the hood                            |
+| [Troubleshooting](https://react-native-mcp.dev/en/mcp/troubleshooting)    | Connection issues and fixes                            |
+| [VS Code Extension](https://react-native-mcp.dev/en/mcp/vscode-extension) | DevTools + Component Tree in the sidebar               |
+| [E2E Testing](https://react-native-mcp.dev/en/test/)                      | YAML scenario testing                                  |
 
 ## Quick Start (CLI init)
 
@@ -140,6 +141,10 @@ Or edit `~/Library/Application Support/Claude/claude_desktop_config.json` with t
 ### GitHub Copilot CLI
 
 Run `/mcp add react-native-mcp` in Copilot CLI, or edit `~/.copilot/mcp-config.json`.
+
+### VS Code Extension (DevTools)
+
+Install [**React Native MCP DevTools**](https://marketplace.visualstudio.com/items?itemName=ohah.react-native-mcp-devtools) from the Marketplace, or in VS Code: `Ctrl+Shift+X` (Extensions) → search **React Native MCP DevTools** → Install. Gives you Console, Network, State, Renders, and Component Tree in the sidebar. See [VS Code Extension](https://react-native-mcp.dev/en/mcp/vscode-extension) for local .vsix install.
 
 > For detailed client setup, see [Cursor / Claude / Copilot](https://react-native-mcp.dev/en/mcp/mcp-usage).
 
