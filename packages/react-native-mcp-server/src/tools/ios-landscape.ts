@@ -113,3 +113,33 @@ export function transformForIdb(
       return { x, y };
   }
 }
+
+/**
+ * 앱 좌표계의 사각형을 portrait 스크린샷 좌표계로 변환.
+ * simctl screenshot은 항상 portrait 방향으로 캡처하므로,
+ * landscape 앱의 measureView 좌표를 portrait 기준으로 변환해야 crop이 정상 동작한다.
+ *
+ * 4개 꼭짓점을 transformForIdb로 변환 후 bounding box를 계산한다.
+ * Portrait(orientation=1)이면 변환 없이 그대로 반환.
+ */
+export function transformRectForPortraitScreenshot(
+  rect: { pageX: number; pageY: number; width: number; height: number },
+  info: IOSOrientationInfo
+): { left: number; top: number; width: number; height: number } {
+  if (info.graphicsOrientation === 1 || info.width <= 0 || info.height <= 0) {
+    return { left: rect.pageX, top: rect.pageY, width: rect.width, height: rect.height };
+  }
+  const corners = [
+    transformForIdb(rect.pageX, rect.pageY, info),
+    transformForIdb(rect.pageX + rect.width, rect.pageY, info),
+    transformForIdb(rect.pageX, rect.pageY + rect.height, info),
+    transformForIdb(rect.pageX + rect.width, rect.pageY + rect.height, info),
+  ];
+  const xs = corners.map((c) => c.x);
+  const ys = corners.map((c) => c.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
+  return { left: minX, top: minY, width: maxX - minX, height: maxY - minY };
+}
