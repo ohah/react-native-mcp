@@ -7,8 +7,8 @@ React Native MCP 프로젝트 문서 목차.
 ## E2E / YAML
 
 - [E2E 테스트 계획](e2e-test-plan.md)
-- YAML 레퍼런스 → [published docs](../document/docs/ko/testing/e2e-yaml-reference.md)로 이동
-- E2E 대시보드 → [published docs](../document/docs/ko/testing/e2e-dashboard.md) (리포터·`test report show` 사용법)
+- YAML 레퍼런스 → [published docs](../document/docs/ko/test/e2e-yaml-reference.md)로 이동
+- E2E 대시보드 → [published docs](../document/docs/ko/test/e2e-dashboard.md) (리포터·`test report show` 사용법)
 
 ---
 
