@@ -122,9 +122,9 @@ Without these, other MCP tools (state, network, console, eval) still work.
 
 ## Documentation
 
-- **Full docs:** [react-native-mcp.dev](https://react-native-mcp.dev) ([en](https://react-native-mcp.dev/en/mcp/getting-started) / [ko](https://react-native-mcp.dev/ko/mcp/getting-started))
-- **VS Code Extension:** Install from [Marketplace](https://marketplace.visualstudio.com/items?itemName=ohah.react-native-mcp-devtools) or `Ctrl+Shift+X` → search **React Native MCP DevTools**. [Doc](https://react-native-mcp.dev/en/mcp/vscode-extension) ([ko](https://react-native-mcp.dev/ko/mcp/vscode-extension))
-- **Tool Reference:** [All MCP tools](https://react-native-mcp.dev/en/mcp/tools/) · **E2E Testing:** [YAML scenarios](https://react-native-mcp.dev/en/test/)
+- **Full docs:** [ohah.github.io/react-native-mcp](https://ohah.github.io/react-native-mcp/) ([en](https://ohah.github.io/react-native-mcp/mcp/getting-started) / [ko](https://ohah.github.io/react-native-mcp/ko/mcp/getting-started))
+- **VS Code Extension:** Install from [Marketplace](https://marketplace.visualstudio.com/items?itemName=ohah.react-native-mcp-devtools) or `Ctrl+Shift+X` → search **React Native MCP DevTools**. [Doc](https://ohah.github.io/react-native-mcp/mcp/vscode-extension) ([ko](https://ohah.github.io/react-native-mcp/ko/mcp/vscode-extension))
+- **Tool Reference:** [All MCP tools](https://ohah.github.io/react-native-mcp/mcp/tools/) · **E2E Testing:** [YAML scenarios](https://ohah.github.io/react-native-mcp/test/)
 - **Repository:** [github.com/ohah/react-native-mcp](https://github.com/ohah/react-native-mcp)
 
 ## License

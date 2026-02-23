@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@ohah/react-native-mcp-server)](https://www.npmjs.com/package/@ohah/react-native-mcp-server)
 [![license](https://img.shields.io/npm/l/@ohah/react-native-mcp-server)](./LICENSE)
 
-> [한국어 문서](./README_KO.md) | [Documentation Site](https://react-native-mcp.dev)
+> [한국어 문서](./README_KO.md) | [Documentation Site](https://ohah.github.io/react-native-mcp/)
 
 MCP(Model Context Protocol) server for React Native app automation and monitoring. Works with Cursor, Claude Desktop, Claude Code, GitHub Copilot, Windsurf, and any MCP-compatible client.
 
@@ -19,16 +19,16 @@ MCP(Model Context Protocol) server for React Native app automation and monitorin
 
 ## Documentation
 
-| Guide                                                                     | Description                                            |
-| ------------------------------------------------------------------------- | ------------------------------------------------------ |
-| [Quick Start](https://react-native-mcp.dev/en/mcp/getting-started)        | 5-minute setup guide                                   |
-| [Expo Guide](https://react-native-mcp.dev/en/mcp/expo-guide)              | Expo-specific setup (Dev Client, Expo Go, Expo Router) |
-| [Tool Reference](https://react-native-mcp.dev/en/mcp/tools/)              | All 42 tools with parameters and examples              |
-| [Cookbook](https://react-native-mcp.dev/en/mcp/cookbook/)                 | Real-world usage scenarios                             |
-| [Architecture](https://react-native-mcp.dev/en/mcp/architecture)          | How it works under the hood                            |
-| [Troubleshooting](https://react-native-mcp.dev/en/mcp/troubleshooting)    | Connection issues and fixes                            |
-| [VS Code Extension](https://react-native-mcp.dev/en/mcp/vscode-extension) | DevTools + Component Tree in the sidebar               |
-| [E2E Testing](https://react-native-mcp.dev/en/test/)                      | YAML scenario testing                                  |
+| Guide                                                                             | Description                                            |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| [Quick Start](https://ohah.github.io/react-native-mcp/mcp/getting-started)        | 5-minute setup guide                                   |
+| [Expo Guide](https://ohah.github.io/react-native-mcp/mcp/expo-guide)              | Expo-specific setup (Dev Client, Expo Go, Expo Router) |
+| [Tool Reference](https://ohah.github.io/react-native-mcp/mcp/tools/)              | All 42 tools with parameters and examples              |
+| [Cookbook](https://ohah.github.io/react-native-mcp/mcp/cookbook/)                 | Real-world usage scenarios                             |
+| [Architecture](https://ohah.github.io/react-native-mcp/mcp/architecture)          | How it works under the hood                            |
+| [Troubleshooting](https://ohah.github.io/react-native-mcp/mcp/troubleshooting)    | Connection issues and fixes                            |
+| [VS Code Extension](https://ohah.github.io/react-native-mcp/mcp/vscode-extension) | DevTools + Component Tree in the sidebar               |
+| [E2E Testing](https://ohah.github.io/react-native-mcp/test/)                      | YAML scenario testing                                  |
 
 ## Quick Start (CLI init)
 
@@ -144,9 +144,9 @@ Run `/mcp add react-native-mcp` in Copilot CLI, or edit `~/.copilot/mcp-config.j
 
 ### VS Code Extension (DevTools)
 
-Install [**React Native MCP DevTools**](https://marketplace.visualstudio.com/items?itemName=ohah.react-native-mcp-devtools) from the Marketplace, or in VS Code: `Ctrl+Shift+X` (Extensions) → search **React Native MCP DevTools** → Install. Gives you Console, Network, State, Renders, and Component Tree in the sidebar. See [VS Code Extension](https://react-native-mcp.dev/en/mcp/vscode-extension) for local .vsix install.
+Install [**React Native MCP DevTools**](https://marketplace.visualstudio.com/items?itemName=ohah.react-native-mcp-devtools) from the Marketplace, or in VS Code: `Ctrl+Shift+X` (Extensions) → search **React Native MCP DevTools** → Install. Gives you Console, Network, State, Renders, and Component Tree in the sidebar. See [VS Code Extension](https://ohah.github.io/react-native-mcp/mcp/vscode-extension) for local .vsix install.
 
-> For detailed client setup, see [Cursor / Claude / Copilot](https://react-native-mcp.dev/en/mcp/mcp-usage).
+> For detailed client setup, see [Cursor / Claude / Copilot](https://ohah.github.io/react-native-mcp/mcp/mcp-usage).
 
 ## Required: Native Tools (idb / adb)
 
@@ -177,7 +177,7 @@ React Native App (iOS/Android)
      Cursor / Claude Desktop / Copilot CLI
 ```
 
-See [Architecture](https://react-native-mcp.dev/en/mcp/architecture) for the full design.
+See [Architecture](https://ohah.github.io/react-native-mcp/mcp/architecture) for the full design.
 
 ## Development
 

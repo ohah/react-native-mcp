@@ -120,9 +120,9 @@ presets: [
 
 ## 문서
 
-- **전체 문서:** [react-native-mcp.dev](https://react-native-mcp.dev) ([영문](https://react-native-mcp.dev/en/mcp/getting-started) / [한국어](https://react-native-mcp.dev/ko/mcp/getting-started))
-- **VS Code 확장:** [마켓플레이스](https://marketplace.visualstudio.com/items?itemName=ohah.react-native-mcp-devtools)에서 설치 또는 `Ctrl+Shift+X` → **React Native MCP DevTools** 검색. [문서](https://react-native-mcp.dev/ko/mcp/vscode-extension) ([en](https://react-native-mcp.dev/en/mcp/vscode-extension))
-- **도구 레퍼런스:** [MCP 도구 전체](https://react-native-mcp.dev/ko/mcp/tools/) · **E2E 테스팅:** [YAML 시나리오](https://react-native-mcp.dev/ko/test/)
+- **전체 문서:** [ohah.github.io/react-native-mcp](https://ohah.github.io/react-native-mcp/) ([영문](https://ohah.github.io/react-native-mcp/mcp/getting-started) / [한국어](https://ohah.github.io/react-native-mcp/ko/mcp/getting-started))
+- **VS Code 확장:** [마켓플레이스](https://marketplace.visualstudio.com/items?itemName=ohah.react-native-mcp-devtools)에서 설치 또는 `Ctrl+Shift+X` → **React Native MCP DevTools** 검색. [문서](https://ohah.github.io/react-native-mcp/ko/mcp/vscode-extension) ([en](https://ohah.github.io/react-native-mcp/mcp/vscode-extension))
+- **도구 레퍼런스:** [MCP 도구 전체](https://ohah.github.io/react-native-mcp/ko/mcp/tools/) · **E2E 테스팅:** [YAML 시나리오](https://ohah.github.io/react-native-mcp/ko/test/)
 - **저장소:** [github.com/ohah/react-native-mcp](https://github.com/ohah/react-native-mcp)
 
 ## 라이선스
