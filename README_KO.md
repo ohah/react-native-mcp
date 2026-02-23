@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@ohah/react-native-mcp-server)](https://www.npmjs.com/package/@ohah/react-native-mcp-server)
 [![license](https://img.shields.io/npm/l/@ohah/react-native-mcp-server)](./LICENSE)
 
-> [English](./README.md) | [문서 사이트](https://react-native-mcp.dev)
+> [English](./README.md) | [문서 사이트](https://ohah.github.io/react-native-mcp/)
 
 React Native 앱 자동화 및 모니터링을 위한 MCP(Model Context Protocol) 서버. Cursor, Claude Desktop, Claude Code, GitHub Copilot, Windsurf 등 모든 MCP 호환 클라이언트에서 사용할 수 있습니다.
 
@@ -19,16 +19,16 @@ React Native 앱 자동화 및 모니터링을 위한 MCP(Model Context Protocol
 
 ## 문서
 
-| 가이드                                                               | 설명                                              |
-| -------------------------------------------------------------------- | ------------------------------------------------- |
-| [시작하기](https://react-native-mcp.dev/ko/mcp/getting-started)      | 5분 설정 가이드                                   |
-| [Expo 가이드](https://react-native-mcp.dev/ko/mcp/expo-guide)        | Expo 전용 설정 (Dev Client, Expo Go, Expo Router) |
-| [도구 레퍼런스](https://react-native-mcp.dev/ko/mcp/tools/)          | 42개 도구의 파라미터와 예제                       |
-| [쿡북](https://react-native-mcp.dev/ko/mcp/cookbook/)                | 실전 활용 시나리오                                |
-| [아키텍처](https://react-native-mcp.dev/ko/mcp/architecture)         | 내부 동작 원리                                    |
-| [문제 해결](https://react-native-mcp.dev/ko/mcp/troubleshooting)     | 연결 문제와 해결 방법                             |
-| [VS Code 확장](https://react-native-mcp.dev/ko/mcp/vscode-extension) | 사이드바에서 DevTools + 컴포넌트 트리             |
-| [E2E 테스팅](https://react-native-mcp.dev/ko/test/)                  | YAML 시나리오 테스팅                              |
+| 가이드                                                                          | 설명                                              |
+| ------------------------------------------------------------------------------- | ------------------------------------------------- |
+| [시작하기](https://ohah.github.io/react-native-mcp/ko/mcp/getting-started)      | 5분 설정 가이드                                   |
+| [Expo 가이드](https://ohah.github.io/react-native-mcp/ko/mcp/expo-guide)        | Expo 전용 설정 (Dev Client, Expo Go, Expo Router) |
+| [도구 레퍼런스](https://ohah.github.io/react-native-mcp/ko/mcp/tools/)          | 42개 도구의 파라미터와 예제                       |
+| [쿡북](https://ohah.github.io/react-native-mcp/ko/mcp/cookbook/)                | 실전 활용 시나리오                                |
+| [아키텍처](https://ohah.github.io/react-native-mcp/ko/mcp/architecture)         | 내부 동작 원리                                    |
+| [문제 해결](https://ohah.github.io/react-native-mcp/ko/mcp/troubleshooting)     | 연결 문제와 해결 방법                             |
+| [VS Code 확장](https://ohah.github.io/react-native-mcp/ko/mcp/vscode-extension) | 사이드바에서 DevTools + 컴포넌트 트리             |
+| [E2E 테스팅](https://ohah.github.io/react-native-mcp/ko/test/)                  | YAML 시나리오 테스팅                              |
 
 ## 빠른 시작 (CLI init)
 
@@ -144,9 +144,9 @@ Copilot CLI에서 `/mcp add react-native-mcp` 실행, 또는 `~/.copilot/mcp-con
 
 ### VS Code 확장 (DevTools)
 
-[**React Native MCP DevTools**](https://marketplace.visualstudio.com/items?itemName=ohah.react-native-mcp-devtools)를 마켓플레이스에서 설치하거나, VS Code에서 `Ctrl+Shift+X`(확장) → **React Native MCP DevTools** 검색 → 설치. 사이드바에서 Console, Network, State, Renders, Component Tree를 사용할 수 있습니다. .vsix 로컬 설치는 [VS Code 확장](https://react-native-mcp.dev/ko/mcp/vscode-extension) 문서를 참고하세요.
+[**React Native MCP DevTools**](https://marketplace.visualstudio.com/items?itemName=ohah.react-native-mcp-devtools)를 마켓플레이스에서 설치하거나, VS Code에서 `Ctrl+Shift+X`(확장) → **React Native MCP DevTools** 검색 → 설치. 사이드바에서 Console, Network, State, Renders, Component Tree를 사용할 수 있습니다. .vsix 로컬 설치는 [VS Code 확장](https://ohah.github.io/react-native-mcp/ko/mcp/vscode-extension) 문서를 참고하세요.
 
-> 클라이언트별 상세 설정은 [Cursor / Claude / Copilot](https://react-native-mcp.dev/ko/mcp/mcp-usage)를 참고하세요.
+> 클라이언트별 상세 설정은 [Cursor / Claude / Copilot](https://ohah.github.io/react-native-mcp/ko/mcp/mcp-usage)를 참고하세요.
 
 ## 필수: 네이티브 도구 (idb / adb)
 
@@ -177,7 +177,7 @@ React Native 앱 (iOS/Android)
      Cursor / Claude Desktop / Copilot CLI
 ```
 
-전체 설계는 [아키텍처](https://react-native-mcp.dev/ko/mcp/architecture)를 참고하세요.
+전체 설계는 [아키텍처](https://ohah.github.io/react-native-mcp/ko/mcp/architecture)를 참고하세요.
 
 ## 개발
 
