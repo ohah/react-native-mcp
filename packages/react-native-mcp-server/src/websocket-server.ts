@@ -488,23 +488,31 @@ export class AppSession {
     });
   }
 
-  /** 서버 종료 */
+  /** 서버 종료 — 클라이언트에 정상 close frame 전송 후 서버 닫기 */
   stop(): void {
     stopAllRecordings();
     if (this.staleCheckTimer) {
       clearInterval(this.staleCheckTimer);
       this.staleCheckTimer = null;
     }
-    if (this.server) {
-      this.server.close();
-      this.server = null;
+    // 앱 WebSocket 연결을 정상 close (TCP RST 방지)
+    for (const [ws] of this.deviceByWs) {
+      try {
+        ws.close(1000, 'server shutting down');
+      } catch {}
     }
     for (const ext of this.extensionClients) {
-      ext.close();
+      try {
+        ext.close(1000, 'server shutting down');
+      } catch {}
     }
     this.extensionClients.clear();
     for (const [ws] of this.deviceByWs) {
       this.removeConnection(ws);
+    }
+    if (this.server) {
+      this.server.close();
+      this.server = null;
     }
   }
 }

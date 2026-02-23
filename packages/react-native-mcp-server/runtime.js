@@ -3168,12 +3168,10 @@
 	function connect() {
 		if (!_shouldConnect()) return;
 		if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
-		if (ws) try {
-			ws.close();
-		} catch (_unused3) {}
+		ws = null;
 		try {
 			ws = new WebSocket(wsUrl);
-		} catch (_unused4) {
+		} catch (_unused3) {
 			ws = null;
 			_reconnectTimer = setTimeout(function() {
 				connect();
@@ -3203,7 +3201,7 @@
 				var scriptURL = _rn.NativeModules && _rn.NativeModules.SourceCode && _rn.NativeModules.SourceCode.scriptURL;
 				if (scriptURL && typeof scriptURL === "string") try {
 					origin = new URL(scriptURL).origin;
-				} catch (_unused5) {
+				} catch (_unused4) {
 					var _match$;
 					var match = scriptURL.match(/^(https?:\/\/[^/?#]+)/);
 					if (match) origin = (_match$ = match[1]) !== null && _match$ !== void 0 ? _match$ : null;
@@ -3256,7 +3254,7 @@
 								id: msg.id,
 								result: res
 							}));
-						} catch (_unused6) {}
+						} catch (_unused5) {}
 					}
 					if (errMsg != null) sendEvalResponse(null, errMsg);
 					else if (result != null && typeof result.then === "function") result.then(function(r) {
@@ -3266,7 +3264,7 @@
 					});
 					else sendEvalResponse(result, null);
 				}
-			} catch (_unused7) {}
+			} catch (_unused6) {}
 		};
 		ws.onclose = function() {
 			_stopHeartbeat();
@@ -3276,7 +3274,9 @@
 				if (reconnectDelay < 3e4) reconnectDelay = Math.min(reconnectDelay * 1.5, 3e4);
 			}, reconnectDelay);
 		};
-		ws.onerror = function() {};
+		ws.onerror = function() {
+			_stopHeartbeat();
+		};
 	}
 	var _isDevMode, wsUrl, ws, _reconnectTimer, reconnectDelay, _mcpEnabled, _heartbeatTimer, _pongTimer, HEARTBEAT_INTERVAL_MS, PONG_TIMEOUT_MS, _AppRegistry, _originalRun, PERIODIC_INTERVAL_MS;
 	var init_connection = __esmMin(() => {
@@ -3317,7 +3317,7 @@
 						if (ws && ws.readyState === 1) _startHeartbeat();
 					} else _stopHeartbeat();
 				});
-			} catch (_unused8) {}
+			} catch (_unused7) {}
 		})();
 		PERIODIC_INTERVAL_MS = 5e3;
 		setInterval(function() {
