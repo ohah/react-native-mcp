@@ -1,7 +1,7 @@
 {
   "name": "react-native-mcp-devtools",
   "displayName": "React Native MCP DevTools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Chrome DevTools-like GUI for React Native MCP — Console, Network, State, Renders, Component Tree",
   "categories": [
     "Debuggers",
