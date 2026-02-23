@@ -1,5 +1,6 @@
 [
   { "text": "mcp", "link": "/mcp/", "activeMatch": "^/ko/mcp/" },
-  { "text": "test", "link": "/testing/", "activeMatch": "^/ko/testing/" },
+  { "text": "도구 레퍼런스", "link": "/mcp/tools/", "activeMatch": "^/ko/mcp/tools/" },
+  { "text": "test", "link": "/test/", "activeMatch": "^/ko/test/" },
   { "text": "Contribute", "link": "/contribute", "activeMatch": "^/ko/contribute" }
 ]

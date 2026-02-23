@@ -17,7 +17,7 @@ React Native MCP 기반 E2E 테스트를 **GitHub Actions**에서 자동으로 �
   - `-p, --platform <ios|android>`: 플랫폼 덮어쓰기
   - `-o, --output <dir>`: 결과 디렉터리
   - `--no-auto-launch`: 설치만 하고 시나리오의 `setup`에서 `launch`로 실행할 때 사용
-- 전체 옵션/리포터는 [E2E YAML 레퍼런스](../testing/e2e-yaml-reference.md)의 CLI 섹션을 참고하세요.
+- 전체 옵션/리포터는 [E2E YAML 레퍼런스](../test/e2e-yaml-reference.md)의 CLI 섹션을 참고하세요.
 
 ## iOS E2E (시뮬레이터)
 

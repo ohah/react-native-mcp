@@ -17,7 +17,7 @@ Use the existing iOS/Android E2E workflows in the repo as reference.
   - `-p, --platform <ios|android>`: Platform override
   - `-o, --output <dir>`: Output directory
   - `--no-auto-launch`: Use when you pre-install the app and launch via the scenario `setup`
-- For the full option list and reporters, see the CLI section in [E2E YAML Reference](../testing/e2e-yaml-reference.md).
+- For the full option list and reporters, see the CLI section in [E2E YAML Reference](../test/e2e-yaml-reference.md).
 
 ## iOS E2E (simulator)
 
