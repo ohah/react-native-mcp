@@ -27,7 +27,7 @@ React Native MCP enables AI tools (Cursor, Claude Desktop, Copilot) to control a
 ```mermaid
 flowchart TB
   client["AI Client (Cursor / Claude / Copilot)"]
-  server["MCP Server (Node.js)<br/>• 50 MCP tools<br/>• WebSocket server (ws://localhost:12300)<br/>• Native CLI bridge (adb / idb)"]
+  server["MCP Server (Node.js)<br/>• 50+ MCP tools<br/>• WebSocket server (ws://localhost:12300)<br/>• Native CLI bridge (adb / idb)"]
   runtime["App Runtime (in-app JS)"]
   device["Simulator / Device"]
 
@@ -44,7 +44,7 @@ The AI client (Cursor, Claude Desktop, Copilot CLI) communicates with the MCP se
 
 A Node.js process that:
 
-- Exposes **50 MCP tools** across 12 categories (interaction, assertions, screen capture, network mocking, state inspection, render profiling, etc.)
+- Exposes **50+ MCP tools** across multiple categories (interaction, assertions, screen capture, network mocking, state inspection, render profiling, video recording, visual comparison, accessibility, etc.)
 - Runs a **WebSocket server** on port 12300 for bidirectional communication with the app
 - Executes **native CLI commands** (adb for Android, idb for iOS simulator) for screenshots, tap, swipe, and text input
 
@@ -125,20 +125,23 @@ In production builds, the runtime is included but doesn't connect unless `REACT_
 
 ## Tool Categories and Data Flow
 
-| Category             | Examples                                    | Data path                          |
-| -------------------- | ------------------------------------------- | ---------------------------------- |
-| **Snapshot / Query** | `take_snapshot`, `query_selector`           | WebSocket → Fiber tree walk → JSON |
-| **Interaction**      | `tap`, `swipe`, `input_text`                | Native CLI (adb/idb) → device      |
-| **Assertions**       | `assert_text`, `assert_visible`             | WebSocket → Fiber tree check       |
-| **Screenshot**       | `take_screenshot`                           | Native CLI → PNG file              |
-| **State**            | `inspect_state`, `get_state_changes`        | WebSocket → React hooks inspection |
-| **Network**          | `list_network_requests`, `set_network_mock` | WebSocket → XHR/fetch intercept    |
-| **Console**          | `list_console_messages`                     | WebSocket → console intercept      |
-| **Render**           | `start_render_profile`, `get_render_report` | WebSocket → render tracking        |
-| **Eval**             | `evaluate_script`                           | WebSocket → JS eval in app         |
-| **WebView**          | `webview_evaluate_script`                   | WebSocket → WebView JS bridge      |
-| **Device**           | `list_devices`, `set_location`              | Native CLI                         |
-| **File**             | `file_push`, `add_media`                    | Native CLI                         |
+| Category             | Examples                                                              | Data path                           |
+| -------------------- | --------------------------------------------------------------------- | ----------------------------------- |
+| **Snapshot / Query** | `take_snapshot`, `query_selector`, `query_selector_all`               | WebSocket → Fiber tree walk → JSON  |
+| **Interaction**      | `tap`, `swipe`, `input_text`, `type_text`, `press_button`             | Native CLI (adb/idb) → device       |
+| **Assertions**       | `assert_text`, `assert_visible`, `assert_state`                       | WebSocket → Fiber tree / state      |
+| **Screenshot**       | `take_screenshot`                                                     | Native CLI → JPEG (or save to file) |
+| **State**            | `inspect_state`, `get_state_changes`, `clear_state`                   | WebSocket → React hooks inspection  |
+| **Network**          | `list_network_requests`, `set_network_mock`, `remove_network_mock`    | WebSocket → XHR/fetch intercept     |
+| **Console**          | `list_console_messages`, `clear` (buffer)                             | WebSocket → console intercept       |
+| **Render**           | `start_render_profile`, `get_render_report`, `start_render_highlight` | WebSocket → render tracking         |
+| **Eval**             | `evaluate_script`                                                     | WebSocket → JS eval in app          |
+| **WebView**          | `webview_evaluate_script`                                             | WebSocket → WebView JS bridge       |
+| **Device**           | `list_devices`, `set_location`, `list_apps`, `terminate_app`          | Native CLI                          |
+| **File**             | `file_push`, `add_media`                                              | Native CLI                          |
+| **Video**            | `start_video_recording`, `stop_video_recording`                       | Native CLI (idb/adb screenrecord)   |
+| **Visual**           | `visual_compare`                                                      | WebSocket + screenshot diff         |
+| **Accessibility**    | `accessibility_audit`                                                 | WebSocket → a11y tree               |
 
 ---
 
@@ -162,11 +165,13 @@ packages/react-native-mcp-server/
 ├── src/
 │   ├── index.ts                 # CLI entry + MCP server (stdio)
 │   ├── websocket-server.ts      # WebSocket server (multi-device, 12300)
-│   ├── tools/                   # 50 MCP tool implementations
-│   ├── babel/                   # Babel preset (testID injection)
-│   ├── metro/                   # Metro transformer
+│   ├── tools/                   # MCP tool implementations (50+ tools)
+│   ├── babel/                   # Babel plugin source (testID injection)
+│   ├── metro/                   # Metro transformer source
 │   └── runtime/                 # Runtime source (compiled to runtime.js)
 ├── runtime.js                   # App-injected runtime (generated, do not edit)
-├── babel-preset.js              # Babel preset entry
+├── babel-preset.cjs              # Babel preset entry
+├── babel-plugin-app-registry.cjs # AppRegistry wrapping (runtime injection)
+├── babel-plugin-inject-testid.cjs # testID injection
 └── metro-transformer.cjs        # Metro transformer entry
 ```
