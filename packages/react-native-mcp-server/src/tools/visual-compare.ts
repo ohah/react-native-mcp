@@ -12,6 +12,7 @@ import type { AppSession } from '../websocket-server.js';
 import { captureAndroid, captureIos, isValidPng } from './take-screenshot.js';
 import { compareImages, cropElement, getScreenScale } from './image-compare.js';
 import { buildQuerySelectorEvalCode } from './query-selector.js';
+import { getIOSOrientationInfo, transformRectForPortraitScreenshot } from './ios-landscape.js';
 
 const schema = z.object({
   platform: z.enum(['android', 'ios']).describe('Target platform.'),
@@ -87,12 +88,35 @@ export function registerVisualCompare(server: McpServer, appSession: AppSession)
           const runtimeRatio = appSession.getPixelRatio(deviceId, platform);
           const scale = await getScreenScale(rawPng, platform, runtimeRatio);
           const topInsetDp = appSession.getTopInsetDp(deviceId, platform);
-          const rect = {
-            left: Math.round(measure.pageX * scale),
-            top: Math.round((measure.pageY + topInsetDp) * scale),
-            width: Math.round(measure.width * scale),
-            height: Math.round(measure.height * scale),
-          };
+
+          // iOS simctl screenshot은 항상 portrait 방향으로 캡처하므로,
+          // landscape일 때 measure 좌표를 portrait 기준으로 변환해야 한다.
+          let rect: { left: number; top: number; width: number; height: number };
+          if (platform === 'ios') {
+            const orientInfo = await getIOSOrientationInfo(appSession, deviceId, 'ios', 'booted');
+            const transformed = transformRectForPortraitScreenshot(
+              {
+                pageX: measure.pageX,
+                pageY: measure.pageY + topInsetDp,
+                width: measure.width,
+                height: measure.height,
+              },
+              orientInfo
+            );
+            rect = {
+              left: Math.round(transformed.left * scale),
+              top: Math.round(transformed.top * scale),
+              width: Math.round(transformed.width * scale),
+              height: Math.round(transformed.height * scale),
+            };
+          } else {
+            rect = {
+              left: Math.round(measure.pageX * scale),
+              top: Math.round((measure.pageY + topInsetDp) * scale),
+              width: Math.round(measure.width * scale),
+              height: Math.round(measure.height * scale),
+            };
+          }
           currentPng = await cropElement(rawPng, rect);
         } else {
           currentPng = rawPng;
