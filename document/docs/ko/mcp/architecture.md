@@ -24,22 +24,16 @@ React Native MCP는 AI 도구(Cursor, Claude Desktop, Copilot)가 React Native �
 
 ## 3계층 아키텍처
 
-```
-┌──────────────────────────────────────────────┐
-│  AI 클라이언트 (Cursor / Claude / Copilot)   │
-└─────────────────────┬────────────────────────┘
-                      │ stdio (MCP 프로토콜)
-┌─────────────────────▼────────────────────────┐
-│  MCP 서버 (Node.js)                          │
-│  - 50개 MCP 도구                             │
-│  - WebSocket 서버 (ws://localhost:12300)      │
-│  - 네이티브 CLI 브릿지 (adb / idb)           │
-└──────┬──────────────────────────┬────────────┘
-       │ WebSocket (12300)        │ adb/idb CLI
-┌──────▼──────┐            ┌─────▼──────┐
-│  앱 런타임   │            │  시뮬레이터 │
-│  (in-app JS) │            │  / 디바이스 │
-└─────────────┘            └────────────┘
+```mermaid
+flowchart TB
+  client["AI 클라이언트 (Cursor / Claude / Copilot)"]
+  server["MCP 서버 (Node.js)<br/>• 50개 이상 MCP 도구<br/>• WebSocket 서버 (ws://localhost:12300)<br/>• 네이티브 CLI 브릿지 (adb / idb)"]
+  runtime["앱 런타임 (in-app JS)"]
+  device["시뮬레이터 / 디바이스"]
+
+  client -->|stdio (MCP 프로토콜)| server
+  server -->|WebSocket (12300)| runtime
+  server -->|adb/idb CLI| device
 ```
 
 ### 1계층: AI 클라이언트
@@ -50,7 +44,7 @@ AI 클라이언트(Cursor, Claude Desktop, Copilot CLI)는 **stdio**를 통해 M
 
 Node.js 프로세스로 다음을 수행합니다:
 
-- 12개 카테고리에 걸친 **50개 MCP 도구** 제공 (인터랙션, 검증, 화면 캡처, 네트워크 모킹, 상태 인스펙션, 렌더 프로파일링 등)
+- 여러 카테고리의 **50개 이상 MCP 도구** 제공 (인터랙션, 검증, 화면 캡처, 네트워크 모킹, 상태 인스펙션, 렌더 프로파일링, 비디오 녹화, 비주얼 비교, 접근성 등)
 - 앱과의 양방향 통신을 위한 **WebSocket 서버** (포트 12300)
 - 스크린샷, 탭, 스와이프, 텍스트 입력을 위한 **네이티브 CLI 명령** 실행 (Android는 adb, iOS 시뮬레이터는 idb)
 
@@ -85,16 +79,16 @@ AI 클라이언트가 도구 호출 (예: "take_snapshot")
 
 ### 멀티 디바이스 지원
 
-```
-┌─────────────────────────────────────────────┐
-│  MCP 서버                                   │
-│  WebSocket 서버 (ws://localhost:12300)       │
-└──────┬──────────┬───────────┬───────────────┘
-       │          │           │  WebSocket
-┌──────▼───┐ ┌───▼────┐ ┌───▼─────┐
-│ ios-1    │ │ ios-2  │ │android-1│  ...N대
-│ iPhone15 │ │iPad Pro│ │ Pixel 7 │
-└──────────┘ └────────┘ └─────────┘
+```mermaid
+flowchart TB
+  server["MCP 서버<br/>WebSocket 서버 (ws://localhost:12300)"]
+  ios1["ios-1<br/>iPhone15"]
+  ios2["ios-2<br/>iPad Pro"]
+  android1["android-1<br/>Pixel 7"]
+
+  server -->|WebSocket| ios1
+  server -->|WebSocket| ios2
+  server -->|WebSocket| android1
 ```
 
 모든 도구는 선택적 `deviceId`와 `platform` 파라미터를 지원합니다:
@@ -131,20 +125,23 @@ Babel 프리셋(`@ohah/react-native-mcp-server/babel-preset`)은 빌드 시 두 
 
 ## 도구 카테고리별 데이터 흐름
 
-| 카테고리          | 예시                                        | 데이터 경로                        |
-| ----------------- | ------------------------------------------- | ---------------------------------- |
-| **스냅샷 / 쿼리** | `take_snapshot`, `query_selector`           | WebSocket → Fiber 트리 순회 → JSON |
-| **인터랙션**      | `tap`, `swipe`, `input_text`                | 네이티브 CLI (adb/idb) → 디바이스  |
-| **검증**          | `assert_text`, `assert_visible`             | WebSocket → Fiber 트리 확인        |
-| **스크린샷**      | `take_screenshot`                           | 네이티브 CLI → PNG 파일            |
-| **상태**          | `inspect_state`, `get_state_changes`        | WebSocket → React hooks 검사       |
-| **네트워크**      | `list_network_requests`, `set_network_mock` | WebSocket → XHR/fetch 인터셉트     |
-| **콘솔**          | `list_console_messages`                     | WebSocket → console 인터셉트       |
-| **렌더**          | `start_render_profile`, `get_render_report` | WebSocket → 렌더 추적              |
-| **실행**          | `evaluate_script`                           | WebSocket → 앱 내 JS eval          |
-| **WebView**       | `webview_evaluate_script`                   | WebSocket → WebView JS 브릿지      |
-| **디바이스**      | `list_devices`, `set_location`              | 네이티브 CLI                       |
-| **파일**          | `file_push`, `add_media`                    | 네이티브 CLI                       |
+| 카테고리          | 예시                                                                  | 데이터 경로                          |
+| ----------------- | --------------------------------------------------------------------- | ------------------------------------ |
+| **스냅샷 / 쿼리** | `take_snapshot`, `query_selector`, `query_selector_all`               | WebSocket → Fiber 트리 순회 → JSON   |
+| **인터랙션**      | `tap`, `swipe`, `input_text`, `type_text`, `press_button`             | 네이티브 CLI (adb/idb) → 디바이스    |
+| **검증**          | `assert_text`, `assert_visible`, `assert_state`                       | WebSocket → Fiber 트리 / 상태 확인   |
+| **스크린샷**      | `take_screenshot`                                                     | 네이티브 CLI → JPEG (또는 파일 저장) |
+| **상태**          | `inspect_state`, `get_state_changes`, `clear_state`                   | WebSocket → React hooks 검사         |
+| **네트워크**      | `list_network_requests`, `set_network_mock`, `remove_network_mock`    | WebSocket → XHR/fetch 인터셉트       |
+| **콘솔**          | `list_console_messages`, `clear` (버퍼)                               | WebSocket → console 인터셉트         |
+| **렌더**          | `start_render_profile`, `get_render_report`, `start_render_highlight` | WebSocket → 렌더 추적                |
+| **실행**          | `evaluate_script`                                                     | WebSocket → 앱 내 JS eval            |
+| **WebView**       | `webview_evaluate_script`                                             | WebSocket → WebView JS 브릿지        |
+| **디바이스**      | `list_devices`, `set_location`, `list_apps`, `terminate_app`          | 네이티브 CLI                         |
+| **파일**          | `file_push`, `add_media`                                              | 네이티브 CLI                         |
+| **비디오**        | `start_video_recording`, `stop_video_recording`                       | 네이티브 CLI (idb/adb screenrecord)  |
+| **비주얼**        | `visual_compare`                                                      | WebSocket + 스크린샷 diff            |
+| **접근성**        | `accessibility_audit`                                                 | WebSocket → a11y 트리                |
 
 ---
 
@@ -168,11 +165,13 @@ packages/react-native-mcp-server/
 ├── src/
 │   ├── index.ts                 # CLI 진입점 + MCP 서버 (stdio)
 │   ├── websocket-server.ts      # WebSocket 서버 (멀티 디바이스, 12300)
-│   ├── tools/                   # 50개 MCP 도구 구현
-│   ├── babel/                   # Babel 프리셋 (testID 주입)
-│   ├── metro/                   # Metro transformer
+│   ├── tools/                   # MCP 도구 구현 (50개 이상)
+│   ├── babel/                   # Babel 플러그인 소스 (testID 주입)
+│   ├── metro/                   # Metro transformer 소스
 │   └── runtime/                 # 런타임 소스 (runtime.js로 컴파일)
 ├── runtime.js                   # 앱 주입 런타임 (생성됨, 직접 편집 금지)
-├── babel-preset.js              # Babel 프리셋 진입점
+├── babel-preset.cjs              # Babel 프리셋 진입점
+├── babel-plugin-app-registry.cjs # AppRegistry 래핑 (런타임 주입)
+├── babel-plugin-inject-testid.cjs # testID 주입
 └── metro-transformer.cjs        # Metro transformer 진입점
 ```
