@@ -6,7 +6,7 @@ VS Code extension. Connects to the MCP server and provides a Chrome DevTools-sty
 
 **State tab** — Component-level state change history, Hook change tracking
 
-![State tab screenshot](https://github.com/ohah/react-native-mcp/raw/main/assets/screenshot-state.png)
+![State tab screenshot](https://github.com/ohah/react-native-mcp/raw/main/editor/vscode/assets/screenshot-state.png)
 
 ## Install & usage
 
