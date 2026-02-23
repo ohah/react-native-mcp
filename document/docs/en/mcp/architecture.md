@@ -27,7 +27,7 @@ React Native MCP enables AI tools (Cursor, Claude Desktop, Copilot) to control a
 ```mermaid
 flowchart TB
   client["AI Client (Cursor / Claude / Copilot)"]
-  server["MCP Server (Node.js)<br/>• 50+ MCP tools<br/>• WebSocket server (ws://localhost:12300)<br/>• Native CLI bridge (adb / idb)"]
+  server["MCP Server (Node.js)<br/>• 49 MCP tools<br/>• WebSocket server (ws://localhost:12300)<br/>• Native CLI bridge (adb / idb)"]
   runtime["App Runtime (in-app JS)"]
   device["Simulator / Device"]
 
@@ -44,7 +44,7 @@ The AI client (Cursor, Claude Desktop, Copilot CLI) communicates with the MCP se
 
 A Node.js process that:
 
-- Exposes **50+ MCP tools** across multiple categories (interaction, assertions, screen capture, network mocking, state inspection, render profiling, video recording, visual comparison, accessibility, etc.)
+- Exposes **49 MCP tools** across 12 categories (interaction, assertions, screen capture, network mocking, state inspection, render profiling, video recording, visual comparison, accessibility, etc.)
 - Runs a **WebSocket server** on port 12300 for bidirectional communication with the app
 - Executes **native CLI commands** (adb for Android, idb for iOS simulator) for screenshots, tap, swipe, and text input
 
@@ -165,9 +165,9 @@ packages/react-native-mcp-server/
 ├── src/
 │   ├── index.ts                 # CLI entry + MCP server (stdio)
 │   ├── websocket-server.ts      # WebSocket server (multi-device, 12300)
-│   ├── tools/                   # MCP tool implementations (50+ tools)
-│   ├── babel/                   # Babel plugin source (testID injection)
-│   ├── metro/                   # Metro transformer source
+│   ├── tools/                   # MCP tool implementations (49 tools)
+│   ├── babel/                   # Babel preset (testID injection)
+│   ├── metro/                   # Metro transformer
 │   └── runtime/                 # Runtime source (compiled to runtime.js)
 ├── runtime.js                   # App-injected runtime (generated, do not edit)
 ├── babel-preset.cjs              # Babel preset entry

@@ -1,7 +1,6 @@
 /**
  * MCP 도구: evaluate_script
- * Chrome DevTools MCP 스펙. function + args를 앱에서 실행 (WebSocket eval)
- * @see docs/chrome-devtools-mcp-spec-alignment.md
+ * function + args를 앱에서 실행 (WebSocket eval)
  */
 
 import { z } from 'zod';

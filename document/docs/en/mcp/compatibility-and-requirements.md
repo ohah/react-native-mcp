@@ -43,7 +43,7 @@ When changing requirements, update:
 
 Detailed setup and CLI references live in the repo `docs/` folder (not in this site):
 
-- **[idb-setup](https://github.com/ohah/react-native-mcp/blob/main/docs/idb-setup.md)** — idb install and configuration
-- **[ADB_REFERENCE](https://github.com/ohah/react-native-mcp/blob/main/docs/ADB_REFERENCE.md)** — adb commands and options
-- **[IDB_REFERENCE](https://github.com/ohah/react-native-mcp/blob/main/docs/IDB_REFERENCE.md)** — idb commands and options
-- **[e2e-orientation-and-idb-coordinates](https://github.com/ohah/react-native-mcp/blob/main/docs/e2e-orientation-and-idb-coordinates.md)** — E2E orientation and coordinate notes
+- **[idb-setup](https://github.com/ohah/react-native-mcp/blob/main/docs/references/idb-setup.md)** — idb install and configuration
+- **[ADB Reference](https://github.com/ohah/react-native-mcp/blob/main/docs/references/adb.md)** — adb commands and options
+- **[IDB Reference](https://github.com/ohah/react-native-mcp/blob/main/docs/references/idb.md)** — idb commands and options
+- **[Orientation & Coordinates](https://github.com/ohah/react-native-mcp/blob/main/docs/references/orientation-coordinates.md)** — E2E orientation and coordinate notes

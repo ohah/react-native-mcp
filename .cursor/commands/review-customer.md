@@ -10,7 +10,7 @@
   - **영향 큰 것만 인라인**: 버그·잠재 오류·명확한 개선에만 인라인 댓글. 사소한 스타일·포맷은 요약 리뷰에 묶어서 언급.
   - **이유 명시**: "이렇게 하면 ~ 때문입니다"처럼 **왜** 수정하는지 한 줄 포함.
   - **제안 블록**: 수정안이 명확하면 ` ```suggestion ``` ` 블록을 넣어 커밋 가능하게 한다.
-- **리뷰 시 참고**: `docs/coding-style.md`, `docs/behavioral-guidelines.md`, `AGENTS.md`를 기준으로 프로젝트 규칙·스타일 준수 여부를 검토한다.
+- **리뷰 시 참고**: `docs/guides/coding-style.md`, `.cursor/rules/behavioral-guidelines.mdc`, `AGENTS.md`를 기준으로 프로젝트 규칙·스타일 준수 여부를 검토한다.
 
 ## 이 레포의 gh 계정 (ohah 전용)
 

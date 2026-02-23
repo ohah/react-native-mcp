@@ -1,6 +1,5 @@
 [
   { "text": "mcp", "link": "/mcp/", "activeMatch": "^/en/mcp/" },
-  { "text": "Tool Reference", "link": "/mcp/tools/", "activeMatch": "^/en/mcp/tools/" },
   { "text": "test", "link": "/test/", "activeMatch": "^/en/test/" },
   { "text": "Contribute", "link": "/contribute", "activeMatch": "^/en/contribute" }
 ]

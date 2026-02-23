@@ -13,7 +13,7 @@ MCP(Model Context Protocol) server for React Native app automation and monitorin
 - **State inspection** — Read React hooks (useState, Zustand, etc.) of any component in real time
 - **Render profiling** — Track mounts, re-renders, and unnecessary renders without React DevTools
 - **Network mocking** — Intercept XHR/fetch and inject mock responses at runtime
-- **38 MCP tools** — Tap, swipe, screenshot, assert, eval, clear(target), and more across 12 categories
+- **48 MCP tools** — Tap, swipe, screenshot, assert, eval, clear(target), and more across 12 categories
 - **Zero native module** — Pure JS runtime + host CLI tools (adb/idb). No linking, no native code
 - **YAML E2E testing** — Write scenarios in YAML and run in CI without AI
 
@@ -23,7 +23,7 @@ MCP(Model Context Protocol) server for React Native app automation and monitorin
 | --------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | [Quick Start](https://ohah.github.io/react-native-mcp/mcp/getting-started)        | 5-minute setup guide                                   |
 | [Expo Guide](https://ohah.github.io/react-native-mcp/mcp/expo-guide)              | Expo-specific setup (Dev Client, Expo Go, Expo Router) |
-| [Tool Reference](https://ohah.github.io/react-native-mcp/mcp/tools/)              | All 42 tools with parameters and examples              |
+| [Tool Reference](https://ohah.github.io/react-native-mcp/mcp/tools/)              | All 48 tools with parameters and examples              |
 | [Cookbook](https://ohah.github.io/react-native-mcp/mcp/cookbook/)                 | Real-world usage scenarios                             |
 | [Architecture](https://ohah.github.io/react-native-mcp/mcp/architecture)          | How it works under the hood                            |
 | [Troubleshooting](https://ohah.github.io/react-native-mcp/mcp/troubleshooting)    | Connection issues and fixes                            |
@@ -163,7 +163,7 @@ pip3 install fb-idb
 idb list-targets  # verify
 ```
 
-> idb is macOS-only, simulators only. See [idb Setup Guide](./docs/idb-setup.md) for details.
+> idb is macOS-only, simulators only. See [idb Setup Guide](./docs/references/idb-setup.md) for details.
 
 ## Architecture
 

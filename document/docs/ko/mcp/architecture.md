@@ -27,7 +27,7 @@ React Native MCP는 AI 도구(Cursor, Claude Desktop, Copilot)가 React Native �
 ```mermaid
 flowchart TB
   client["AI 클라이언트 (Cursor / Claude / Copilot)"]
-  server["MCP 서버 (Node.js)<br/>• 50개 이상 MCP 도구<br/>• WebSocket 서버 (ws://localhost:12300)<br/>• 네이티브 CLI 브릿지 (adb / idb)"]
+  server["MCP 서버 (Node.js)<br/>• 49개 MCP 도구<br/>• WebSocket 서버 (ws://localhost:12300)<br/>• 네이티브 CLI 브릿지 (adb / idb)"]
   runtime["앱 런타임 (in-app JS)"]
   device["시뮬레이터 / 디바이스"]
 
@@ -44,7 +44,7 @@ AI 클라이언트(Cursor, Claude Desktop, Copilot CLI)는 **stdio**를 통해 M
 
 Node.js 프로세스로 다음을 수행합니다:
 
-- 여러 카테고리의 **50개 이상 MCP 도구** 제공 (인터랙션, 검증, 화면 캡처, 네트워크 모킹, 상태 인스펙션, 렌더 프로파일링, 비디오 녹화, 비주얼 비교, 접근성 등)
+- 12개 카테고리에 걸친 **49개 MCP 도구** 제공 (인터랙션, 검증, 화면 캡처, 네트워크 모킹, 상태 인스펙션, 렌더 프로파일링, 비디오 녹화, 비주얼 비교, 접근성 등)
 - 앱과의 양방향 통신을 위한 **WebSocket 서버** (포트 12300)
 - 스크린샷, 탭, 스와이프, 텍스트 입력을 위한 **네이티브 CLI 명령** 실행 (Android는 adb, iOS 시뮬레이터는 idb)
 
@@ -165,9 +165,9 @@ packages/react-native-mcp-server/
 ├── src/
 │   ├── index.ts                 # CLI 진입점 + MCP 서버 (stdio)
 │   ├── websocket-server.ts      # WebSocket 서버 (멀티 디바이스, 12300)
-│   ├── tools/                   # MCP 도구 구현 (50개 이상)
-│   ├── babel/                   # Babel 플러그인 소스 (testID 주입)
-│   ├── metro/                   # Metro transformer 소스
+│   ├── tools/                   # MCP 도구 구현 (49개)
+│   ├── babel/                   # Babel 프리셋 (testID 주입)
+│   ├── metro/                   # Metro transformer
 │   └── runtime/                 # 런타임 소스 (runtime.js로 컴파일)
 ├── runtime.js                   # 앱 주입 런타임 (생성됨, 직접 편집 금지)
 ├── babel-preset.cjs              # Babel 프리셋 진입점

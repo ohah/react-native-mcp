@@ -136,7 +136,7 @@ graph TB
 
   subgraph Layer2["Layer 2: MCP Server"]
     MCP["MCP Server (Node.js)"]
-    MCP --- M1["50 MCP tools"]
+    MCP --- M1["48 MCP tools"]
     MCP --- M2["WebSocket ws://localhost:12300"]
     MCP --- M3["Native CLI bridge (adb / idb)"]
   end
@@ -152,7 +152,7 @@ graph TB
 ```
 
 - **Layer 1 — AI Client:** Communicates with the MCP server over stdio (MCP protocol).
-- **Layer 2 — MCP Server:** Node.js process exposing 42 tools, WebSocket on port 12300, and native CLI (adb/idb).
+- **Layer 2 — MCP Server:** Node.js process exposing 48 tools, WebSocket on port 12300, and native CLI (adb/idb).
 - **Layer 3 — App Runtime + Native Tools:** In-app `runtime.js` (Fiber, eval, network/console intercept) and host CLI for screenshot/tap (no native module in the app).
 
 ## Communication flow
@@ -233,7 +233,7 @@ packages/react-native-mcp-server/
 ├── src/
 │   ├── index.ts                 # CLI + MCP server (stdio)
 │   ├── websocket-server.ts      # WebSocket (12300)
-│   ├── tools/                   # 50 MCP tools
+│   ├── tools/                   # 48 MCP tools
 │   ├── babel/                   # Babel preset (testID)
 │   ├── metro/                   # Metro transformer
 │   └── runtime/                 # Runtime source → runtime.js
