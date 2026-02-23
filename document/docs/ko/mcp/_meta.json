@@ -2,6 +2,7 @@
   { "type": "file", "name": "index", "label": "설치 및 연결" },
   { "type": "file", "name": "cli-init", "label": "CLI Init (빠른 설정)" },
   { "type": "file", "name": "getting-started", "label": "시작하기" },
+  { "type": "file", "name": "architecture", "label": "아키텍처" },
   { "type": "file", "name": "mcp-usage", "label": "Cursor / Claude / Copilot" },
   { "type": "file", "name": "expo-guide", "label": "Expo 가이드" },
   { "type": "file", "name": "compatibility-and-requirements", "label": "호환성 및 요구사항" },
