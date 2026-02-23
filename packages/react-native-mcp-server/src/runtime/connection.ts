@@ -69,10 +69,8 @@ function _startHeartbeat(): void {
 function connect(): void {
   if (!_shouldConnect()) return;
   if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
-  if (ws)
-    try {
-      ws.close();
-    } catch {}
+  // CLOSING/CLOSED 상태의 이전 소켓은 참조만 해제 — close() 재호출은 네이티브 크래시 위험
+  ws = null;
   try {
     ws = new WebSocket(wsUrl);
   } catch {
@@ -210,7 +208,11 @@ function connect(): void {
       if (reconnectDelay < 30000) reconnectDelay = Math.min(reconnectDelay * 1.5, 30000);
     }, reconnectDelay);
   };
-  ws.onerror = function () {};
+  ws.onerror = function () {
+    // heartbeat만 정지. ws.close()는 호출하지 않음 — dead socket에 close frame 전송 시 네이티브 크래시 위험.
+    // WebSocket 스펙상 onerror 후 onclose가 자동 발생하므로 정리는 onclose에서 처리.
+    _stopHeartbeat();
+  };
 }
 
 /**
