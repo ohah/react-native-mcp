@@ -73,7 +73,17 @@ function connect(): void {
     try {
       ws.close();
     } catch {}
-  ws = new WebSocket(wsUrl);
+  try {
+    ws = new WebSocket(wsUrl);
+  } catch {
+    // 서버 미실행 등으로 WebSocket 생성 자체가 실패 → reconnect 예약
+    ws = null;
+    _reconnectTimer = setTimeout(function () {
+      connect();
+      if (reconnectDelay < 30000) reconnectDelay = Math.min(reconnectDelay * 1.5, 30000);
+    }, reconnectDelay);
+    return;
+  }
   ws.onopen = function () {
     if (typeof console !== 'undefined' && console.warn) {
       console.warn('[MCP] Connected to server', wsUrl);
@@ -165,11 +175,15 @@ function connect(): void {
           errMsg = e && e.message != null ? e.message : String(e);
         }
         function sendEvalResponse(res: any, err: string | null) {
-          if (ws && ws.readyState === 1) {
-            ws.send(
-              JSON.stringify(err != null ? { id: msg.id, error: err } : { id: msg.id, result: res })
-            );
-          }
+          try {
+            if (ws && ws.readyState === 1) {
+              ws.send(
+                JSON.stringify(
+                  err != null ? { id: msg.id, error: err } : { id: msg.id, result: res }
+                )
+              );
+            }
+          } catch {}
         }
         if (errMsg != null) {
           sendEvalResponse(null, errMsg);
