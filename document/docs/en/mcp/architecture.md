@@ -24,22 +24,16 @@ React Native MCP enables AI tools (Cursor, Claude Desktop, Copilot) to control a
 
 ## Three-Layer Architecture
 
-```
-┌──────────────────────────────────────────────┐
-│  AI Client (Cursor / Claude / Copilot)       │
-└─────────────────────┬────────────────────────┘
-                      │ stdio (MCP protocol)
-┌─────────────────────▼────────────────────────┐
-│  MCP Server (Node.js)                        │
-│  - 50 MCP tools                              │
-│  - WebSocket server (ws://localhost:12300)    │
-│  - Native CLI bridge (adb / idb)             │
-└──────┬──────────────────────────┬────────────┘
-       │ WebSocket (12300)        │ adb/idb CLI
-┌──────▼──────┐            ┌─────▼──────┐
-│  App Runtime │            │  Simulator │
-│  (in-app JS) │            │  / Device  │
-└─────────────┘            └────────────┘
+```mermaid
+flowchart TB
+  client["AI Client (Cursor / Claude / Copilot)"]
+  server["MCP Server (Node.js)<br/>• 50 MCP tools<br/>• WebSocket server (ws://localhost:12300)<br/>• Native CLI bridge (adb / idb)"]
+  runtime["App Runtime (in-app JS)"]
+  device["Simulator / Device"]
+
+  client -->|stdio (MCP protocol)| server
+  server -->|WebSocket (12300)| runtime
+  server -->|adb/idb CLI| device
 ```
 
 ### Layer 1: AI Client
@@ -85,16 +79,16 @@ AI client calls tool (e.g. "take_snapshot")
 
 ### Multi-Device Support
 
-```
-┌─────────────────────────────────────────────┐
-│  MCP Server                                 │
-│  WebSocket Server (ws://localhost:12300)     │
-└──────┬──────────┬───────────┬───────────────┘
-       │          │           │  WebSocket
-┌──────▼───┐ ┌───▼────┐ ┌───▼─────┐
-│ ios-1    │ │ ios-2  │ │android-1│  ...N devices
-│ iPhone15 │ │iPad Pro│ │ Pixel 7 │
-└──────────┘ └────────┘ └─────────┘
+```mermaid
+flowchart TB
+  server["MCP Server<br/>WebSocket Server (ws://localhost:12300)"]
+  ios1["ios-1<br/>iPhone15"]
+  ios2["ios-2<br/>iPad Pro"]
+  android1["android-1<br/>Pixel 7"]
+
+  server -->|WebSocket| ios1
+  server -->|WebSocket| ios2
+  server -->|WebSocket| android1
 ```
 
 Every tool accepts optional `deviceId` and `platform` parameters:
