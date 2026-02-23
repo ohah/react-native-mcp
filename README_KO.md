@@ -13,7 +13,7 @@ React Native 앱 자동화 및 모니터링을 위한 MCP(Model Context Protocol
 - **상태 인스펙션** — 어떤 컴포넌트든 React 훅(useState, Zustand 등)을 실시간으로 확인
 - **렌더 프로파일링** — React DevTools 없이 마운트, 리렌더, 불필요한 렌더를 추적
 - **네트워크 모킹** — XHR/fetch를 인터셉트하고 모의 응답을 런타임에 주입
-- **42개 MCP 도구** — 탭, 스와이프, 스크린샷, 검증, eval 등 12개 카테고리
+- **48개 MCP 도구** — 탭, 스와이프, 스크린샷, 검증, eval 등 12개 카테고리
 - **Zero Native Module** — 순수 JS 런타임 + 호스트 CLI 도구(adb/idb). 링킹 불필요, 네이티브 코드 없음
 - **YAML E2E 테스팅** — YAML로 시나리오를 작성하고 CI에서 AI 없이 실행
 
@@ -23,7 +23,7 @@ React Native 앱 자동화 및 모니터링을 위한 MCP(Model Context Protocol
 | ------------------------------------------------------------------------------- | ------------------------------------------------- |
 | [시작하기](https://ohah.github.io/react-native-mcp/ko/mcp/getting-started)      | 5분 설정 가이드                                   |
 | [Expo 가이드](https://ohah.github.io/react-native-mcp/ko/mcp/expo-guide)        | Expo 전용 설정 (Dev Client, Expo Go, Expo Router) |
-| [도구 레퍼런스](https://ohah.github.io/react-native-mcp/ko/mcp/tools/)          | 42개 도구의 파라미터와 예제                       |
+| [도구 레퍼런스](https://ohah.github.io/react-native-mcp/ko/mcp/tools/)          | 48개 도구의 파라미터와 예제                       |
 | [쿡북](https://ohah.github.io/react-native-mcp/ko/mcp/cookbook/)                | 실전 활용 시나리오                                |
 | [아키텍처](https://ohah.github.io/react-native-mcp/ko/mcp/architecture)         | 내부 동작 원리                                    |
 | [문제 해결](https://ohah.github.io/react-native-mcp/ko/mcp/troubleshooting)     | 연결 문제와 해결 방법                             |
@@ -163,7 +163,7 @@ pip3 install fb-idb
 idb list-targets  # 확인
 ```
 
-> idb는 macOS 전용, 시뮬레이터만 지원. 자세한 내용은 [idb 설치 가이드](./docs/idb-setup.md) 참고.
+> idb는 macOS 전용, 시뮬레이터만 지원. 자세한 내용은 [idb 설치 가이드](./docs/references/idb-setup.md) 참고.
 
 ## 아키텍처
 

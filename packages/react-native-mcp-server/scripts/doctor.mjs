@@ -65,7 +65,7 @@ if (!nodeOk) failedCount++;
 lines.push(
   nodeOk
     ? ` ✓ Node.js ${process.version}`
-    : ` ✗ Node.js ${process.version} - Required >= ${MIN_NODE_MAJOR} (see docs/compatibility-and-requirements.md)`
+    : ` ✗ Node.js ${process.version} - Required >= ${MIN_NODE_MAJOR}`
 );
 lines.push('');
 
@@ -79,7 +79,7 @@ if (rnVersion) {
   lines.push(
     rnOk
       ? ` ✓ react-native ${rnVersion}`
-      : ` ✗ react-native ${rnVersion} - Required >= ${MIN_RN_VERSION} (New Architecture, see docs/compatibility-and-requirements.md)`
+      : ` ✗ react-native ${rnVersion} - Required >= ${MIN_RN_VERSION} (New Architecture)`
   );
 } else {
   lines.push(' ○ react-native - Not in this project (skipped)');
@@ -97,7 +97,7 @@ if (process.platform === 'darwin') {
   const idbOk = inPath('idb');
   if (!idbOk) {
     lines.push(
-      ' ○ idb - Not in PATH (required for iOS simulator automation, see docs/idb-setup.md)'
+      ' ○ idb - Not in PATH (required for iOS simulator automation, see docs/references/idb-setup.md)'
     );
   } else {
     lines.push(' ✓ idb');
@@ -116,7 +116,7 @@ lines.push('');
 // ---- Summary ----
 lines.push('---');
 if (failedCount > 0) {
-  lines.push(`${failedCount} required check(s) failed. See docs/adoption-checklist.md`);
+  lines.push(`${failedCount} required check(s) failed.`);
   lines.push('');
   process.stdout.write(lines.join('\n'));
   process.exit(1);
