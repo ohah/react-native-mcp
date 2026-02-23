@@ -3171,7 +3171,16 @@
 		if (ws) try {
 			ws.close();
 		} catch (_unused3) {}
-		ws = new WebSocket(wsUrl);
+		try {
+			ws = new WebSocket(wsUrl);
+		} catch (_unused4) {
+			ws = null;
+			_reconnectTimer = setTimeout(function() {
+				connect();
+				if (reconnectDelay < 3e4) reconnectDelay = Math.min(reconnectDelay * 1.5, 3e4);
+			}, reconnectDelay);
+			return;
+		}
 		ws.onopen = function() {
 			if (typeof console !== "undefined" && console.warn) console.warn("[MCP] Connected to server", wsUrl);
 			reconnectDelay = 1e3;
@@ -3194,7 +3203,7 @@
 				var scriptURL = _rn.NativeModules && _rn.NativeModules.SourceCode && _rn.NativeModules.SourceCode.scriptURL;
 				if (scriptURL && typeof scriptURL === "string") try {
 					origin = new URL(scriptURL).origin;
-				} catch (_unused4) {
+				} catch (_unused5) {
 					var _match$;
 					var match = scriptURL.match(/^(https?:\/\/[^/?#]+)/);
 					if (match) origin = (_match$ = match[1]) !== null && _match$ !== void 0 ? _match$ : null;
@@ -3239,13 +3248,15 @@
 						errMsg = e && e.message != null ? e.message : String(e);
 					}
 					function sendEvalResponse(res, err) {
-						if (ws && ws.readyState === 1) ws.send(JSON.stringify(err != null ? {
-							id: msg.id,
-							error: err
-						} : {
-							id: msg.id,
-							result: res
-						}));
+						try {
+							if (ws && ws.readyState === 1) ws.send(JSON.stringify(err != null ? {
+								id: msg.id,
+								error: err
+							} : {
+								id: msg.id,
+								result: res
+							}));
+						} catch (_unused6) {}
 					}
 					if (errMsg != null) sendEvalResponse(null, errMsg);
 					else if (result != null && typeof result.then === "function") result.then(function(r) {
@@ -3255,7 +3266,7 @@
 					});
 					else sendEvalResponse(result, null);
 				}
-			} catch (_unused5) {}
+			} catch (_unused7) {}
 		};
 		ws.onclose = function() {
 			_stopHeartbeat();
@@ -3306,7 +3317,7 @@
 						if (ws && ws.readyState === 1) _startHeartbeat();
 					} else _stopHeartbeat();
 				});
-			} catch (_unused6) {}
+			} catch (_unused8) {}
 		})();
 		PERIODIC_INTERVAL_MS = 5e3;
 		setInterval(function() {
