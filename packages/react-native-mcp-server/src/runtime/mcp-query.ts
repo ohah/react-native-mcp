@@ -2,7 +2,7 @@ import type { Fiber } from './types';
 import { getFiberRoot, getRNComponents } from './fiber-helpers';
 import { parseSelector, matchesComplexSelector } from './query-selector';
 import { fiberToResult } from './fiber-serialization';
-import { measureView } from './mcp-measure';
+import { measureView, measureByNativeTag } from './mcp-measure';
 
 /**
  * querySelectorAll(selector) → 매칭되는 모든 fiber 정보 배열.
@@ -94,13 +94,43 @@ export function querySelectorWithMeasure(selector: string): Promise<any> {
   var el = querySelector(selector);
   if (!el) return Promise.resolve(null);
   if (el.measure) return Promise.resolve(el);
-  // Bridge fallback: composite fiber면 _measureUid(host child) 사용
-  return measureView(el._measureUid || el.uid)
+  // Bridge fallback 우선순위:
+  // 1. _nativeTag: Fiber 재탐색 없이 UIManager.measure 직접 호출 (가장 빠르고 안정적)
+  // 2. uid(testID): Fiber에서 testID로 찾아 host child로 이동 후 측정
+  // 3. _measureUid(경로): 최후 수단 (Fiber 트리 변경 시 깨질 수 있음)
+  if (typeof el._nativeTag === 'number') {
+    return measureByNativeTag(el._nativeTag)
+      .then(function (m: any) {
+        el.measure = m;
+        return el;
+      })
+      .catch(function () {
+        return measureView(el.uid)
+          .then(function (m: any) {
+            el.measure = m;
+            return el;
+          })
+          .catch(function () {
+            return el;
+          });
+      });
+  }
+  return measureView(el.uid)
     .then(function (m: any) {
       el.measure = m;
       return el;
     })
     .catch(function () {
+      if (el._measureUid && el._measureUid !== el.uid) {
+        return measureView(el._measureUid)
+          .then(function (m: any) {
+            el.measure = m;
+            return el;
+          })
+          .catch(function () {
+            return el;
+          });
+      }
       return el;
     });
 }
@@ -122,11 +152,33 @@ export function querySelectorAllWithMeasure(selector: string): Promise<any[]> {
   var chain: Promise<any> = Promise.resolve();
   needsMeasure.forEach(function (idx) {
     chain = chain.then(function () {
-      return measureView(list[idx]._measureUid || list[idx].uid)
+      var item = list[idx];
+      if (typeof item._nativeTag === 'number') {
+        return measureByNativeTag(item._nativeTag)
+          .then(function (m: any) {
+            item.measure = m;
+          })
+          .catch(function () {
+            return measureView(item.uid)
+              .then(function (m: any) {
+                item.measure = m;
+              })
+              .catch(function () {});
+          });
+      }
+      return measureView(item.uid)
         .then(function (m: any) {
-          list[idx].measure = m;
+          item.measure = m;
         })
-        .catch(function () {});
+        .catch(function () {
+          if (item._measureUid && item._measureUid !== item.uid) {
+            return measureView(item._measureUid)
+              .then(function (m: any) {
+                item.measure = m;
+              })
+              .catch(function () {});
+          }
+        });
     });
   });
   return chain.then(function () {

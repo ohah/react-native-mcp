@@ -214,3 +214,32 @@ export function measureViewSync(uid: string): MeasureResult | null {
     return null;
   }
 }
+
+/**
+ * measureByNativeTag(nativeTag) → Promise<MeasureResult>
+ * Bridge 전용: Fiber 재탐색 없이 nativeTag로 직접 UIManager.measure 호출.
+ * testID 유무와 무관하게 동작.
+ */
+export function measureByNativeTag(nativeTag: number): Promise<MeasureResult> {
+  return new Promise(function (resolve, reject) {
+    try {
+      var rn = typeof require !== 'undefined' && require('react-native');
+      if (rn && rn.UIManager && typeof rn.UIManager.measure === 'function') {
+        rn.UIManager.measure(
+          nativeTag,
+          function (x: number, y: number, w: number, h: number, pageX: number, pageY: number) {
+            if (w === 0 && h === 0 && pageX === 0 && pageY === 0) {
+              reject(new Error('nativeTag ' + nativeTag + ' returned zero measure'));
+            } else {
+              resolve({ x: x, y: y, width: w, height: h, pageX: pageX, pageY: pageY });
+            }
+          }
+        );
+      } else {
+        reject(new Error('UIManager.measure not available'));
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
