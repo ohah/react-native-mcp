@@ -40,7 +40,7 @@ export function fiberToResult(fiber: Fiber, TextComp: any, _ImgComp: any): any {
     measure = measureViewSync(uid);
   } catch {}
   // composite fiber(AnimatedComponent 등)면 measure가 null일 수 있음.
-  // 하위 첫 번째 host child의 uid로 재시도.
+  // 하위 첫 번째 host child를 찾아 재시도.
   if (!measure && typeof fiber.type !== 'string') {
     var hostChild = (function findHost(f: Fiber | null): Fiber | null {
       if (!f) return null;
@@ -58,8 +58,18 @@ export function fiberToResult(fiber: Fiber, TextComp: any, _ImgComp: any): any {
       try {
         measure = measureViewSync(hostUid);
       } catch {}
-      // Bridge fallback용: host child uid 저장
-      if (!measure) result._measureUid = hostUid;
+      if (!measure) {
+        // Bridge fallback용: nativeTag를 직접 저장하여 Fiber 재탐색 없이 측정 가능.
+        // 경로 UID는 Fiber 트리 변경 시 깨질 수 있으므로 nativeTag 우선.
+        var hostTag =
+          hostChild.stateNode && typeof hostChild.stateNode._nativeTag === 'number'
+            ? hostChild.stateNode._nativeTag
+            : null;
+        if (hostTag) {
+          result._nativeTag = hostTag;
+        }
+        result._measureUid = hostUid;
+      }
     }
   }
   result.measure = measure;

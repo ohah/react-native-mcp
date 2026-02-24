@@ -1703,6 +1703,32 @@
 			return null;
 		}
 	}
+	/**
+	* measureByNativeTag(nativeTag) → Promise<MeasureResult>
+	* Bridge 전용: Fiber 재탐색 없이 nativeTag로 직접 UIManager.measure 호출.
+	* testID 유무와 무관하게 동작.
+	*/
+	function measureByNativeTag(nativeTag) {
+		return new Promise(function(resolve, reject) {
+			try {
+				var rn = typeof require !== "undefined" && require("react-native");
+				if (rn && rn.UIManager && typeof rn.UIManager.measure === "function") rn.UIManager.measure(nativeTag, function(x, y, w, h, pageX, pageY) {
+					if (w === 0 && h === 0 && pageX === 0 && pageY === 0) reject(/* @__PURE__ */ new Error("nativeTag " + nativeTag + " returned zero measure"));
+					else resolve({
+						x,
+						y,
+						width: w,
+						height: h,
+						pageX,
+						pageY
+					});
+				});
+				else reject(/* @__PURE__ */ new Error("UIManager.measure not available"));
+			} catch (e) {
+				reject(e);
+			}
+		});
+	}
 	var init_mcp_measure = __esmMin(() => {
 		init_fiber_helpers();
 		init_query_selector();
@@ -1877,7 +1903,11 @@
 				try {
 					measure = measureViewSync(hostUid);
 				} catch (_unused2) {}
-				if (!measure) result._measureUid = hostUid;
+				if (!measure) {
+					var hostTag = hostChild.stateNode && typeof hostChild.stateNode._nativeTag === "number" ? hostChild.stateNode._nativeTag : null;
+					if (hostTag) result._nativeTag = hostTag;
+					result._measureUid = hostUid;
+				}
 			}
 		}
 		result.measure = measure;
@@ -2478,10 +2508,27 @@
 		var el = querySelector(selector);
 		if (!el) return Promise.resolve(null);
 		if (el.measure) return Promise.resolve(el);
-		return measureView(el._measureUid || el.uid).then(function(m) {
+		if (typeof el._nativeTag === "number") return measureByNativeTag(el._nativeTag).then(function(m) {
 			el.measure = m;
 			return el;
 		}).catch(function() {
+			return measureView(el.uid).then(function(m) {
+				el.measure = m;
+				return el;
+			}).catch(function() {
+				return el;
+			});
+		});
+		return measureView(el.uid).then(function(m) {
+			el.measure = m;
+			return el;
+		}).catch(function() {
+			if (el._measureUid && el._measureUid !== el.uid) return measureView(el._measureUid).then(function(m) {
+				el.measure = m;
+				return el;
+			}).catch(function() {
+				return el;
+			});
 			return el;
 		});
 	}
@@ -2498,9 +2545,21 @@
 		var chain = Promise.resolve();
 		needsMeasure.forEach(function(idx) {
 			chain = chain.then(function() {
-				return measureView(list[idx]._measureUid || list[idx].uid).then(function(m) {
-					list[idx].measure = m;
-				}).catch(function() {});
+				var item = list[idx];
+				if (typeof item._nativeTag === "number") return measureByNativeTag(item._nativeTag).then(function(m) {
+					item.measure = m;
+				}).catch(function() {
+					return measureView(item.uid).then(function(m) {
+						item.measure = m;
+					}).catch(function() {});
+				});
+				return measureView(item.uid).then(function(m) {
+					item.measure = m;
+				}).catch(function() {
+					if (item._measureUid && item._measureUid !== item.uid) return measureView(item._measureUid).then(function(m) {
+						item.measure = m;
+					}).catch(function() {});
+				});
 			});
 		});
 		return chain.then(function() {
