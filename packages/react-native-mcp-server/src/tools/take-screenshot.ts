@@ -53,7 +53,7 @@ export async function captureIos(): Promise<Buffer> {
  * iOS simctl은 항상 portrait 레이아웃으로 캡처하고,
  * 일부 Android 기기도 landscape에서 portrait 버퍼를 반환.
  */
-async function rotateToUpright(
+export async function rotateToUpright(
   png: Buffer,
   platform: 'android' | 'ios',
   appSession: AppSession,
