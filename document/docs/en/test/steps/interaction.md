@@ -160,11 +160,12 @@ Scroll until the element is visible (repeat up to limit).
 
 #### Parameters
 
-| Field      | Type   | Required | Description                                         |
-| ---------- | ------ | -------- | --------------------------------------------------- |
-| selector   | string | Yes      | Element to make visible                             |
-| direction  | string | No       | `up` \| `down` \| `left` \| `right`. Default `down` |
-| maxScrolls | number | No       | Max scrolls. Fails if exceeded                      |
+| Field              | Type   | Required | Description                                              |
+| ------------------ | ------ | -------- | -------------------------------------------------------- |
+| selector           | string | Yes      | Element to make visible                                  |
+| scrollableSelector | string | No       | Scrollable container selector. Swipes full screen if omitted |
+| direction          | string | No       | `up` \| `down` \| `left` \| `right`. Default `down`      |
+| maxScrolls         | number | No       | Max scrolls. Fails if exceeded                           |
 
 #### Example
 
@@ -173,4 +174,11 @@ Scroll until the element is visible (repeat up to limit).
     selector: '#footer'
     direction: down
     maxScrolls: 10
+
+# Scroll within a specific ScrollView
+- scrollUntilVisible:
+    selector: '#bottom-navigation-badge'
+    scrollableSelector: '#content-scroll-tablet'
+    direction: down
+    maxScrolls: 3
 ```

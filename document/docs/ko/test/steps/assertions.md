@@ -63,21 +63,32 @@
 
 ## assertCount
 
-셀렉터에 매칭되는 요소 개수가 기대값인지 검증한다.
+셀렉터에 매칭되는 요소 개수가 조건에 맞는지 검증한다. `count`로 정확한 값을, `minCount`/`maxCount`로 범위를 검사할 수 있다.
 
 #### Parameters
 
 | 필드     | 타입   | 필수 | 설명                  |
 | -------- | ------ | ---- | --------------------- |
 | selector | string | ✓    | 개수를 셀 요소 셀렉터 |
-| count    | number | ✓    | 기대 개수             |
+| count    | number |      | 정확한 기대 개수      |
+| minCount | number |      | 최소 개수 (이상)      |
+| maxCount | number |      | 최대 개수 (이하)      |
+
+`count`, `minCount`, `maxCount` 중 하나 이상 필수.
 
 #### Example
 
 ```yaml
+# 정확한 개수 검증
 - assertCount:
     selector: ':has-press'
     count: 5
+
+# 범위 검증
+- assertCount:
+    selector: '.list-item'
+    minCount: 1
+    maxCount: 10
 ```
 
 ---
