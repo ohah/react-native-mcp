@@ -28,13 +28,13 @@ export type TestStep =
   | { typeText: { selector: string; text: string } }
   | { inputText: { text: string } }
   | { pressButton: { button: string } }
-  | { waitForText: { text: string; timeout?: number; selector?: string } }
-  | { waitForVisible: { selector: string; timeout?: number } }
-  | { waitForNotVisible: { selector: string; timeout?: number } }
+  | { waitForText: { text: string; timeout?: number; selector?: string; interval?: number } }
+  | { waitForVisible: { selector: string; timeout?: number; interval?: number } }
+  | { waitForNotVisible: { selector: string; timeout?: number; interval?: number } }
   | { assertText: { text: string; selector?: string } }
   | { assertVisible: { selector: string } }
   | { assertNotVisible: { selector: string } }
-  | { assertCount: { selector: string; count: number } }
+  | { assertCount: { selector: string; count?: number; minCount?: number; maxCount?: number } }
   | { screenshot: { path?: string } }
   | { wait: number }
   | { launch: string }
@@ -46,7 +46,7 @@ export type TestStep =
   | { pasteText: null | Record<string, never> }
   | { evaluate: { script: string } }
   | { webviewEval: { webViewId: string; script: string } }
-  | { scrollUntilVisible: { selector: string; direction?: string; maxScrolls?: number } }
+  | { scrollUntilVisible: { selector: string; scrollableSelector?: string; direction?: string; maxScrolls?: number } }
   | { back: null | Record<string, never> }
   | { home: null | Record<string, never> }
   | { hideKeyboard: null | Record<string, never> }
@@ -78,6 +78,8 @@ export type TestStep =
         selector?: string;
         threshold?: number;
         update?: boolean;
+        saveDiff?: string;
+        saveCurrent?: string;
       };
     }
   | { startRecording: { path?: string } }

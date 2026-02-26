@@ -49,18 +49,19 @@ const stepSchema: z.ZodType<unknown> = z.lazy(() =>
         text: z.string(),
         timeout: z.number().optional(),
         selector: z.string().optional(),
+        interval: z.number().optional(),
       }),
     }),
     z.object({
-      waitForVisible: z.object({ selector: z.string(), timeout: z.number().optional() }),
+      waitForVisible: z.object({ selector: z.string(), timeout: z.number().optional(), interval: z.number().optional() }),
     }),
     z.object({
-      waitForNotVisible: z.object({ selector: z.string(), timeout: z.number().optional() }),
+      waitForNotVisible: z.object({ selector: z.string(), timeout: z.number().optional(), interval: z.number().optional() }),
     }),
     z.object({ assertText: z.object({ text: z.string(), selector: z.string().optional() }) }),
     z.object({ assertVisible: z.object({ selector: z.string() }) }),
     z.object({ assertNotVisible: z.object({ selector: z.string() }) }),
-    z.object({ assertCount: z.object({ selector: z.string(), count: z.number() }) }),
+    z.object({ assertCount: z.object({ selector: z.string(), count: z.number().optional(), minCount: z.number().optional(), maxCount: z.number().optional() }) }),
     z.object({ screenshot: z.object({ path: z.string().optional() }) }),
     z.object({ wait: z.number() }),
     z.object({ launch: z.string() }),
@@ -85,6 +86,7 @@ const stepSchema: z.ZodType<unknown> = z.lazy(() =>
     z.object({
       scrollUntilVisible: z.object({
         selector: z.string(),
+        scrollableSelector: z.string().optional(),
         direction: z.string().optional(),
         maxScrolls: z.number().optional(),
       }),
@@ -139,6 +141,8 @@ const stepSchema: z.ZodType<unknown> = z.lazy(() =>
         selector: z.string().optional(),
         threshold: z.number().min(0).max(1).optional(),
         update: z.boolean().optional(),
+        saveDiff: z.string().optional(),
+        saveCurrent: z.string().optional(),
       }),
     }),
     // Video recording (v2)

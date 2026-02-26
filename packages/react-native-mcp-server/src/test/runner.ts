@@ -71,16 +71,19 @@ async function executeStep(
     const result = await app.waitForText(step.waitForText.text, {
       timeout: step.waitForText.timeout,
       selector: step.waitForText.selector,
+      interval: step.waitForText.interval,
     });
     if (!result.pass) throw new Error(result.message);
   } else if ('waitForVisible' in step) {
     const result = await app.waitForVisible(step.waitForVisible.selector, {
       timeout: step.waitForVisible.timeout,
+      interval: step.waitForVisible.interval,
     });
     if (!result.pass) throw new Error(result.message);
   } else if ('waitForNotVisible' in step) {
     const result = await app.waitForNotVisible(step.waitForNotVisible.selector, {
       timeout: step.waitForNotVisible.timeout,
+      interval: step.waitForNotVisible.interval,
     });
     if (!result.pass) throw new Error(result.message);
   } else if ('assertText' in step) {
@@ -95,7 +98,11 @@ async function executeStep(
     const result = await app.assertNotVisible(step.assertNotVisible.selector);
     if (!result.pass) throw new Error(result.message);
   } else if ('assertCount' in step) {
-    const result = await app.assertCount(step.assertCount.selector, step.assertCount.count);
+    const result = await app.assertElementCount(step.assertCount.selector, {
+      expectedCount: step.assertCount.count,
+      minCount: step.assertCount.minCount,
+      maxCount: step.assertCount.maxCount,
+    });
     if (!result.pass) throw new Error(result.message);
   } else if ('screenshot' in step) {
     const filePath = step.screenshot.path
@@ -148,6 +155,7 @@ async function executeStep(
     await app.webviewEval(step.webviewEval.webViewId, step.webviewEval.script);
   } else if ('scrollUntilVisible' in step) {
     const result = await app.scrollUntilVisible(step.scrollUntilVisible.selector, {
+      scrollableSelector: step.scrollUntilVisible.scrollableSelector,
       direction: step.scrollUntilVisible.direction as 'up' | 'down' | 'left' | 'right' | undefined,
       maxScrolls: step.scrollUntilVisible.maxScrolls,
     });
@@ -240,13 +248,19 @@ async function executeStep(
     const baselinePath = ctx.yamlFilePath
       ? resolve(dirname(ctx.yamlFilePath), cs.baseline)
       : resolve(cs.baseline);
-    const diffPath = resolve(ctx.outputDir, `diff-${Date.now()}.png`);
+    const diffPath = cs.saveDiff
+      ? (cs.saveDiff.startsWith('/') ? resolve(cs.saveDiff) : resolve(ctx.outputDir, cs.saveDiff))
+      : resolve(ctx.outputDir, `diff-${Date.now()}.png`);
+    const saveCurrent = cs.saveCurrent
+      ? (cs.saveCurrent.startsWith('/') ? resolve(cs.saveCurrent) : resolve(ctx.outputDir, cs.saveCurrent))
+      : undefined;
     const result = await app.visualCompare({
       baseline: baselinePath,
       selector: cs.selector,
       threshold: cs.threshold,
       updateBaseline: cs.update,
       saveDiff: cs.update ? undefined : diffPath,
+      saveCurrent,
     });
     if (!result.pass && !cs.update) {
       const err = new Error(result.message) as Error & { diffImagePath?: string };

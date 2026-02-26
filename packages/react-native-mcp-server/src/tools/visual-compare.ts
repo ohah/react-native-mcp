@@ -71,28 +71,70 @@ export function registerVisualCompare(server: McpServer, appSession: AppSession)
       } = schema.parse(args);
 
       try {
-        // 1. 스크린샷 캡처 (raw PNG)
-        const rawPng = platform === 'android' ? await captureAndroid() : await captureIos();
+        // 1. selector가 있으면 스크롤 관성이 멈출 때까지 대기
+        let stableMeasure: MeasureResult | null = null;
+        if (selector) {
+          stableMeasure = await waitForStableMeasure(appSession, selector, deviceId, platform);
+          if (!stableMeasure) {
+            throw new Error(`Element not found for selector: ${selector}`);
+          }
+        }
+
+        // 2. measure → screenshot → measure 샌드위치로 drift 감지 & 재시도
+        //    스크린샷 전후 좌표가 1dp 이상 차이나면 다시 찍는다 (최대 5회).
+        //    drift가 없으면 pre/post의 평균 좌표를 사용한다 (스크린샷 시점에 가장 가까운 추정).
+        let rawPng: Buffer;
+        const MAX_CAPTURE_RETRIES = 5;
+        const DRIFT_TOLERANCE_DP = 1;
+        for (let attempt = 0; attempt < MAX_CAPTURE_RETRIES; attempt++) {
+          const preMeasure = selector
+            ? await queryMeasure(appSession, selector, deviceId, platform)
+            : null;
+
+          rawPng = platform === 'android' ? await captureAndroid() : await captureIos();
+
+          if (selector && preMeasure) {
+            const postMeasure = await queryMeasure(appSession, selector, deviceId, platform);
+            if (postMeasure) {
+              const driftX = Math.abs(postMeasure.pageX - preMeasure.pageX);
+              const driftY = Math.abs(postMeasure.pageY - preMeasure.pageY);
+              if (driftX > DRIFT_TOLERANCE_DP || driftY > DRIFT_TOLERANCE_DP) {
+                // drift 감지 — 안정화 대기 후 재시도
+                stableMeasure = await waitForStableMeasure(appSession, selector, deviceId, platform);
+                continue;
+              }
+              // drift 없음 — pre/post 평균 좌표 사용 (스크린샷은 그 사이에 찍혔으므로)
+              stableMeasure = {
+                pageX: (preMeasure.pageX + postMeasure.pageX) / 2,
+                pageY: (preMeasure.pageY + postMeasure.pageY) / 2,
+                width: (preMeasure.width + postMeasure.width) / 2,
+                height: (preMeasure.height + postMeasure.height) / 2,
+              };
+            }
+          }
+          break;
+        }
+
+        rawPng = rawPng!;
         if (!isValidPng(rawPng)) {
           throw new Error('Capture produced invalid PNG.');
         }
 
-        // 2. orientation에 맞게 회전 (landscape → 가로 이미지)
-        //    iOS simctl은 항상 portrait로 캡처, 일부 Android도 portrait 버퍼 반환.
-        //    회전 후에는 이미지가 디바이스 orientation과 일치하므로
-        //    measure 좌표를 그대로 사용할 수 있다.
+        // 3. orientation에 맞게 회전
         const uprightPng = await rotateToUpright(rawPng, platform, appSession, deviceId);
 
-        // 3. selector가 있으면 요소 크롭
+        // 4. selector가 있으면 요소 크롭
         let currentPng: Buffer;
-        if (selector) {
-          const measure = await queryMeasure(appSession, selector, deviceId, platform);
-          if (!measure) {
-            throw new Error(`Element not found for selector: ${selector}`);
-          }
+        if (stableMeasure) {
+          const measure = stableMeasure;
           const runtimeRatio = appSession.getPixelRatio(deviceId, platform);
           const scale = await getScreenScale(uprightPng, platform, runtimeRatio);
           const topInsetDp = appSession.getTopInsetDp(deviceId, platform);
+
+          const sharp = (await import('sharp')).default;
+          const imgMeta = await sharp(uprightPng).metadata();
+          const imgW = imgMeta.width!;
+          const imgH = imgMeta.height!;
 
           const rect = {
             left: Math.round(measure.pageX * scale),
@@ -100,18 +142,31 @@ export function registerVisualCompare(server: McpServer, appSession: AppSession)
             width: Math.round(measure.width * scale),
             height: Math.round(measure.height * scale),
           };
+
+          // 스크린샷 범위를 초과하지 않도록 클램핑
+          if (rect.left < 0) { rect.width += rect.left; rect.left = 0; }
+          if (rect.top < 0) { rect.height += rect.top; rect.top = 0; }
+          if (rect.left + rect.width > imgW) rect.width = imgW - rect.left;
+          if (rect.top + rect.height > imgH) rect.height = imgH - rect.top;
+
+          if (rect.width <= 0 || rect.height <= 0) {
+            throw new Error(
+              `Element is off-screen after clamping (rect: ${JSON.stringify(rect)}, img: ${imgW}x${imgH}).`
+            );
+          }
+
           currentPng = await cropElement(uprightPng, rect);
         } else {
           currentPng = uprightPng;
         }
 
-        // 4. saveCurrent 옵션
+        // 5. saveCurrent 옵션
         if (saveCurrent) {
           await mkdir(dirname(saveCurrent), { recursive: true });
           await writeFile(saveCurrent, currentPng);
         }
 
-        // 5. updateBaseline 모드: 현재를 베이스라인으로 저장
+        // 6. updateBaseline 모드: 현재를 베이스라인으로 저장
         if (updateBaseline) {
           await mkdir(dirname(baseline), { recursive: true });
           await writeFile(baseline, currentPng);
@@ -129,7 +184,7 @@ export function registerVisualCompare(server: McpServer, appSession: AppSession)
           };
         }
 
-        // 6. 베이스라인 로드
+        // 7. 베이스라인 로드
         let baselinePng: Buffer;
         try {
           baselinePng = await readFile(baseline);
@@ -139,16 +194,16 @@ export function registerVisualCompare(server: McpServer, appSession: AppSession)
           );
         }
 
-        // 7. 비교
+        // 8. 비교
         const result = await compareImages(baselinePng, currentPng, threshold);
 
-        // 8. saveDiff 옵션
+        // 9. saveDiff 옵션
         if (saveDiff && result.diffBuffer) {
           await mkdir(dirname(saveDiff), { recursive: true });
           await writeFile(saveDiff, result.diffBuffer);
         }
 
-        // 9. 결과 반환 (텍스트만 — diff 이미지는 saveDiff 파일로만 저장, 토큰 절약)
+        // 10. 결과 반환 (텍스트만 — diff 이미지는 saveDiff 파일로만 저장, 토큰 절약)
         const content = [
           {
             type: 'text' as const,
@@ -177,6 +232,45 @@ export function registerVisualCompare(server: McpServer, appSession: AppSession)
       }
     }
   );
+}
+
+/**
+ * measure를 반복 조회하여 좌표가 수렴(안정)할 때까지 대기한다.
+ * 스크롤 관성이 남아있으면 pageX/pageY가 프레임마다 변하므로,
+ * 연속 3번 measure가 toleranceDp 이내로 같으면 안정으로 판단한다.
+ */
+async function waitForStableMeasure(
+  appSession: AppSession,
+  selector: string,
+  deviceId?: string,
+  platform?: string,
+  { maxAttempts = 15, intervalMs = 200, toleranceDp = 0.5, requiredConsecutive = 3 } = {}
+): Promise<MeasureResult | null> {
+  let prev = await queryMeasure(appSession, selector, deviceId, platform);
+  if (!prev) return null;
+
+  let consecutiveStable = 0;
+
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise((r) => setTimeout(r, intervalMs));
+    const curr = await queryMeasure(appSession, selector, deviceId, platform);
+    if (!curr) return null;
+
+    if (
+      Math.abs(curr.pageX - prev.pageX) <= toleranceDp &&
+      Math.abs(curr.pageY - prev.pageY) <= toleranceDp
+    ) {
+      consecutiveStable++;
+      if (consecutiveStable >= requiredConsecutive) {
+        return curr;
+      }
+    } else {
+      consecutiveStable = 0;
+    }
+    prev = curr;
+  }
+
+  return prev;
 }
 
 /** querySelector로 요소의 measure 좌표를 가져온다. */
