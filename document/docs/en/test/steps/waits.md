@@ -8,12 +8,12 @@ Wait until the given text appears.
 
 #### Parameters
 
-| Field    | Type   | Required | Description                                |
-| -------- | ------ | -------- | ------------------------------------------ |
-| text     | string | Yes      | Expected text                              |
-| timeout  | number | No       | Wait time (ms). Default if omitted         |
-| selector | string | No       | Scope selector for text                    |
-| interval | number | No       | Polling interval (ms). Default 300         |
+| Field    | Type   | Required | Description                        |
+| -------- | ------ | -------- | ---------------------------------- |
+| text     | string | Yes      | Expected text                      |
+| timeout  | number | No       | Wait time (ms). Default if omitted |
+| selector | string | No       | Scope selector for text            |
+| interval | number | No       | Polling interval (ms). Default 300 |
 
 #### Example
 

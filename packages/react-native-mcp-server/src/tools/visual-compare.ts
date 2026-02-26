@@ -100,7 +100,12 @@ export function registerVisualCompare(server: McpServer, appSession: AppSession)
               const driftY = Math.abs(postMeasure.pageY - preMeasure.pageY);
               if (driftX > DRIFT_TOLERANCE_DP || driftY > DRIFT_TOLERANCE_DP) {
                 // drift 감지 — 안정화 대기 후 재시도
-                stableMeasure = await waitForStableMeasure(appSession, selector, deviceId, platform);
+                stableMeasure = await waitForStableMeasure(
+                  appSession,
+                  selector,
+                  deviceId,
+                  platform
+                );
                 continue;
               }
               // drift 없음 — pre/post 평균 좌표 사용 (스크린샷은 그 사이에 찍혔으므로)
@@ -144,8 +149,14 @@ export function registerVisualCompare(server: McpServer, appSession: AppSession)
           };
 
           // 스크린샷 범위를 초과하지 않도록 클램핑
-          if (rect.left < 0) { rect.width += rect.left; rect.left = 0; }
-          if (rect.top < 0) { rect.height += rect.top; rect.top = 0; }
+          if (rect.left < 0) {
+            rect.width += rect.left;
+            rect.left = 0;
+          }
+          if (rect.top < 0) {
+            rect.height += rect.top;
+            rect.top = 0;
+          }
           if (rect.left + rect.width > imgW) rect.width = imgW - rect.left;
           if (rect.top + rect.height > imgH) rect.height = imgH - rect.top;
 

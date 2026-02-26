@@ -67,12 +67,12 @@ Assert that the number of elements matching the selector meets the expected cond
 
 #### Parameters
 
-| Field    | Type   | Required | Description                                |
-| -------- | ------ | -------- | ------------------------------------------ |
-| selector | string | Yes      | Selector to count                          |
-| count    | number | No       | Exact expected count                       |
-| minCount | number | No       | Minimum count (inclusive)                  |
-| maxCount | number | No       | Maximum count (inclusive)                  |
+| Field    | Type   | Required | Description               |
+| -------- | ------ | -------- | ------------------------- |
+| selector | string | Yes      | Selector to count         |
+| count    | number | No       | Exact expected count      |
+| minCount | number | No       | Minimum count (inclusive) |
+| maxCount | number | No       | Maximum count (inclusive) |
 
 At least one of `count`, `minCount`, or `maxCount` must be provided.
 
