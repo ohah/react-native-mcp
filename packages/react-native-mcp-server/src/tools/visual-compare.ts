@@ -55,7 +55,7 @@ export function registerVisualCompare(server: McpServer, appSession: AppSession)
     'visual_compare',
     {
       description:
-        'Compare screenshot against baseline PNG. Supports element-level cropping via selector.',
+        'Visual regression: capture current screen (or crop by selector), pixel-diff against baseline PNG; use to verify UI didn’t change or to update baseline.',
       inputSchema: schema,
     },
     async (args: unknown) => {
