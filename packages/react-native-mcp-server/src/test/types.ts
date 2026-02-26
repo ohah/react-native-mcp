@@ -46,7 +46,14 @@ export type TestStep =
   | { pasteText: null | Record<string, never> }
   | { evaluate: { script: string } }
   | { webviewEval: { webViewId: string; script: string } }
-  | { scrollUntilVisible: { selector: string; scrollableSelector?: string; direction?: string; maxScrolls?: number } }
+  | {
+      scrollUntilVisible: {
+        selector: string;
+        scrollableSelector?: string;
+        direction?: string;
+        maxScrolls?: number;
+      };
+    }
   | { back: null | Record<string, never> }
   | { home: null | Record<string, never> }
   | { hideKeyboard: null | Record<string, never> }

@@ -160,12 +160,12 @@ TextInput의 텍스트를 전부 지운다.
 
 #### Parameters
 
-| 필드               | 타입   | 필수 | 설명                                                                 |
-| ------------------ | ------ | ---- | -------------------------------------------------------------------- |
-| selector           | string | ✓    | 보이게 할 요소 셀렉터                                                |
-| scrollableSelector | string |      | 스크롤할 컨테이너 셀렉터. 생략 시 화면 전체를 스와이프              |
-| direction          | string |      | `up` \| `down` \| `left` \| `right`. 기본 `down`                     |
-| maxScrolls         | number |      | 최대 스크롤 횟수. 초과 시 실패                                       |
+| 필드               | 타입   | 필수 | 설명                                                   |
+| ------------------ | ------ | ---- | ------------------------------------------------------ |
+| selector           | string | ✓    | 보이게 할 요소 셀렉터                                  |
+| scrollableSelector | string |      | 스크롤할 컨테이너 셀렉터. 생략 시 화면 전체를 스와이프 |
+| direction          | string |      | `up` \| `down` \| `left` \| `right`. 기본 `down`       |
+| maxScrolls         | number |      | 최대 스크롤 횟수. 초과 시 실패                         |
 
 #### Example
 

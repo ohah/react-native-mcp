@@ -249,10 +249,14 @@ async function executeStep(
       ? resolve(dirname(ctx.yamlFilePath), cs.baseline)
       : resolve(cs.baseline);
     const diffPath = cs.saveDiff
-      ? (cs.saveDiff.startsWith('/') ? resolve(cs.saveDiff) : resolve(ctx.outputDir, cs.saveDiff))
+      ? cs.saveDiff.startsWith('/')
+        ? resolve(cs.saveDiff)
+        : resolve(ctx.outputDir, cs.saveDiff)
       : resolve(ctx.outputDir, `diff-${Date.now()}.png`);
     const saveCurrent = cs.saveCurrent
-      ? (cs.saveCurrent.startsWith('/') ? resolve(cs.saveCurrent) : resolve(ctx.outputDir, cs.saveCurrent))
+      ? cs.saveCurrent.startsWith('/')
+        ? resolve(cs.saveCurrent)
+        : resolve(ctx.outputDir, cs.saveCurrent)
       : undefined;
     const result = await app.visualCompare({
       baseline: baselinePath,

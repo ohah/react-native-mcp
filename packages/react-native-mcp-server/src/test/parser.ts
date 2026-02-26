@@ -53,15 +53,30 @@ const stepSchema: z.ZodType<unknown> = z.lazy(() =>
       }),
     }),
     z.object({
-      waitForVisible: z.object({ selector: z.string(), timeout: z.number().optional(), interval: z.number().optional() }),
+      waitForVisible: z.object({
+        selector: z.string(),
+        timeout: z.number().optional(),
+        interval: z.number().optional(),
+      }),
     }),
     z.object({
-      waitForNotVisible: z.object({ selector: z.string(), timeout: z.number().optional(), interval: z.number().optional() }),
+      waitForNotVisible: z.object({
+        selector: z.string(),
+        timeout: z.number().optional(),
+        interval: z.number().optional(),
+      }),
     }),
     z.object({ assertText: z.object({ text: z.string(), selector: z.string().optional() }) }),
     z.object({ assertVisible: z.object({ selector: z.string() }) }),
     z.object({ assertNotVisible: z.object({ selector: z.string() }) }),
-    z.object({ assertCount: z.object({ selector: z.string(), count: z.number().optional(), minCount: z.number().optional(), maxCount: z.number().optional() }) }),
+    z.object({
+      assertCount: z.object({
+        selector: z.string(),
+        count: z.number().optional(),
+        minCount: z.number().optional(),
+        maxCount: z.number().optional(),
+      }),
+    }),
     z.object({ screenshot: z.object({ path: z.string().optional() }) }),
     z.object({ wait: z.number() }),
     z.object({ launch: z.string() }),

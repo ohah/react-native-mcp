@@ -160,12 +160,12 @@ Scroll until the element is visible (repeat up to limit).
 
 #### Parameters
 
-| Field              | Type   | Required | Description                                              |
-| ------------------ | ------ | -------- | -------------------------------------------------------- |
-| selector           | string | Yes      | Element to make visible                                  |
+| Field              | Type   | Required | Description                                                  |
+| ------------------ | ------ | -------- | ------------------------------------------------------------ |
+| selector           | string | Yes      | Element to make visible                                      |
 | scrollableSelector | string | No       | Scrollable container selector. Swipes full screen if omitted |
-| direction          | string | No       | `up` \| `down` \| `left` \| `right`. Default `down`      |
-| maxScrolls         | number | No       | Max scrolls. Fails if exceeded                           |
+| direction          | string | No       | `up` \| `down` \| `left` \| `right`. Default `down`          |
+| maxScrolls         | number | No       | Max scrolls. Fails if exceeded                               |
 
 #### Example
 

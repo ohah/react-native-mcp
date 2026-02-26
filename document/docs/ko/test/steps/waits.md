@@ -8,12 +8,12 @@
 
 #### Parameters
 
-| 필드     | 타입   | 필수 | 설명                            |
-| -------- | ------ | ---- | ------------------------------- |
-| text     | string | ✓    | 기대하는 텍스트                 |
-| timeout  | number |      | 대기 시간(ms). 생략 시 기본값   |
-| selector | string |      | 텍스트를 찾을 범위 셀렉터       |
-| interval | number |      | 폴링 간격(ms). 기본 300         |
+| 필드     | 타입   | 필수 | 설명                          |
+| -------- | ------ | ---- | ----------------------------- |
+| text     | string | ✓    | 기대하는 텍스트               |
+| timeout  | number |      | 대기 시간(ms). 생략 시 기본값 |
+| selector | string |      | 텍스트를 찾을 범위 셀렉터     |
+| interval | number |      | 폴링 간격(ms). 기본 300       |
 
 #### Example
 
