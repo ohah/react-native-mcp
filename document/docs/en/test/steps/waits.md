@@ -8,11 +8,12 @@ Wait until the given text appears.
 
 #### Parameters
 
-| Field    | Type   | Required | Description                        |
-| -------- | ------ | -------- | ---------------------------------- |
-| text     | string | Yes      | Expected text                      |
-| timeout  | number | No       | Wait time (ms). Default if omitted |
-| selector | string | No       | Scope selector for text            |
+| Field    | Type   | Required | Description                                |
+| -------- | ------ | -------- | ------------------------------------------ |
+| text     | string | Yes      | Expected text                              |
+| timeout  | number | No       | Wait time (ms). Default if omitted         |
+| selector | string | No       | Scope selector for text                    |
+| interval | number | No       | Polling interval (ms). Default 300         |
 
 #### Example
 
@@ -31,10 +32,11 @@ Wait until the element is visible.
 
 #### Parameters
 
-| Field    | Type   | Required | Description      |
-| -------- | ------ | -------- | ---------------- |
-| selector | string | Yes      | Element selector |
-| timeout  | number | No       | Wait time (ms)   |
+| Field    | Type   | Required | Description                        |
+| -------- | ------ | -------- | ---------------------------------- |
+| selector | string | Yes      | Element selector                   |
+| timeout  | number | No       | Wait time (ms)                     |
+| interval | number | No       | Polling interval (ms). Default 300 |
 
 #### Example
 
@@ -52,10 +54,11 @@ Wait until the element is not visible.
 
 #### Parameters
 
-| Field    | Type   | Required | Description      |
-| -------- | ------ | -------- | ---------------- |
-| selector | string | Yes      | Element selector |
-| timeout  | number | No       | Wait time (ms)   |
+| Field    | Type   | Required | Description                        |
+| -------- | ------ | -------- | ---------------------------------- |
+| selector | string | Yes      | Element selector                   |
+| timeout  | number | No       | Wait time (ms)                     |
+| interval | number | No       | Polling interval (ms). Default 300 |
 
 #### Example
 

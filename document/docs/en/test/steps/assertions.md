@@ -63,21 +63,32 @@ Assert that the element is not visible.
 
 ## assertCount
 
-Assert that the number of elements matching the selector equals the expected count.
+Assert that the number of elements matching the selector meets the expected condition. Provide `count` for exact match, or `minCount`/`maxCount` for range checks.
 
 #### Parameters
 
-| Field    | Type   | Required | Description       |
-| -------- | ------ | -------- | ----------------- |
-| selector | string | Yes      | Selector to count |
-| count    | number | Yes      | Expected count    |
+| Field    | Type   | Required | Description                                |
+| -------- | ------ | -------- | ------------------------------------------ |
+| selector | string | Yes      | Selector to count                          |
+| count    | number | No       | Exact expected count                       |
+| minCount | number | No       | Minimum count (inclusive)                  |
+| maxCount | number | No       | Maximum count (inclusive)                  |
+
+At least one of `count`, `minCount`, or `maxCount` must be provided.
 
 #### Example
 
 ```yaml
+# Exact count
 - assertCount:
     selector: ':has-press'
     count: 5
+
+# Range check
+- assertCount:
+    selector: '.list-item'
+    minCount: 1
+    maxCount: 10
 ```
 
 ---

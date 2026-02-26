@@ -27,12 +27,14 @@
 
 #### Parameters
 
-| 필드      | 타입    | 필수 | 설명                                                       |
-| --------- | ------- | ---- | ---------------------------------------------------------- |
-| baseline  | string  | ✓    | 베이스라인 PNG 경로 (YAML 파일 기준 상대경로)              |
-| selector  | string  |      | 특정 요소만 크롭할 CSS-like 셀렉터. 생략 시 전체 화면 비교 |
-| threshold | number  |      | pixelmatch 임계값 (0~1). 기본 0.01                         |
-| update    | boolean |      | true이면 현재 스크린샷을 베이스라인으로 저장 (비교 생략)   |
+| 필드        | 타입    | 필수 | 설명                                                       |
+| ----------- | ------- | ---- | ---------------------------------------------------------- |
+| baseline    | string  | ✓    | 베이스라인 PNG 경로 (YAML 파일 기준 상대경로)              |
+| selector    | string  |      | 특정 요소만 크롭할 CSS-like 셀렉터. 생략 시 전체 화면 비교 |
+| threshold   | number  |      | pixelmatch 임계값 (0~1). 기본 0.01                         |
+| update      | boolean |      | true이면 현재 스크린샷을 베이스라인으로 저장 (비교 생략)   |
+| saveDiff    | string  |      | diff 이미지 저장 경로 (출력 디렉터리 기준 상대경로)        |
+| saveCurrent | string  |      | 현재 스크린샷 저장 경로 (출력 디렉터리 기준 상대경로)      |
 
 #### Example
 

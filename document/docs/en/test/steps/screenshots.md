@@ -27,12 +27,14 @@ Compare the current screenshot against a baseline PNG image. Supports element-le
 
 #### Parameters
 
-| Field     | Type    | Required | Description                                                                    |
-| --------- | ------- | -------- | ------------------------------------------------------------------------------ |
-| baseline  | string  | Yes      | Path to baseline PNG (relative to YAML file)                                   |
-| selector  | string  | No       | CSS-like selector to crop a specific element. If omitted, compares full screen |
-| threshold | number  | No       | pixelmatch threshold (0–1). Default 0.01                                       |
-| update    | boolean | No       | If true, save current screenshot as new baseline (skip comparison)             |
+| Field       | Type    | Required | Description                                                                    |
+| ----------- | ------- | -------- | ------------------------------------------------------------------------------ |
+| baseline    | string  | Yes      | Path to baseline PNG (relative to YAML file)                                   |
+| selector    | string  | No       | CSS-like selector to crop a specific element. If omitted, compares full screen |
+| threshold   | number  | No       | pixelmatch threshold (0–1). Default 0.01                                       |
+| update      | boolean | No       | If true, save current screenshot as new baseline (skip comparison)             |
+| saveDiff    | string  | No       | Custom path for diff image (relative to output dir)                            |
+| saveCurrent | string  | No       | Save current screenshot to this path (relative to output dir)                  |
 
 #### Example
 
