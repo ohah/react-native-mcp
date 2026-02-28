@@ -1,5 +1,6 @@
 /**
  * 프로젝트 타입 감지 (Expo vs bare RN, 패키지 매니저, babel 설정 등)
+ * 모노레포: 워크스페이스 내 RN 앱 탐색 지원
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,6 +13,15 @@ export interface ProjectInfo {
   hasBabelConfig: boolean;
   babelConfigPath: string | null;
   packageManager: 'bun' | 'yarn' | 'npm' | 'pnpm';
+}
+
+/** 단일 레포: appRoot === cwd. 모노레포: appRoot는 워크스페이스 내 RN 앱 경로 */
+export interface DetectResult {
+  appRoot: string;
+  info: ProjectInfo;
+  isMonorepo: boolean;
+  /** 모노레포에서 RN 앱이 여러 개일 때 선택용 (상대 경로) */
+  candidateAppRoots?: string[];
 }
 
 const BABEL_CONFIG_FILES = [
@@ -60,6 +70,102 @@ export function detectProject(cwd: string): ProjectInfo {
     hasBabelConfig: babelConfigPath != null,
     babelConfigPath,
     packageManager: detectPackageManager(cwd),
+  };
+}
+
+/** package.json workspaces 배열에서 패키지 디렉터리 목록 반환 (루트 기준) */
+function getWorkspacePackageDirs(rootDir: string): string[] {
+  const pkgPath = path.join(rootDir, 'package.json');
+  if (!fs.existsSync(pkgPath)) return [];
+  let pkg: { workspaces?: string[] };
+  try {
+    pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+  } catch {
+    return [];
+  }
+  const workspaces = pkg.workspaces;
+  if (!Array.isArray(workspaces) || workspaces.length === 0) return [];
+
+  const dirs: string[] = [];
+  for (const pattern of workspaces) {
+    const globMatch = pattern.match(/^(.+)\/\*$/);
+    if (globMatch) {
+      const base = path.join(rootDir, globMatch[1]);
+      if (!fs.existsSync(base)) continue;
+      const entries = fs.readdirSync(base, { withFileTypes: true });
+      for (const e of entries) {
+        if (e.isDirectory() && !e.name.startsWith('.')) {
+          const subPath = path.join(base, e.name);
+          if (fs.existsSync(path.join(subPath, 'package.json'))) {
+            dirs.push(subPath);
+          }
+        }
+      }
+    } else {
+      const full = path.join(rootDir, pattern);
+      if (fs.existsSync(full) && fs.existsSync(path.join(full, 'package.json'))) {
+        dirs.push(full);
+      }
+    }
+  }
+  return dirs;
+}
+
+/** 디렉터리가 React Native 앱인지 (dependencies/devDependencies에 react-native 존재) */
+function hasReactNativeInPackage(dir: string): boolean {
+  const pkgPath = path.join(dir, 'package.json');
+  if (!fs.existsSync(pkgPath)) return false;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+    const rn = deps['react-native'];
+    return rn != null && typeof rn === 'string';
+  } catch {
+    return false;
+  }
+}
+
+/** 모노레포 루트에서 워크스페이스 내 RN 앱 경로 목록 반환 */
+export function findRnAppsInMonorepo(rootDir: string): string[] {
+  const dirs = getWorkspacePackageDirs(rootDir);
+  return dirs.filter(hasReactNativeInPackage);
+}
+
+/**
+ * cwd에서 프로젝트 감지. cwd에 react-native가 없으면 모노레포인지 확인하고
+ * 워크스페이스 내 RN 앱 중 하나를 appRoot로 사용할 수 있게 결과 반환.
+ * appRoot 선택은 호출측에서 (단일 후보면 그대로, 복수면 선택 또는 --app).
+ */
+export function detectProjectOrMonorepo(
+  cwd: string,
+  explicitAppPath?: string
+): DetectResult | null {
+  if (explicitAppPath) {
+    const appRoot = path.isAbsolute(explicitAppPath)
+      ? explicitAppPath
+      : path.resolve(cwd, explicitAppPath);
+    if (!fs.existsSync(path.join(appRoot, 'package.json'))) return null;
+    const info = detectProject(appRoot);
+    if (!info.rnVersion) return null;
+    return { appRoot, info, isMonorepo: true };
+  }
+
+  const info = detectProject(cwd);
+  if (info.rnVersion) {
+    return { appRoot: cwd, info, isMonorepo: false };
+  }
+
+  const rnApps = findRnAppsInMonorepo(cwd);
+  if (rnApps.length === 0) return null;
+  const appRoot = rnApps[0];
+  const appInfo = detectProject(appRoot);
+  const candidateAppRoots =
+    rnApps.length > 1 ? rnApps.map((d) => path.relative(cwd, d)) : undefined;
+  return {
+    appRoot,
+    info: appInfo,
+    isMonorepo: true,
+    candidateAppRoots,
   };
 }
 
