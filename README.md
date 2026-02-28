@@ -112,6 +112,8 @@ npx -y @ohah/react-native-mcp-server init --help
 
 Running `init` multiple times is safe — each step checks if the change is already applied.
 
+**Monorepo:** Run `init` from the repo root. It adds `@ohah/react-native-mcp-server` to the detected app package’s `devDependencies` and runs install from the root. See [CLI Init](https://ohah.github.io/react-native-mcp/mcp/cli-init) for options like `--no-install`.
+
 ## Usage
 
 ### Cursor

@@ -169,11 +169,12 @@ npx -y @ohah/react-native-mcp-server init
 
 ### Step 3 — 변경 적용
 
-네 단계가 적용됩니다:
+다음이 적용됩니다:
 
-1. **babel.config.js** — `presets` 배열에 `@ohah/react-native-mcp-server/babel-preset` 추가.
-2. **MCP 클라이언트 설정** — 위에서 설명한 경로에 생성/병합.
-3. **.gitignore** — `/results/` 추가 (E2E 테스트 출력 디렉토리).
+1. **package.json** — 앱 패키지의 `devDependencies`에 `@ohah/react-native-mcp-server` 추가(이미 있으면 스킵). 이어서 패키지 매니저 install 실행(`--no-install` 시 생략).
+2. **babel.config.js** — `presets` 배열에 `@ohah/react-native-mcp-server/babel-preset` 추가.
+3. **MCP 클라이언트 설정** — 위에서 설명한 경로에 생성/병합.
+4. **.gitignore** — `/results/` 추가 (E2E 테스트 출력 디렉토리).
 
 각 단계는 **멱등성**을 보장합니다. 다시 실행하면 이미 적용된 변경은 건너뜁니다.
 
@@ -188,11 +189,13 @@ npx -y @ohah/react-native-mcp-server init
 
 ## 옵션
 
-| 플래그            | 설명                             | 예시              |
-| ----------------- | -------------------------------- | ----------------- |
-| `--client <name>` | 클라이언트 선택 프롬프트 건너뜀  | `--client cursor` |
-| `-y`, `--yes`     | 비인터랙티브 모드 (기본: Cursor) | `-y`              |
-| `-h`, `--help`    | 도움말 표시                      | `--help`          |
+| 플래그            | 설명                                              | 예시                      |
+| ----------------- | ------------------------------------------------- | ------------------------- |
+| `--app <path>`    | 모노레포에서 초기화할 앱 경로 지정                | `--app examples/demo-app` |
+| `--client <name>` | 클라이언트 선택 프롬프트 건너뜀                   | `--client cursor`         |
+| `-y`, `--yes`     | 비인터랙티브 모드 (기본: Cursor)                  | `-y`                      |
+| `--no-install`    | package.json에만 추가하고 install은 실행하지 않음 | `--no-install`            |
+| `-h`, `--help`    | 도움말 표시                                       | `--help`                  |
 
 ```bash
 # CI / 자동화
@@ -201,6 +204,24 @@ npx -y @ohah/react-native-mcp-server init --client cursor -y
 # 특정 클라이언트 지정
 npx -y @ohah/react-native-mcp-server init --client antigravity
 ```
+
+## package.json 추가 및 install
+
+`init`은 **앱 패키지의 package.json**에 `@ohah/react-native-mcp-server`를 `devDependencies`로 추가합니다. 이미 있으면 건너뜁니다. 이어서 패키지 매니저 install을 실행해 의존성을 설치합니다(생략하려면 `--no-install`).
+
+- **단일 레포**: 앱 루트의 package.json에 추가 후, 앱 루트에서 install 실행.
+- **모노레포**: 선택한 앱 패키지의 package.json에 추가 후, **모노레포 루트**에서 install 실행(워크스페이스 전체 갱신).
+
+init이 자동으로 앱 package.json에 추가하므로, **모노레포에서도 수동으로 의존성을 넣을 필요 없이** 루트에서 `init`만 실행하면 됩니다.
+
+```bash
+# 루트에서
+npx -y @ohah/react-native-mcp-server init -y
+# 또는 앱 경로 지정
+npx -y @ohah/react-native-mcp-server init -y --app apps/mobile
+```
+
+---
 
 ## 멱등성
 
