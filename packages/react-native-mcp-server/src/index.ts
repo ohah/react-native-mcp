@@ -83,7 +83,9 @@ if (subcommand === 'test') {
     args: process.argv.slice(3),
     options: {
       client: { type: 'string' },
+      app: { type: 'string' },
       yes: { type: 'boolean', short: 'y', default: false },
+      'no-install': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
     },
   });
@@ -94,7 +96,9 @@ Usage: react-native-mcp-server init [options]
 
 Options:
   --client <name>    MCP client: cursor, claude-code, claude-desktop, windsurf, antigravity
+  --app <path>       In a monorepo, path to the React Native app (e.g. examples/demo-app)
   -y, --yes          Skip prompts (non-interactive mode)
+  --no-install       Add package to package.json only; do not run install
   --help, -h         Show this help message
 `);
   } else {
@@ -109,7 +113,12 @@ Options:
       }
     }
     if (process.exitCode !== 1) {
-      await runInit({ client, interactive: !values.yes });
+      await runInit({
+        client,
+        interactive: !values.yes,
+        appPath: values.app,
+        noInstall: values['no-install'],
+      });
     }
   }
 } else {
