@@ -112,6 +112,8 @@ npx -y @ohah/react-native-mcp-server init --help
 
 `init`을 여러 번 실행해도 안전합니다 — 각 단계에서 이미 적용된 변경은 건너뜁니다.
 
+**모노레포:** 루트에서 `init`만 실행하면 됩니다. 감지된 앱 패키지의 `devDependencies`에 `@ohah/react-native-mcp-server`를 넣고, 루트에서 install을 실행합니다. `--no-install` 등 옵션은 [CLI Init](https://ohah.github.io/react-native-mcp/mcp/cli-init) 참고.
+
 ## 사용법
 
 ### Cursor

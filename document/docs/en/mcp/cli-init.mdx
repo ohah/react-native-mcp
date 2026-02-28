@@ -169,11 +169,12 @@ If the file already exists, the `react-native-mcp` entry is merged in — existi
 
 ### Step 3 — Apply Changes
 
-Three files are modified (after the tool check):
+The following are applied (after the tool check):
 
-1. **babel.config.js** — Appends `@ohah/react-native-mcp-server/babel-preset` to the `presets` array.
-2. **MCP client config** — Created or merged as described above.
-3. **.gitignore** — Appends `/results/` (used by E2E test outputs).
+1. **package.json** — Adds `@ohah/react-native-mcp-server` to the app package’s `devDependencies` (skipped if already present), then runs the package manager install (skipped with `--no-install`).
+2. **babel.config.js** — Appends `@ohah/react-native-mcp-server/babel-preset` to the `presets` array.
+3. **MCP client config** — Created or merged as described above.
+4. **.gitignore** — Appends `/results/` (used by E2E test outputs).
 
 Each step is **idempotent**: running `init` again skips already-applied changes.
 
@@ -188,11 +189,13 @@ Based on your project type, the command shows what to do next:
 
 ## Options
 
-| Flag              | Description                            | Example           |
-| ----------------- | -------------------------------------- | ----------------- |
-| `--client <name>` | Skip client prompt                     | `--client cursor` |
-| `-y`, `--yes`     | Non-interactive mode (default: Cursor) | `-y`              |
-| `-h`, `--help`    | Show help                              | `--help`          |
+| Flag              | Description                                  | Example                   |
+| ----------------- | -------------------------------------------- | ------------------------- |
+| `--app <path>`    | In a monorepo, path to the RN app to set up  | `--app examples/demo-app` |
+| `--client <name>` | Skip client prompt                           | `--client cursor`         |
+| `-y`, `--yes`     | Non-interactive mode (default: Cursor)       | `-y`                      |
+| `--no-install`    | Add to package.json only; do not run install | `--no-install`            |
+| `-h`, `--help`    | Show help                                    | `--help`                  |
 
 ```bash
 # CI / automation
@@ -201,6 +204,24 @@ npx -y @ohah/react-native-mcp-server init --client cursor -y
 # Specific client, still interactive for confirmations
 npx -y @ohah/react-native-mcp-server init --client antigravity
 ```
+
+## package.json and install
+
+`init` **adds** `@ohah/react-native-mcp-server` to the app package’s `devDependencies` in package.json (skipped if already present), then runs the package manager **install** so dependencies are installed. Use `--no-install` to skip the install step.
+
+- **Single repo**: Adds to the app root’s package.json, then runs install in the app root.
+- **Monorepo**: Adds to the chosen app package’s package.json, then runs install from the **monorepo root** (updates the whole workspace).
+
+Because `init` adds the dependency and runs install for you, **in a monorepo you can just run `init` from the root** — no need to add the package to package.json by hand.
+
+```bash
+# From repo root
+npx -y @ohah/react-native-mcp-server init -y
+# Or specify the app path
+npx -y @ohah/react-native-mcp-server init -y --app apps/mobile
+```
+
+---
 
 ## Idempotent
 
