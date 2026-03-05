@@ -23,15 +23,11 @@ selector로 찾은 React 컴포넌트의 state hook을 검사합니다. `useStat
   "arguments": { "selector": "#cart-view" }
 }
 
-// 응답
-{
-  "component": "CartScreen",
-  "hooks": [
-    { "index": 0, "type": "useState", "value": [{ "id": 1, "name": "Widget", "qty": 2 }] },
-    { "index": 1, "type": "useState", "value": true },
-    { "index": 2, "type": "useState", "value": "loading" }
-  ]
-}
+// 응답 (compact 텍스트)
+CartScreen
+  [0] useState: [{"id":1,"name":"Widget","qty":2}]
+  [1] useState: true
+  [2] useState: "loading"
 ```
 
 #### Tips

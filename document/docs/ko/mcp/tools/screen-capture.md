@@ -30,52 +30,57 @@
 
 ## take_snapshot
 
-React Native 컴포넌트 트리를 캡처합니다. UID, 타입, testID, 텍스트 내용을 반환합니다.
+React Native 컴포넌트 트리를 캡처합니다. **compact 텍스트**로 출력하여 토큰 사용량을 대폭 절감합니다.
 
 #### Parameters
 
-| Parameter  | Type                 | Required | Description                        |
-| ---------- | -------------------- | -------- | ---------------------------------- |
-| `platform` | `"ios" \| "android"` | No       | 대상 플랫폼                        |
-| `deviceId` | `string`             | No       | 대상 디바이스                      |
-| `maxDepth` | `number`             | No       | 최대 트리 깊이 (1–100). 기본값: 30 |
+| Parameter     | Type                 | Required | Description                                                                             |
+| ------------- | -------------------- | -------- | --------------------------------------------------------------------------------------- |
+| `platform`    | `"ios" \| "android"` | No       | 대상 플랫폼                                                                             |
+| `deviceId`    | `string`             | No       | 대상 디바이스                                                                           |
+| `maxDepth`    | `number`             | No       | 최대 트리 깊이 (1–100). 기본값: 30                                                      |
+| `interactive` | `boolean`            | No       | `true`: 인터랙티브 요소(Touchable, Button, TextInput, Switch 등)만 출력. 토큰 추가 절감 |
 
 #### Example
 
 ```json
 // Request
 { "tool": "take_snapshot", "arguments": { "maxDepth": 10 } }
+```
 
-// Response (abbreviated)
-{
-  "tree": {
-    "uid": "RCTView:0",
-    "type": "View",
-    "children": [
-      {
-        "uid": "header",
-        "type": "View",
-        "testID": "header",
-        "children": [
-          { "uid": "header>Text:0", "type": "Text", "text": "Home" }
-        ]
-      }
-    ]
-  }
-}
+```
+// Response (compact 텍스트)
+- View #app-root uid=RCTView:0
+  - View #header
+    - Text "Home" uid=header>Text:0
+  - TextInput #email-input
+  - TouchableOpacity #submit-btn
+    - Text "Submit"
+```
+
+```json
+// interactive 모드: 인터랙티브 요소만 출력
+{ "tool": "take_snapshot", "arguments": { "interactive": true } }
+```
+
+```
+// Response
+- TextInput #email-input
+- TouchableOpacity #submit-btn
 ```
 
 #### Tips
 
+- **compact 출력**: JSON 대비 **90% 이상 토큰 절감**. 들여쓰기로 계층 구조를 표현합니다.
+- `interactive: true`를 사용하면 탭/입력 가능한 요소만 표시되어 토큰을 더 줄일 수 있습니다.
 - `uid` 값을 `evaluate_script`의 `measureView(uid)`와 함께 사용하면 정확한 좌표를 얻을 수 있습니다.
 - 큰 컴포넌트 트리에서는 `maxDepth`를 줄여 출력 크기를 제한하세요.
-- 스냅샷은 네이티브 뷰 계층이 아닌 React Fiber 트리를 순회합니다.
 
 ---
 
 ## describe_ui
 
-네이티브 UI/접근성 트리를 조회합니다. 전체 네이티브 계층 구조를 반환합니다.
+네이티브 UI/접근성 트리를 조회합니다. **compact 텍스트**로 출력하여 토큰을 절감합니다.
 
 #### Parameters
 
@@ -100,7 +105,8 @@ React Native 컴포넌트 트리를 캡처합니다. UID, 타입, testID, 텍스
 
 #### Tips
 
-- 큰 페이로드를 생성합니다. React Native 요소를 조회할 때는 `query_selector`를 사용하는 것이 좋습니다.
+- **compact 출력**: JSON/XML 대비 **78% 이상 토큰 절감**. Android는 `[clickable]`, `[scrollable]`, `bounds=` 등 네이티브 속성을 표시합니다.
+- React Native 요소를 조회할 때는 `query_selector`를 사용하는 것이 좋습니다.
 - iOS는 `idb ui describe-all/describe-point`를, Android는 `uiautomator dump`를 사용합니다.
 - React 트리에 포함되지 않는 네이티브 컴포넌트(예: 네이티브 알림, 시스템 UI)를 검사할 때 유용합니다.
 

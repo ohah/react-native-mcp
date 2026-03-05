@@ -30,52 +30,53 @@ Capture the device/simulator screen as a JPEG image (720p).
 
 ## take_snapshot
 
-Capture the React Native component tree. Returns UIDs, types, testIDs, and text content.
+Capture the React Native component tree. **Compact text** output for massive token savings.
 
 #### Parameters
 
-| Parameter  | Type                 | Required | Description                         |
-| ---------- | -------------------- | -------- | ----------------------------------- |
-| `platform` | `"ios" \| "android"` | No       | Target platform                     |
-| `deviceId` | `string`             | No       | Target device                       |
-| `maxDepth` | `number`             | No       | Max tree depth (1–100). Default: 30 |
+| Parameter     | Type                 | Required | Description                                                                                    |
+| ------------- | -------------------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `platform`    | `"ios" \| "android"` | No       | Target platform                                                                                |
+| `deviceId`    | `string`             | No       | Target device                                                                                  |
+| `maxDepth`    | `number`             | No       | Max tree depth (1–100). Default: 30                                                            |
+| `interactive` | `boolean`            | No       | If `true`, show only interactive elements (Touchable, Button, TextInput, Switch, etc.)         |
 
 #### Example
 
-```json
+```
 // Request
 { "tool": "take_snapshot", "arguments": { "maxDepth": 10 } }
 
-// Response (abbreviated)
-{
-  "tree": {
-    "uid": "RCTView:0",
-    "type": "View",
-    "children": [
-      {
-        "uid": "header",
-        "type": "View",
-        "testID": "header",
-        "children": [
-          { "uid": "header>Text:0", "type": "Text", "text": "Home" }
-        ]
-      }
-    ]
-  }
-}
+// Response (compact text)
+- View #app-root uid=RCTView:0
+  - View #header
+    - Text "Home" uid=header>Text:0
+  - TextInput #email-input
+  - TouchableOpacity #submit-btn
+    - Text "Submit"
+```
+
+```
+// interactive mode: only interactive elements
+{ "tool": "take_snapshot", "arguments": { "interactive": true } }
+
+// Response
+- TextInput #email-input
+- TouchableOpacity #submit-btn
 ```
 
 #### Tips
 
+- **Compact output**: Over **90% token savings** compared to JSON. Hierarchy is represented by indentation.
+- Use `interactive: true` to show only tappable/input elements, further reducing tokens.
 - Use `uid` values with `measureView(uid)` via `evaluate_script` to get exact coordinates.
 - Reduce `maxDepth` for large component trees to limit output size.
-- The snapshot traverses the React Fiber tree, not the native view hierarchy.
 
 ---
 
 ## describe_ui
 
-Query the native UI/accessibility tree. Returns the full native hierarchy.
+Query the native UI/accessibility tree. **Compact text** output for significant token savings.
 
 #### Parameters
 
@@ -100,7 +101,8 @@ Query the native UI/accessibility tree. Returns the full native hierarchy.
 
 #### Tips
 
-- Produces a large payload. Prefer `query_selector` for querying React Native elements.
+- **Compact output**: Over **78% token savings** compared to JSON/XML. Android shows `[clickable]`, `[scrollable]`, `bounds=` etc. iOS shows `role=`, `enabled=`, `frame=`.
+- Prefer `query_selector` for querying React Native elements.
 - iOS uses `idb ui describe-all/describe-point`. Android uses `uiautomator dump`.
 - Useful for inspecting native components that aren't part of the React tree (e.g., native alerts, system UI).
 

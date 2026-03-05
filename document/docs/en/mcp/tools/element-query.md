@@ -4,7 +4,7 @@ Tools for finding elements in the React Native component tree and executing Java
 
 ## query_selector
 
-Find the first element matching a selector in the React Fiber tree. Returns UID, type, and measurement (position + size).
+Find the first element matching a selector in the React Fiber tree. Returns **compact text** with UID, type, and position (pageX, pageY, width, height).
 
 #### Parameters
 
@@ -16,7 +16,7 @@ Find the first element matching a selector in the React Fiber tree. Returns UID,
 
 #### Example
 
-```json
+```
 // Find by testID
 { "tool": "query_selector", "arguments": { "selector": "#submit-btn" } }
 
@@ -26,13 +26,8 @@ Find the first element matching a selector in the React Fiber tree. Returns UID,
 // Find by hierarchy
 { "tool": "query_selector", "arguments": { "selector": "ScrollView > View > Text" } }
 
-// Response
-{
-  "uid": "submit-btn",
-  "type": "View",
-  "testID": "submit-btn",
-  "measure": { "pageX": 120, "pageY": 580, "width": 200, "height": 48 }
-}
+// Response (compact text)
+View #submit-btn pageX=120 pageY=580 width=200 height=48
 ```
 
 #### Tips
@@ -40,6 +35,7 @@ Find the first element matching a selector in the React Fiber tree. Returns UID,
 - This is the **entry point** for most interaction workflows: `query_selector` → get coordinates → `tap`.
 - Tap the center of an element: `x = pageX + width/2`, `y = pageY + height/2`.
 - UIDs are not known ahead of time — always call `query_selector` first to discover them.
+- **Compact output**: Significant token savings compared to JSON. Each attribute uses explicit `key=value` format.
 
 ---
 
@@ -57,15 +53,14 @@ Find **all** elements matching a selector. Returns an array with measurements.
 
 #### Example
 
-```json
+```
 // Find all list items
 { "tool": "query_selector_all", "arguments": { "selector": "#list-item" } }
 
-// Response
-[
-  { "uid": "list-item-0", "type": "View", "measure": { "pageX": 0, "pageY": 100, "width": 375, "height": 60 } },
-  { "uid": "list-item-1", "type": "View", "measure": { "pageX": 0, "pageY": 160, "width": 375, "height": 60 } }
-]
+// Response (compact text)
+# 2 matches
+- View #list-item-0 pageX=0 pageY=100 width=375 height=60
+- View #list-item-1 pageX=0 pageY=160 width=375 height=60
 ```
 
 #### Tips
