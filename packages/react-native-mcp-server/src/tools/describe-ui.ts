@@ -53,12 +53,20 @@ function formatUiNodeCompact(node: Record<string, unknown>, depth: number): stri
   const contentDesc = String(node['content-desc'] ?? node['contentDesc'] ?? '');
   const resourceId = String(node['resource-id'] ?? node['resourceId'] ?? '');
   const shortId = resourceId.includes('/') ? resourceId.split('/').pop()! : resourceId;
+  const clickable = node['clickable'] === 'true' || node['clickable'] === true;
+  const scrollable = node['scrollable'] === 'true' || node['scrollable'] === true;
+  const enabled = node['enabled'];
+  const bounds = String(node['bounds'] ?? '');
 
   const indent = '  '.repeat(depth);
   const parts: string[] = [shortClass || 'node'];
   if (shortId) parts.push(`#${shortId}`);
   if (text) parts.push(`"${text}"`);
   if (contentDesc && contentDesc !== text) parts.push(`desc="${contentDesc}"`);
+  if (clickable) parts.push('[clickable]');
+  if (scrollable) parts.push('[scrollable]');
+  if (enabled === 'false' || enabled === false) parts.push('[disabled]');
+  if (bounds) parts.push(`bounds=${bounds}`);
 
   const out: string[] = [];
   if (parts.length > 1 || depth === 0) {
@@ -113,11 +121,23 @@ function formatIosNode(node: Record<string, unknown>, depth: number): string[] {
   const type = String(node['AXType'] ?? node['type'] ?? node['AXRole'] ?? '');
   const label = String(node['AXLabel'] ?? node['label'] ?? '');
   const value = String(node['AXValue'] ?? node['value'] ?? '');
+  const role = String(node['AXRole'] ?? node['role'] ?? '');
+  const enabled = node['AXEnabled'] ?? node['enabled'];
+  const frame = node['AXFrame'] ?? node['frame'];
 
   const indent = '  '.repeat(depth);
   const parts: string[] = [type || 'element'];
+  if (role && role !== type) parts.push(`role=${role}`);
   if (label) parts.push(`"${label}"`);
   if (value && value !== label) parts.push(`value="${value}"`);
+  if (enabled === false || enabled === 0) parts.push('[disabled]');
+  if (frame && typeof frame === 'object') {
+    const f = frame as Record<string, number>;
+    if (f.x != null && f.y != null)
+      parts.push(
+        `frame=(${Math.round(f.x)},${Math.round(f.y)},${Math.round(f.width ?? 0)},${Math.round(f.height ?? 0)})`
+      );
+  }
 
   const out: string[] = [];
   if (parts.length > 1 || depth === 0) {
