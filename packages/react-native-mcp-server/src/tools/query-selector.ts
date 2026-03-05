@@ -58,7 +58,7 @@ function isWebViewType(typeName: string): boolean {
   return typeName === 'RNCWebView' || typeName.includes('WebView');
 }
 
-/** JSON → compact 한 줄: "Type #testID uid=xxx (x,y w×h)" */
+/** JSON → compact 한 줄: "Type #testID uid=xxx pageX=N pageY=N width=N height=N" */
 function formatElementCompact(el: Record<string, unknown>): string {
   const type = String(el.type ?? '');
   const uid = String(el.uid ?? '');
@@ -71,8 +71,10 @@ function formatElementCompact(el: Record<string, unknown>): string {
   const parts: string[] = [type || 'element'];
   if (testID) parts.push(`#${testID}`);
   if (uid && uid !== testID) parts.push(`uid=${uid}`);
-  if (pageX != null && pageY != null) parts.push(`(${pageX},${pageY})`);
-  if (width != null && height != null) parts.push(`${width}×${height}`);
+  if (pageX != null) parts.push(`pageX=${pageX}`);
+  if (pageY != null) parts.push(`pageY=${pageY}`);
+  if (width != null) parts.push(`width=${width}`);
+  if (height != null) parts.push(`height=${height}`);
   return parts.join(' ');
 }
 
