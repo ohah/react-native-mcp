@@ -50,10 +50,7 @@ export function registerListDevices(server: McpServer): void {
             ),
           ].join('\n');
           return {
-            content: [
-              { type: 'text' as const, text: summary },
-              { type: 'text' as const, text: JSON.stringify(targets, null, 2) },
-            ],
+            content: [{ type: 'text' as const, text: summary }],
           };
         } else {
           if (!(await checkAdbAvailable())) return adbNotInstalledError();
@@ -75,10 +72,7 @@ export function registerListDevices(server: McpServer): void {
             ),
           ].join('\n');
           return {
-            content: [
-              { type: 'text' as const, text: summary },
-              { type: 'text' as const, text: JSON.stringify(withEmulatorFlag, null, 2) },
-            ],
+            content: [{ type: 'text' as const, text: summary }],
           };
         }
       } catch (err) {

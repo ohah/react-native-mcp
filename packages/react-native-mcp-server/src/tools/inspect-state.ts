@@ -81,7 +81,7 @@ export function registerInspectState(server: McpServer, appSession: AppSession):
         };
         const lines = [`Component: ${result.component}`, `State hooks: ${result.hooks.length}`];
         for (const hook of result.hooks) {
-          lines.push(`  [${hook.index}] ${hook.type}: ${JSON.stringify(hook.value, null, 2)}`);
+          lines.push(`  [${hook.index}] ${hook.type}: ${JSON.stringify(hook.value)}`);
         }
         return {
           content: [{ type: 'text' as const, text: lines.join('\n') }],
