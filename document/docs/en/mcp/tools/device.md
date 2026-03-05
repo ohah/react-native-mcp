@@ -47,14 +47,13 @@ List connected simulators/emulators and physical devices.
 
 #### Example
 
-```json
+```
 // Request
 { "tool": "list_devices", "arguments": { "platform": "android" } }
 
-// Response
-[
-  { "deviceId": "emulator-5554", "state": "device", "model": "Pixel_7_API_34" }
-]
+// Response (summary text)
+Found 1 Android device(s):
+- emulator-5554 (device) model=Pixel_7_API_34
 ```
 
 #### Tips
@@ -77,13 +76,14 @@ List installed apps on the device/simulator. **No app connection required.**
 
 #### Example
 
-```json
+```
 // Request
 { "tool": "list_apps", "arguments": { "platform": "ios" } }
 
-// Response (summary + JSON)
-// Found N app(s). Use these IDs with terminate_app(platform, appId).
-// [ { "id": "com.example.app", "name": "My App" }, ... ]
+// Response (summary text)
+Found 2 app(s). Use these IDs with terminate_app(platform, appId).
+- com.example.app (My App)
+- com.example.app2 (My App 2)
 ```
 
 #### Tips
@@ -289,12 +289,12 @@ Get screen dimensions (width and height in px).
 
 #### Example
 
-```json
+```
 // Request
 { "tool": "get_screen_size", "arguments": { "platform": "android" } }
 
-// Response
-{ "width": 1920, "height": 1200, "unit": "px" }
+// Response (summary text)
+Screen size: 1920×1200 px
 ```
 
 #### Tips

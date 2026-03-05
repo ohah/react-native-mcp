@@ -23,15 +23,11 @@ Inspect React state hooks of a component found by selector. Works with `useState
   "arguments": { "selector": "#cart-view" }
 }
 
-// Response
-{
-  "component": "CartScreen",
-  "hooks": [
-    { "index": 0, "type": "useState", "value": [{ "id": 1, "name": "Widget", "qty": 2 }] },
-    { "index": 1, "type": "useState", "value": true },
-    { "index": 2, "type": "useState", "value": "loading" }
-  ]
-}
+// Response (compact text)
+CartScreen
+  [0] useState: [{"id":1,"name":"Widget","qty":2}]
+  [1] useState: true
+  [2] useState: "loading"
 ```
 
 #### Tips
