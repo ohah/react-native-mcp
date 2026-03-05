@@ -58,6 +58,24 @@ function isWebViewType(typeName: string): boolean {
   return typeName === 'RNCWebView' || typeName.includes('WebView');
 }
 
+/** JSON → compact 한 줄: "Type #testID uid=xxx (x,y w×h)" */
+function formatElementCompact(el: Record<string, unknown>): string {
+  const type = String(el.type ?? '');
+  const uid = String(el.uid ?? '');
+  const testID = String(el.testID ?? '');
+  const pageX = el.pageX != null ? Math.round(Number(el.pageX)) : null;
+  const pageY = el.pageY != null ? Math.round(Number(el.pageY)) : null;
+  const width = el.width != null ? Math.round(Number(el.width)) : null;
+  const height = el.height != null ? Math.round(Number(el.height)) : null;
+
+  const parts: string[] = [type || 'element'];
+  if (testID) parts.push(`#${testID}`);
+  if (uid && uid !== testID) parts.push(`uid=${uid}`);
+  if (pageX != null && pageY != null) parts.push(`(${pageX},${pageY})`);
+  if (width != null && height != null) parts.push(`${width}×${height}`);
+  return parts.join(' ');
+}
+
 export function registerQuerySelector(server: McpServer, appSession: AppSession): void {
   const register = (
     name: string,
@@ -100,7 +118,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
           };
         }
         const result = res.result as Record<string, unknown>;
-        let text = JSON.stringify(result, null, 2);
+        let text = formatElementCompact(result);
         if (isWebViewType(String(result.type ?? ''))) {
           text += await getWebViewHint(appSession, deviceId, platform);
         }
@@ -140,7 +158,11 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
             content: [{ type: 'text' as const, text: 'No elements match selector: ' + selector }],
           };
         }
-        let text = JSON.stringify(list, null, 2);
+        const lines = [`# ${list.length} matches`];
+        for (const el of list) {
+          lines.push(`- ${formatElementCompact(el)}`);
+        }
+        let text = lines.join('\n');
         const hasWebView = list.some((el) => isWebViewType(String(el.type ?? '')));
         if (hasWebView) {
           text += await getWebViewHint(appSession, deviceId, platform);

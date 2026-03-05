@@ -83,10 +83,7 @@ export function registerListApps(server: McpServer): void {
             ...(apps.length > 20 ? [`  ... and ${apps.length - 20} more`] : []),
           ].join('\n');
           return {
-            content: [
-              { type: 'text' as const, text: summary },
-              { type: 'text' as const, text: JSON.stringify(apps, null, 2) },
-            ],
+            content: [{ type: 'text' as const, text: summary }],
           };
         } else {
           if (!(await checkAdbAvailable())) return adbNotInstalledError();
@@ -109,10 +106,7 @@ export function registerListApps(server: McpServer): void {
             ...(apps.length > 20 ? [`  ... and ${apps.length - 20} more`] : []),
           ].join('\n');
           return {
-            content: [
-              { type: 'text' as const, text: summary },
-              { type: 'text' as const, text: JSON.stringify(apps, null, 2) },
-            ],
+            content: [{ type: 'text' as const, text: summary }],
           };
         }
       } catch (err) {

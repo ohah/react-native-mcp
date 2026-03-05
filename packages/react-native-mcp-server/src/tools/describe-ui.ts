@@ -45,12 +45,40 @@ function stripEmpty(node: UiNode): Record<string, unknown> {
   return out;
 }
 
-function xmlToJson(xml: string): string {
+/** compact 텍스트: Android UI 노드 → 들여쓰기 텍스트 */
+function formatUiNodeCompact(node: Record<string, unknown>, depth: number): string[] {
+  const cls = String(node['class'] ?? node['type'] ?? '');
+  const shortClass = cls.includes('.') ? cls.split('.').pop()! : cls;
+  const text = String(node['text'] ?? '');
+  const contentDesc = String(node['content-desc'] ?? node['contentDesc'] ?? '');
+  const resourceId = String(node['resource-id'] ?? node['resourceId'] ?? '');
+  const shortId = resourceId.includes('/') ? resourceId.split('/').pop()! : resourceId;
+
+  const indent = '  '.repeat(depth);
+  const parts: string[] = [shortClass || 'node'];
+  if (shortId) parts.push(`#${shortId}`);
+  if (text) parts.push(`"${text}"`);
+  if (contentDesc && contentDesc !== text) parts.push(`desc="${contentDesc}"`);
+
+  const out: string[] = [];
+  if (parts.length > 1 || depth === 0) {
+    out.push(`${indent}- ${parts.join(' ')}`);
+  }
+  const children = node['children'] as Record<string, unknown>[] | undefined;
+  if (Array.isArray(children)) {
+    for (const child of children) {
+      out.push(...formatUiNodeCompact(child, depth + 1));
+    }
+  }
+  return out;
+}
+
+function xmlToCompact(xml: string): string {
   const parsed = xmlParser.parse(xml) as {
     hierarchy?: { node?: UiNode[] } & Record<string, unknown>;
   };
   const hierarchy = parsed.hierarchy;
-  if (!hierarchy) return JSON.stringify(parsed, null, 2);
+  if (!hierarchy) return xml.slice(0, 500);
 
   const result: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(hierarchy)) {
@@ -60,7 +88,50 @@ function xmlToJson(xml: string): string {
   if (hierarchy.node) {
     result.children = hierarchy.node.map(stripEmpty);
   }
-  return JSON.stringify(result, null, 2);
+  const lines = formatUiNodeCompact(result, 0);
+  return lines.length > 0 ? lines.join('\n') : '(empty UI tree)';
+}
+
+/** iOS JSON 출력도 compact로 변환 */
+function iosJsonToCompact(jsonStr: string): string {
+  try {
+    const data = JSON.parse(jsonStr);
+    if (Array.isArray(data)) {
+      const lines: string[] = [];
+      for (const item of data) {
+        lines.push(...formatIosNode(item as Record<string, unknown>, 0));
+      }
+      return lines.length > 0 ? lines.join('\n') : '(empty)';
+    }
+    return formatIosNode(data as Record<string, unknown>, 0).join('\n') || '(empty)';
+  } catch {
+    return jsonStr;
+  }
+}
+
+function formatIosNode(node: Record<string, unknown>, depth: number): string[] {
+  const type = String(node['AXType'] ?? node['type'] ?? node['AXRole'] ?? '');
+  const label = String(node['AXLabel'] ?? node['label'] ?? '');
+  const value = String(node['AXValue'] ?? node['value'] ?? '');
+
+  const indent = '  '.repeat(depth);
+  const parts: string[] = [type || 'element'];
+  if (label) parts.push(`"${label}"`);
+  if (value && value !== label) parts.push(`value="${value}"`);
+
+  const out: string[] = [];
+  if (parts.length > 1 || depth === 0) {
+    out.push(`${indent}- ${parts.join(' ')}`);
+  }
+  const children = (node['children'] ?? node['AXChildren']) as
+    | Record<string, unknown>[]
+    | undefined;
+  if (Array.isArray(children)) {
+    for (const child of children) {
+      out.push(...formatIosNode(child, depth + 1));
+    }
+  }
+  return out;
 }
 
 /* ─── 스키마 ─── */
@@ -127,8 +198,9 @@ export function registerDescribeUi(server: McpServer): void {
           if (nested) cmd.push('--nested');
           cmd.push('--json');
           const output = await runIdbCommand(cmd, udid, { timeoutMs: 15000 });
+          const compact = iosJsonToCompact(output);
           return {
-            content: [{ type: 'text' as const, text: output }],
+            content: [{ type: 'text' as const, text: compact }],
           };
         } else {
           if (!(await checkAdbAvailable())) return adbNotInstalledError();
@@ -144,7 +216,7 @@ export function registerDescribeUi(server: McpServer): void {
 
           let output: string;
           try {
-            output = xmlToJson(xml);
+            output = xmlToCompact(xml);
           } catch {
             output = xml;
           }

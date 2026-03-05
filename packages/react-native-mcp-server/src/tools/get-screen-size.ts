@@ -70,13 +70,9 @@ export function registerGetScreenSize(server: McpServer, appSession: AppSession)
           }
           const width = parseInt(match[1], 10);
           const height = parseInt(match[2], 10);
-          const result = { width, height, unit: 'px' as const };
           const summary = `Screen size on Android device ${serial}: ${width}x${height} px.`;
           return {
-            content: [
-              { type: 'text' as const, text: summary },
-              { type: 'text' as const, text: JSON.stringify(result, null, 2) },
-            ],
+            content: [{ type: 'text' as const, text: summary }],
           };
         } else {
           if (!(await checkIdbAvailable())) return idbNotInstalledError();
@@ -132,13 +128,9 @@ export function registerGetScreenSize(server: McpServer, appSession: AppSession)
           const scale = typeof info.scale === 'number' && info.scale > 0 ? info.scale : 1;
           const width = Math.round(info.screen.width * scale);
           const height = Math.round(info.screen.height * scale);
-          const result = { width, height, unit: 'px' as const };
           const summary = `Screen size on iOS simulator ${udid} (from app): ${width}x${height} px.`;
           return {
-            content: [
-              { type: 'text' as const, text: summary },
-              { type: 'text' as const, text: JSON.stringify(result, null, 2) },
-            ],
+            content: [{ type: 'text' as const, text: summary }],
           };
         }
       } catch (err) {
