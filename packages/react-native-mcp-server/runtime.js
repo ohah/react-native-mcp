@@ -3206,13 +3206,9 @@
 		(function patchWebSocketModule() {
 			var nativeModule = null;
 			try {
-				var TurboModuleRegistry = require("react-native/Libraries/TurboModule/TurboModuleRegistry");
-				if (TurboModuleRegistry && typeof TurboModuleRegistry.get === "function") nativeModule = TurboModuleRegistry.get("WebSocketModule");
-			} catch (_unused) {}
-			if (!nativeModule) try {
 				var NativeModules = require("react-native").NativeModules;
 				if (NativeModules) nativeModule = NativeModules.WebSocketModule;
-			} catch (_unused2) {}
+			} catch (_unused) {}
 			if (!nativeModule) return;
 			var _openSockets = /* @__PURE__ */ new Set();
 			var _origConnect = nativeModule.connect;
@@ -3230,7 +3226,7 @@
 						if (ev && ev.id != null) _openSockets.delete(ev.id);
 					});
 				}
-			} catch (_unused3) {}
+			} catch (_unused2) {}
 			function guardMethod(name) {
 				var orig = nativeModule[name];
 				if (typeof orig !== "function") return;
@@ -3239,7 +3235,7 @@
 					if (!_openSockets.has(socketId)) return;
 					try {
 						return orig.apply(nativeModule, arguments);
-					} catch (_unused4) {}
+					} catch (_unused3) {}
 				};
 			}
 			guardMethod("send");

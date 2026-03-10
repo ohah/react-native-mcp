@@ -16,26 +16,18 @@
 
 (function patchWebSocketModule() {
   // ── 1. 네이티브 모듈 획득 (Old Arch / New Arch 양쪽) ──
+  // NativeModules.WebSocketModule은 Old Architecture에서는 Bridge를 통해,
+  // New Architecture에서는 내부적으로 TurboModuleRegistry로 폴백하여 양쪽 모두 동작한다.
+  // react-native/Libraries/... 내부 경로를 직접 require하면 버전 간 호환성이 깨질 수 있으므로
+  // 공개 API인 NativeModules만 사용한다.
 
   var nativeModule: any = null;
-
-  // New Architecture: TurboModuleRegistry
   try {
-    var TurboModuleRegistry = require('react-native/Libraries/TurboModule/TurboModuleRegistry');
-    if (TurboModuleRegistry && typeof TurboModuleRegistry.get === 'function') {
-      nativeModule = TurboModuleRegistry.get('WebSocketModule');
+    var NativeModules = require('react-native').NativeModules;
+    if (NativeModules) {
+      nativeModule = NativeModules.WebSocketModule;
     }
   } catch {}
-
-  // Old Architecture fallback: NativeModules
-  if (!nativeModule) {
-    try {
-      var NativeModules = require('react-native').NativeModules;
-      if (NativeModules) {
-        nativeModule = NativeModules.WebSocketModule;
-      }
-    } catch {}
-  }
 
   if (!nativeModule) return;
 
@@ -46,12 +38,7 @@
   // connect 래핑: 소켓 ID 등록
   var _origConnect = nativeModule.connect;
   if (typeof _origConnect === 'function') {
-    nativeModule.connect = function (
-      url: string,
-      protocols: any,
-      options: any,
-      socketId: number
-    ) {
+    nativeModule.connect = function (url: string, protocols: any, options: any, socketId: number) {
       _openSockets.add(socketId);
       return _origConnect.apply(nativeModule, arguments);
     };
