@@ -3217,7 +3217,7 @@
 				return _origConnect.apply(nativeModule, arguments);
 			};
 			try {
-				var DeviceEventEmitter = require("react-native").DeviceEventEmitter || require("react-native/Libraries/EventEmitter/RCTDeviceEventEmitter");
+				var DeviceEventEmitter = require("react-native").DeviceEventEmitter;
 				if (DeviceEventEmitter && typeof DeviceEventEmitter.addListener === "function") {
 					DeviceEventEmitter.addListener("websocketClosed", function(ev) {
 						if (ev && ev.id != null) _openSockets.delete(ev.id);
@@ -3241,7 +3241,15 @@
 			guardMethod("send");
 			guardMethod("sendBinary");
 			guardMethod("ping");
-			guardMethod("close");
+			var _origClose = nativeModule.close;
+			if (typeof _origClose === "function") nativeModule.close = function() {
+				var socketId = arguments[arguments.length - 1];
+				if (!_openSockets.has(socketId)) return;
+				_openSockets.delete(socketId);
+				try {
+					return _origClose.apply(nativeModule, arguments);
+				} catch (_unused4) {}
+			};
 		})();
 	});
 

@@ -46,9 +46,7 @@
 
   // websocketClosed / websocketFailed 이벤트로 소켓 ID 제거
   try {
-    var DeviceEventEmitter =
-      require('react-native').DeviceEventEmitter ||
-      require('react-native/Libraries/EventEmitter/RCTDeviceEventEmitter');
+    var DeviceEventEmitter = require('react-native').DeviceEventEmitter;
 
     if (DeviceEventEmitter && typeof DeviceEventEmitter.addListener === 'function') {
       DeviceEventEmitter.addListener('websocketClosed', function (ev: any) {
@@ -60,7 +58,7 @@
     }
   } catch {}
 
-  // ── 3. send / sendBinary / ping / close 방어 래핑 ──
+  // ── 3. send / sendBinary / ping 방어 래핑 ──
 
   function guardMethod(name: string) {
     var orig = nativeModule[name];
@@ -79,5 +77,18 @@
   guardMethod('send');
   guardMethod('sendBinary');
   guardMethod('ping');
-  guardMethod('close');
+
+  // close는 호출 후 즉시 Set에서 제거하여 close~websocketClosed 이벤트 사이
+  // gap에서 추가 send()가 통과하는 것을 방지한다.
+  var _origClose = nativeModule.close;
+  if (typeof _origClose === 'function') {
+    nativeModule.close = function () {
+      var socketId = arguments[arguments.length - 1];
+      if (!_openSockets.has(socketId)) return;
+      _openSockets.delete(socketId);
+      try {
+        return _origClose.apply(nativeModule, arguments);
+      } catch {}
+    };
+  }
 })();
