@@ -68,8 +68,8 @@ export function registerGetScreenSize(server: McpServer, appSession: AppSession)
               ],
             };
           }
-          const width = parseInt(match[1], 10);
-          const height = parseInt(match[2], 10);
+          const width = parseInt(match[1]!, 10);
+          const height = parseInt(match[2]!, 10);
           const summary = `Screen size on Android device ${serial}: ${width}x${height} px.`;
           return {
             content: [{ type: 'text' as const, text: summary }],

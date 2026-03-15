@@ -86,7 +86,7 @@ const subcommand = process.argv[2];
 
 if (subcommand === 'test') {
   // 'test' 토큰 제거 → test CLI가 "run <path> ..." 를 argv[2]로 받도록
-  process.argv = [process.argv[0], process.argv[1], ...process.argv.slice(3)];
+  process.argv = [process.argv[0]!, process.argv[1]!, ...process.argv.slice(3)];
   await import('./test/cli.js');
 } else if (subcommand === 'doctor') {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));

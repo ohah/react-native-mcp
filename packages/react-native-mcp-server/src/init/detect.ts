@@ -90,7 +90,7 @@ function getWorkspacePackageDirs(rootDir: string): string[] {
   for (const pattern of workspaces) {
     const globMatch = pattern.match(/^(.+)\/\*$/);
     if (globMatch) {
-      const base = path.join(rootDir, globMatch[1]);
+      const base = path.join(rootDir, globMatch[1]!);
       if (!fs.existsSync(base)) continue;
       const entries = fs.readdirSync(base, { withFileTypes: true });
       for (const e of entries) {
@@ -157,7 +157,7 @@ export function detectProjectOrMonorepo(
 
   const rnApps = findRnAppsInMonorepo(cwd);
   if (rnApps.length === 0) return null;
-  const appRoot = rnApps[0];
+  const appRoot = rnApps[0]!;
   const appInfo = detectProject(appRoot);
   const candidateAppRoots =
     rnApps.length > 1 ? rnApps.map((d) => path.relative(cwd, d)) : undefined;
@@ -198,7 +198,7 @@ function checkCommand(
       .toString()
       .trim();
     // Extract first line, strip common prefixes
-    const firstLine = output.split('\n')[0];
+    const firstLine = output.split('\n')[0] ?? output;
     return { installed: true, version: firstLine };
   } catch {
     return { installed: false, version: null };
