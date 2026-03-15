@@ -186,7 +186,7 @@ export function registerDescribeUi(server: McpServer): void {
     'describe_ui',
     {
       description:
-        'Query native UI/accessibility tree. Large payload. Prefer query_selector for RN elements.',
+        'Query native UI/accessibility tree. Large payload. Cannot see inside WebView content. Prefer query_selector for RN elements, webview_evaluate_script for WebView DOM.',
       inputSchema: schema,
     },
     async (args: unknown) => {

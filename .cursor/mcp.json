@@ -7,6 +7,10 @@
         "-c",
         "source \"$HOME/.zprofile\" 2>/dev/null; source \"$HOME/.zshrc\" 2>/dev/null; exec npx -y @ohah/react-native-mcp-server"
       ]
+    },
+    "react-native-mcp": {
+      "command": "npx",
+      "args": ["-y", "@ohah/react-native-mcp-server"]
     }
   }
 }

@@ -59,7 +59,7 @@ export async function runInit(options: InitOptions = {}): Promise<void> {
     );
     effectiveAppRoot = selected.value;
   } else if (candidateAppRoots && candidateAppRoots.length > 1 && !interactive) {
-    effectiveAppRoot = path.resolve(cwd, candidateAppRoots[0]);
+    effectiveAppRoot = path.resolve(cwd, candidateAppRoots[0]!);
   }
 
   const infoToUse = effectiveAppRoot === appRoot ? info : detectProject(effectiveAppRoot);

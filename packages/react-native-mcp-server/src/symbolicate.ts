@@ -11,7 +11,7 @@ const cache = new Map<string, { deltaId: string | null; rawMap: unknown }>();
 
 function getLib(url: string): typeof http {
   try {
-    return url.startsWith('https:') ? https : http;
+    return url.startsWith('https:') ? (https as unknown as typeof http) : http;
   } catch {
     return http;
   }
@@ -68,7 +68,7 @@ function fetchUrl(url: string): Promise<string> {
 
 function extractSourceMapFromBundle(bundleText: string): unknown | null {
   const match = bundleText.match(/\/\/# sourceMappingURL=(.+)/);
-  if (!match) return null;
+  if (!match?.[1]) return null;
   const raw = match[1].trim();
   if (raw.startsWith('data:application/json;charset=utf-8;base64,')) {
     const b64 = raw.slice('data:application/json;charset=utf-8;base64,'.length);
@@ -149,9 +149,9 @@ export async function getSourcePosition(
     return { ok: false, message: 'No source map in bundle' };
   }
 
-  const consumer = await new SourceMapConsumer(
-    rawMap as Parameters<typeof SourceMapConsumer.new>[0]
-  );
+  const consumer = await new (SourceMapConsumer as unknown as new (
+    rawSourceMap: unknown
+  ) => Promise<InstanceType<typeof SourceMapConsumer>>)(rawMap);
   const pos = consumer.originalPositionFor({ line, column: column || 0 });
   consumer.destroy();
 

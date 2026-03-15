@@ -35,7 +35,7 @@ export function registerWebviewEvaluateScript(server: McpServer, appSession: App
     'webview_evaluate_script',
     {
       description:
-        'Run JS in WebView. Prefer over tap for DOM interactions. Get webViewId via evaluate_script getRegisteredWebViewIds().',
+        'Run JS inside a WebView (DOM query, click, read text, etc). Use this instead of tap for any WebView content — tap cannot target DOM elements. Get webViewId via evaluate_script with getRegisteredWebViewIds().',
       inputSchema: schema,
     },
     async (args: unknown) => {
