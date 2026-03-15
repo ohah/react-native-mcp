@@ -34,12 +34,12 @@ Capture the React Native component tree. **Compact text** output for massive tok
 
 #### Parameters
 
-| Parameter     | Type                 | Required | Description                                                                                    |
-| ------------- | -------------------- | -------- | ---------------------------------------------------------------------------------------------- |
-| `platform`    | `"ios" \| "android"` | No       | Target platform                                                                                |
-| `deviceId`    | `string`             | No       | Target device                                                                                  |
-| `maxDepth`    | `number`             | No       | Max tree depth (1–100). Default: 30                                                            |
-| `interactive` | `boolean`            | No       | If `true`, show only interactive elements (Touchable, Button, TextInput, Switch, etc.)         |
+| Parameter     | Type                 | Required | Description                                                                            |
+| ------------- | -------------------- | -------- | -------------------------------------------------------------------------------------- |
+| `platform`    | `"ios" \| "android"` | No       | Target platform                                                                        |
+| `deviceId`    | `string`             | No       | Target device                                                                          |
+| `maxDepth`    | `number`             | No       | Max tree depth (1–100). Default: 30                                                    |
+| `interactive` | `boolean`            | No       | If `true`, show only interactive elements (Touchable, Button, TextInput, Switch, etc.) |
 
 #### Example
 
