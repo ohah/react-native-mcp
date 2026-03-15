@@ -50,7 +50,7 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
     'scroll_until_visible',
     {
       description:
-        'Scroll until element matching selector is visible. For long lists and off-screen elements.',
+        'Scroll until RN element matching selector becomes visible. For long lists and off-screen elements. After scrolling, use query_selector to get the element position for tap.',
       inputSchema: schema,
     },
     async (args: unknown) => {

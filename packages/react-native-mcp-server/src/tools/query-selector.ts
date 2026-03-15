@@ -97,7 +97,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
 
   register(
     'query_selector',
-    'Find first element matching selector. Returns uid, type, and position (pageX, pageY, width, height) for tap.',
+    'Find first RN element matching selector. Returns uid, type, and position (pageX, pageY, width, height) in points — use these coordinates directly with tap. For WebView inner elements, use webview_evaluate_script instead.',
     async (args: unknown) => {
       const { selector, deviceId, platform } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {
@@ -137,7 +137,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
 
   register(
     'query_selector_all',
-    'Find all elements matching selector. Returns array with positions. Use query_selector for single element.',
+    'Find all RN elements matching selector. Returns array with positions (pageX, pageY, width, height) in points. Use query_selector for single element.',
     async (args: unknown) => {
       const { selector, deviceId, platform } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {

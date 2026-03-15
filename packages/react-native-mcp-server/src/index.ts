@@ -30,10 +30,40 @@ async function main() {
   appSession.start(WS_PORT);
   startHealthServer(appSession, WS_PORT);
 
-  const server = new McpServer({
-    name: 'react-native-mcp-server',
-    version: VERSION,
-  });
+  const server = new McpServer(
+    {
+      name: 'react-native-mcp-server',
+      version: VERSION,
+    },
+    {
+      instructions: [
+        '## React Native MCP — Quick Guide',
+        '',
+        '### How to interact with elements',
+        '- **Native RN elements**: Use `query_selector` to find element → use returned `pageX`/`pageY` center coordinates with `tap`.',
+        '- **WebView DOM elements** (buttons, links, inputs inside WebView): Use `webview_evaluate_script` to run JS directly (e.g. `document.querySelector("button").click()`). Do NOT use coordinate-based `tap` for WebView content.',
+        '  - First discover WebView IDs: `evaluate_script` → `getRegisteredWebViewIds()`',
+        '- **Scrolling to off-screen elements**: Use `scroll_until_visible` with a selector.',
+        '',
+        '### Coordinate system',
+        '- All coordinates are in **points (dp)**, not pixels.',
+        '- `query_selector` returns `pageX`, `pageY`, `width`, `height` in points — pass `pageX + width/2`, `pageY + height/2` to `tap` for center tap.',
+        '- For landscape iPad, pass `iosOrientation: 3` (or 4) to `tap` to skip auto-detect.',
+        '',
+        '### Screenshots',
+        '- `take_screenshot` is for **visual verification only**. Do NOT estimate coordinates from screenshots manually.',
+        '- To find element positions, use `query_selector` (native) or `webview_evaluate_script` (WebView DOM).',
+        '',
+        '### Text input',
+        '- `input_text`: ASCII only, types into currently focused input.',
+        '- `type_text`: Supports Unicode/Korean, targets a specific element by uid from `query_selector`.',
+        '',
+        '### Verification (prefer over screenshots)',
+        '- `assert_text`: Check if text exists on screen.',
+        '- `assert_visible` / `assert_not_visible`: Check element visibility by selector.',
+      ].join('\n'),
+    },
+  );
 
   registerAllTools(server, appSession);
   registerAllResources(server);

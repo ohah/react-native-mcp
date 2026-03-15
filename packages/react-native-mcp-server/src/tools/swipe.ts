@@ -45,7 +45,7 @@ export function registerSwipe(server: McpServer, appSession: AppSession): void {
   ).registerTool(
     'swipe',
     {
-      description: 'Swipe from (x1,y1) to (x2,y2) in points. For scrolling and drawers.',
+      description: 'Swipe from (x1,y1) to (x2,y2) in points. Get coordinates from query_selector. For scrolling and drawers.',
       inputSchema: schema,
     },
     async (args: unknown) => {

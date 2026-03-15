@@ -42,7 +42,7 @@ export function registerEvaluateScript(server: McpServer, appSession: AppSession
   ).registerTool(
     'evaluate_script',
     {
-      description: 'Run JS in app context. Returns JSON result. Use measureView(uid) for coords.',
+      description: 'Run JS in React Native app context (not WebView). Returns JSON result. For WebView JS, use webview_evaluate_script. Use measureView(uid) for coords.',
       inputSchema: schema,
     },
     async (args: unknown) => {

@@ -51,7 +51,7 @@ export function registerTap(server: McpServer, appSession: AppSession): void {
   ).registerTool(
     'tap',
     {
-      description: 'Tap at (x,y) in points. Long press via duration param.',
+      description: 'Tap at (x,y) in points. Get coordinates from query_selector (pageX/pageY). For WebView DOM elements, use webview_evaluate_script instead. Long press via duration param.',
       inputSchema: schema,
     },
     async (args: unknown) => {

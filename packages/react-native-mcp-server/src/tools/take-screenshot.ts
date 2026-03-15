@@ -166,7 +166,7 @@ export function registerTakeScreenshot(server: McpServer, appSession: AppSession
     'take_screenshot',
     {
       description:
-        'Capture device screen as JPEG. Prefer assert_text/assert_visible over screenshots when possible.',
+        'Capture device screen as JPEG for visual verification. Do NOT estimate tap coordinates from screenshots — use query_selector instead. Prefer assert_text/assert_visible over screenshots when possible.',
       inputSchema: schema,
     },
     async (args: unknown) => {
