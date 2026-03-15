@@ -62,7 +62,7 @@ async function main() {
         '- `assert_text`: Check if text exists on screen.',
         '- `assert_visible` / `assert_not_visible`: Check element visibility by selector.',
       ].join('\n'),
-    },
+    }
   );
 
   registerAllTools(server, appSession);

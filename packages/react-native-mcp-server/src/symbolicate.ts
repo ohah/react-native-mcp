@@ -149,9 +149,9 @@ export async function getSourcePosition(
     return { ok: false, message: 'No source map in bundle' };
   }
 
-  const consumer = await new (SourceMapConsumer as unknown as new (rawSourceMap: unknown) => Promise<InstanceType<typeof SourceMapConsumer>>)(
-    rawMap
-  );
+  const consumer = await new (SourceMapConsumer as unknown as new (
+    rawSourceMap: unknown
+  ) => Promise<InstanceType<typeof SourceMapConsumer>>)(rawMap);
   const pos = consumer.originalPositionFor({ line, column: column || 0 });
   consumer.destroy();
 
