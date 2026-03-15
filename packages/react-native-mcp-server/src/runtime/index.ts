@@ -47,5 +47,6 @@ import './network-mock';
 import './xhr-patch';
 import './fetch-patch';
 
-// Phase 6: WebSocket 연결 (마지막)
+// Phase 6: WebSocket 네이티브 모듈 방어 + 연결
+import './websocket-guard'; // 네이티브 크래시 방지 (connection 전에 패치)
 import './connection';

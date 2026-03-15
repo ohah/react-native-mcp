@@ -3188,6 +3188,72 @@
 	});
 
 //#endregion
+//#region src/runtime/websocket-guard.ts
+/**
+	* WebSocket 네이티브 모듈 방어 패치
+	*
+	* MCP 서버가 강제 종료(SIGKILL)되면 TCP RST가 발생하고,
+	* RN 네이티브 WebSocketModule이 이미 제거된 소켓에 send/close를 시도하면서
+	* JS에서 catch 불가능한 RuntimeException을 throw한다.
+	* (facebook/react-native#16214, #17494, #9465)
+	*
+	* 이 모듈은 네이티브 호출 전에 JS 레벨에서 가드를 걸어
+	* 죽은 소켓으로의 네이티브 호출을 사전 차단한다.
+	*
+	* Old Architecture (Bridge) + New Architecture (TurboModules) 양쪽 지원.
+	*/
+	var init_websocket_guard = __esmMin(() => {
+		(function patchWebSocketModule() {
+			var nativeModule = null;
+			try {
+				var NativeModules = require("react-native").NativeModules;
+				if (NativeModules) nativeModule = NativeModules.WebSocketModule;
+			} catch (_unused) {}
+			if (!nativeModule) return;
+			var _openSockets = /* @__PURE__ */ new Set();
+			var _origConnect = nativeModule.connect;
+			if (typeof _origConnect === "function") nativeModule.connect = function(url, protocols, options, socketId) {
+				_openSockets.add(socketId);
+				return _origConnect.apply(nativeModule, arguments);
+			};
+			try {
+				var DeviceEventEmitter = require("react-native").DeviceEventEmitter;
+				if (DeviceEventEmitter && typeof DeviceEventEmitter.addListener === "function") {
+					DeviceEventEmitter.addListener("websocketClosed", function(ev) {
+						if (ev && ev.id != null) _openSockets.delete(ev.id);
+					});
+					DeviceEventEmitter.addListener("websocketFailed", function(ev) {
+						if (ev && ev.id != null) _openSockets.delete(ev.id);
+					});
+				}
+			} catch (_unused2) {}
+			function guardMethod(name) {
+				var orig = nativeModule[name];
+				if (typeof orig !== "function") return;
+				nativeModule[name] = function() {
+					var socketId = arguments[arguments.length - 1];
+					if (!_openSockets.has(socketId)) return;
+					try {
+						return orig.apply(nativeModule, arguments);
+					} catch (_unused3) {}
+				};
+			}
+			guardMethod("send");
+			guardMethod("sendBinary");
+			guardMethod("ping");
+			var _origClose = nativeModule.close;
+			if (typeof _origClose === "function") nativeModule.close = function() {
+				var socketId = arguments[arguments.length - 1];
+				if (!_openSockets.has(socketId)) return;
+				_openSockets.delete(socketId);
+				try {
+					return _origClose.apply(nativeModule, arguments);
+				} catch (_unused4) {}
+			};
+		})();
+	});
+
+//#endregion
 //#region src/runtime/connection.ts
 	function _shouldConnect() {
 		if (_mcpEnabled) return true;
@@ -3423,6 +3489,7 @@
 		init_network_mock();
 		init_xhr_patch();
 		init_fetch_patch();
+		init_websocket_guard();
 		init_connection();
 	});
 

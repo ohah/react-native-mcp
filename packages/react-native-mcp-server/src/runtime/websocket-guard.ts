@@ -1,0 +1,94 @@
+/**
+ * WebSocket 네이티브 모듈 방어 패치
+ *
+ * MCP 서버가 강제 종료(SIGKILL)되면 TCP RST가 발생하고,
+ * RN 네이티브 WebSocketModule이 이미 제거된 소켓에 send/close를 시도하면서
+ * JS에서 catch 불가능한 RuntimeException을 throw한다.
+ * (facebook/react-native#16214, #17494, #9465)
+ *
+ * 이 모듈은 네이티브 호출 전에 JS 레벨에서 가드를 걸어
+ * 죽은 소켓으로의 네이티브 호출을 사전 차단한다.
+ *
+ * Old Architecture (Bridge) + New Architecture (TurboModules) 양쪽 지원.
+ */
+
+'use strict';
+
+(function patchWebSocketModule() {
+  // ── 1. 네이티브 모듈 획득 (Old Arch / New Arch 양쪽) ──
+  // NativeModules.WebSocketModule은 Old Architecture에서는 Bridge를 통해,
+  // New Architecture에서는 내부적으로 TurboModuleRegistry로 폴백하여 양쪽 모두 동작한다.
+  // react-native/Libraries/... 내부 경로를 직접 require하면 버전 간 호환성이 깨질 수 있으므로
+  // 공개 API인 NativeModules만 사용한다.
+
+  var nativeModule: any = null;
+  try {
+    var NativeModules = require('react-native').NativeModules;
+    if (NativeModules) {
+      nativeModule = NativeModules.WebSocketModule;
+    }
+  } catch {}
+
+  if (!nativeModule) return;
+
+  // ── 2. 활성 소켓 ID 추적 ──
+
+  var _openSockets = new Set<number>();
+
+  // connect 래핑: 소켓 ID 등록
+  var _origConnect = nativeModule.connect;
+  if (typeof _origConnect === 'function') {
+    nativeModule.connect = function (url: string, protocols: any, options: any, socketId: number) {
+      _openSockets.add(socketId);
+      return _origConnect.apply(nativeModule, arguments);
+    };
+  }
+
+  // websocketClosed / websocketFailed 이벤트로 소켓 ID 제거
+  try {
+    var DeviceEventEmitter = require('react-native').DeviceEventEmitter;
+
+    if (DeviceEventEmitter && typeof DeviceEventEmitter.addListener === 'function') {
+      DeviceEventEmitter.addListener('websocketClosed', function (ev: any) {
+        if (ev && ev.id != null) _openSockets.delete(ev.id);
+      });
+      DeviceEventEmitter.addListener('websocketFailed', function (ev: any) {
+        if (ev && ev.id != null) _openSockets.delete(ev.id);
+      });
+    }
+  } catch {}
+
+  // ── 3. send / sendBinary / ping 방어 래핑 ──
+
+  function guardMethod(name: string) {
+    var orig = nativeModule[name];
+    if (typeof orig !== 'function') return;
+
+    nativeModule[name] = function () {
+      // 마지막 인자가 socketId
+      var socketId = arguments[arguments.length - 1];
+      if (!_openSockets.has(socketId)) return;
+      try {
+        return orig.apply(nativeModule, arguments);
+      } catch {}
+    };
+  }
+
+  guardMethod('send');
+  guardMethod('sendBinary');
+  guardMethod('ping');
+
+  // close는 호출 후 즉시 Set에서 제거하여 close~websocketClosed 이벤트 사이
+  // gap에서 추가 send()가 통과하는 것을 방지한다.
+  var _origClose = nativeModule.close;
+  if (typeof _origClose === 'function') {
+    nativeModule.close = function () {
+      var socketId = arguments[arguments.length - 1];
+      if (!_openSockets.has(socketId)) return;
+      _openSockets.delete(socketId);
+      try {
+        return _origClose.apply(nativeModule, arguments);
+      } catch {}
+    };
+  }
+})();
