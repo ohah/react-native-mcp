@@ -39,6 +39,13 @@ async function main() {
       instructions: [
         '## React Native MCP — Quick Guide',
         '',
+        '### ⚠️ First step: Check device orientation (iOS)',
+        'Before any interaction on iOS, **always check the device orientation first** using `get_orientation`.',
+        'iOS coordinate systems differ between portrait and landscape — tapping, swiping, and element positions will all be wrong if orientation is not accounted for.',
+        '- Call `get_orientation` at the start of every session.',
+        '- If landscape, pass the correct `iosOrientation` parameter (3 or 4) to `tap` / `swipe`.',
+        '- Re-check after any rotation event (e.g. `set_orientation`).',
+        '',
         '### How to interact with elements',
         '- **Native RN elements**: Use `query_selector` to find element → use returned `pageX`/`pageY` center coordinates with `tap`.',
         '- **WebView DOM elements** (buttons, links, inputs inside WebView): Use `webview_evaluate_script` to run JS directly (e.g. `document.querySelector("button").click()`). Do NOT use coordinate-based `tap` for WebView content.',
