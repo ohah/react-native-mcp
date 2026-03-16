@@ -166,7 +166,7 @@ export function registerTakeScreenshot(server: McpServer, appSession: AppSession
     'take_screenshot',
     {
       description:
-        'Capture device screen as JPEG for visual verification. Do NOT estimate tap coordinates from screenshots — use query_selector instead. Prefer assert_text/assert_visible over screenshots when possible.',
+        'Capture device screen as JPEG. EXPENSIVE: consumes large image tokens. Prefer text-based tools first: query_selector/assert_text for native UI, webview_evaluate_script for WebView DOM. Use screenshot only when visual layout check is needed or text tools cannot verify the state. After one screenshot, switch back to text-based tools.',
       inputSchema: schema,
     },
     async (args: unknown) => {
