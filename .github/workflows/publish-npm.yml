@@ -42,11 +42,7 @@ jobs:
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          if [[ "$VERSION" == *"-rc"* ]]; then
-            echo "npm-tag=rc" >> $GITHUB_OUTPUT
-          else
-            echo "npm-tag=latest" >> $GITHUB_OUTPUT
-          fi
+          echo "npm-tag=latest" >> $GITHUB_OUTPUT
 
   publish:
     name: 서버 배포
