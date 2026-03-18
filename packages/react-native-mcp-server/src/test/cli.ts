@@ -22,6 +22,7 @@ const { values, positionals } = parseArgs({
     'no-bail': { type: 'boolean' },
     'no-auto-launch': { type: 'boolean' },
     'continue-on-error': { type: 'boolean' },
+    'retry-on-fail': { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -45,6 +46,7 @@ Options (run):
   --no-bail                      Continue running after suite failure
   --no-auto-launch               Do not launch app in create(); use setup launch step (e.g. CI install-only)
   --continue-on-error            Continue executing steps after a step failure (for diagnostics)
+  --retry-on-fail <N>            Auto-retry failed transient steps (tap, swipe, etc.) up to N times
 
 Options (report show):
   -o, --output <dir>             Directory containing dashboard/ (default: ./results)
@@ -129,6 +131,7 @@ async function runMain(target: string): Promise<void> {
     bail: !values['no-bail'],
     autoLaunch: !values['no-auto-launch'],
     continueOnError: values['continue-on-error'] ?? false,
+    retryOnFail: values['retry-on-fail'] ? Number(values['retry-on-fail']) : undefined,
     envVars: Object.keys(envVars).length > 0 ? envVars : undefined,
   });
 

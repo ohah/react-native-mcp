@@ -17,6 +17,15 @@ function stepKey(step: TestStep): string {
   return Object.keys(step)[0]!;
 }
 
+/** transient step 타입 — 일시적 실패가 발생할 수 있어 자동 재시도 대상 */
+const RETRYABLE_STEP_TYPES = new Set([
+  'tap',
+  'swipe',
+  'doubleTap',
+  'longPress',
+  'scrollUntilVisible',
+]);
+
 function resolveBundleId(
   bundleId: TestSuite['config']['bundleId'],
   platform: Platform
@@ -316,12 +325,13 @@ async function runSteps(
   reporter: Reporter,
   suiteName: string,
   ctx: StepContext,
-  stepOpts?: { timeout?: number; continueOnError?: boolean }
+  stepOpts?: { timeout?: number; continueOnError?: boolean; retryOnFail?: number }
 ): Promise<{ results: StepResult[]; failed: boolean }> {
   const results: StepResult[] = [];
   let failed = false;
   const { outputDir } = ctx;
   const continueOnError = stepOpts?.continueOnError ?? false;
+  const retryOnFail = stepOpts?.retryOnFail ?? 0;
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i]!;
@@ -333,17 +343,35 @@ async function runSteps(
       continue;
     }
 
-    try {
-      await executeStep(app, step, ctx, stepOpts);
+    const maxAttempts =
+      retryOnFail > 0 && RETRYABLE_STEP_TYPES.has(stepKey(step)) ? retryOnFail + 1 : 1;
+    let lastErr: unknown;
+    let passed = false;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await executeStep(app, step, ctx, stepOpts);
+        passed = true;
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < maxAttempts) {
+          console.log(`Step failed, retrying (attempt ${attempt + 1}/${maxAttempts})...`);
+          await new Promise((r) => setTimeout(r, 1_000));
+        }
+      }
+    }
+
+    if (passed) {
       const result: StepResult = { step, status: 'passed', duration: Date.now() - start };
       results.push(result);
       reporter.onStepResult(result);
-    } catch (err) {
-      const error = err instanceof Error ? err.message : String(err);
+    } else {
+      const error = lastErr instanceof Error ? lastErr.message : String(lastErr);
       const failure = await captureFailure(app, suiteName, i, outputDir);
       const diffImagePath =
-        err && typeof err === 'object' && 'diffImagePath' in err
-          ? (err as { diffImagePath?: string }).diffImagePath
+        lastErr && typeof lastErr === 'object' && 'diffImagePath' in lastErr
+          ? (lastErr as { diffImagePath?: string }).diffImagePath
           : undefined;
       const result: StepResult = {
         step,
@@ -428,6 +456,7 @@ export async function runSuite(
 
   const connectionTimeout = opts.timeout ?? suite.config.timeout ?? 90_000;
   const continueOnError = opts.continueOnError ?? suite.config.continueOnError ?? false;
+  const retryOnFail = opts.retryOnFail ?? suite.config.retryOnFail ?? 0;
 
   try {
     // setup (setup은 항상 실패 시 중단 — continueOnError 적용하지 않음)
@@ -463,6 +492,7 @@ export async function runSuite(
         {
           timeout: connectionTimeout,
           continueOnError,
+          retryOnFail,
         }
       );
       allStepResults.push(...results);
