@@ -72,6 +72,7 @@ function checkPortAvailable(port) {
       resolve(true); // port is available (no response)
     });
     socket.once('error', () => {
+      socket.destroy();
       resolve(true); // port is available (connection refused)
     });
     socket.connect(port, '127.0.0.1');
@@ -145,28 +146,46 @@ lines.push('');
 
 // ---- Babel Preset ----
 lines.push('Babel Preset');
-const babelConfigPath = path.join(cwd, 'babel.config.js');
-if (fs.existsSync(babelConfigPath)) {
+const BABEL_CONFIG_FILES = [
+  'babel.config.js',
+  'babel.config.cjs',
+  'babel.config.mjs',
+  '.babelrc',
+  '.babelrc.js',
+];
+let babelConfigFound = null;
+for (const name of BABEL_CONFIG_FILES) {
+  const full = path.join(cwd, name);
+  if (fs.existsSync(full)) {
+    babelConfigFound = { name, full };
+    break;
+  }
+}
+if (babelConfigFound) {
   try {
-    const babelContent = fs.readFileSync(babelConfigPath, 'utf8');
+    const babelContent = fs.readFileSync(babelConfigFound.full, 'utf8');
     const hasMcpPreset = babelContent.includes('react-native-mcp-server/babel-preset');
     if (hasMcpPreset) {
-      lines.push(' ✓ babel.config.js contains react-native-mcp-server/babel-preset');
+      lines.push(` ✓ ${babelConfigFound.name} contains react-native-mcp-server/babel-preset`);
     } else {
       failedCount++;
-      lines.push(' ✗ babel.config.js found but missing react-native-mcp-server/babel-preset');
+      lines.push(
+        ` ✗ ${babelConfigFound.name} found but missing react-native-mcp-server/babel-preset`
+      );
     }
   } catch {
-    lines.push(' ○ babel.config.js - Could not read file');
+    lines.push(` ○ ${babelConfigFound.name} - Could not read file`);
   }
 } else {
-  lines.push(' ○ babel.config.js - Not found (skipped)');
+  lines.push(' ○ babel config - Not found (skipped)');
 }
 lines.push('');
 
 // ---- Metro / WebSocket (async checks) ----
-const metroRunning = await checkMetroRunning();
-const wsPortAvailable = await checkPortAvailable(WS_PORT);
+const [metroRunning, wsPortAvailable] = await Promise.all([
+  checkMetroRunning(),
+  checkPortAvailable(WS_PORT),
+]);
 
 lines.push('Metro Bundler');
 if (metroRunning) {
