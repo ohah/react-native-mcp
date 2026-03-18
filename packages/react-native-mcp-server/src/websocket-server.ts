@@ -437,12 +437,29 @@ export class AppSession {
 
     this.server.on('error', (err: Error) => {
       if (err.message?.includes('EADDRINUSE')) {
-        console.error(
-          '[react-native-mcp-server] Port %s already in use. Only one MCP server should run. Kill the other process: kill $(lsof -t -i :%s)',
-          port,
-          port
-        );
-        process.exit(1);
+        const maxRetries = 5;
+        const nextPort = port + 1;
+        if (nextPort <= DEFAULT_PORT + maxRetries) {
+          console.error(
+            `[react-native-mcp-server] Port ${port} already in use, trying ${nextPort}...`
+          );
+          this.server?.close();
+          this.server = null;
+          if (this.staleCheckTimer) {
+            clearInterval(this.staleCheckTimer);
+            this.staleCheckTimer = null;
+          }
+          this.start(nextPort);
+        } else {
+          console.error(
+            '[react-native-mcp-server] Ports %s-%s all in use. Kill the other process: kill $(lsof -t -i :%s)',
+            DEFAULT_PORT,
+            DEFAULT_PORT + maxRetries,
+            DEFAULT_PORT
+          );
+          process.exit(1);
+        }
+        return;
       }
       console.error('[react-native-mcp-server] WebSocket server error:', err.message);
     });

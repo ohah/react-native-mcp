@@ -4,6 +4,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import { existsSync } from 'fs';
+import { fileURLToPath } from 'url';
 
 const execFileAsync = promisify(execFile);
 import type {
@@ -28,14 +29,16 @@ import {
   type ScreenBounds,
 } from './viewport-clamp.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 function resolveServerCwd(): string {
   // tsdown may place chunks at dist/ root or dist/client/ — walk up to find package.json
-  let dir = import.meta.dirname;
+  let dir = __dirname;
   for (let i = 0; i < 5; i++) {
     if (existsSync(path.join(dir, 'package.json'))) return dir;
     dir = path.dirname(dir);
   }
-  return path.resolve(import.meta.dirname, '..');
+  return path.resolve(__dirname, '..');
 }
 
 function sleep(ms: number): Promise<void> {

@@ -95,8 +95,8 @@ async function main() {
   // 프로세스 종료 시 WebSocket 클라이언트에 정상 close frame 전송 (TCP RST로 인한 앱 크래시 방지)
   const gracefulStop = () => {
     appSession.stop();
-    // close frame이 실제 전송될 시간을 확보한 뒤 종료
-    setTimeout(() => process.exit(0), 200);
+    // close frame이 실제 전송·ACK될 시간을 확보한 뒤 종료 (느린 네트워크 대비 500ms)
+    setTimeout(() => process.exit(0), 500);
   };
   process.once('SIGINT', gracefulStop);
   process.once('SIGTERM', gracefulStop);

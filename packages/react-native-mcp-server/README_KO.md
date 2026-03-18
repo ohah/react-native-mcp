@@ -11,7 +11,7 @@ React Native 앱 자동화 및 모니터링을 위한 MCP(Model Context Protocol
 
 ## 설치
 
-**필요 환경:** Node.js 18+ 또는 Bun. 탭/스와이프/스크린샷을 쓰려면 [idb](https://fbidb.io/) (iOS, macOS), [adb](https://developer.android.com/tools/adb) (Android)가 필요합니다.
+**필요 환경:** Node.js 20+ 또는 Bun 1.0+. 탭/스와이프/스크린샷을 쓰려면 [idb](https://fbidb.io/) (iOS, macOS), [adb](https://developer.android.com/tools/adb) (Android)가 필요합니다.
 
 전역 설치 없이 npx로 실행:
 

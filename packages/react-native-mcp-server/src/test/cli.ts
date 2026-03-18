@@ -21,6 +21,7 @@ const { values, positionals } = parseArgs({
     env: { type: 'string', short: 'e', multiple: true },
     'no-bail': { type: 'boolean' },
     'no-auto-launch': { type: 'boolean' },
+    'continue-on-error': { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -43,6 +44,7 @@ Options (run):
   -e, --env <KEY=VALUE>          Set environment variable (repeatable)
   --no-bail                      Continue running after suite failure
   --no-auto-launch               Do not launch app in create(); use setup launch step (e.g. CI install-only)
+  --continue-on-error            Continue executing steps after a step failure (for diagnostics)
 
 Options (report show):
   -o, --output <dir>             Directory containing dashboard/ (default: ./results)
@@ -126,6 +128,7 @@ async function runMain(target: string): Promise<void> {
     deviceId: values.device,
     bail: !values['no-bail'],
     autoLaunch: !values['no-auto-launch'],
+    continueOnError: values['continue-on-error'] ?? false,
     envVars: Object.keys(envVars).length > 0 ? envVars : undefined,
   });
 
