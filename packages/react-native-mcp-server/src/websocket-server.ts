@@ -468,6 +468,7 @@ export class AppSession {
   /**
    * 앱에 요청 전송 후 응답 대기 (타임아웃 ms).
    * deviceId/platform 지정 시 해당 디바이스로, 미지정 시 연결 1대일 때만 가능.
+   * 연결이 끊겨 있으면 최대 5초간 재연결을 대기한 후 재시도.
    */
   async sendRequest(
     request: Omit<AppRequest, 'id'>,
@@ -476,14 +477,15 @@ export class AppSession {
     platform?: string
   ): Promise<AppResponse> {
     const conn = this.resolveDevice(deviceId, platform);
+
+    // 연결이 끊겨 있으면 최대 5초간 재연결 대기 후 재시도
+    if (conn.ws.readyState !== WebSocket.OPEN) {
+      const reconnected = await this.waitForDevice(deviceId, platform, 5000);
+      return this.sendRequest(request, timeoutMs, deviceId, platform);
+    }
+
     const id = crypto.randomUUID();
     const msg: AppRequest = { ...request, id };
-
-    if (conn.ws.readyState !== WebSocket.OPEN) {
-      throw new Error(
-        'No React Native app connected. Start the app with Metro and ensure the runtime is loaded.'
-      );
-    }
 
     return new Promise<AppResponse>((resolve, reject) => {
       const t = setTimeout(() => {
@@ -502,6 +504,38 @@ export class AppSession {
         },
       });
       conn.ws.send(JSON.stringify(msg));
+    });
+  }
+
+  /** 디바이스 연결을 최대 timeoutMs 동안 대기. 연결되면 반환, 초과 시 에러. */
+  private waitForDevice(
+    deviceId: string | undefined,
+    platform: string | undefined,
+    timeoutMs: number
+  ): Promise<DeviceConnection> {
+    return new Promise((resolve, reject) => {
+      const start = Date.now();
+      const check = () => {
+        try {
+          const conn = this.resolveDevice(deviceId, platform);
+          if (conn.ws.readyState === WebSocket.OPEN) {
+            resolve(conn);
+            return;
+          }
+        } catch {
+          // not found yet
+        }
+        if (Date.now() - start >= timeoutMs) {
+          reject(
+            new Error(
+              'No React Native app connected. Start the app with Metro and ensure the runtime is loaded.'
+            )
+          );
+          return;
+        }
+        setTimeout(check, 500);
+      };
+      check();
     });
   }
 

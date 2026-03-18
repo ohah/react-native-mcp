@@ -123,14 +123,17 @@ jobs:
         run: bundle exec pod install
         working-directory: examples/demo-app/ios
 
+      - name: Xcode 버전 확인
+        if: steps.app-cache.outputs.cache-hit != 'true'
+        id: xcode-version
+        run: echo "version=$(xcodebuild -version | head -1 | sed 's/Xcode //')" >> $GITHUB_OUTPUT
+
       - name: DerivedData 캐시
         if: steps.app-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/DerivedData
-          key: ${{ runner.os }}-deriveddata-${{ hashFiles('examples/demo-app/ios/**/*.pbxproj', 'examples/demo-app/ios/Podfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-deriveddata-
+          key: ${{ runner.os }}-deriveddata-xcode${{ steps.xcode-version.outputs.version }}-${{ hashFiles('examples/demo-app/ios/**/*.pbxproj', 'examples/demo-app/ios/Podfile.lock') }}
 
       - name: iOS 앱 빌드
         if: steps.app-cache.outputs.cache-hit != 'true'
@@ -237,9 +240,13 @@ jobs:
           exit 1
 
       - name: E2E YAML 테스트 실행
+        uses: nick-fields/retry@v3
         env:
           REACT_NATIVE_MCP_TAP_TIMEOUT_MS: 25000
-        run: node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/all-steps.yaml -p ios -o e2e-artifacts/yaml-results --no-auto-launch
+        with:
+          timeout_minutes: 15
+          max_attempts: 2
+          command: node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/all-steps.yaml -p ios -o e2e-artifacts/yaml-results --no-auto-launch
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()

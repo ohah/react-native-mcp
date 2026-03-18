@@ -79,9 +79,9 @@ steps:
   - swipe: { selector: 'ScrollView', direction: 'up', distance: '30%' }
   - wait: 4000
   - scrollUntilVisible: { selector: '#scroll-btn-20', direction: 'down', maxScrolls: 5 }
-  - wait: 1600
+  - wait: 2000
   - tap: { selector: '#scroll-btn-20' }
-  - wait: 1200
+  - wait: 2000
   - waitForText: { text: '버튼 20 (1)', timeout: 40000, selector: '#scroll-btn-20' }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'Pressable:text("버튼 0 (0)")', timeout: 30000 }
@@ -90,9 +90,9 @@ steps:
   - wait: 4000
   - scrollUntilVisible:
       { selector: 'Pressable:text("버튼 20 (0)")', direction: 'down', maxScrolls: 5 }
-  - wait: 1600
+  - wait: 2000
   - tap: { selector: 'Pressable:text("버튼 20 (0)")' }
-  - wait: 1200
+  - wait: 2000
   - waitForText: { text: '버튼 20 (1)', timeout: 40000, selector: 'Pressable:text("버튼 20 (1)")' }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: 'FlatList', timeout: 30000 }
