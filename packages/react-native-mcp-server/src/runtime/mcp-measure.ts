@@ -72,9 +72,36 @@ function getShadowNode(stateNode: any): any {
  */
 export function measureView(uid: string): Promise<MeasureResult> {
   return new Promise(function (resolve, reject) {
+    var settled = false;
+    // Fabric measureInWindow 콜백이 호출되지 않는 Release 빌드 대비 타임아웃
+    var timer = setTimeout(function () {
+      if (!settled) {
+        settled = true;
+        reject(new Error('measureView timeout for uid "' + uid + '"'));
+      }
+    }, 3000);
+
+    function done(result: MeasureResult) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      // 0,0,0,0 결과는 아직 layout되지 않은 것으로 간주
+      if (result.width === 0 && result.height === 0 && result.pageX === 0 && result.pageY === 0) {
+        reject(new Error('measure returned zero rect'));
+      } else {
+        resolve(result);
+      }
+    }
+    function fail(err: unknown) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(err);
+    }
+
     try {
       var root = getFiberRoot();
-      if (!root) return reject(new Error('no fiber root'));
+      if (!root) return fail(new Error('no fiber root'));
 
       var found: Fiber | null = null;
       if (isPathUid(uid)) {
@@ -94,7 +121,7 @@ export function measureView(uid: string): Promise<MeasureResult> {
         })(root);
       }
 
-      if (!found) return reject(new Error('uid "' + uid + '" not found or has no native view'));
+      if (!found) return fail(new Error('uid "' + uid + '" not found or has no native view'));
 
       // class component 등 non-host fiber면 host descendant로 교체
       if (found && typeof found.type !== 'string') {
@@ -117,7 +144,7 @@ export function measureView(uid: string): Promise<MeasureResult> {
             g.nativeFabricUIManager.measureInWindow(
               shadowNode,
               function (x: number, y: number, w: number, h: number) {
-                resolve({
+                done({
                   x: x,
                   y: y,
                   width: w,
@@ -137,7 +164,7 @@ export function measureView(uid: string): Promise<MeasureResult> {
             rn.UIManager.measure(
               handle,
               function (x: number, y: number, w: number, h: number, pageX: number, pageY: number) {
-                resolve({ x: x, y: y, width: w, height: h, pageX: pageX, pageY: pageY });
+                done({ x: x, y: y, width: w, height: h, pageX: pageX, pageY: pageY });
               }
             );
             return;
@@ -147,9 +174,9 @@ export function measureView(uid: string): Promise<MeasureResult> {
         found = (found as Fiber).return;
       }
 
-      reject(new Error('cannot measure: no native node'));
+      fail(new Error('cannot measure: no native node'));
     } catch (e) {
-      reject(e);
+      fail(e);
     }
   });
 }
@@ -195,6 +222,8 @@ export function measureViewSync(uid: string): MeasureResult | null {
         g.nativeFabricUIManager.measureInWindow(
           sn,
           function (x: number, y: number, w: number, h: number) {
+            // 0,0,0,0은 아직 layout되지 않은 상태 — null로 취급하여 async fallback 유도
+            if (w === 0 && h === 0 && x === 0 && y === 0) return;
             result = {
               x: x,
               y: y,
