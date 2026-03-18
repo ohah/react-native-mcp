@@ -7,11 +7,14 @@
  */
 
 import fs from 'fs';
+import net from 'net';
 import path from 'path';
 import { execSync } from 'child_process';
 
 const MIN_NODE_MAJOR = 24;
 const MIN_RN_VERSION = '0.74.0';
+const METRO_STATUS_URL = 'http://localhost:8081/status';
+const WS_PORT = 12300;
 
 function parseVersion(s) {
   if (!s || typeof s !== 'string') return null;
@@ -36,6 +39,55 @@ function inPath(cmd) {
     const query = process.platform === 'win32' ? `where ${cmd}` : `which ${cmd}`;
     execSync(query, { stdio: 'ignore', encoding: 'utf8' });
     return true;
+  } catch {
+    return false;
+  }
+}
+
+function getCommandOutput(cmd) {
+  try {
+    return execSync(cmd, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if a TCP port is available (i.e. nothing is listening on it).
+ * Returns a promise that resolves to true if available, false if in use.
+ */
+function checkPortAvailable(port) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(1000);
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(false); // port is in use
+    });
+    socket.once('timeout', () => {
+      socket.destroy();
+      resolve(true); // port is available (no response)
+    });
+    socket.once('error', () => {
+      resolve(true); // port is available (connection refused)
+    });
+    socket.connect(port, '127.0.0.1');
+  });
+}
+
+/**
+ * Check if Metro bundler is running by fetching its status endpoint.
+ */
+async function checkMetroRunning() {
+  try {
+    const response = await fetch(METRO_STATUS_URL, {
+      signal: AbortSignal.timeout(2000),
+    });
+    const text = await response.text();
+    return text.includes('packager-status:running');
   } catch {
     return false;
   }
@@ -91,6 +143,48 @@ if (hasMetroConfig) {
 }
 lines.push('');
 
+// ---- Babel Preset ----
+lines.push('Babel Preset');
+const babelConfigPath = path.join(cwd, 'babel.config.js');
+if (fs.existsSync(babelConfigPath)) {
+  try {
+    const babelContent = fs.readFileSync(babelConfigPath, 'utf8');
+    const hasMcpPreset = babelContent.includes('react-native-mcp-server/babel-preset');
+    if (hasMcpPreset) {
+      lines.push(' ✓ babel.config.js contains react-native-mcp-server/babel-preset');
+    } else {
+      failedCount++;
+      lines.push(' ✗ babel.config.js found but missing react-native-mcp-server/babel-preset');
+    }
+  } catch {
+    lines.push(' ○ babel.config.js - Could not read file');
+  }
+} else {
+  lines.push(' ○ babel.config.js - Not found (skipped)');
+}
+lines.push('');
+
+// ---- Metro / WebSocket (async checks) ----
+const metroRunning = await checkMetroRunning();
+const wsPortAvailable = await checkPortAvailable(WS_PORT);
+
+lines.push('Metro Bundler');
+if (metroRunning) {
+  lines.push(` ✓ Metro is running on ${METRO_STATUS_URL}`);
+} else {
+  lines.push(" ○ Metro is not running (start with 'npx react-native start' before using MCP)");
+}
+lines.push('');
+
+lines.push('WebSocket Port');
+if (wsPortAvailable) {
+  lines.push(` ✓ Port ${WS_PORT} is available`);
+} else {
+  lines.push(` ✗ Port ${WS_PORT} is already in use — MCP server needs this port`);
+  failedCount++;
+}
+lines.push('');
+
 // ---- E2E (idb / adb) ----
 lines.push('E2E (optional)');
 if (process.platform === 'darwin') {
@@ -100,7 +194,8 @@ if (process.platform === 'darwin') {
       ' ○ idb - Not in PATH (required for iOS simulator automation, see docs/references/idb-setup.md)'
     );
   } else {
-    lines.push(' ✓ idb');
+    const idbVersion = getCommandOutput('idb --version') || 'unknown';
+    lines.push(` ✓ idb (${idbVersion})`);
   }
 } else {
   lines.push(' ○ idb - macOS only (skip on this OS)');
@@ -109,7 +204,64 @@ const adbOk = inPath('adb');
 if (!adbOk) {
   lines.push(' ○ adb - Not in PATH (required for Android automation)');
 } else {
-  lines.push(' ✓ adb');
+  const adbVersionRaw = getCommandOutput('adb --version');
+  const adbVersionMatch = adbVersionRaw?.match(/Android Debug Bridge version ([\d.]+)/);
+  const adbVersionStr = adbVersionMatch ? adbVersionMatch[1] : 'unknown';
+  lines.push(` ✓ adb (${adbVersionStr})`);
+}
+lines.push('');
+
+// ---- Simulator / Emulator Status ----
+lines.push('Simulator / Emulator');
+if (process.platform === 'darwin') {
+  const bootedSims = getCommandOutput('xcrun simctl list devices booted -j');
+  if (bootedSims) {
+    try {
+      const simJson = JSON.parse(bootedSims);
+      const booted = Object.values(simJson.devices || {})
+        .flat()
+        .filter((d) => d.state === 'Booted');
+      if (booted.length > 0) {
+        lines.push(` ✓ iOS Simulator: ${booted.length} booted`);
+        for (const d of booted) {
+          lines.push(`   - ${d.name} (${d.udid})`);
+        }
+      } else {
+        lines.push(' ○ iOS Simulator: No booted devices');
+      }
+    } catch {
+      lines.push(' ○ iOS Simulator: Could not parse device list');
+    }
+  } else {
+    lines.push(' ○ iOS Simulator: xcrun simctl not available');
+  }
+} else {
+  lines.push(' ○ iOS Simulator - macOS only (skip on this OS)');
+}
+
+if (adbOk) {
+  const adbDevicesRaw = getCommandOutput('adb devices');
+  if (adbDevicesRaw) {
+    const deviceLines = adbDevicesRaw
+      .split('\n')
+      .slice(1)
+      .filter((l) => l.trim() && l.includes('\t'));
+    const emulators = deviceLines.filter((l) => l.includes('emulator'));
+    const devices = deviceLines.filter((l) => !l.includes('emulator'));
+    if (deviceLines.length > 0) {
+      lines.push(` ✓ Android: ${emulators.length} emulator(s), ${devices.length} device(s)`);
+      for (const d of deviceLines) {
+        const parts = d.split('\t');
+        lines.push(`   - ${parts[0]} (${parts[1]?.trim() || 'unknown'})`);
+      }
+    } else {
+      lines.push(' ○ Android: No connected devices or emulators');
+    }
+  } else {
+    lines.push(' ○ Android: Could not list devices');
+  }
+} else {
+  lines.push(' ○ Android: adb not available (skipped)');
 }
 lines.push('');
 
