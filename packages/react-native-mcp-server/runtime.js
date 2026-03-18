@@ -1588,9 +1588,29 @@
 	*/
 	function measureView(uid) {
 		return new Promise(function(resolve, reject) {
+			var settled = false;
+			var timer = setTimeout(function() {
+				if (!settled) {
+					settled = true;
+					reject(/* @__PURE__ */ new Error("measureView timeout for uid \"" + uid + "\""));
+				}
+			}, 3e3);
+			function done(result) {
+				if (settled) return;
+				settled = true;
+				clearTimeout(timer);
+				if (result.width === 0 && result.height === 0 && result.pageX === 0 && result.pageY === 0) reject(/* @__PURE__ */ new Error("measure returned zero rect"));
+				else resolve(result);
+			}
+			function fail(err) {
+				if (settled) return;
+				settled = true;
+				clearTimeout(timer);
+				reject(err);
+			}
 			try {
 				var root = getFiberRoot();
-				if (!root) return reject(/* @__PURE__ */ new Error("no fiber root"));
+				if (!root) return fail(/* @__PURE__ */ new Error("no fiber root"));
 				var found = null;
 				if (isPathUid(uid)) {
 					found = getFiberByPath(root, uid);
@@ -1605,7 +1625,7 @@
 					find(fiber.child);
 					if (!found) find(fiber.sibling);
 				})(root);
-				if (!found) return reject(/* @__PURE__ */ new Error("uid \"" + uid + "\" not found or has no native view"));
+				if (!found) return fail(/* @__PURE__ */ new Error("uid \"" + uid + "\" not found or has no native view"));
 				if (found && typeof found.type !== "string") {
 					var host = findNearestHost(found.child);
 					if (host) found = host;
@@ -1619,7 +1639,7 @@
 						if (shadowNode) {
 							/* @__PURE__ */ resolveScreenOffset();
 							g.nativeFabricUIManager.measureInWindow(shadowNode, function(x, y, w, h) {
-								resolve({
+								done({
 									x,
 									y,
 									width: w,
@@ -1635,7 +1655,7 @@
 						var handle = rn.findNodeHandle(node);
 						if (handle) {
 							rn.UIManager.measure(handle, function(x, y, w, h, pageX, pageY) {
-								resolve({
+								done({
 									x,
 									y,
 									width: w,
@@ -1649,9 +1669,9 @@
 					}
 					found = found.return;
 				}
-				reject(/* @__PURE__ */ new Error("cannot measure: no native node"));
+				fail(/* @__PURE__ */ new Error("cannot measure: no native node"));
 			} catch (e) {
-				reject(e);
+				fail(e);
 			}
 		});
 	}
@@ -1686,6 +1706,7 @@
 					var result = null;
 					/* @__PURE__ */ resolveScreenOffset();
 					g.nativeFabricUIManager.measureInWindow(sn, function(x, y, w, h) {
+						if (w === 0 && h === 0 && x === 0 && y === 0) return;
 						result = {
 							x,
 							y,
