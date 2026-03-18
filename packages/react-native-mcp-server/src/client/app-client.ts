@@ -197,7 +197,7 @@ export class AppClient {
   }
 
   async querySelector(selector: string, opts?: DeviceOpts): Promise<ElementInfo | null> {
-    const result = await this.call('query_selector', { selector, ...opts });
+    const result = await this.call('query_selector', { selector, format: 'json', ...opts });
     if (result == null || (typeof result === 'string' && result.includes('No element'))) {
       return null;
     }
@@ -205,7 +205,7 @@ export class AppClient {
   }
 
   async querySelectorAll(selector: string, opts?: DeviceOpts): Promise<ElementInfo[]> {
-    const result = await this.call('query_selector_all', { selector, ...opts });
+    const result = await this.call('query_selector_all', { selector, format: 'json', ...opts });
     if (!Array.isArray(result)) return [];
     return result as ElementInfo[];
   }
