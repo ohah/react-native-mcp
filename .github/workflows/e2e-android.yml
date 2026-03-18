@@ -159,7 +159,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ steps.avd.outputs.name }}-1200x1920
+          key: avd-${{ steps.avd.outputs.name }}-1080x1920-v2
 
       - name: AVD 스냅샷 생성 (캐시 미스 시)
         if: steps.avd-cache.outputs.cache-hit != 'true'
@@ -170,7 +170,7 @@ jobs:
           target: google_apis
           arch: x86_64
           force-avd-creation: false
-          emulator-options: -no-window -skin 1200x1920 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -skin 1080x1920 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
           script: echo "Generated AVD snapshot for caching."
 
@@ -215,6 +215,13 @@ jobs:
             # 에뮬레이터 세로(Portrait) 방향 고정 (0=portrait, 자동회전 끔)
             adb shell settings put system accelerometer_rotation 0 || true
             adb shell settings put system user_rotation 0 || true
+
+            # 디버그: wm density 오버라이드 (1080x1920 skin + density 420 = 일반 FHD 폰과 동일)
+            adb shell wm density 420 || true
+            sleep 3
+            echo "--- After density override ---"
+            adb shell wm size
+            adb shell wm density
 
             # E2E YAML 시나리오 실행 (시뮬/에뮬 지연 시 tap 타임아웃 확대)
             export REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000
