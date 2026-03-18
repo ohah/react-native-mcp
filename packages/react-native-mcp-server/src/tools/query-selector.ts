@@ -19,6 +19,12 @@ const schema = z.object({
   selector: z.string().describe(selectorDescription),
   deviceId: deviceParam,
   platform: platformParam,
+  format: z
+    .enum(['compact', 'json'])
+    .optional()
+    .describe(
+      'Output format. compact (default): human-readable one-liner. json: raw JSON for programmatic use.'
+    ),
 });
 
 export function buildQuerySelectorEvalCode(selector: string): string {
@@ -99,7 +105,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
     'query_selector',
     'Find first RN element matching selector. Returns uid, type, and position (pageX, pageY, width, height) in points — use these coordinates directly with tap. For WebView inner elements, use webview_evaluate_script instead.',
     async (args: unknown) => {
-      const { selector, deviceId, platform } = schema.parse(args);
+      const { selector, deviceId, platform, format } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {
         return { content: [{ type: 'text' as const, text: 'No React Native app connected.' }] };
       }
@@ -120,6 +126,9 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
           };
         }
         const result = res.result as Record<string, unknown>;
+        if (format === 'json') {
+          return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
+        }
         let text = formatElementCompact(result);
         if (isWebViewType(String(result.type ?? ''))) {
           text += await getWebViewHint(appSession, deviceId, platform);
@@ -139,7 +148,7 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
     'query_selector_all',
     'Find all RN elements matching selector. Returns array with positions (pageX, pageY, width, height) in points. Use query_selector for single element.',
     async (args: unknown) => {
-      const { selector, deviceId, platform } = schema.parse(args);
+      const { selector, deviceId, platform, format } = schema.parse(args);
       if (!appSession.isConnected(deviceId, platform)) {
         return { content: [{ type: 'text' as const, text: 'No React Native app connected.' }] };
       }
@@ -159,6 +168,9 @@ export function registerQuerySelector(server: McpServer, appSession: AppSession)
           return {
             content: [{ type: 'text' as const, text: 'No elements match selector: ' + selector }],
           };
+        }
+        if (format === 'json') {
+          return { content: [{ type: 'text' as const, text: JSON.stringify(list) }] };
         }
         const lines = [`# ${list.length} matches`];
         for (const el of list) {
