@@ -445,7 +445,11 @@ export class AppSession {
             `[react-native-mcp-server] Port ${port} already in use, trying ${nextPort}...`
           );
           this.server?.close();
-          this.server = null as unknown as WebSocketServer;
+          this.server = null;
+          if (this.staleCheckTimer) {
+            clearInterval(this.staleCheckTimer);
+            this.staleCheckTimer = null;
+          }
           this.start(nextPort);
         } else {
           console.error(

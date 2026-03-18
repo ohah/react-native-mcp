@@ -453,7 +453,7 @@ export class AppClient {
     tool: string,
     selector: string,
     opts?: DeviceOpts
-  ): Promise<{ uid: string; measure: { pageX: number; pageY: number; width: number; height: number }; [k: string]: unknown }> {
+  ): Promise<ElementInfo & { measure: NonNullable<ElementInfo['measure']> }> {
     let el = await this.querySelector(selector, opts);
     if (!el) throw new McpToolError(tool, `No element found for selector: ${selector}`);
     // CI/Release 빌드에서 layout 측정이 지연될 수 있으므로 최대 3회 재시도
@@ -463,7 +463,7 @@ export class AppClient {
       if (!el) throw new McpToolError(tool, `No element found for selector: ${selector}`);
     }
     if (!el.measure) throw new McpToolError(tool, `Element "${selector}" has no measure data after retries`);
-    return el as typeof el & { measure: NonNullable<typeof el.measure> };
+    return el as ElementInfo & { measure: NonNullable<ElementInfo['measure']> };
   }
 
   // ─── Convenience: tap by selector ───────────────────────
