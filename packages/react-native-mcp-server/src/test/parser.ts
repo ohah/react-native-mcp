@@ -99,6 +99,13 @@ const stepSchema: z.ZodType<unknown> = z.lazy(() =>
       }),
     }),
     z.object({
+      webviewTap: z.object({
+        webViewId: z.string(),
+        selector: z.string(),
+        webViewSelector: z.string().optional(),
+      }),
+    }),
+    z.object({
       scrollUntilVisible: z.object({
         selector: z.string(),
         scrollableSelector: z.string().optional(),

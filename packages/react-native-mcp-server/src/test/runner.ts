@@ -153,6 +153,10 @@ async function executeStep(
     await app.evaluate(step.evaluate.script);
   } else if ('webviewEval' in step) {
     await app.webviewEval(step.webviewEval.webViewId, step.webviewEval.script);
+  } else if ('webviewTap' in step) {
+    await app.webviewTap(step.webviewTap.webViewId, step.webviewTap.selector, {
+      webViewSelector: step.webviewTap.webViewSelector,
+    });
   } else if ('scrollUntilVisible' in step) {
     const result = await app.scrollUntilVisible(step.scrollUntilVisible.selector, {
       scrollableSelector: step.scrollUntilVisible.scrollableSelector,
