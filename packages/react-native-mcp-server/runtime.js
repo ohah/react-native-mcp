@@ -2525,32 +2525,41 @@
 	* Fabric: fiberToResult의 measureViewSync로 이미 measure 포함 → 즉시 반환.
 	* Bridge: measure가 null인 경우 async measureView fallback.
 	*/
+	/**
+	* 단일 measure 시도: nativeTag → uid → _measureUid 순서로 fallback.
+	* 성공 시 el.measure에 결과를 설정하고 el 반환. 실패 시 el (measure=null) 반환.
+	*/
+	function tryMeasure(el) {
+		if (el.measure) return Promise.resolve(el);
+		function assignMeasure(m) {
+			el.measure = m;
+			return el;
+		}
+		if (typeof el._nativeTag === "number") return measureByNativeTag(el._nativeTag).then(assignMeasure).catch(function() {
+			return measureView(el.uid).then(assignMeasure).catch(function() {
+				return el;
+			});
+		});
+		return measureView(el.uid).then(assignMeasure).catch(function() {
+			if (el._measureUid && el._measureUid !== el.uid) return measureView(el._measureUid).then(assignMeasure).catch(function() {
+				return el;
+			});
+			return el;
+		});
+	}
 	function querySelectorWithMeasure(selector) {
 		var el = querySelector(selector);
 		if (!el) return Promise.resolve(null);
 		if (el.measure) return Promise.resolve(el);
-		if (typeof el._nativeTag === "number") return measureByNativeTag(el._nativeTag).then(function(m) {
-			el.measure = m;
-			return el;
-		}).catch(function() {
-			return measureView(el.uid).then(function(m) {
-				el.measure = m;
-				return el;
-			}).catch(function() {
-				return el;
+		return tryMeasure(el).then(function(result) {
+			if (result.measure) return result;
+			return new Promise(function(resolve) {
+				(typeof requestAnimationFrame === "function" ? requestAnimationFrame : setTimeout)(function() {
+					var el2 = querySelector(selector);
+					if (!el2) return resolve(result);
+					tryMeasure(el2).then(resolve);
+				});
 			});
-		});
-		return measureView(el.uid).then(function(m) {
-			el.measure = m;
-			return el;
-		}).catch(function() {
-			if (el._measureUid && el._measureUid !== el.uid) return measureView(el._measureUid).then(function(m) {
-				el.measure = m;
-				return el;
-			}).catch(function() {
-				return el;
-			});
-			return el;
 		});
 	}
 	/**

@@ -90,49 +90,61 @@ export function querySelector(selector: string): any {
  * Fabric: fiberToResult의 measureViewSync로 이미 measure 포함 → 즉시 반환.
  * Bridge: measure가 null인 경우 async measureView fallback.
  */
-export function querySelectorWithMeasure(selector: string): Promise<any> {
-  var el = querySelector(selector);
-  if (!el) return Promise.resolve(null);
+/**
+ * 단일 measure 시도: nativeTag → uid → _measureUid 순서로 fallback.
+ * 성공 시 el.measure에 결과를 설정하고 el 반환. 실패 시 el (measure=null) 반환.
+ */
+function tryMeasure(el: any): Promise<any> {
   if (el.measure) return Promise.resolve(el);
-  // Bridge fallback 우선순위:
-  // 1. _nativeTag: Fiber 재탐색 없이 UIManager.measure 직접 호출 (가장 빠르고 안정적)
-  // 2. uid(testID): Fiber에서 testID로 찾아 host child로 이동 후 측정
-  // 3. _measureUid(경로): 최후 수단 (Fiber 트리 변경 시 깨질 수 있음)
+
+  function assignMeasure(m: any) {
+    el.measure = m;
+    return el;
+  }
+
   if (typeof el._nativeTag === 'number') {
     return measureByNativeTag(el._nativeTag)
-      .then(function (m: any) {
-        el.measure = m;
-        return el;
-      })
+      .then(assignMeasure)
       .catch(function () {
         return measureView(el.uid)
-          .then(function (m: any) {
-            el.measure = m;
-            return el;
-          })
+          .then(assignMeasure)
           .catch(function () {
             return el;
           });
       });
   }
   return measureView(el.uid)
-    .then(function (m: any) {
-      el.measure = m;
-      return el;
-    })
+    .then(assignMeasure)
     .catch(function () {
       if (el._measureUid && el._measureUid !== el.uid) {
         return measureView(el._measureUid)
-          .then(function (m: any) {
-            el.measure = m;
-            return el;
-          })
+          .then(assignMeasure)
           .catch(function () {
             return el;
           });
       }
       return el;
     });
+}
+
+export function querySelectorWithMeasure(selector: string): Promise<any> {
+  var el = querySelector(selector);
+  if (!el) return Promise.resolve(null);
+  if (el.measure) return Promise.resolve(el);
+
+  return tryMeasure(el).then(function (result: any) {
+    if (result.measure) return result;
+    // measure 실패 시 requestAnimationFrame 후 재시도 (layout commit 대기)
+    return new Promise(function (resolve) {
+      var raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : setTimeout;
+      raf(function () {
+        // re-query: fiber 트리가 업데이트되었을 수 있음
+        var el2 = querySelector(selector);
+        if (!el2) return resolve(result);
+        tryMeasure(el2).then(resolve);
+      });
+    });
+  });
 }
 
 /**
