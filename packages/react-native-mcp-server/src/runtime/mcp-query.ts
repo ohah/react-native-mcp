@@ -90,6 +90,12 @@ export function querySelector(selector: string): any {
  * Fabric: fiberToResult의 measureViewSync로 이미 measure 포함 → 즉시 반환.
  * Bridge: measure가 null인 경우 async measureView fallback.
  */
+function _warnMeasure(msg: string): void {
+  try {
+    console.warn('[react-native-mcp] ' + msg);
+  } catch {}
+}
+
 export function querySelectorWithMeasure(selector: string): Promise<any> {
   var el = querySelector(selector);
   if (!el) return Promise.resolve(null);
@@ -104,13 +110,19 @@ export function querySelectorWithMeasure(selector: string): Promise<any> {
         el.measure = m;
         return el;
       })
-      .catch(function () {
+      .catch(function (e: any) {
+        _warnMeasure(
+          'measureByNativeTag(' + el._nativeTag + ') failed: ' + ((e && e.message) || e)
+        );
         return measureView(el.uid)
           .then(function (m: any) {
             el.measure = m;
             return el;
           })
-          .catch(function () {
+          .catch(function (e2: any) {
+            _warnMeasure(
+              'measureView(' + el.uid + ') fallback also failed: ' + ((e2 && e2.message) || e2)
+            );
             return el;
           });
       });
@@ -120,14 +132,21 @@ export function querySelectorWithMeasure(selector: string): Promise<any> {
       el.measure = m;
       return el;
     })
-    .catch(function () {
+    .catch(function (e: any) {
+      _warnMeasure('measureView(' + el.uid + ') failed: ' + ((e && e.message) || e));
       if (el._measureUid && el._measureUid !== el.uid) {
         return measureView(el._measureUid)
           .then(function (m: any) {
             el.measure = m;
             return el;
           })
-          .catch(function () {
+          .catch(function (e2: any) {
+            _warnMeasure(
+              'measureView(' +
+                el._measureUid +
+                ') last fallback failed: ' +
+                ((e2 && e2.message) || e2)
+            );
             return el;
           });
       }

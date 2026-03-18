@@ -2504,6 +2504,11 @@
 	* Fabric: fiberToResult의 measureViewSync로 이미 measure 포함 → 즉시 반환.
 	* Bridge: measure가 null인 경우 async measureView fallback.
 	*/
+	function _warnMeasure(msg) {
+		try {
+			console.warn("[react-native-mcp] " + msg);
+		} catch (_unused4) {}
+	}
 	function querySelectorWithMeasure(selector) {
 		var el = querySelector(selector);
 		if (!el) return Promise.resolve(null);
@@ -2511,22 +2516,26 @@
 		if (typeof el._nativeTag === "number") return measureByNativeTag(el._nativeTag).then(function(m) {
 			el.measure = m;
 			return el;
-		}).catch(function() {
+		}).catch(function(e) {
+			_warnMeasure("measureByNativeTag(" + el._nativeTag + ") failed: " + (e && e.message || e));
 			return measureView(el.uid).then(function(m) {
 				el.measure = m;
 				return el;
-			}).catch(function() {
+			}).catch(function(e2) {
+				_warnMeasure("measureView(" + el.uid + ") fallback also failed: " + (e2 && e2.message || e2));
 				return el;
 			});
 		});
 		return measureView(el.uid).then(function(m) {
 			el.measure = m;
 			return el;
-		}).catch(function() {
+		}).catch(function(e) {
+			_warnMeasure("measureView(" + el.uid + ") failed: " + (e && e.message || e));
 			if (el._measureUid && el._measureUid !== el.uid) return measureView(el._measureUid).then(function(m) {
 				el.measure = m;
 				return el;
-			}).catch(function() {
+			}).catch(function(e2) {
+				_warnMeasure("measureView(" + el._measureUid + ") last fallback failed: " + (e2 && e2.message || e2));
 				return el;
 			});
 			return el;

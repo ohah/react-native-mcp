@@ -288,7 +288,7 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
 
         for (let i = 0; i < maxScrolls; i++) {
           await performSwipe(swipeCoords, orientationInfo);
-          await sleep(500); // swipe 후 렌더링 대기
+          await sleep(800); // swipe 후 렌더링 + 관성 스크롤 대기 (CI swiftshader 환경 고려)
 
           const res = await appSession.sendRequest(
             { method: 'eval', params: { code: queryCode } },
