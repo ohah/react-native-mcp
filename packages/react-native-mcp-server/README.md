@@ -13,7 +13,7 @@ MCP (Model Context Protocol) server for React Native app automation and monitori
 
 ## Install
 
-**Prerequisites:** Node.js 18+ or Bun. For tap/swipe/screenshots you need [idb](https://fbidb.io/) (iOS, macOS) and [adb](https://developer.android.com/tools/adb) (Android).
+**Prerequisites:** Node.js 20+ or Bun 1.0+. For tap/swipe/screenshots you need [idb](https://fbidb.io/) (iOS, macOS) and [adb](https://developer.android.com/tools/adb) (Android).
 
 No global install required — use with npx:
 
