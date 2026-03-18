@@ -11,6 +11,10 @@ import { stopAllRecordings } from './tools/video-recording.js';
 
 const DEFAULT_PORT = 12300;
 
+/** 연결 실패 시 사용자에게 보여주는 진단 체크리스트 */
+export const CONNECTION_CHECKLIST =
+  "Checklist: (1) Is Metro running? (2) Is the app launched on a device/simulator? (3) Is the babel preset configured in babel.config.js? (4) Run 'npx react-native-mcp-server doctor' for full diagnostics.";
+
 /** 앱에서 오는 응답 메시지 */
 interface AppResponse {
   id: string;
@@ -107,9 +111,7 @@ export class AppSession {
           'No React Native app connected. Device was previously connected but is now disconnected. The app may have crashed or been terminated. Restart the app and try again.'
         );
       }
-      throw new Error(
-        "No React Native app connected. Checklist: (1) Is Metro running? (2) Is the app launched on a device/simulator? (3) Is the babel preset configured in babel.config.js? (4) Run 'npx react-native-mcp-server doctor' for full diagnostics."
-      );
+      throw new Error(`No React Native app connected. ${CONNECTION_CHECKLIST}`);
     }
     if (list.length > 1) {
       const ids = list.map((c) => `${c.deviceId} (${c.platform})`).join(', ');
@@ -558,9 +560,7 @@ export class AppSession {
         if (Date.now() - start >= timeoutMs) {
           reject(
             new Error(
-              'No React Native app connected after waiting ' +
-                timeoutMs / 1000 +
-                "s. Checklist: (1) Is Metro running? (2) Is the app launched on a device/simulator? (3) Is the babel preset configured in babel.config.js? (4) Run 'npx react-native-mcp-server doctor' for full diagnostics."
+              `No React Native app connected after waiting ${timeoutMs / 1000}s. ${CONNECTION_CHECKLIST}`
             )
           );
           return;
