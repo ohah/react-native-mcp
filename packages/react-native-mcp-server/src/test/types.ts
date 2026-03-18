@@ -10,6 +10,8 @@ export interface TestConfig {
   orientation?: number;
   /** true면 step 실패 시에도 나머지 step을 계속 실행. 기본 false (실패 즉시 중단) */
   continueOnError?: boolean;
+  /** 실패한 transient step(tap, swipe, doubleTap, longPress, scrollUntilVisible)을 자동 재시도할 횟수. 기본 0 (재시도 안 함) */
+  retryOnFail?: number;
 }
 
 export interface TestSuite {
@@ -134,4 +136,6 @@ export interface RunOptions {
   envVars?: Record<string, string>;
   /** true면 step 실패 시에도 나머지 step을 계속 실행 (config.continueOnError 우선) */
   continueOnError?: boolean;
+  /** 실패한 transient step을 자동 재시도할 횟수. 기본 0 (재시도 안 함). config.retryOnFail 우선 */
+  retryOnFail?: number;
 }

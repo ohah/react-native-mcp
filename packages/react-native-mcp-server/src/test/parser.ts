@@ -177,6 +177,7 @@ const suiteSchema = z.object({
     deviceId: z.string().optional(),
     orientation: z.number().optional(),
     continueOnError: z.boolean().optional(),
+    retryOnFail: z.number().int().min(0).optional(),
   }),
   setup: z.array(stepSchema).optional(),
   steps: z.array(stepSchema).min(1),
