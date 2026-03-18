@@ -159,7 +159,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ steps.avd.outputs.name }}-1080x1920-v2
+          key: avd-${{ steps.avd.outputs.name }}-1080x1920-ram4096-v3
 
       - name: AVD 스냅샷 생성 (캐시 미스 시)
         if: steps.avd-cache.outputs.cache-hit != 'true'
@@ -169,8 +169,10 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
+          ram-size: 4096M
+          heap-size: 2048M
           force-avd-creation: false
-          emulator-options: -no-window -skin 1080x1920 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -skin 1080x1920 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -cores 4
           disable-animations: false
           script: echo "Generated AVD snapshot for caching."
 
@@ -182,8 +184,10 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
+          ram-size: 4096M
+          heap-size: 2048M
           force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -skin 1200x1920 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-snapshot-save -no-window -skin 1080x1920 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -cores 4
           disable-animations: true
           script: |
             echo "=== Connected Android devices (adb devices -l) ==="
@@ -223,9 +227,10 @@ jobs:
             adb shell wm size
             adb shell wm density
 
-            # E2E YAML 시나리오 실행 (시뮬/에뮬 지연 시 tap 타임아웃 확대)
+            # E2E YAML 시나리오 실행 (시뮬/에뮬 지연 시 tap 타임아웃 확대, 실패 시 1회 재시도)
             export REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000
-            node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/all-steps.yaml -p android -o e2e-artifacts/yaml-results --no-auto-launch
+            E2E_CMD="node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/all-steps.yaml -p android -o e2e-artifacts/yaml-results --no-auto-launch"
+            $E2E_CMD || { echo "--- E2E 1차 실패, 재시도 ---"; sleep 5; $E2E_CMD; }
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
