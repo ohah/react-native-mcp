@@ -4,6 +4,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import { existsSync } from 'fs';
+import { fileURLToPath } from 'url';
 
 const execFileAsync = promisify(execFile);
 import type {
@@ -28,14 +29,16 @@ import {
   type ScreenBounds,
 } from './viewport-clamp.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 function resolveServerCwd(): string {
   // tsdown may place chunks at dist/ root or dist/client/ — walk up to find package.json
-  let dir = import.meta.dirname;
+  let dir = __dirname;
   for (let i = 0; i < 5; i++) {
     if (existsSync(path.join(dir, 'package.json'))) return dir;
     dir = path.dirname(dir);
   }
-  return path.resolve(import.meta.dirname, '..');
+  return path.resolve(__dirname, '..');
 }
 
 function sleep(ms: number): Promise<void> {
@@ -444,12 +447,29 @@ export class AppClient {
     return this.call('visual_compare', { ...opts }) as Promise<VisualCompareResult>;
   }
 
+  // ─── Convenience: measure retry helper ──────────────────
+
+  private async queryWithMeasure(
+    tool: string,
+    selector: string,
+    opts?: DeviceOpts
+  ): Promise<{ uid: string; measure: { pageX: number; pageY: number; width: number; height: number }; [k: string]: unknown }> {
+    let el = await this.querySelector(selector, opts);
+    if (!el) throw new McpToolError(tool, `No element found for selector: ${selector}`);
+    // CI/Release 빌드에서 layout 측정이 지연될 수 있으므로 최대 3회 재시도
+    for (let attempt = 0; attempt < 3 && !el.measure; attempt++) {
+      await sleep(300);
+      el = await this.querySelector(selector, opts);
+      if (!el) throw new McpToolError(tool, `No element found for selector: ${selector}`);
+    }
+    if (!el.measure) throw new McpToolError(tool, `Element "${selector}" has no measure data after retries`);
+    return el as typeof el & { measure: NonNullable<typeof el.measure> };
+  }
+
   // ─── Convenience: tap by selector ───────────────────────
 
   async tap(selector: string, opts?: { duration?: number } & DeviceOpts): Promise<unknown> {
-    const el = await this.querySelector(selector, opts);
-    if (!el) throw new McpToolError('tap', `No element found for selector: ${selector}`);
-    if (!el.measure) throw new McpToolError('tap', `Element "${selector}" has no measure data`);
+    const el = await this.queryWithMeasure('tap', selector, opts);
     const rawX = el.measure.pageX + el.measure.width / 2;
     const rawY = el.measure.pageY + el.measure.height / 2;
     const screen = await this.getScreenBounds();
@@ -474,9 +494,7 @@ export class AppClient {
       duration?: number;
     } & DeviceOpts
   ): Promise<unknown> {
-    const el = await this.querySelector(selector, opts);
-    if (!el) throw new McpToolError('swipe', `No element found for selector: ${selector}`);
-    if (!el.measure) throw new McpToolError('swipe', `Element "${selector}" has no measure data`);
+    const el = await this.queryWithMeasure('swipe', selector, opts);
     const rawCx = el.measure.pageX + el.measure.width / 2;
     const rawCy = el.measure.pageY + el.measure.height / 2;
     const screen = await this.getScreenBounds();
@@ -557,10 +575,7 @@ export class AppClient {
   // ─── Convenience: doubleTap by selector ────────────────
 
   async doubleTap(selector: string, opts?: { interval?: number } & DeviceOpts): Promise<unknown> {
-    const el = await this.querySelector(selector, opts);
-    if (!el) throw new McpToolError('doubleTap', `No element found for selector: ${selector}`);
-    if (!el.measure)
-      throw new McpToolError('doubleTap', `Element "${selector}" has no measure data`);
+    const el = await this.queryWithMeasure('doubleTap', selector, opts);
     const rawX = el.measure.pageX + el.measure.width / 2;
     const rawY = el.measure.pageY + el.measure.height / 2;
     const screen = await this.getScreenBounds();
