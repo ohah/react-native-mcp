@@ -301,24 +301,6 @@ export function registerScrollUntilVisible(server: McpServer, appSession: AppSes
               measure?: { pageX: number; pageY: number; width: number; height: number };
             };
             if (isInViewport(el.measure, bounds.width, bounds.height)) {
-              // 요소가 뷰포트 가장자리에 걸쳐 있으면 중앙쪽으로 미세 스크롤
-              if (el.measure) {
-                const centerY = el.measure.pageY + el.measure.height / 2;
-                const screenCenter = bounds.height / 2;
-                const offset = centerY - screenCenter;
-                // 화면 중앙에서 30% 이상 벗어나 있으면 보정 스크롤
-                if (Math.abs(offset) > bounds.height * 0.3) {
-                  const adjustDist = offset * 0.5;
-                  const adjustCoords = {
-                    x1: area.centerX,
-                    y1: area.centerY + adjustDist / 2,
-                    x2: area.centerX,
-                    y2: area.centerY - adjustDist / 2,
-                  };
-                  await performSwipe(adjustCoords, orientationInfo);
-                  await sleep(800);
-                }
-              }
               return {
                 content: [
                   {
