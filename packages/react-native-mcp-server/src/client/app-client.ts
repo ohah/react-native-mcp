@@ -338,6 +338,14 @@ export class AppClient {
     return this.call('webview_evaluate_script', { webViewId, script, ...opts });
   }
 
+  async webviewTap(
+    webViewId: string,
+    selector: string,
+    opts?: { webViewSelector?: string } & DeviceOpts
+  ): Promise<unknown> {
+    return this.call('webview_tap', { webViewId, selector, ...opts });
+  }
+
   // ─── Debug ──────────────────────────────────────────────
 
   async getStatus(): Promise<DebuggerStatus> {

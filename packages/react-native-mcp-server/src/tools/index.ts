@@ -45,6 +45,7 @@ import { registerRenderTracking } from './render-tracking.js';
 import { registerRenderOverlay } from './render-overlay.js';
 import { registerGetComponentSource } from './get-component-source.js';
 import { registerStartVideoRecording, registerStopVideoRecording } from './video-recording.js';
+import { registerWebviewTap } from './webview-tap.js';
 
 export function registerAllTools(server: McpServer, appSession: AppSession): void {
   registerEvaluateScript(server, appSession);
@@ -99,4 +100,6 @@ export function registerAllTools(server: McpServer, appSession: AppSession): voi
   // 화면 비디오 녹화 (idb / adb screenrecord)
   registerStartVideoRecording(server);
   registerStopVideoRecording(server);
+  // WebView DOM 요소 네이티브 탭
+  registerWebviewTap(server, appSession);
 }

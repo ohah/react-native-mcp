@@ -48,6 +48,7 @@ export type TestStep =
   | { pasteText: null | Record<string, never> }
   | { evaluate: { script: string } }
   | { webviewEval: { webViewId: string; script: string } }
+  | { webviewTap: { webViewId: string; selector: string; webViewSelector?: string } }
   | {
       scrollUntilVisible: {
         selector: string;
