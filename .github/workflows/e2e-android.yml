@@ -130,8 +130,6 @@ jobs:
         with:
           path: ${{ runner.temp }}/e2e-app-cache/android
           key: ${{ runner.os }}-android-apk-${{ hashFiles('examples/demo-app/android/build.gradle', 'examples/demo-app/android/settings.gradle', 'examples/demo-app/android/app/build.gradle', 'examples/demo-app/android/app/src/**', 'examples/demo-app/package.json', 'examples/demo-app/index.js', 'examples/demo-app/metro.config.js', 'examples/demo-app/babel.config.js', 'examples/demo-app/app.json', 'examples/demo-app/tsconfig.json', 'examples/demo-app/src/**', 'examples/demo-app/react-native.config.js', 'packages/react-native-mcp-server/package.json', 'packages/react-native-mcp-server/runtime.js', 'packages/react-native-mcp-server/src/**') }}
-          restore-keys: |
-            ${{ runner.os }}-android-apk-
 
       - name: 데모앱 Release APK 빌드
         if: steps.app-cache.outputs.cache-hit != 'true'
