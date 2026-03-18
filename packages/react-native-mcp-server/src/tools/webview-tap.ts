@@ -178,7 +178,7 @@ export function registerWebviewTap(server: McpServer, appSession: AppSession): v
         const y = wvPageY + domRect.top + domRect.height / 2;
 
         // Step 4: Perform native tap via idb/adb (same logic as tap tool)
-        const resolvedPlatform = platform ?? 'ios';
+        const resolvedPlatform = platform ?? appSession.resolveDevice(deviceId, platform).platform;
 
         if (resolvedPlatform === 'ios') {
           if (!(await checkIdbAvailable())) return idbNotInstalledError();
