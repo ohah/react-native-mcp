@@ -65,27 +65,57 @@ export class AppSession {
 
     if (deviceId != null && deviceId !== '') {
       const conn = this.devices.get(deviceId);
-      if (!conn || conn.ws.readyState !== WebSocket.OPEN) {
-        throw new Error('Device not connected: ' + deviceId);
+      if (!conn) {
+        const available = [...this.devices.keys()];
+        throw new Error(
+          `Device not found: "${deviceId}". ${available.length > 0 ? `Available devices: ${available.join(', ')}` : 'No devices are currently connected.'}`
+        );
+      }
+      if (conn.ws.readyState !== WebSocket.OPEN) {
+        throw new Error(
+          `Device "${deviceId}" was connected but is now disconnected. The app may have crashed or been terminated. Restart the app and try again.`
+        );
       }
       return conn;
     }
     if (platform != null && platform !== '') {
       const list = open().filter((c) => c.platform === platform);
-      if (list.length === 0) throw new Error('No ' + platform + ' device connected');
-      if (list.length > 1) throw new Error('Multiple ' + platform + ' devices connected');
+      if (list.length === 0) {
+        const allOpen = open();
+        const hint =
+          allOpen.length > 0
+            ? ` Connected devices are on other platforms: ${allOpen.map((c) => `${c.deviceId} (${c.platform})`).join(', ')}`
+            : '';
+        throw new Error(`No ${platform} device connected.${hint}`);
+      }
+      if (list.length > 1) {
+        const ids = list.map((c) => c.deviceId).join(', ');
+        throw new Error(
+          `Multiple ${platform} devices connected: ${ids}. Specify deviceId to target one.`
+        );
+      }
       const byPlatform = list[0];
-      if (!byPlatform) throw new Error('No ' + platform + ' device connected');
+      if (!byPlatform) throw new Error(`No ${platform} device connected.`);
       return byPlatform;
     }
     const list = open();
     if (list.length === 0) {
+      // Check if there are disconnected devices (were connected but now closed)
+      const allDevices = [...this.devices.values()];
+      if (allDevices.length > 0) {
+        throw new Error(
+          'No React Native app connected. Device was previously connected but is now disconnected. The app may have crashed or been terminated. Restart the app and try again.'
+        );
+      }
       throw new Error(
-        'No React Native app connected. Start the app with Metro and ensure the runtime is loaded.'
+        "No React Native app connected. Checklist: (1) Is Metro running? (2) Is the app launched on a device/simulator? (3) Is the babel preset configured in babel.config.js? (4) Run 'npx react-native-mcp-server doctor' for full diagnostics."
       );
     }
     if (list.length > 1) {
-      throw new Error('Multiple devices connected. Specify deviceId or platform.');
+      const ids = list.map((c) => `${c.deviceId} (${c.platform})`).join(', ');
+      throw new Error(
+        `Multiple devices connected: ${ids}. Specify deviceId (e.g. deviceId: "${list[0]!.deviceId}") or platform (e.g. platform: "ios") to target one.`
+      );
     }
     const single = list[0];
     if (!single) throw new Error('No React Native app connected.');
@@ -528,7 +558,9 @@ export class AppSession {
         if (Date.now() - start >= timeoutMs) {
           reject(
             new Error(
-              'No React Native app connected. Start the app with Metro and ensure the runtime is loaded.'
+              'No React Native app connected after waiting ' +
+                timeoutMs / 1000 +
+                "s. Checklist: (1) Is Metro running? (2) Is the app launched on a device/simulator? (3) Is the babel preset configured in babel.config.js? (4) Run 'npx react-native-mcp-server doctor' for full diagnostics."
             )
           );
           return;
