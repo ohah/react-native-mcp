@@ -172,7 +172,7 @@ export class AppClient {
       await sleep(intervalMs);
     }
     throw new ConnectionError(
-      `App did not connect within ${timeoutMs / 1000}s. Last status: ${JSON.stringify(lastStatus, null, 2)}`
+      `App did not connect within ${timeoutMs / 1000}s. Checklist: (1) Is Metro running? (2) Is the app launched on a device/simulator? (3) Is the babel preset configured in babel.config.js? (4) Run 'npx react-native-mcp-server doctor' for full diagnostics. Last status: ${JSON.stringify(lastStatus, null, 2)}`
     );
   }
 

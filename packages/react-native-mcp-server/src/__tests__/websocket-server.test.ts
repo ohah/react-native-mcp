@@ -47,13 +47,13 @@ describe('AppSession', () => {
     });
 
     it('없는 deviceId → 에러', () => {
-      expect(() => session.resolveDevice('ios-99')).toThrow('not connected');
+      expect(() => session.resolveDevice('ios-99')).toThrow('Device not found');
     });
 
     it('닫힌 WebSocket의 deviceId → 에러', () => {
       session._testInjectDevice(makeDevice('ios-1', 'ios', { readyState: WebSocket.CLOSED }));
 
-      expect(() => session.resolveDevice('ios-1')).toThrow('not connected');
+      expect(() => session.resolveDevice('ios-1')).toThrow('now disconnected');
     });
 
     it('platform으로 1대 자동 선택', () => {
