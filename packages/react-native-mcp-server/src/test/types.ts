@@ -8,6 +8,8 @@ export interface TestConfig {
   deviceId?: string;
   /** iOS GraphicsOrientation 강제값 (1-4). 1=Portrait, 2=Portrait180, 3=LandscapeA, 4=LandscapeB. 지정 시 xcrun 자동감지 건너뜀. */
   orientation?: number;
+  /** true면 step 실패 시에도 나머지 step을 계속 실행. 기본 false (실패 즉시 중단) */
+  continueOnError?: boolean;
 }
 
 export interface TestSuite {
@@ -130,4 +132,6 @@ export interface RunOptions {
   autoLaunch?: boolean;
   /** CLI --env로 전달된 환경 변수. runFlow에서 하위 파일 파싱 시 전달 */
   envVars?: Record<string, string>;
+  /** true면 step 실패 시에도 나머지 step을 계속 실행 (config.continueOnError 우선) */
+  continueOnError?: boolean;
 }

@@ -312,17 +312,18 @@ async function runSteps(
   reporter: Reporter,
   suiteName: string,
   ctx: StepContext,
-  stepOpts?: { timeout?: number }
+  stepOpts?: { timeout?: number; continueOnError?: boolean }
 ): Promise<{ results: StepResult[]; failed: boolean }> {
   const results: StepResult[] = [];
   let failed = false;
   const { outputDir } = ctx;
+  const continueOnError = stepOpts?.continueOnError ?? false;
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i]!;
     const start = Date.now();
 
-    if (failed) {
+    if (failed && !continueOnError) {
       results.push({ step, status: 'skipped', duration: 0 });
       reporter.onStepResult(results[results.length - 1]!);
       continue;
@@ -422,9 +423,10 @@ export async function runSuite(
   };
 
   const connectionTimeout = opts.timeout ?? suite.config.timeout ?? 90_000;
+  const continueOnError = opts.continueOnError ?? suite.config.continueOnError ?? false;
 
   try {
-    // setup
+    // setup (setup은 항상 실패 시 중단 — continueOnError 적용하지 않음)
     if (suite.setup) {
       const { results, failed } = await runSteps(
         app,
@@ -456,6 +458,7 @@ export async function runSuite(
         },
         {
           timeout: connectionTimeout,
+          continueOnError,
         }
       );
       allStepResults.push(...results);

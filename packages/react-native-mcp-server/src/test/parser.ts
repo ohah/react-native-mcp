@@ -175,6 +175,8 @@ const suiteSchema = z.object({
     timeout: z.number().optional(),
     bundleId: z.union([z.string(), z.object({ ios: z.string(), android: z.string() })]).optional(),
     deviceId: z.string().optional(),
+    orientation: z.number().optional(),
+    continueOnError: z.boolean().optional(),
   }),
   setup: z.array(stepSchema).optional(),
   steps: z.array(stepSchema).min(1),
