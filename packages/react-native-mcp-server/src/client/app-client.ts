@@ -462,7 +462,8 @@ export class AppClient {
       el = await this.querySelector(selector, opts);
       if (!el) throw new McpToolError(tool, `No element found for selector: ${selector}`);
     }
-    if (!el.measure) throw new McpToolError(tool, `Element "${selector}" has no measure data after retries`);
+    if (!el.measure)
+      throw new McpToolError(tool, `Element "${selector}" has no measure data after retries`);
     return el as ElementInfo & { measure: NonNullable<ElementInfo['measure']> };
   }
 
