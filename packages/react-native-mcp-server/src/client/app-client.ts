@@ -456,9 +456,10 @@ export class AppClient {
   ): Promise<ElementInfo & { measure: NonNullable<ElementInfo['measure']> }> {
     let el = await this.querySelector(selector, opts);
     if (!el) throw new McpToolError(tool, `No element found for selector: ${selector}`);
-    // CI/Release 빌드에서 layout 측정이 지연될 수 있으므로 최대 3회 재시도
-    for (let attempt = 0; attempt < 3 && !el.measure; attempt++) {
-      await sleep(300);
+    // CI/Release 빌드에서 Fabric shadow node commit이 지연될 수 있으므로 점진적 대기 후 재시도
+    const retryDelays = [500, 1000, 2000, 3000];
+    for (let attempt = 0; attempt < retryDelays.length && !el.measure; attempt++) {
+      await sleep(retryDelays[attempt]!);
       el = await this.querySelector(selector, opts);
       if (!el) throw new McpToolError(tool, `No element found for selector: ${selector}`);
     }
