@@ -159,7 +159,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ steps.avd.outputs.name }}
+          key: avd-${{ steps.avd.outputs.name }}-1200x1920
 
       - name: AVD 스냅샷 생성 (캐시 미스 시)
         if: steps.avd-cache.outputs.cache-hit != 'true'
@@ -170,7 +170,7 @@ jobs:
           target: google_apis
           arch: x86_64
           force-avd-creation: false
-          emulator-options: -no-window -skin 1920x1200 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -skin 1200x1920 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
           script: echo "Generated AVD snapshot for caching."
 
@@ -183,7 +183,7 @@ jobs:
           target: google_apis
           arch: x86_64
           force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -skin 1920x1200 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-snapshot-save -no-window -skin 1200x1920 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
             echo "=== Connected Android devices (adb devices -l) ==="
