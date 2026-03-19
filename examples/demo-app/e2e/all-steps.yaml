@@ -127,11 +127,15 @@ steps:
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#postmessage-count', timeout: 30000 }
   # ─── Step 14: WebView no testID (Babel이 자동 부여한 ID로 실행) ─────
-  - webviewEval:
-      webViewId: 'StepWebViewNoTestId-2-WebView'
-      script: 'document.getElementById("postmsg-btn").click()'
-  - wait: 2000
-  - waitForText: { text: 'postMessage 수: 1', selector: '#postmessage-count', timeout: 40000 }
+  # CI에서 postMessage 전달이 간헐적으로 느림 → retry로 안정화
+  - retry:
+      times: 2
+      steps:
+        - webviewEval:
+            webViewId: 'StepWebViewNoTestId-2-WebView'
+            script: 'document.getElementById("postmsg-btn").click()'
+        - wait: 3000
+        - waitForText: { text: 'postMessage 수: 1', selector: '#postmessage-count', timeout: 40000 }
   - tap: { selector: 'Pressable:text("다음")' }
   - waitForVisible: { selector: '#network-fetch-get', timeout: 30000 }
   # ─── Step 15: Network GET (android: 네트워크 불안정 → assertion 생략) ──

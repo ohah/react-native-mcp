@@ -246,6 +246,12 @@ jobs:
         with:
           timeout_minutes: 15
           max_attempts: 2
+          on_retry_command: |
+            echo "--- 재시도 전 앱 재시작 ---"
+            xcrun simctl terminate booted org.reactnativemcp.demo 2>/dev/null || true
+            sleep 2
+            xcrun simctl launch booted org.reactnativemcp.demo 2>/dev/null || true
+            sleep 5
           command: node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/all-steps.yaml -p ios -o e2e-artifacts/yaml-results --no-auto-launch
 
       - name: 실패 시 스크린샷·로그 저장
