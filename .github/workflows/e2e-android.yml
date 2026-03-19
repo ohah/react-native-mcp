@@ -227,10 +227,10 @@ jobs:
             adb shell wm size
             adb shell wm density
 
-            # E2E YAML 시나리오 실행 (시뮬/에뮬 지연 시 tap 타임아웃 확대, 실패 시 1회 재시도)
+            # E2E YAML 시나리오 실행 (시뮬/에뮬 지연 시 tap 타임아웃 확대, 실패 시 앱 재시작 후 1회 재시도)
             export REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000
             E2E_CMD="node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/all-steps.yaml -p android -o e2e-artifacts/yaml-results --no-auto-launch"
-            $E2E_CMD || { echo "--- E2E 1차 실패, 재시도 ---"; sleep 5; $E2E_CMD; }
+            $E2E_CMD || (echo "--- E2E 1차 실패, 앱 재시작 후 재시도 ---" && adb shell am force-stop com.reactnativemcp.demo 2>/dev/null; sleep 2; adb shell monkey -p com.reactnativemcp.demo -c android.intent.category.LAUNCHER 1 2>/dev/null; sleep 5; $E2E_CMD)
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
