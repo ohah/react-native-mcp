@@ -103,7 +103,12 @@ export class WsClient {
   /**
    * 앱 런타임에서 JavaScript 코드 실행.
    */
-  async eval(code: string, deviceId?: string, platform?: string, timeoutMs = 10000): Promise<unknown> {
+  async eval(
+    code: string,
+    deviceId?: string,
+    platform?: string,
+    timeoutMs = 10000
+  ): Promise<unknown> {
     const id = crypto.randomUUID();
     const params: Record<string, unknown> = { code };
     if (deviceId) params.deviceId = deviceId;

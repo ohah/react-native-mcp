@@ -41,6 +41,7 @@ rn-mcp snapshot --max-depth 10   # 깊이 제한
 ```
 
 **출력 예시:**
+
 ```
 @e1  View #main-container
 @e2    ScrollView #feed
@@ -189,6 +190,7 @@ rn-mcp tap @e3
 ## 구현 계획
 
 ### Phase 1: 핵심 (MVP)
+
 - `rn-mcp snapshot [-i]` — Fiber 트리 + refs 할당
 - `rn-mcp tap @ref` — ref로 탭
 - `rn-mcp type @ref "text"` — ref로 텍스트 입력
@@ -197,12 +199,14 @@ rn-mcp tap @e3
 - 세션 파일 관리
 
 ### Phase 2: 상호작용 확장
+
 - `rn-mcp swipe`, `rn-mcp scroll`, `rn-mcp key`
 - `rn-mcp screenshot`, `rn-mcp record`
 - `rn-mcp query`, `rn-mcp query-all` (셀렉터 직접 사용)
 - `--json` 출력 모드
 
 ### Phase 3: 디버깅 & WebView
+
 - `rn-mcp console`, `rn-mcp network`
 - `rn-mcp webview eval`
 - `rn-mcp eval`
@@ -218,12 +222,14 @@ rn-mcp tap @e3
 이 프로젝트의 React Native 앱을 제어하려면 `rn-mcp` CLI를 사용하세요.
 
 ### 기본 워크플로우
+
 1. `rn-mcp status` — 앱 연결 확인
 2. `rn-mcp snapshot -i` — 화면의 interactive 요소를 @ref로 조회
 3. `rn-mcp tap @e3` — ref로 요소 탭
 4. 화면이 바뀌었으면 `rn-mcp snapshot -i`로 새 refs 획득
 
 ### 규칙
+
 - 스크린샷보다 `snapshot -i`와 `assert text`를 우선 사용 (토큰 절약)
 - tap/type 후 화면 전환이 예상되면 반드시 `snapshot -i` 재호출
 - ref가 "not found"이면 `snapshot -i`로 갱신
@@ -232,10 +238,10 @@ rn-mcp tap @e3
 
 ### MCP와 CLI 공존
 
-| 연동 방식 | 사용 도구 | 대상 |
-|-----------|-----------|------|
-| MCP 서버 | Cursor, Windsurf 등 에디터 | MCP 프로토콜 지원 클라이언트 |
-| CLI | Claude Code, Codex, 셸 스크립트 | 셸 접근 가능한 AI 에이전트 |
+| 연동 방식 | 사용 도구                       | 대상                         |
+| --------- | ------------------------------- | ---------------------------- |
+| MCP 서버  | Cursor, Windsurf 등 에디터      | MCP 프로토콜 지원 클라이언트 |
+| CLI       | Claude Code, Codex, 셸 스크립트 | 셸 접근 가능한 AI 에이전트   |
 
 동일한 WebSocket 서버(포트 12300)에 연결하므로 동시 사용 가능.
 단, refs는 CLI 세션에서만 관리 — MCP 쪽에서는 기존 query_selector 방식 유지.

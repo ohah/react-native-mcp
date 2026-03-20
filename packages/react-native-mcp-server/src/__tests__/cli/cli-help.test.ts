@@ -6,10 +6,7 @@ import { describe, expect, it } from 'bun:test';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
-const CLI_PATH = path.resolve(
-  import.meta.dirname,
-  '../../../dist/cli.js'
-);
+const CLI_PATH = path.resolve(import.meta.dirname, '../../../dist/cli.js');
 
 function runCli(args: string[]): string {
   return execFileSync('node', [CLI_PATH, ...args], {

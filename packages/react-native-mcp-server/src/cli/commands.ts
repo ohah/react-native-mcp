@@ -47,8 +47,15 @@ function evalGetScreenInfo(): string {
 // ─── 공유 상수 ───────────────────────────────────────────────────
 
 const ANDROID_KEYCODES: Record<string, number> = {
-  back: 4, home: 3, enter: 66, tab: 61, delete: 67,
-  up: 19, down: 20, left: 21, right: 22,
+  back: 4,
+  home: 3,
+  enter: 66,
+  tab: 61,
+  delete: 67,
+  up: 19,
+  down: 20,
+  left: 21,
+  right: 22,
 };
 
 const VALID_DIRECTIONS = ['up', 'down', 'left', 'right'] as const;
@@ -161,9 +168,7 @@ async function resolveElementCoords(
   }
 
   if (!result) {
-    throw new Error(
-      `${target} not found on screen. Run \`rn-mcp snapshot -i\` to refresh refs.`
-    );
+    throw new Error(`${target} not found on screen. Run \`rn-mcp snapshot -i\` to refresh refs.`);
   }
 
   return {
@@ -301,10 +306,7 @@ export async function cmdSnapshot(
 /**
  * rn-mcp tap <@ref|selector> [--long <ms>]
  */
-export async function cmdTap(
-  target: string,
-  opts: CliOptions & { long?: number }
-): Promise<void> {
+export async function cmdTap(target: string, opts: CliOptions & { long?: number }): Promise<void> {
   const { ws, device } = await connectAndResolveDevice(opts);
 
   const el = await resolveElementCoords(ws, target, device);
@@ -315,7 +317,9 @@ export async function cmdTap(
   try {
     if (device.platform === 'ios') {
       if (!(await checkIdbAvailable())) {
-        throw new Error('idb not installed. Run: brew tap facebook/fb && brew install idb-companion');
+        throw new Error(
+          'idb not installed. Run: brew tap facebook/fb && brew install idb-companion'
+        );
       }
       const udid = await resolveUdid(device.deviceId);
       const orientInfo = await getIOSOrientation(ws, device, udid);
@@ -337,7 +341,16 @@ export async function cmdTap(
       const py = Math.round((cy + topInsetDp) * scale);
       if (isLongPress) {
         await runAdbCommand(
-          ['shell', 'input', 'swipe', String(px), String(py), String(px), String(py), String(opts.long!)],
+          [
+            'shell',
+            'input',
+            'swipe',
+            String(px),
+            String(py),
+            String(px),
+            String(py),
+            String(opts.long!),
+          ],
           serial,
           { timeoutMs: opts.timeout }
         );
@@ -366,11 +379,7 @@ export async function cmdTap(
 /**
  * rn-mcp type <@ref|selector> <text>
  */
-export async function cmdType(
-  target: string,
-  text: string,
-  opts: CliOptions
-): Promise<void> {
+export async function cmdType(target: string, text: string, opts: CliOptions): Promise<void> {
   const { ws, device } = await connectAndResolveDevice(opts);
 
   // 요소 찾기 (존재 확인 + uid 획득)
@@ -549,11 +558,32 @@ export async function cmdSwipe(
 
   let x1: number, y1: number, x2: number, y2: number;
   switch (direction) {
-    case 'up':    x1 = cx; y1 = cy + dist / 2; x2 = cx; y2 = cy - dist / 2; break;
-    case 'down':  x1 = cx; y1 = cy - dist / 2; x2 = cx; y2 = cy + dist / 2; break;
-    case 'left':  x1 = cx + dist / 2; y1 = cy; x2 = cx - dist / 2; y2 = cy; break;
-    case 'right': x1 = cx - dist / 2; y1 = cy; x2 = cx + dist / 2; y2 = cy; break;
-    default: throw new Error('unreachable');
+    case 'up':
+      x1 = cx;
+      y1 = cy + dist / 2;
+      x2 = cx;
+      y2 = cy - dist / 2;
+      break;
+    case 'down':
+      x1 = cx;
+      y1 = cy - dist / 2;
+      x2 = cx;
+      y2 = cy + dist / 2;
+      break;
+    case 'left':
+      x1 = cx + dist / 2;
+      y1 = cy;
+      x2 = cx - dist / 2;
+      y2 = cy;
+      break;
+    case 'right':
+      x1 = cx - dist / 2;
+      y1 = cy;
+      x2 = cx + dist / 2;
+      y2 = cy;
+      break;
+    default:
+      throw new Error('unreachable');
   }
 
   try {
@@ -564,8 +594,14 @@ export async function cmdSwipe(
       const t1 = transformForIdb(x1, y1, orientInfo);
       const t2 = transformForIdb(x2, y2, orientInfo);
       await runIdbCommand(
-        ['ui', 'swipe', String(Math.round(t1.x)), String(Math.round(t1.y)),
-         String(Math.round(t2.x)), String(Math.round(t2.y))],
+        [
+          'ui',
+          'swipe',
+          String(Math.round(t1.x)),
+          String(Math.round(t1.y)),
+          String(Math.round(t2.x)),
+          String(Math.round(t2.y)),
+        ],
         udid,
         { timeoutMs: opts.timeout }
       );
@@ -628,9 +664,7 @@ export async function cmdKey(button: string, opts: CliOptions): Promise<void> {
 /**
  * rn-mcp screenshot [-o <file>]
  */
-export async function cmdScreenshot(
-  opts: CliOptions & { output?: string }
-): Promise<void> {
+export async function cmdScreenshot(opts: CliOptions & { output?: string }): Promise<void> {
   const { ws, device } = await connectAndResolveDevice(opts);
 
   try {
@@ -661,9 +695,7 @@ export async function cmdScreenshot(
  * rn-mcp init-agent [--target agents|claude] [--lang en|ko]
  * AGENTS.md 또는 CLAUDE.md에 CLI 사용 가이드를 추가.
  */
-export async function cmdInitAgent(
-  opts: { target: string; lang: string }
-): Promise<void> {
+export async function cmdInitAgent(opts: { target: string; lang: string }): Promise<void> {
   const targets: Array<{ file: string; label: string }> = [];
 
   if (opts.target === 'all' || opts.target === 'agents') {

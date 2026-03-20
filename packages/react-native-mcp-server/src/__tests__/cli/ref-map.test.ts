@@ -38,9 +38,7 @@ const sampleTree = {
     {
       uid: 'no-info',
       type: 'View',
-      children: [
-        { uid: 'nested-btn', type: 'Button', text: '확인' },
-      ],
+      children: [{ uid: 'nested-btn', type: 'Button', text: '확인' }],
     },
   ],
 };
@@ -72,7 +70,14 @@ describe('assignRefs', () => {
       // root(depth=0)는 항상 포함, 나머지는 interactive만
       if (t === 'View') continue; // root
       expect(
-        ['TextInput', 'Pressable', 'Button', 'TouchableOpacity', 'TouchableHighlight', 'Switch'].includes(t)
+        [
+          'TextInput',
+          'Pressable',
+          'Button',
+          'TouchableOpacity',
+          'TouchableHighlight',
+          'Switch',
+        ].includes(t)
       ).toBe(true);
     }
 
