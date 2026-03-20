@@ -6,7 +6,7 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { WsClient, type DeviceInfo } from './ws-client.js';
 import { loadSession, saveSession, resolveRef, type Session } from './session.js';
@@ -21,30 +21,37 @@ import {
   getAndroidTopInset,
 } from '../tools/adb-utils.js';
 import { transformForIdb, type IOSOrientationInfo } from '../tools/ios-landscape.js';
+import {
+  buildQuerySelectorEvalCode,
+  buildQuerySelectorAllEvalCode,
+} from '../tools/query-selector.js';
+import { runCommand } from '../tools/run-command.js';
 
 const execFileAsync = promisify(execFile);
 
-// ─── Eval code builders (인라인 — tools/ 의존 최소화) ────────────
+// ─── Eval code builders ─────────────────────────────────────────
+
+/** __REACT_NATIVE_MCP__ 메서드 호출 eval 코드 생성 */
+function buildEvalCall(method: string, ...args: string[]): string {
+  return `(function(){ var M = typeof __REACT_NATIVE_MCP__ !== 'undefined' ? __REACT_NATIVE_MCP__ : null; return M && M.${method} ? M.${method}(${args.join(', ')}) : null; })();`;
+}
 
 function evalGetComponentTree(maxDepth: number): string {
-  return `(function(){ return typeof __REACT_NATIVE_MCP__ !== 'undefined' && __REACT_NATIVE_MCP__.getComponentTree ? __REACT_NATIVE_MCP__.getComponentTree({ maxDepth: ${maxDepth} }) : null; })();`;
-}
-
-function evalQuerySelector(selector: string): string {
-  return `(function(){ var M = typeof __REACT_NATIVE_MCP__ !== 'undefined' ? __REACT_NATIVE_MCP__ : null; return M && M.querySelectorWithMeasure ? M.querySelectorWithMeasure(${JSON.stringify(selector)}) : null; })();`;
-}
-
-function evalQuerySelectorAll(selector: string): string {
-  return `(function(){ var M = typeof __REACT_NATIVE_MCP__ !== 'undefined' ? __REACT_NATIVE_MCP__ : null; return M && M.querySelectorAllWithMeasure ? M.querySelectorAllWithMeasure(${JSON.stringify(selector)}) : []; })();`;
+  return buildEvalCall('getComponentTree', `{ maxDepth: ${maxDepth} }`);
 }
 
 function evalGetScreenInfo(): string {
-  return '(function(){ var M = typeof __REACT_NATIVE_MCP__ !== "undefined" ? __REACT_NATIVE_MCP__ : null; return M && M.getScreenInfo ? M.getScreenInfo() : null; })();';
+  return buildEvalCall('getScreenInfo');
 }
 
-function evalAssertText(text: string): string {
-  return `(function(){ var M = typeof __REACT_NATIVE_MCP__ !== 'undefined' ? __REACT_NATIVE_MCP__ : null; return M && M.assertText ? M.assertText(${JSON.stringify(text)}) : null; })();`;
-}
+// ─── 공유 상수 ───────────────────────────────────────────────────
+
+const ANDROID_KEYCODES: Record<string, number> = {
+  back: 4, home: 3, enter: 66, tab: 61, delete: 67,
+  up: 19, down: 20, left: 21, right: 22,
+};
+
+const VALID_DIRECTIONS = ['up', 'down', 'left', 'right'] as const;
 
 // ─── Shared helpers ──────────────────────────────────────────────
 
@@ -139,7 +146,7 @@ async function resolveElementCoords(
 
   if (filterUid) {
     const all = (await ws.eval(
-      evalQuerySelectorAll(selector),
+      buildQuerySelectorAllEvalCode(selector),
       device.deviceId,
       device.platform
     )) as Record<string, unknown>[];
@@ -147,7 +154,7 @@ async function resolveElementCoords(
     if (match) result = match;
   } else {
     result = (await ws.eval(
-      evalQuerySelector(selector),
+      buildQuerySelectorEvalCode(selector),
       device.deviceId,
       device.platform
     )) as Record<string, unknown> | null;
@@ -208,6 +215,18 @@ async function getIOSOrientation(
   }
 
   return { graphicsOrientation, width, height };
+}
+
+/** 요소 정보를 compact 한 줄 포맷으로 변환 */
+function formatElementLine(el: Record<string, unknown>): string {
+  const parts = [String(el.type ?? 'element')];
+  if (el.testID) parts.push(`#${el.testID}`);
+  if (el.uid && el.uid !== el.testID) parts.push(`uid=${el.uid}`);
+  if (el.pageX != null) parts.push(`pageX=${Math.round(Number(el.pageX))}`);
+  if (el.pageY != null) parts.push(`pageY=${Math.round(Number(el.pageY))}`);
+  if (el.width != null) parts.push(`w=${Math.round(Number(el.width))}`);
+  if (el.height != null) parts.push(`h=${Math.round(Number(el.height))}`);
+  return parts.join(' ');
 }
 
 // ─── Commands ────────────────────────────────────────────────────
@@ -332,9 +351,12 @@ export async function cmdTap(
     // UI 업데이트 대기
     await new Promise((r) => setTimeout(r, 300));
 
-    const label = target.startsWith('@e')
-      ? `${target} ${loadSession()?.refs[target]?.type ?? ''}${loadSession()?.refs[target]?.testID ? ' #' + loadSession()?.refs[target]?.testID : ''}`
-      : target;
+    let label = target;
+    if (target.startsWith('@e')) {
+      const s = loadSession();
+      const r = s?.refs[target];
+      label = `${target} ${r?.type ?? ''}${r?.testID ? ' #' + r.testID : ''}`;
+    }
     console.log(`✓ ${isLongPress ? 'long-pressed' : 'tapped'} ${label.trim()}`);
   } finally {
     ws.close();
@@ -386,9 +408,13 @@ export async function cmdAssert(
       case 'text': {
         const text = args[0];
         if (!text) throw new Error('Usage: rn-mcp assert text <text>');
-        // Fiber 트리에서 텍스트 검색
-        const tree = await ws.eval(evalGetComponentTree(30), device.deviceId, device.platform);
-        const found = tree ? JSON.stringify(tree).includes(text) : false;
+        // :text() 셀렉터로 정확한 텍스트 검색 (JSON.stringify false-positive 방지)
+        const result = await ws.eval(
+          buildQuerySelectorEvalCode(`:text(${JSON.stringify(text)})`),
+          device.deviceId,
+          device.platform
+        );
+        const found = result != null;
         if (found) {
           console.log(`✓ text "${text}" found`);
         } else {
@@ -428,7 +454,7 @@ export async function cmdAssert(
           throw new Error('Usage: rn-mcp assert count <selector> <n>');
         }
         const list = (await ws.eval(
-          evalQuerySelectorAll(selector),
+          buildQuerySelectorAllEvalCode(selector),
           device.deviceId,
           device.platform
         )) as unknown[];
@@ -464,7 +490,7 @@ export async function cmdQuery(
   try {
     if (opts.all) {
       const list = (await ws.eval(
-        evalQuerySelectorAll(selector),
+        buildQuerySelectorAllEvalCode(selector),
         device.deviceId,
         device.platform
       )) as Record<string, unknown>[];
@@ -478,19 +504,12 @@ export async function cmdQuery(
       } else {
         console.log(`# ${list.length} matches`);
         for (const el of list) {
-          const parts = [String(el.type ?? 'element')];
-          if (el.testID) parts.push(`#${el.testID}`);
-          if (el.uid && el.uid !== el.testID) parts.push(`uid=${el.uid}`);
-          if (el.pageX != null) parts.push(`pageX=${Math.round(Number(el.pageX))}`);
-          if (el.pageY != null) parts.push(`pageY=${Math.round(Number(el.pageY))}`);
-          if (el.width != null) parts.push(`w=${Math.round(Number(el.width))}`);
-          if (el.height != null) parts.push(`h=${Math.round(Number(el.height))}`);
-          console.log(`- ${parts.join(' ')}`);
+          console.log(`- ${formatElementLine(el)}`);
         }
       }
     } else {
       const result = (await ws.eval(
-        evalQuerySelector(selector),
+        buildQuerySelectorEvalCode(selector),
         device.deviceId,
         device.platform
       )) as Record<string, unknown> | null;
@@ -502,14 +521,7 @@ export async function cmdQuery(
       if (opts.json) {
         console.log(JSON.stringify(result, null, 2));
       } else {
-        const parts = [String(result.type ?? 'element')];
-        if (result.testID) parts.push(`#${result.testID}`);
-        if (result.uid && result.uid !== result.testID) parts.push(`uid=${result.uid}`);
-        if (result.pageX != null) parts.push(`pageX=${Math.round(Number(result.pageX))}`);
-        if (result.pageY != null) parts.push(`pageY=${Math.round(Number(result.pageY))}`);
-        if (result.width != null) parts.push(`w=${Math.round(Number(result.width))}`);
-        if (result.height != null) parts.push(`h=${Math.round(Number(result.height))}`);
-        console.log(parts.join(' '));
+        console.log(formatElementLine(result));
       }
     }
   } finally {
@@ -525,9 +537,8 @@ export async function cmdSwipe(
   direction: string,
   opts: CliOptions & { dist?: number }
 ): Promise<void> {
-  const validDirs = ['up', 'down', 'left', 'right'];
-  if (!validDirs.includes(direction)) {
-    throw new Error(`Invalid direction: ${direction}. Use: ${validDirs.join(', ')}`);
+  if (!VALID_DIRECTIONS.includes(direction as any)) {
+    throw new Error(`Invalid direction: ${direction}. Use: ${VALID_DIRECTIONS.join(', ')}`);
   }
 
   const { ws, device } = await connectAndResolveDevice(opts);
@@ -597,14 +608,10 @@ export async function cmdKey(button: string, opts: CliOptions): Promise<void> {
     } else {
       if (!(await checkAdbAvailable())) throw new Error('adb not installed');
       const serial = await resolveSerial(device.deviceId);
-      const keycodeMap: Record<string, number> = {
-        back: 4, home: 3, enter: 66, tab: 61, delete: 67,
-        up: 19, down: 20, left: 21, right: 22,
-      };
-      const keycode = keycodeMap[button.toLowerCase()];
+      const keycode = ANDROID_KEYCODES[button.toLowerCase()];
       if (keycode == null) {
         throw new Error(
-          `Unknown key: ${button}. Available: ${Object.keys(keycodeMap).join(', ')}`
+          `Unknown key: ${button}. Available: ${Object.keys(ANDROID_KEYCODES).join(', ')}`
         );
       }
       await runAdbCommand(['shell', 'input', 'keyevent', String(keycode)], serial, {
@@ -637,11 +644,6 @@ export async function cmdScreenshot(
       if (!(await checkAdbAvailable())) throw new Error('adb not installed');
       const serial = await resolveSerial(device.deviceId);
       const outFile = opts.output ?? 'screenshot.png';
-      await runAdbCommand(['exec-out', 'screencap', '-p'], serial, { timeoutMs: opts.timeout });
-      // screencap binary output → file
-      const { execFile: execFileCb } = await import('node:child_process');
-      const { writeFileSync } = await import('node:fs');
-      const { runCommand } = await import('../tools/run-command.js');
       const buf = await runCommand(
         'adb',
         [...(serial ? ['-s', serial] : []), 'exec-out', 'screencap', '-p'],
@@ -680,9 +682,14 @@ export async function cmdInitAgent(
   for (const { file, label } of targets) {
     const filePath = path.resolve(process.cwd(), file);
 
-    if (existsSync(filePath)) {
-      const content = readFileSync(filePath, 'utf8');
+    let content: string | null = null;
+    try {
+      content = readFileSync(filePath, 'utf8');
+    } catch {
+      // 파일 없음
+    }
 
+    if (content != null) {
       // 이미 가이드가 있으면 교체
       if (content.includes(MARKER_START)) {
         const regex = new RegExp(

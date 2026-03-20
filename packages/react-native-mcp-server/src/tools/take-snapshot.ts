@@ -23,20 +23,7 @@ const schema = z.object({
   platform: platformParam,
 });
 
-/** 인터랙티브 컴포넌트 타입 */
-const INTERACTIVE_TYPES = new Set([
-  'TouchableOpacity',
-  'TouchableHighlight',
-  'TouchableWithoutFeedback',
-  'TouchableNativeFeedback',
-  'Pressable',
-  'Button',
-  'TextInput',
-  'Switch',
-  'Slider',
-  'Picker',
-  'CheckBox',
-]);
+import { INTERACTIVE_TYPES } from '../shared/interactive-types.js';
 
 interface SnapshotNode {
   uid?: string;

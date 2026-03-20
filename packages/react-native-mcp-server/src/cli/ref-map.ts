@@ -4,6 +4,7 @@
  */
 
 import type { RefInfo } from './session.js';
+import { INTERACTIVE_TYPES } from '../shared/interactive-types.js';
 
 interface SnapshotNode {
   uid?: string;
@@ -12,20 +13,6 @@ interface SnapshotNode {
   text?: string;
   children?: SnapshotNode[];
 }
-
-const INTERACTIVE_TYPES = new Set([
-  'TouchableOpacity',
-  'TouchableHighlight',
-  'TouchableWithoutFeedback',
-  'TouchableNativeFeedback',
-  'Pressable',
-  'Button',
-  'TextInput',
-  'Switch',
-  'Slider',
-  'Picker',
-  'CheckBox',
-]);
 
 export interface AssignResult {
   refs: Record<string, RefInfo>;

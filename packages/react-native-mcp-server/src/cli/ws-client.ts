@@ -58,6 +58,7 @@ export class WsClient {
             const client = new WsClient(ws, msg.devices ?? []);
             ws.removeAllListeners('message');
             ws.on('message', (d) => client.handleMessage(d));
+            ws.on('close', () => client.onDisconnect());
             resolve(client);
           }
         } catch {
@@ -127,6 +128,14 @@ export class WsClient {
 
       this.ws.send(JSON.stringify({ method: 'eval', id, params }));
     });
+  }
+
+  /** WebSocket 예기치 않은 종료 시 대기 중인 요청 전부 reject */
+  private onDisconnect(): void {
+    for (const { reject } of this.pending.values()) {
+      reject(new Error('WebSocket connection closed unexpectedly'));
+    }
+    this.pending.clear();
   }
 
   get devices(): DeviceInfo[] {
