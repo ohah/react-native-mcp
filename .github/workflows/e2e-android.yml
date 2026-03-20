@@ -232,6 +232,16 @@ jobs:
             E2E_CMD="node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/all-steps.yaml -p android -o e2e-artifacts/yaml-results --no-auto-launch"
             $E2E_CMD || { echo "--- E2E 1차 실패, 재시도 ---"; sleep 5; $E2E_CMD; }
 
+            # CLI (rn-mcp) E2E smoke test
+            echo ""
+            echo "=== CLI (rn-mcp) E2E smoke test ==="
+            # YAML 테스트 후 앱 재시작
+            adb shell am force-stop com.reactnativemcp.demo
+            sleep 2
+            adb shell monkey -p com.reactnativemcp.demo -c android.intent.category.LAUNCHER 1
+            sleep 8
+            bash examples/demo-app/e2e/cli-smoke.sh --platform android
+
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
         timeout-minutes: 2
