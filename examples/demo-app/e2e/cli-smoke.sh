@@ -29,7 +29,7 @@ trap cleanup EXIT
 
 # MCP 서버 시작 (WebSocket 서버 제공)
 step "0. MCP 서버 시작 (백그라운드)"
-$MCP_SERVER > /dev/null 2>&1 &
+$MCP_SERVER < /dev/null > /dev/null 2>&1 &
 MCP_PID=$!
 echo "  MCP server PID: $MCP_PID"
 

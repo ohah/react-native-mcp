@@ -321,7 +321,7 @@ export async function cmdTap(target: string, opts: CliOptions & { long?: number 
           'idb not installed. Run: brew tap facebook/fb && brew install idb-companion'
         );
       }
-      const udid = await resolveUdid(device.deviceId);
+      const udid = await resolveUdid();
       const orientInfo = await getIOSOrientation(ws, device, udid);
       const t = transformForIdb(cx, cy, orientInfo);
       const ix = Math.round(t.x);
@@ -333,7 +333,7 @@ export async function cmdTap(target: string, opts: CliOptions & { long?: number 
       if (!(await checkAdbAvailable())) {
         throw new Error('adb not installed. Run: brew install android-platform-tools');
       }
-      const serial = await resolveSerial(device.deviceId);
+      const serial = await resolveSerial();
       const scale = await getAndroidScale(serial);
       const topInsetPx = await getAndroidTopInset(serial);
       const topInsetDp = topInsetPx / scale;
@@ -589,7 +589,7 @@ export async function cmdSwipe(
   try {
     if (device.platform === 'ios') {
       if (!(await checkIdbAvailable())) throw new Error('idb not installed');
-      const udid = await resolveUdid(device.deviceId);
+      const udid = await resolveUdid();
       const orientInfo = await getIOSOrientation(ws, device, udid);
       const t1 = transformForIdb(x1, y1, orientInfo);
       const t2 = transformForIdb(x2, y2, orientInfo);
@@ -607,7 +607,7 @@ export async function cmdSwipe(
       );
     } else {
       if (!(await checkAdbAvailable())) throw new Error('adb not installed');
-      const serial = await resolveSerial(device.deviceId);
+      const serial = await resolveSerial();
       const scale = await getAndroidScale(serial);
       const topInsetPx = await getAndroidTopInset(serial);
       const topInsetDp = topInsetPx / scale;
@@ -638,12 +638,12 @@ export async function cmdKey(button: string, opts: CliOptions): Promise<void> {
   try {
     if (device.platform === 'ios') {
       if (!(await checkIdbAvailable())) throw new Error('idb not installed');
-      const udid = await resolveUdid(device.deviceId);
+      const udid = await resolveUdid();
       const idbButton = button === 'back' ? 'HOME' : button.toUpperCase();
       await runIdbCommand(['ui', 'button', idbButton], udid, { timeoutMs: opts.timeout });
     } else {
       if (!(await checkAdbAvailable())) throw new Error('adb not installed');
-      const serial = await resolveSerial(device.deviceId);
+      const serial = await resolveSerial();
       const keycode = ANDROID_KEYCODES[button.toLowerCase()];
       if (keycode == null) {
         throw new Error(
@@ -670,13 +670,13 @@ export async function cmdScreenshot(opts: CliOptions & { output?: string }): Pro
   try {
     if (device.platform === 'ios') {
       if (!(await checkIdbAvailable())) throw new Error('idb not installed');
-      const udid = await resolveUdid(device.deviceId);
+      const udid = await resolveUdid();
       const outFile = opts.output ?? 'screenshot.png';
       await runIdbCommand(['screenshot', '--path', outFile], udid, { timeoutMs: opts.timeout });
       console.log(`✓ saved ${outFile}`);
     } else {
       if (!(await checkAdbAvailable())) throw new Error('adb not installed');
-      const serial = await resolveSerial(device.deviceId);
+      const serial = await resolveSerial();
       const outFile = opts.output ?? 'screenshot.png';
       const buf = await runCommand(
         'adb',
