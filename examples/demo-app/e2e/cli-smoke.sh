@@ -70,7 +70,7 @@ $CLI assert text "Count:" $TIMEOUT && pass "assert text found" || fail "assert t
 
 step "6. tap @ref (ref로 탭)"
 # snapshot에서 Count 버튼의 ref를 찾아서 탭
-COUNT_REF=$(echo "$SNAPSHOT" | grep 'Pressable.*"Count:' | head -1 | awk '{print $1}')
+COUNT_REF=$(echo "$SNAPSHOT" | grep 'Pressable.*"Count:' | head -1 | awk '{print $1}' || true)
 if [ -z "$COUNT_REF" ]; then
   # ref가 없으면 셀렉터로 직접 탭
   echo "  (Count ref not found in snapshot, using selector fallback)"
