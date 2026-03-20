@@ -22,6 +22,7 @@ export default defineConfig([
     name: 'server',
     entry: {
       index: './src/index.ts',
+      cli: './src/cli.ts',
       symbolicate: './src/symbolicate.ts',
       'transformer-entry': './src/transformer-entry.ts',
       'client/index': './src/client/index.ts',

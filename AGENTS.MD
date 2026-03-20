@@ -116,3 +116,58 @@ bun run format       # oxfmt
 - [E2E YAML Reference](document/docs/en/testing/e2e-yaml-reference.md) — YAML scenario syntax and steps
 - Runner: `packages/react-native-mcp-server/src/e2e/`
 - Config: `e2e.yaml` at project root
+
+---
+
+## CLI (rn-mcp) — AI 에이전트 권장 인터페이스
+
+셸 접근이 가능한 AI 에이전트(Claude Code, Codex 등)는 MCP 도구 대신 `rn-mcp` CLI를 사용하세요.
+Snapshot + Refs 패턴으로 토큰 소비를 크게 절감합니다.
+
+### 필수 워크플로우
+
+```bash
+# 1. 연결 확인
+rn-mcp status
+
+# 2. 화면의 interactive 요소를 @ref로 조회
+rn-mcp snapshot -i
+
+# 3. ref로 요소 조작
+rn-mcp tap @e3
+rn-mcp type @e5 "user@example.com"
+
+# 4. 화면이 바뀌었으면 snapshot 재호출
+rn-mcp snapshot -i
+```
+
+### 핵심 규칙
+
+1. **snapshot -i를 먼저** — 앱 화면을 모르는 상태에서 tap하지 마세요
+2. **화면 전환 후 snapshot 재호출** — 탭 후 화면이 바뀌면 기존 refs는 무효
+3. **ref "not found" = snapshot 필요** — `✗ @e3 not found` 에러 시 `rn-mcp snapshot -i`
+4. **스크린샷보다 assert** — `rn-mcp assert text "Welcome"`이 스크린샷보다 토큰 절약
+5. **iOS orientation 자동 처리** — CLI가 내부적으로 좌표 변환 (별도 조치 불필요)
+
+### 명령어 빠른 참조
+
+| 명령 | 용도 |
+|------|------|
+| `rn-mcp status` | 연결 상태 확인 |
+| `rn-mcp snapshot -i` | interactive 요소 + @ref 할당 |
+| `rn-mcp tap @e3` | 탭 |
+| `rn-mcp tap @e3 --long 500` | 롱프레스 |
+| `rn-mcp type @e5 "텍스트"` | 텍스트 입력 |
+| `rn-mcp swipe @e2 down` | 스와이프 |
+| `rn-mcp key back` | 하드웨어 키 (back, home, enter) |
+| `rn-mcp assert text "Welcome"` | 텍스트 존재 확인 |
+| `rn-mcp assert visible @e3` | 가시성 확인 |
+| `rn-mcp query "#btn"` | 요소 조회 |
+| `rn-mcp screenshot -o s.png` | 스크린샷 |
+
+### CLI vs MCP 선택 기준
+
+- **CLI 가능** (Claude Code, Codex 등) → `rn-mcp` CLI 사용 (토큰 효율)
+- **CLI 불가** (Cursor, Windsurf 등 MCP만 지원) → 기존 MCP 도구 사용
+
+자세한 사용법: `rn-mcp --help`

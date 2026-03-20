@@ -46,3 +46,21 @@ jobs:
 
       - name: 테스트 실행
         run: bun run test:unit
+
+      - name: CLI smoke test
+        run: |
+          node packages/react-native-mcp-server/dist/cli.js --version
+          node packages/react-native-mcp-server/dist/cli.js --help | grep -q "WORKFLOW"
+          echo "✓ CLI --help and --version work"
+
+      - name: CLI init-agent test
+        run: |
+          cd "$(mktemp -d)"
+          node "$GITHUB_WORKSPACE/packages/react-native-mcp-server/dist/cli.js" init-agent --lang en
+          grep -q "rn-mcp snapshot" AGENTS.md
+          grep -q "rn-mcp snapshot" CLAUDE.md
+          # 한국어로 교체
+          node "$GITHUB_WORKSPACE/packages/react-native-mcp-server/dist/cli.js" init-agent --lang ko
+          grep -q "연결 확인" AGENTS.md
+          grep -q "연결 확인" CLAUDE.md
+          echo "✓ init-agent creates and updates guide files"
