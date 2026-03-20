@@ -21,15 +21,18 @@ step() { echo ""; echo "── $1 ──"; }
 cleanup() {
   if [ -n "$MCP_PID" ] && kill -0 "$MCP_PID" 2>/dev/null; then
     echo "Stopping MCP server (PID $MCP_PID)..."
-    kill "$MCP_PID" 2>/dev/null || true
+    # sleep infinity | node ... 로 시작했으므로 프로세스 그룹 전체 종료
+    kill -- -"$MCP_PID" 2>/dev/null || kill "$MCP_PID" 2>/dev/null || true
     wait "$MCP_PID" 2>/dev/null || true
   fi
 }
 trap cleanup EXIT
 
 # MCP 서버 시작 (WebSocket 서버 제공)
+# MCP 서버는 stdin으로 stdio transport를 사용하므로, stdin EOF가 오면 종료됨.
+# sleep infinity로 stdin을 열어두고, MCP 서버의 stdout/stderr은 /dev/null로 버림.
 step "0. MCP 서버 시작 (백그라운드)"
-$MCP_SERVER < /dev/null > /dev/null 2>&1 &
+sleep infinity | $MCP_SERVER > /dev/null 2>&1 &
 MCP_PID=$!
 echo "  MCP server PID: $MCP_PID"
 
