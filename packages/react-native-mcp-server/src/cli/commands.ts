@@ -539,7 +539,7 @@ export async function cmdQuery(
 }
 
 /**
- * rn-mcp swipe <@ref|selector> <direction> [--dist <px>]
+ * rn-mcp swipe <@ref|selector> <direction> [--dist <dp>]
  */
 export async function cmdSwipe(
   target: string,

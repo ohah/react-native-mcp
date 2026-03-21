@@ -77,7 +77,7 @@ Each element gets a short ref (`@e1`, `@e2`, ...) assigned in depth-first order.
 |---------|-------------|
 | `rn-mcp snapshot` | Full component tree with @refs |
 | `rn-mcp snapshot -i` | Interactive elements only (recommended) |
-| `rn-mcp snapshot --max-depth 10` | Limit tree depth |
+| `rn-mcp snapshot --max-depth 10` | Limit tree depth (default: 30) |
 | `rn-mcp snapshot -i --json` | JSON output for scripting |
 
 ### Interaction
@@ -89,7 +89,7 @@ Each element gets a short ref (`@e1`, `@e2`, ...) assigned in depth-first order.
 | `rn-mcp tap @e3 --long 500` | Long press (500ms) |
 | `rn-mcp type @e5 "text"` | Type into TextInput |
 | `rn-mcp swipe @e2 down` | Swipe element |
-| `rn-mcp swipe @e2 down --dist 300` | Swipe with distance |
+| `rn-mcp swipe @e2 down --dist 300` | Swipe with distance (dp) |
 | `rn-mcp key back` | Press hardware key |
 
 Available keys: `back`, `home`, `enter`, `tab`, `delete`, `up`, `down`, `left`, `right`
@@ -133,6 +133,8 @@ Available keys: `back`, `home`, `enter`, `tab`, `delete`, `up`, `down`, `left`, 
 --port <n>               WebSocket port (default: 12300)
 --json                   JSON output for scripting
 --timeout <ms>           Command timeout (default: 10000)
+-h, --help               Show help
+-v, --version            Show version
 ```
 
 ## Refs System

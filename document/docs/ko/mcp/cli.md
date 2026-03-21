@@ -78,7 +78,7 @@ rn-mcp snapshot -i
 |------|------|
 | `rn-mcp snapshot` | 전체 컴포넌트 트리 + @refs |
 | `rn-mcp snapshot -i` | interactive 요소만 (권장) |
-| `rn-mcp snapshot --max-depth 10` | 트리 깊이 제한 |
+| `rn-mcp snapshot --max-depth 10` | 트리 깊이 제한 (기본: 30) |
 | `rn-mcp snapshot -i --json` | 스크립팅용 JSON 출력 |
 
 ### 상호작용
@@ -90,7 +90,7 @@ rn-mcp snapshot -i
 | `rn-mcp tap @e3 --long 500` | 롱프레스 (500ms) |
 | `rn-mcp type @e5 "텍스트"` | TextInput에 입력 |
 | `rn-mcp swipe @e2 down` | 스와이프 |
-| `rn-mcp swipe @e2 down --dist 300` | 거리 지정 스와이프 |
+| `rn-mcp swipe @e2 down --dist 300` | 거리 지정 스와이프 (dp) |
 | `rn-mcp key back` | 하드웨어 키 입력 |
 
 사용 가능한 키: `back`, `home`, `enter`, `tab`, `delete`, `up`, `down`, `left`, `right`
@@ -134,6 +134,8 @@ rn-mcp snapshot -i
 --port <n>               WebSocket 포트 (기본: 12300)
 --json                   스크립팅용 JSON 출력
 --timeout <ms>           명령 타임아웃 (기본: 10000)
+-h, --help               도움말
+-v, --version            버전 정보
 ```
 
 ## Refs 시스템
