@@ -63,7 +63,7 @@ jobs:
 
       - name: 디스크 공간 확보
         run: |
-          sudo apt-get remove -y '^dotnet-.*' 'php.*' '^mongodb-.*' '^mysql-.*' azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri
+          sudo apt-get remove -y '^dotnet-.*' 'php.*' '^mongodb-.*' '^mysql-.*' azure-cli google-chrome-stable firefox powershell mono-devel
           sudo apt-get autoremove -y
           sudo apt-get clean
           sudo rm -rf /usr/share/dotnet/ /usr/local/graalvm/ /usr/local/.ghcup/ /usr/local/share/powershell /usr/local/share/chromium
@@ -152,6 +152,13 @@ jobs:
           mkdir -p examples/demo-app/android/app/build/outputs/apk/release
           cp "${{ runner.temp }}/e2e-app-cache/android/app-release.apk" examples/demo-app/android/app/build/outputs/apk/release/
 
+      - name: Android SDK PATH 설정 및 adb 시작
+        run: |
+          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+          echo "$ANDROID_HOME/emulator" >> $GITHUB_PATH
+          $ANDROID_HOME/platform-tools/adb start-server
+          $ANDROID_HOME/platform-tools/adb devices
+
       - name: AVD 캐시
         uses: actions/cache@v4
         id: avd-cache
@@ -159,7 +166,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ steps.avd.outputs.name }}-1080x1920-ram4096-v3
+          key: avd-${{ steps.avd.outputs.name }}-1080x1920-ram4096-v4
 
       - name: AVD 스냅샷 생성 (캐시 미스 시)
         if: steps.avd-cache.outputs.cache-hit != 'true'
@@ -173,6 +180,7 @@ jobs:
           heap-size: 2048M
           force-avd-creation: false
           emulator-options: -no-window -skin 1080x1920 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -cores 4
+          emulator-boot-timeout: 600
           disable-animations: false
           script: echo "Generated AVD snapshot for caching."
 
@@ -188,6 +196,7 @@ jobs:
           heap-size: 2048M
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -skin 1080x1920 -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -cores 4
+          emulator-boot-timeout: 600
           disable-animations: true
           script: |
             echo "=== Connected Android devices (adb devices -l) ==="
@@ -231,6 +240,16 @@ jobs:
             export REACT_NATIVE_MCP_TAP_TIMEOUT_MS=25000
             E2E_CMD="node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/all-steps.yaml -p android -o e2e-artifacts/yaml-results --no-auto-launch"
             $E2E_CMD || (echo "--- E2E 1차 실패, 앱 재시작 후 재시도 ---" && adb shell am force-stop com.reactnativemcp.demo 2>/dev/null; sleep 2; adb shell monkey -p com.reactnativemcp.demo -c android.intent.category.LAUNCHER 1 2>/dev/null; sleep 5; $E2E_CMD)
+
+            # CLI (rn-mcp) E2E smoke test
+            echo ""
+            echo "=== CLI (rn-mcp) E2E smoke test ==="
+            # YAML 테스트 후 앱 재시작
+            adb shell am force-stop com.reactnativemcp.demo
+            sleep 2
+            adb shell monkey -p com.reactnativemcp.demo -c android.intent.category.LAUNCHER 1
+            sleep 8
+            bash examples/demo-app/e2e/cli-smoke.sh --platform android
 
       - name: 실패 시 스크린샷·로그 저장
         if: failure()

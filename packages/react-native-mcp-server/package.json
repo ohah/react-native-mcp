@@ -21,7 +21,8 @@
     "directory": "packages/react-native-mcp-server"
   },
   "bin": {
-    "react-native-mcp-server": "dist/index.js"
+    "react-native-mcp-server": "dist/index.js",
+    "rn-mcp": "dist/cli.js"
   },
   "files": [
     "dist",

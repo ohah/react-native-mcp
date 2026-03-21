@@ -254,6 +254,19 @@ jobs:
             sleep 5
           command: node packages/react-native-mcp-server/dist/test/cli.js run examples/demo-app/e2e/all-steps.yaml -p ios -o e2e-artifacts/yaml-results --no-auto-launch
 
+      - name: CLI (rn-mcp) E2E smoke test
+        if: success()
+        timeout-minutes: 5
+        env:
+          REACT_NATIVE_MCP_TAP_TIMEOUT_MS: 25000
+        run: |
+          # YAML 테스트 후 앱이 마지막 화면에 있으므로 재시작
+          xcrun simctl terminate booted org.reactnativemcp.demo 2>/dev/null || true
+          sleep 2
+          xcrun simctl launch booted org.reactnativemcp.demo 2>/dev/null || true
+          sleep 8
+          bash examples/demo-app/e2e/cli-smoke.sh --platform ios
+
       - name: 실패 시 스크린샷·로그 저장
         if: failure()
         timeout-minutes: 2
