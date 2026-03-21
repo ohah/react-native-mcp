@@ -19,33 +19,20 @@ pass() { echo "  ✓ $1"; }
 fail() { echo "  ✗ $1"; cleanup; exit 1; }
 step() { echo ""; echo "── $1 ──"; }
 
-MCP_FIFO=""
 cleanup() {
-  # fd 3 닫기 → MCP 서버에 EOF 전달 → 정상 종료
-  exec 3>&- 2>/dev/null || true
   if [ -n "$MCP_PID" ]; then
     echo "Stopping MCP server (PID $MCP_PID)..."
-    # EOF로 자연 종료 대기 (최대 2초)
-    for _ in 1 2 3 4; do
-      kill -0 "$MCP_PID" 2>/dev/null || break
-      sleep 0.5
-    done
     kill "$MCP_PID" 2>/dev/null || true
     wait "$MCP_PID" 2>/dev/null || true
   fi
-  [ -n "$MCP_FIFO" ] && rm -f "$MCP_FIFO" 2>/dev/null || true
 }
 trap cleanup EXIT
 
 # MCP 서버 시작 (WebSocket 서버 제공)
 # MCP 서버는 stdin으로 stdio transport를 사용하므로, stdin EOF가 오면 종료됨.
-# named pipe(FIFO)로 stdin을 열어두고, 종료 시 FIFO 삭제로 깨끗하게 정리.
+# tail -f /dev/null로 stdin을 영구히 열어두고, cleanup 시 kill로 정리.
 step "0. MCP 서버 시작 (백그라운드)"
-MCP_FIFO=$(mktemp -u /tmp/rn-mcp-fifo.XXXXXX)
-mkfifo "$MCP_FIFO"
-# FIFO에 writer를 열어두어야 reader(MCP 서버)가 블로킹되지 않음
-exec 3>"$MCP_FIFO"
-$MCP_SERVER < "$MCP_FIFO" > /dev/null 2>&1 &
+tail -f /dev/null | $MCP_SERVER > /dev/null 2>&1 &
 MCP_PID=$!
 echo "  MCP server PID: $MCP_PID"
 
