@@ -8,8 +8,9 @@ set -euo pipefail
 
 PLATFORM="${1:---platform}"
 PLATFORM_VAL="${2:-ios}"
-MCP_SERVER="node packages/react-native-mcp-server/dist/index.js"
-CLI="node packages/react-native-mcp-server/dist/cli.js"
+SCRIPT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+MCP_SERVER="node $SCRIPT_DIR/packages/react-native-mcp-server/dist/index.js"
+CLI="node $SCRIPT_DIR/packages/react-native-mcp-server/dist/cli.js"
 TIMEOUT="--timeout 25000"
 MCP_PID=""
 
