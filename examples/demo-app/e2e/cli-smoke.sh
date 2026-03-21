@@ -23,6 +23,8 @@ cleanup() {
   if [ -n "$MCP_PID" ]; then
     echo "Stopping MCP server (PID $MCP_PID)..."
     kill "$MCP_PID" 2>/dev/null || true
+    # tail -f 자식도 kill
+    pkill -P "$MCP_PID" 2>/dev/null || true
     wait "$MCP_PID" 2>/dev/null || true
   fi
 }
@@ -30,9 +32,9 @@ trap cleanup EXIT
 
 # MCP 서버 시작 (WebSocket 서버 제공)
 # MCP 서버는 stdin으로 stdio transport를 사용하므로, stdin EOF가 오면 종료됨.
-# tail -f /dev/null로 stdin을 영구히 열어두고, cleanup 시 kill로 정리.
+# 서브셸 안에서 tail + node를 실행하고, cleanup 시 서브셸 + 자식 전부 kill.
 step "0. MCP 서버 시작 (백그라운드)"
-tail -f /dev/null | $MCP_SERVER > /dev/null 2>&1 &
+(tail -f /dev/null | $MCP_SERVER > /dev/null 2>&1) &
 MCP_PID=$!
 echo "  MCP server PID: $MCP_PID"
 
