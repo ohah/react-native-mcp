@@ -63,7 +63,7 @@ jobs:
 
       - name: 디스크 공간 확보
         run: |
-          sudo apt-get remove -y '^dotnet-.*' 'php.*' '^mongodb-.*' '^mysql-.*' azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri
+          sudo apt-get remove -y '^dotnet-.*' 'php.*' '^mongodb-.*' '^mysql-.*' azure-cli google-chrome-stable firefox powershell mono-devel
           sudo apt-get autoremove -y
           sudo apt-get clean
           sudo rm -rf /usr/share/dotnet/ /usr/local/graalvm/ /usr/local/.ghcup/ /usr/local/share/powershell /usr/local/share/chromium
