@@ -166,7 +166,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ steps.avd.outputs.name }}-1080x1920-ram4096-v3
+          key: avd-${{ steps.avd.outputs.name }}-1080x1920-ram4096-v4
 
       - name: AVD 스냅샷 생성 (캐시 미스 시)
         if: steps.avd-cache.outputs.cache-hit != 'true'
